@@ -1,4 +1,5 @@
 const rateLimit = require('express-rate-limit');
+const env = require('../config/env');
 const { logger } = require('../utils/logger');
 
 function createLimiter(options) {
@@ -7,7 +8,8 @@ function createLimiter(options) {
     windowMs,
     limit,
     skipSuccessfulRequests = false,
-    skipFailedRequests = false
+    skipFailedRequests = false,
+    skip
   } = options;
 
   return rateLimit({
@@ -17,6 +19,7 @@ function createLimiter(options) {
     legacyHeaders: false,
     skipSuccessfulRequests,
     skipFailedRequests,
+    skip,
     handler: (req, res) => {
       logger.warn('Rate limit reached', {
         limiter: name,
@@ -36,10 +39,15 @@ function createLimiter(options) {
   });
 }
 
+function isPunchRegistrationRequest(req) {
+  return req.method === 'POST' && /^\/(api\/pontos|ponto)\/(validar-qr|login|registrar|bater)\/?$/.test(req.path);
+}
+
 const globalLimiter = createLimiter({
   name: 'global',
   windowMs: 15 * 60 * 1000,
-  limit: 300
+  limit: 300,
+  skip: isPunchRegistrationRequest
 });
 
 const loginLimiter = createLimiter({
@@ -57,8 +65,8 @@ const sensitiveLimiter = createLimiter({
 
 const pointLimiter = createLimiter({
   name: 'point',
-  windowMs: 5 * 60 * 1000,
-  limit: 20
+  windowMs: env.POINT_RATE_LIMIT_WINDOW_MS,
+  limit: env.POINT_RATE_LIMIT_MAX
 });
 
 module.exports = {

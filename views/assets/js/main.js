@@ -23,8 +23,7 @@ function isAdminPage() {
 }
 
 function isPublicPunchPage() {
-  const path = getCurrentPath();
-  return /^\/(ponto|bater-ponto)\/?$/.test(path);
+  return false;
 }
 
 function loadAuthState() {
@@ -581,6 +580,7 @@ async function initRegisterEmployeePage() {
     const nome = document.getElementById('input-nome')?.value?.trim() || '';
     const email = document.getElementById('input-email')?.value?.trim() || '';
     const cpf = (document.getElementById('input-cpf')?.value || '').replace(/\D/g, '');
+    const senha = document.getElementById('input-senha')?.value || '';
 
     const submitButton = document.getElementById('btn-registrar');
     const restore = setLoadingButton(submitButton, 'Registrando...');
@@ -592,6 +592,7 @@ async function initRegisterEmployeePage() {
           nome,
           email,
           cpf,
+          senha,
           ativo: true
         }
       });
@@ -808,138 +809,8 @@ async function initLoginPage() {
   });
 }
 
-function getCurrentLocationForPunch() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Para bater ponto, e necessario permitir o acesso a localizacao.'));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const latitude = Number(position?.coords?.latitude);
-        const longitude = Number(position?.coords?.longitude);
-
-        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-          reject(new Error('Nao foi possivel obter sua localizacao. Tente novamente.'));
-          return;
-        }
-
-        resolve({ latitude, longitude });
-      },
-      (error) => {
-        if (error?.code === 1) {
-          reject(new Error('Para bater ponto, e necessario permitir o acesso a localizacao.'));
-          return;
-        }
-        reject(new Error('Nao foi possivel obter sua localizacao. Tente novamente.'));
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 0
-      }
-    );
-  });
-}
-
 async function initPublicPunchPage() {
-  attachCpfMask('ponto-cpf');
-
-  const card = document.getElementById('auth-card');
-  const brandIcon = document.getElementById('login-brand-icon');
-  const brandName = document.getElementById('login-brand-name');
-  const title = document.getElementById('login-title');
-  const subtitle = document.getElementById('login-subtitle');
-  const loginForm = document.getElementById('form-login');
-  const form = document.getElementById('form-bater-ponto');
-  const inputCpf = document.getElementById('ponto-cpf');
-  const inputToken = document.getElementById('ponto-token');
-  const submitButton = document.getElementById('btn-enviar-ponto');
-  const loginFooter = document.getElementById('login-footer-admin');
-  const helperFooter = document.getElementById('login-footer-public-link');
-  const punchHintFooter = document.getElementById('ponto-footer-hint');
-
-  if (card) {
-    card.classList.add('punch-card');
-  }
-  if (brandIcon) {
-    brandIcon.textContent = 'P';
-  }
-  if (brandName) {
-    brandName.textContent = 'Bater Ponto';
-  }
-  if (title) {
-    title.textContent = 'Registro rapido';
-  }
-  if (subtitle) {
-    subtitle.textContent = 'Use este mesmo link com ou sem QR Code.';
-  }
-  if (loginForm) {
-    loginForm.classList.add('hidden');
-  }
-  if (form) {
-    form.classList.remove('hidden');
-  }
-  if (loginFooter) {
-    loginFooter.classList.add('hidden');
-  }
-  if (helperFooter) {
-    helperFooter.classList.add('hidden');
-  }
-  if (punchHintFooter) {
-    punchHintFooter.classList.remove('hidden');
-  }
-
-  if (!form || !inputCpf || !inputToken) {
-    return;
-  }
-
-  const queryToken = new URLSearchParams(window.location.search).get('token');
-  if (queryToken && /^[a-f0-9]{64}$/i.test(queryToken.trim())) {
-    inputToken.value = queryToken.trim();
-  }
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const cpf = inputCpf.value.replace(/\D/g, '');
-    const qrToken = inputToken.value.trim();
-
-    if (!cpf || cpf.length !== 11) {
-      mostrarToast('Informe um CPF valido com 11 digitos.', 'error');
-      return;
-    }
-    if (!/^[a-f0-9]{64}$/i.test(qrToken)) {
-      mostrarToast('Informe um token valido com 64 caracteres hex.', 'error');
-      return;
-    }
-
-    const restoreSubmitButton = setLoadingButton(submitButton, 'Verificando localizacao...');
-
-    try {
-      const location = await getCurrentLocationForPunch();
-      submitButton.textContent = 'Registrando...';
-
-      const data = await apiRequest('/pontos/bater', {
-        method: 'POST',
-        auth: false,
-        body: {
-          cpf,
-          qrToken,
-          latitude: location.latitude,
-          longitude: location.longitude
-        }
-      });
-
-      const ponto = data?.ponto || {};
-      mostrarToast(`Ponto registrado: ${ponto.tipo || 'OK'} (${ponto.sequencia || '-'})`, 'success');
-    } catch (error) {
-      mostrarToast(sanitizeMessage(error.message, 'Falha ao registrar ponto.'), 'error');
-    } finally {
-      restoreSubmitButton();
-    }
-  });
+  window.location.href = '/ponto/acessar';
 }
 
 async function bootstrapApp() {

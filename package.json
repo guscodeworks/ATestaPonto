@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "db:init": "node src/scripts/initDatabase.js",
+    "db:run": "node src/scripts/runSqlFile.js",
     "admin:create": "node src/scripts/createAdmin.js"
   },
   "dependencies": {

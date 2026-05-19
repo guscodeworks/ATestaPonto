@@ -145,13 +145,23 @@ const env = {
     ? getRequiredVar('DB_PASSWORD', dbPassword)
     : (typeof dbPassword === 'string' ? dbPassword : ''),
   DB_NAME: getRequiredVar('DB_NAME', dbName),
+  DB_CONNECTION_LIMIT: parseInteger(process.env.DB_CONNECTION_LIMIT || '10', 'DB_CONNECTION_LIMIT', 1, 100),
   JWT_SECRET: validateJwtSecret(getRequiredVar('JWT_SECRET')),
   JWT_EXPIRES_IN: validateJwtExpiresIn(getRequiredVar('JWT_EXPIRES_IN')),
+  FUNCIONARIO_JWT_EXPIRES_IN: validateJwtExpiresIn(process.env.FUNCIONARIO_JWT_EXPIRES_IN || '20m'),
   SCHOOL_LATITUDE: schoolLatitude,
   SCHOOL_LONGITUDE: schoolLongitude,
+  SCHOOL_UNIT_CODE: (process.env.SCHOOL_UNIT_CODE || 'DEFAULT').trim(),
   COMPANY_LATITUDE: schoolLatitude,
   COMPANY_LONGITUDE: schoolLongitude,
   ALLOWED_RADIUS_METERS: parseFloatValue(getRequiredVar('ALLOWED_RADIUS_METERS'), 'ALLOWED_RADIUS_METERS', 1, 10000),
+  POINT_RATE_LIMIT_WINDOW_MS: parseInteger(
+    process.env.POINT_RATE_LIMIT_WINDOW_MS || String(5 * 60 * 1000),
+    'POINT_RATE_LIMIT_WINDOW_MS',
+    1000,
+    60 * 60 * 1000
+  ),
+  POINT_RATE_LIMIT_MAX: parseInteger(process.env.POINT_RATE_LIMIT_MAX || '500', 'POINT_RATE_LIMIT_MAX', 1, 10000),
   CORS_ORIGINS: validateCorsOrigins(getRequiredVar('CORS_ORIGIN'), IS_PRODUCTION)
 };
 

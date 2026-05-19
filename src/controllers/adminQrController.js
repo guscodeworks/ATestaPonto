@@ -1,47 +1,43 @@
-const { isValidTokenFormat } = require('../utils/token');
-const { BadRequestError } = require('../utils/errors');
-const { getDailyQrTokenPayload, isDailyQrTokenValid } = require('../services/dailyQrTokenService');
+const { NotFoundError } = require('../utils/errors');
+const {
+  createQrCode,
+  deactivateQrCode,
+  listQrCodes,
+  validateQrCode
+} = require('../services/qrCodeService');
 const { registerAuditLog } = require('../services/auditLogService');
 
 function getClientIp(req) {
   return req.headers['x-forwarded-for']?.split(',')?.[0]?.trim() || req.ip || null;
 }
 
-function mapQrToken(token, includeRawToken = false) {
-  return {
-    id: token.id,
-    token_hint: token.token_hint,
-    contexto: token.contexto,
-    ativo: Boolean(token.ativo),
-    expira_em: token.expira_em,
-    max_uso: null,
-    uso_atual: null,
-    ultimo_uso_em: null,
-    criado_em: null,
-    desativado_em: null,
-    rotacao: token.rotacao,
-    timezone: token.timezone,
-    data_referencia: token.data_referencia,
-    ...(includeRawToken ? { token: token.token } : {})
-  };
+function getBaseUrl(req) {
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.get('host');
+  return host ? `${protocol}://${host}` : '';
 }
 
 async function generateQrToken(req, res, next) {
   try {
-    const token = getDailyQrTokenPayload();
-
-    await registerAuditLog({
-      evento: 'qr_token_diario_consultado',
+    const qrCode = await createQrCode({
       adminId: req.auth.id,
-      mensagem: 'Administrador consultou QR token diario',
-      ipOrigem: getClientIp(req),
-      metadados: { data_referencia: token.data_referencia, expira_em: token.expira_em }
+      unidadeCodigo: req.body.unidade_codigo,
+      baseUrl: getBaseUrl(req)
     });
 
-    return res.status(200).json({
+    await registerAuditLog({
+      evento: 'qr_code_gerado',
+      adminId: req.auth.id,
+      mensagem: 'Administrador gerou QR Code de ponto',
+      ipOrigem: getClientIp(req),
+      metadados: { qr_code_id: qrCode.id, unidade_codigo: qrCode.unidade_codigo, expira_em: qrCode.expira_em }
+    });
+
+    return res.status(201).json({
       success: true,
       data: {
-        qrToken: mapQrToken(token, true)
+        qrCode,
+        qrToken: qrCode
       }
     });
   } catch (error) {
@@ -51,18 +47,14 @@ async function generateQrToken(req, res, next) {
 
 async function listQrTokens(req, res, next) {
   try {
-    const token = getDailyQrTokenPayload();
+    const result = await listQrCodes({
+      page: req.query.page,
+      limit: req.query.limit
+    });
 
     return res.status(200).json({
       success: true,
-      data: {
-        items: [mapQrToken(token)],
-        pagination: {
-          page: 1,
-          limit: 1,
-          total: 1
-        }
-      }
+      data: result
     });
   } catch (error) {
     return next(error);
@@ -71,7 +63,28 @@ async function listQrTokens(req, res, next) {
 
 async function deactivateQrToken(req, res, next) {
   try {
-    throw new BadRequestError('Token diario automatico nao pode ser desativado manualmente');
+    const qrCodeId = Number(req.params.id);
+    const deactivated = await deactivateQrCode(qrCodeId);
+
+    if (!deactivated) {
+      throw new NotFoundError('QR Code nao encontrado ou ja desativado');
+    }
+
+    await registerAuditLog({
+      evento: 'qr_code_desativado',
+      adminId: req.auth.id,
+      mensagem: 'Administrador desativou QR Code de ponto',
+      ipOrigem: getClientIp(req),
+      metadados: { qr_code_id: qrCodeId }
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: qrCodeId,
+        ativo: false
+      }
+    });
   } catch (error) {
     return next(error);
   }
@@ -79,32 +92,29 @@ async function deactivateQrToken(req, res, next) {
 
 async function validateQrToken(req, res, next) {
   try {
-    const qrToken = String(req.body.qrToken || '').trim();
-    if (!isValidTokenFormat(qrToken)) {
-      throw new BadRequestError('QR token malformado');
-    }
+    const qrCodeValue = String(req.body.qrCode || req.body.qr_code || req.body.qrToken || '').trim();
+    const validation = await validateQrCode(qrCodeValue, {
+      unidadeCodigo: req.body.unidade_codigo
+    });
 
-    const token = getDailyQrTokenPayload();
-    const isValid = isDailyQrTokenValid(qrToken);
-    const status = isValid ? 'valido' : 'invalido';
-
-    if (!isValid) {
+    if (!validation.valid) {
       await registerAuditLog({
         evento: 'tentativa_qr_invalido',
         nivel: 'WARN',
         adminId: req.auth.id,
-        mensagem: 'Tentativa de validacao de QR token invalido',
+        mensagem: 'Tentativa de validacao de QR Code invalido',
         ipOrigem: getClientIp(req),
-        metadados: { status, data_referencia: token.data_referencia }
+        metadados: { status: validation.status }
       });
     }
 
     return res.status(200).json({
       success: true,
       data: {
-        valido: isValid,
-        status,
-        qrToken: mapQrToken(token)
+        valido: validation.valid,
+        status: validation.status,
+        qrCode: validation.qrCode,
+        qrToken: validation.qrCode
       }
     });
   } catch (error) {

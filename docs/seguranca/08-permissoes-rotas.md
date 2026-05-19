@@ -1,9 +1,10 @@
-﻿# 08 - Permissoes e Separacao de Rotas
+# 08 - Permissoes e Separacao de Rotas
 
 ## O que foi implementado
 
-- Separacao entre rotas publicas e privadas.
+- Separacao entre rotas publicas, rotas de funcionario e rotas administrativas.
 - Rotas admin protegidas por middleware JWT.
+- Registro de ponto protegido por JWT de funcionario.
 - Rotas de batida de ponto sem acesso a dados administrativos.
 - Funcionario nao possui endpoint para listar outros funcionarios.
 
@@ -12,8 +13,15 @@
 ### Publicas
 
 - POST /api/admin/auth/login
-- POST /api/pontos/bater
+- GET /ponto/acessar?qr_code=<codigo>
+- POST /api/pontos/validar-qr
+- POST /api/pontos/login
 - GET /health
+
+### Privadas (funcionario)
+
+- POST /api/pontos/registrar
+- POST /ponto/registrar
 
 ### Privadas (admin)
 
@@ -34,3 +42,4 @@
 - src/routes/adminEmployeeRoutes.js
 - src/routes/adminQrRoutes.js
 - src/routes/punchRoutes.js
+- src/middlewares/authMiddleware.js

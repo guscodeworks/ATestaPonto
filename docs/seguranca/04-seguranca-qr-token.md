@@ -1,16 +1,16 @@
-﻿# 04 - Seguranca do QR Token
+# 04 - Seguranca do QR Code
 
 ## O que foi implementado
 
-- Token diario deterministico por data de `America/Sao_Paulo`.
-- Rotacao automatica na virada do dia (00:00 horario de Brasilia).
-- Validacao em memoria (sem necessidade de consulta na tabela de tokens).
-- Comparacao em tempo constante (`timingSafeEqual`) para reduzir risco de side channel.
-- Endpoint de validacao com retorno de status (`valido` ou `invalido`).
+- QR Code aleatorio, persistido em banco somente como hash.
+- Validade diaria ate a proxima meia-noite de `America/Sao_Paulo`.
+- Validacao de existencia, status ativo, expiracao e unidade/local.
+- QR Code usado apenas como porta de entrada; nao substitui login do funcionario.
+- Endpoint de validacao com retorno de status.
 - Auditoria para tentativas invalidas.
 
 ## Arquivos principais
 
-- src/services/dailyQrTokenService.js
+- src/services/qrCodeService.js
 - src/controllers/adminQrController.js
 - src/controllers/punchController.js

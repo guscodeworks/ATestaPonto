@@ -26,6 +26,20 @@ function cpfRule(field = 'cpf', required = true) {
     });
 }
 
+function getQrCodeCandidate(value, { req }) {
+  return String(value || req.body.qr_code || req.body.qrCode || req.body.qrToken || '');
+}
+
+function qrCodeRule() {
+  return body('qrCode')
+    .customSanitizer(getQrCodeCandidate)
+    .trim()
+    .notEmpty()
+    .withMessage('QR Code e obrigatorio')
+    .matches(QR_TOKEN_REGEX)
+    .withMessage('QR Code invalido');
+}
+
 const adminLoginValidator = withValidation([
   body('email')
     .trim()
@@ -63,6 +77,11 @@ const createFuncionarioValidator = withValidation([
     .isEmail()
     .withMessage('Email invalido')
     .normalizeEmail({ gmail_remove_dots: false }),
+  body('senha')
+    .isString()
+    .withMessage('Senha deve ser texto')
+    .isLength({ min: 8, max: 72 })
+    .withMessage('Senha deve ter entre 8 e 72 caracteres'),
   body('ativo')
     .optional()
     .isIn(['true', 'false', true, false, 1, 0, '1', '0'])
@@ -118,22 +137,25 @@ const qrTokenIdParamValidator = withValidation([
 ]);
 
 const validateQrTokenValidator = withValidation([
-  body('qrToken')
+  qrCodeRule()
+]);
+
+const funcionarioLoginValidator = withValidation([
+  body('login')
+    .optional()
     .trim()
-    .notEmpty()
-    .withMessage('qrToken e obrigatorio')
-    .matches(QR_TOKEN_REGEX)
-    .withMessage('qrToken invalido')
+    .isLength({ min: 3, max: 150 })
+    .withMessage('Login invalido'),
+  cpfRule('cpf', false),
+  body('senha')
+    .isString()
+    .withMessage('Senha deve ser texto')
+    .isLength({ min: 8, max: 72 })
+    .withMessage('Senha deve ter entre 8 e 72 caracteres'),
+  qrCodeRule()
 ]);
 
 const baterPontoValidator = withValidation([
-  cpfRule('cpf', true),
-  body('qrToken')
-    .trim()
-    .notEmpty()
-    .withMessage('qrToken e obrigatorio')
-    .matches(QR_TOKEN_REGEX)
-    .withMessage('qrToken invalido'),
   body('latitude')
     .notEmpty()
     .withMessage('Localizacao obrigatoria para bater ponto')
@@ -158,5 +180,6 @@ module.exports = {
   paginationValidator,
   qrTokenIdParamValidator,
   validateQrTokenValidator,
+  funcionarioLoginValidator,
   baterPontoValidator
 };

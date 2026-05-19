@@ -6,14 +6,27 @@ const helmet = require('helmet');
 const cors = require('cors');
 const env = require('./config/env');
 const apiRoutes = require('./routes');
+const punchRoutes = require('./routes/punchRoutes');
 const { globalLimiter } = require('./middlewares/rateLimiters');
 const { notFoundMiddleware } = require('./middlewares/notFoundMiddleware');
 const { errorMiddleware } = require('./middlewares/errorMiddleware');
 
 const app = express();
-const frontendRoot = path.resolve(__dirname, '../views/pages/login/css');
-const frontendAssets = path.join(frontendRoot, 'assets');
-const frontendAdmin = path.join(frontendRoot, 'admin');
+const viewsRoot = path.resolve(__dirname, '../views');
+const frontendAssets = path.join(viewsRoot, 'assets');
+const frontendCss = path.join(frontendAssets, 'css');
+const frontendJs = path.join(frontendAssets, 'js');
+const frontendImg = path.join(frontendAssets, 'img');
+const frontendAdmin = path.join(viewsRoot, 'admin');
+const funcionarioRoot = path.join(viewsRoot, 'funcionario');
+const staticOptions = {
+  maxAge: '1h'
+};
+const noCacheHtmlHeaders = {
+  'Cache-Control': 'no-store, max-age=0',
+  Pragma: 'no-cache',
+  Expires: '0'
+};
 
 function isAllowedOrigin(origin) {
   if (!origin) {
@@ -51,6 +64,14 @@ app.use(
   })
 );
 
+app.use('/assets', express.static(frontendAssets));
+app.use('/ponto/assets', express.static(frontendAssets, staticOptions));
+app.use('/css', express.static(frontendCss, staticOptions));
+app.use('/js', express.static(frontendJs, staticOptions));
+app.use('/img', express.static(frontendImg, staticOptions));
+app.use('/admin', express.static(frontendAdmin));
+app.use('/funcionario', express.static(funcionarioRoot));
+
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 app.use(globalLimiter);
@@ -59,24 +80,29 @@ app.get('/health', (req, res) => {
   res.status(200).json({ success: true, data: { status: 'ok' } });
 });
 
-app.use('/assets', express.static(frontendAssets));
-app.use('/admin', express.static(frontendAdmin));
 app.get('/', (req, res) => {
-  res.sendFile(path.join(frontendRoot, 'index.html'));
+  res.set(noCacheHtmlHeaders);
+  res.sendFile(path.join(viewsRoot, 'index.html'));
 });
 app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(frontendRoot, 'index.html'));
+  res.set(noCacheHtmlHeaders);
+  res.sendFile(path.join(viewsRoot, 'index.html'));
 });
 app.get('/bater-ponto', (req, res) => {
-  res.redirect('/ponto');
+  res.redirect('/ponto/acessar');
 });
 app.get('/ponto', (req, res) => {
-  res.sendFile(path.join(frontendRoot, 'index.html'));
+  res.redirect('/ponto/acessar');
+});
+app.get('/ponto/acessar', (req, res) => {
+  res.set(noCacheHtmlHeaders);
+  res.sendFile(path.join(funcionarioRoot, 'login.html'));
 });
 app.get('/admin', (req, res) => {
   res.redirect('/admin/dashboard.html');
 });
 
+app.use('/ponto', punchRoutes);
 app.use('/api', apiRoutes);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

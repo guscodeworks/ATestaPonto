@@ -67,7 +67,61 @@ async function authenticateAdmin(req, _res, next) {
   }
 }
 
+async function authenticateFuncionario(req, _res, next) {
+  try {
+    const token = extractBearerToken(req);
+
+    if (!token) {
+      throw new UnauthorizedError('Sessao do funcionario e obrigatoria');
+    }
+
+    const payload = jwt.verify(token, env.JWT_SECRET);
+    const role = String(payload.role || '').toLowerCase();
+
+    if (role !== 'funcionario') {
+      throw new ForbiddenError('Acesso de funcionario obrigatorio');
+    }
+
+    const funcionarioId = Number(payload.sub || payload.id || 0);
+    if (!Number.isInteger(funcionarioId) || funcionarioId <= 0) {
+      throw new UnauthorizedError('Sessao do funcionario invalida');
+    }
+
+    const funcionario = await executeOne(
+      'SELECT id, cpf, nome, email, ativo FROM funcionarios WHERE id = ? LIMIT 1',
+      [funcionarioId]
+    );
+
+    if (!funcionario || !funcionario.ativo) {
+      throw new UnauthorizedError('Funcionario inexistente ou inativo');
+    }
+
+    req.auth = {
+      id: funcionario.id,
+      nome: funcionario.nome,
+      role: 'funcionario',
+      email: funcionario.email,
+      cpf: funcionario.cpf,
+      qrCodeId: Number(payload.qrCodeId || 0),
+      qrCodeHash: String(payload.qrCodeHash || '')
+    };
+
+    return next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return next(new UnauthorizedError('Sessao expirada. Escaneie o QR Code novamente.'));
+    }
+
+    if (error.name === 'JsonWebTokenError' || error.name === 'NotBeforeError') {
+      return next(new UnauthorizedError('Sessao do funcionario invalida'));
+    }
+
+    return next(error);
+  }
+}
+
 module.exports = {
   authenticateAdmin,
+  authenticateFuncionario,
   extractBearerToken
 };

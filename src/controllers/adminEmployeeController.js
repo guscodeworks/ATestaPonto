@@ -1,3 +1,4 @@
+const bcrypt = require('bcrypt');
 const { execute, executeOne, withTransaction } = require('../config/database');
 const { maskCpf } = require('../utils/cpf');
 const { BadRequestError, ConflictError, NotFoundError } = require('../utils/errors');
@@ -25,7 +26,9 @@ async function createEmployee(req, res, next) {
     const nome = String(req.body.nome || '').trim();
     const cpf = String(req.body.cpf || '').trim();
     const email = String(req.body.email || '').trim().toLowerCase();
+    const senha = String(req.body.senha || '');
     const ativo = req.body.ativo === undefined ? true : Boolean(req.body.ativo);
+    const senhaHash = await bcrypt.hash(senha, 12);
 
     const employeeId = await withTransaction(async (tx) => {
       const cpfExists = await tx.executeOne('SELECT id FROM funcionarios WHERE cpf = ? LIMIT 1 FOR UPDATE', [cpf]);
@@ -39,9 +42,9 @@ async function createEmployee(req, res, next) {
       }
 
       const result = await tx.execute(
-        `INSERT INTO funcionarios (cpf, nome, email, ativo, desativado_em)
-         VALUES (?, ?, ?, ?, ?)`,
-        [cpf, nome, email, ativo ? 1 : 0, ativo ? null : new Date()]
+        `INSERT INTO funcionarios (cpf, nome, email, senha_hash, ativo, desativado_em)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [cpf, nome, email, senhaHash, ativo ? 1 : 0, ativo ? null : new Date()]
       );
       return result.insertId;
     });

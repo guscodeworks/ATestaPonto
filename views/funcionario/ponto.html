@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bater Ponto — Sala do Futuro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%231251a3'/><text y='22' x='5' font-size='18'>🏫</text></svg>"/>
+  <link rel="stylesheet" href="/assets/css/funcionario.css"/>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">Sala do Futuro</span>
+        <span class="sidebar-brand-sub">Funcionário</span>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">IO</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Isaque Oliveira</div>
+        <div class="sidebar-user-role" id="sb-role">Técnico de Suporte</div>
+      </div>
+      <div class="sidebar-status-dot"></div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/funcionario/ponto.html" class="nav-link active">
+        <span class="nav-icon">⏱</span> Bater Ponto
+      </a>
+
+      <div class="sidebar-section-label">Histórico</div>
+      <a href="/funcionario/relatorio.html" class="nav-link">
+        <span class="nav-icon">📊</span> Meus Relatórios
+      </a>
+
+      <div class="sidebar-section-label">Conta</div>
+      <a href="/funcionario/perfil.html" class="nav-link">
+        <span class="nav-icon">👤</span> Meu Perfil
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="sair()">
+        <span class="nav-icon">⎋</span> Sair
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="app-main">
+
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">☰</button>
+        <div class="breadcrumb">
+          <span>Funcionário</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Bater Ponto</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock">
+          <div class="topbar-time" id="topbar-time">--:--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="topbar-user" onclick="window.location.href='/funcionario/perfil.html'">
+          <div class="topbar-avatar" id="tp-avatar">IO</div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name" id="tp-name">Isaque</span>
+            <span class="topbar-user-role">Funcionário</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <main class="page-content">
+
+      <!-- Hero com relógio e saudação -->
+      <div class="ponto-hero fade-in">
+        <div class="ponto-hero-bg"></div>
+        <div class="ponto-hero-glow"></div>
+        <div class="ponto-hero-content">
+          <div class="ponto-greeting" id="greeting">Bom dia</div>
+          <div class="ponto-name" id="hero-name">Isaque Oliveira</div>
+          <div class="ponto-cargo" id="hero-cargo">Técnico de Suporte</div>
+
+          <div class="ponto-clock-row">
+            <div class="ponto-time" id="hero-clock">--:--:--</div>
+            <div class="ponto-date-col">
+              <div class="ponto-date-day" id="hero-weekday">--</div>
+              <div class="ponto-date-full" id="hero-date">-- de -- de ----</div>
+            </div>
+          </div>
+
+          <div class="ponto-status-row" id="status-row">
+            <div class="ponto-status-dot waiting" id="status-dot"></div>
+            <span class="ponto-status-text" id="status-text">Aguardando registro de entrada</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão principal -->
+      <div class="ponto-btn-wrap fade-in">
+        <div class="ponto-btn-outer">
+          <div class="ponto-ring"></div>
+          <div class="ponto-ring"></div>
+          <div class="ponto-ring"></div>
+          <button class="ponto-btn entrada" id="btn-ponto" onclick="baterPonto()">
+            <span class="ponto-btn-icon" id="btn-icon">🟢</span>
+            <span class="ponto-btn-label" id="btn-label">Registrar<br/>Entrada</span>
+          </button>
+        </div>
+        <div class="ponto-last-action" id="last-action">
+          Nenhum registro hoje
+        </div>
+      </div>
+
+      <!-- Timeline do dia -->
+      <div class="card fade-in" style="margin-top:4px;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Registros de Hoje</div>
+            <div class="card-subtitle" id="timeline-date">--/--/----</div>
+          </div>
+          <span id="timeline-count" style="font-size:13px;color:var(--text-300);">0 registro(s)</span>
+        </div>
+        <div style="padding:0 24px 20px;" id="timeline-wrap">
+          <div class="ponto-timeline" id="timeline">
+            <div style="padding:32px 0;text-align:center;color:var(--text-300);font-size:14px;">
+              Nenhum registro neste dia
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- BOTTOM NAV MOBILE -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <a href="/funcionario/ponto.html" class="bottom-nav-link active">
+      <span class="bottom-nav-icon">⏱</span>
+      <span>Ponto</span>
+    </a>
+    <a href="/funcionario/relatorio.html" class="bottom-nav-link">
+      <span class="bottom-nav-icon">📊</span>
+      <span>Relatório</span>
+    </a>
+    <a href="/funcionario/perfil.html" class="bottom-nav-link">
+      <span class="bottom-nav-icon">👤</span>
+      <span>Perfil</span>
+    </a>
+  </div>
+</nav>
+
+<!-- MODAL CONFIRMAÇÃO -->
+<div class="ponto-confirm" id="confirm-modal">
+  <div class="ponto-confirm-card">
+    <div class="confirm-icon-wrap success">
+      <span class="confirm-checkmark" id="confirm-icon">✅</span>
+    </div>
+    <div class="confirm-title" id="confirm-title">Ponto Registrado!</div>
+    <div class="confirm-time" id="confirm-time">--:--:--</div>
+    <div class="confirm-sub" id="confirm-sub">Entrada registrada com sucesso</div>
+    <button class="btn btn-primary btn-block" style="margin-top:24px;" onclick="fecharConfirm()">
+      Fechar
+    </button>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+
+<script>
+const funcionarioToken = sessionStorage.getItem('funcionario_token');
+const funcionarioData = JSON.parse(sessionStorage.getItem('funcionario_data') || 'null');
+
+if (!funcionarioToken || !funcionarioData) {
+  window.location.href = '/funcionario/login.html';
+}
+
+const nome = funcionarioData?.nome || sessionStorage.getItem('func_nome') || 'Funcionario';
+const cargo = funcionarioData?.cargo || sessionStorage.getItem('func_cargo') || 'Funcionario';
+const iniciais = nome.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase() || 'FN';
+
+document.getElementById('sb-avatar').textContent = iniciais;
+document.getElementById('sb-name').textContent = nome;
+document.getElementById('sb-role').textContent = cargo;
+document.getElementById('tp-avatar').textContent = iniciais;
+document.getElementById('tp-name').textContent = nome.split(' ')[0] || 'Funcionario';
+document.getElementById('hero-name').textContent = nome;
+document.getElementById('hero-cargo').textContent = cargo;
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`/api${path}`, {
+    method: options.method || 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${funcionarioToken}`,
+      ...(options.headers || {})
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.success === false) {
+    throw new Error(payload?.error?.message || 'Falha ao comunicar com o servidor.');
+  }
+  return payload.data;
+}
+
+function getCurrentLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Este aparelho nao permite capturar localizacao.'));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        });
+      },
+      () => reject(new Error('Para bater ponto, permita o acesso a localizacao.')),
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  });
+}
+
+const DIAS_SEMANA = ['Domingo','Segunda-feira','Terca-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sabado'];
+const MESES = ['janeiro','fevereiro','marco','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+
+function atualizarRelogio() {
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const ss = String(now.getSeconds()).padStart(2,'0');
+  const time = `${hh}:${mm}:${ss}`;
+
+  document.getElementById('hero-clock').textContent = time;
+  document.getElementById('topbar-time').textContent = time;
+  document.getElementById('hero-weekday').textContent = DIAS_SEMANA[now.getDay()];
+  document.getElementById('hero-date').textContent = `${String(now.getDate()).padStart(2,'0')} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`;
+  document.getElementById('topbar-date').textContent = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+  document.getElementById('timeline-date').textContent = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+
+  const h = now.getHours();
+  document.getElementById('greeting').textContent = (h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite') + ',';
+}
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
+
+const SEQUENCIA = [
+  { label: 'Registrar\nEntrada', icon: 'ENT', classe: 'entrada', statusTxt: 'Entrada registrada', dotClass: 'active', tlLabel: 'Entrada', tlIcon: 'entrada', tipoApi: 'ENTRADA' },
+  { label: 'Registrar\nPausa', icon: 'ALM', classe: 'pausa', statusTxt: 'Em pausa', dotClass: 'paused', tlLabel: 'Pausa', tlIcon: 'pausa', tipoApi: 'SAIDA_ALMOCO' },
+  { label: 'Registrar\nRetorno', icon: 'RET', classe: 'retorno', statusTxt: 'De volta ao trabalho', dotClass: 'active', tlLabel: 'Retorno', tlIcon: 'retorno', tipoApi: 'VOLTA_ALMOCO' },
+  { label: 'Registrar\nSaida', icon: 'SAI', classe: 'saida', statusTxt: 'Expediente encerrado', dotClass: 'closed', tlLabel: 'Saida', tlIcon: 'saida', tipoApi: 'SAIDA' }
+];
+
+const storageKey = `ponto_registros_${new Date().toISOString().slice(0, 10)}`;
+let registros = JSON.parse(sessionStorage.getItem(storageKey) || '[]');
+let etapa = registros.length;
+let registrando = false;
+
+function renderEstado() {
+  const btn = document.getElementById('btn-ponto');
+  const btnIcon = document.getElementById('btn-icon');
+  const btnLabel = document.getElementById('btn-label');
+
+  if (etapa >= SEQUENCIA.length) {
+    btn.className = 'ponto-btn saida';
+    btn.disabled = true;
+    btn.style.opacity = '0.45';
+    btn.style.cursor = 'not-allowed';
+    btnIcon.textContent = 'OK';
+    btnLabel.textContent = 'Expediente\nEncerrado';
+    document.getElementById('status-dot').className = 'ponto-status-dot closed';
+    document.getElementById('status-text').textContent = 'Expediente encerrado';
+  } else {
+    const s = SEQUENCIA[etapa];
+    btn.className = `ponto-btn ${s.classe}`;
+    btn.disabled = registrando;
+    btn.style.opacity = registrando ? '0.7' : '';
+    btn.style.cursor = registrando ? 'wait' : '';
+    btnIcon.textContent = registrando ? '...' : s.icon;
+    btnLabel.innerHTML = (registrando ? 'Registrando\nPonto' : s.label).replace('\n','<br/>');
+    document.getElementById('status-dot').className = `ponto-status-dot ${s.dotClass}`;
+    document.getElementById('status-text').textContent = etapa === 0 ? 'Aguardando registro de entrada' : SEQUENCIA[etapa - 1].statusTxt;
+  }
+
+  renderTimeline();
+}
+
+function renderTimeline() {
+  const tl = document.getElementById('timeline');
+  document.getElementById('timeline-count').textContent = registros.length + ' registro(s)';
+
+  if (registros.length === 0) {
+    tl.innerHTML = '<div style="padding:32px 0;text-align:center;color:var(--text-300);font-size:14px;">Nenhum registro neste dia</div>';
+    document.getElementById('last-action').textContent = 'Nenhum registro hoje';
+    return;
+  }
+
+  tl.innerHTML = registros.map(r => `
+    <div class="ponto-timeline-item">
+      <div class="ponto-tl-marker ${r.tipo}">${r.emoji}</div>
+      <div class="ponto-tl-info">
+        <div class="ponto-tl-label">${r.label}</div>
+        <div class="ponto-tl-sub">${r.data}</div>
+      </div>
+      <div class="ponto-tl-time">${r.hora}</div>
+    </div>
+  `).join('');
+
+  const ult = registros[registros.length - 1];
+  document.getElementById('last-action').innerHTML = `Ultimo registro: <strong>${ult.label}</strong> as ${ult.hora}`;
+}
+
+function registroFromResponse(ponto) {
+  const tipoMap = {
+    ENTRADA: { tipo: 'entrada', label: 'Entrada', emoji: 'ENT' },
+    SAIDA_ALMOCO: { tipo: 'pausa', label: 'Pausa', emoji: 'ALM' },
+    VOLTA_ALMOCO: { tipo: 'retorno', label: 'Retorno', emoji: 'RET' },
+    SAIDA: { tipo: 'saida', label: 'Saida', emoji: 'SAI' }
+  };
+  const meta = tipoMap[ponto.tipo] || tipoMap.ENTRADA;
+  const dataRegistro = ponto.registrado_em ? new Date(String(ponto.registrado_em).replace(' ', 'T')) : new Date();
+
+  return {
+    ...meta,
+    hora: dataRegistro.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' }),
+    data: dataRegistro.toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit' })
+  };
+}
+
+async function baterPonto() {
+  if (etapa >= SEQUENCIA.length || registrando) return;
+
+  if (!navigator.onLine) {
+    toast('Sem internet. Verifique sua conexao e tente novamente.', 'error');
+    return;
+  }
+
+  registrando = true;
+  renderEstado();
+
+  try {
+    const location = await getCurrentLocation();
+    const data = await apiRequest('/pontos/registrar', {
+      method: 'POST',
+      body: location
+    });
+
+    const registro = registroFromResponse(data.ponto || {});
+    registros.push(registro);
+    etapa = registros.length;
+    sessionStorage.setItem(storageKey, JSON.stringify(registros));
+
+    document.getElementById('confirm-title').textContent = `${registro.label} Registrada!`;
+    document.getElementById('confirm-time').textContent = registro.hora;
+    document.getElementById('confirm-sub').textContent = `${registro.label} registrada com sucesso`;
+    document.getElementById('confirm-icon').textContent = registro.emoji;
+    document.getElementById('confirm-modal').classList.add('show');
+  } catch (error) {
+    const message = error.message || 'Falha ao registrar ponto.';
+    toast(message, 'error');
+    if (/sessao|token|QR Code/i.test(message)) {
+      setTimeout(sair, 1600);
+    }
+  } finally {
+    registrando = false;
+    renderEstado();
+  }
+}
+
+function fecharConfirm() {
+  document.getElementById('confirm-modal').classList.remove('show');
+}
+
+renderEstado();
+
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebar-overlay');
+document.getElementById('menu-toggle').addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('active');
+});
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('active');
+});
+
+function toast(msg, tipo='info') {
+  const icons = { success:'OK', error:'ERRO', info:'INFO', warning:'AVISO' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${tipo}`;
+  el.innerHTML = `<span class="toast-icon">${icons[tipo] || icons.info}</span><span class="toast-msg">${msg}</span>`;
+  document.getElementById('toast-stack').appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function sair() {
+  sessionStorage.removeItem('funcionario_token');
+  sessionStorage.removeItem('funcionario_data');
+  sessionStorage.removeItem('func_nome');
+  sessionStorage.removeItem('func_cpf');
+  window.location.href = '/funcionario/login.html';
+}
+</script>
+</body>
+</html>
