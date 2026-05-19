@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!--
+  Views/admin/pontos-do-dia.html
+  Registros de ponto de hoje — presentes e ausentes
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pontos do Dia — Sala do Futuro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2300e5ff'/><text y='22' x='5' font-size='18'>🏫</text></svg>" />
+  <link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🏫</div>
+      <div class="brand-text">
+        <span class="brand-name">Sala do Futuro</span>
+        <span class="brand-sub">Controle de Ponto</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+      <div class="nav-section-label">Funcionários</div>
+      <a href="funcionarios.html" class="nav-item"><span class="nav-icon">👥</span> Funcionários</a>
+      <a href="registrar-funcionario.html" class="nav-item"><span class="nav-icon">＋</span> Registrar</a>
+      <div class="nav-section-label">Ponto</div>
+      <a href="pontos-do-dia.html" class="nav-item active"><span class="nav-icon">🕐</span> Pontos do Dia</a>
+      <a href="relatorios.html" class="nav-item"><span class="nav-icon">📊</span> Relatórios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='../index.html'">
+        <span class="nav-icon">⎋</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTEÚDO -->
+  <div class="main-content">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <div class="page-breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Pontos do Dia</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-datetime">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="admin-profile">
+          <div class="admin-avatar" id="admin-avatar">CE</div>
+          <div class="admin-info">
+            <span class="admin-firstname" id="admin-firstname">Carlos</span>
+            <span class="admin-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- Cabeçalho -->
+      <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+        <div>
+          <h1 class="page-title">Pontos do Dia</h1>
+          <p class="page-subtitle" id="data-ponto-sub">Registros de frequência de hoje</p>
+        </div>
+        <a href="relatorios.html" class="btn btn-secondary">📊 Ver relatório completo</a>
+      </div>
+
+      <!-- =====================================================
+           MINI STATS
+           ===================================================== -->
+      <div class="stat-grid" style="margin-bottom:24px;">
+        <div class="stat-card green">
+          <div class="stat-card-glow"></div>
+          <div class="stat-label">Bateram ponto</div>
+          <div class="stat-value" id="count-presentes">—</div>
+          <div class="stat-meta">funcionários presentes</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-card-glow"></div>
+          <div class="stat-label">Não bateram ponto</div>
+          <div class="stat-value" id="count-ausentes">—</div>
+          <div class="stat-meta">funcionários ausentes</div>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           TABS: Presentes / Ausentes
+           ===================================================== -->
+      <div style="margin-bottom:20px;">
+        <div class="tab-filter">
+          <button class="tab-btn active" data-tab="tab-presentes">
+            ✅ Presentes
+          </button>
+          <button class="tab-btn" data-tab="tab-ausentes">
+            ❌ Ausentes
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab: Presentes -->
+      <div class="tab-panel" id="tab-presentes">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">✅ Funcionários que bateram ponto</h2>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Funcionário</th>
+                  <th>Cargo</th>
+                  <th>Horário de Entrada</th>
+                  <th>Horário de Saída</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-presentes">
+                <!-- Renderizado pelo main.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab: Ausentes -->
+      <div class="tab-panel hidden" id="tab-ausentes">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">❌ Funcionários que não bateram ponto</h2>
+            <span style="font-size:12px; color:var(--text-muted);">Atualizado em tempo real</span>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Funcionário</th>
+                  <th>Cargo</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-ausentes">
+                <!-- Renderizado pelo main.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Aviso -->
+        <div style="
+          margin-top:16px;
+          padding:14px 18px;
+          background:var(--accent-amber-dim);
+          border:1px solid rgba(255,184,48,0.2);
+          border-radius:var(--radius-md);
+          display:flex; align-items:center; gap:10px;
+          font-size:13px; color:var(--accent-amber);
+        ">
+          ⚠️ Funcionários ausentes podem ser notificados pelo sistema após integração com o back-end.
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../assets/js/main.js"></script>
+</body>
+</html>

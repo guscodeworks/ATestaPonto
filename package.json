@@ -1,12 +1,22 @@
 {
+  "name": "ponto-escolar",
+  "version": "1.0.0",
+  "description": "Backend seguro para ponto escolar institucional",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "db:init": "node src/scripts/initDatabase.js",
+    "admin:create": "node src/scripts/createAdmin.js"
+  },
   "dependencies": {
-    "body-parser": "^2.2.2",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.5.1",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
-    "mysql2": "^3.22.3",
-    "path": "^0.12.7",
-    "qrcode": "^1.5.4"
+    "mysql2": "^3.22.3"
   }
 }

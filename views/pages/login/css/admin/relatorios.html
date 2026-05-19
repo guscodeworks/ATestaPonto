@@ -1,0 +1,189 @@
+﻿<!DOCTYPE html>
+<!--
+  Views/admin/relatorios.html
+  RelatÃ³rio diÃ¡rio de ponto com opÃ§Ãµes de PDF e impressÃ£o
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RelatÃ³rios â€” Sala do Futuro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2300e5ff'/><text y='22' x='5' font-size='18'>ðŸ«</text></svg>" />
+  <link rel="stylesheet" href="../assets/css/style.css" />
+
+  <!-- Estilos especÃ­ficos de impressÃ£o -->
+  <style>
+    @media print {
+      .sidebar, .topbar, .action-bar, .no-print, .toast-container { display: none !important; }
+      .main-content { margin-left: 0 !important; }
+      .page-content { padding: 0 !important; }
+      body { background: #fff !important; color: #000 !important; }
+      .card { border: 1px solid #ccc !important; background: #fff !important; }
+      th, td { color: #000 !important; border-bottom: 1px solid #eee !important; }
+      .badge { border: 1px solid #ccc !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">ðŸ«</div>
+      <div class="brand-text">
+        <span class="brand-name">Sala do Futuro</span>
+        <span class="brand-sub">Controle de Ponto</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">âŠž</span> Dashboard</a>
+      <div class="nav-section-label">FuncionÃ¡rios</div>
+      <a href="funcionarios.html" class="nav-item"><span class="nav-icon">ðŸ‘¥</span> FuncionÃ¡rios</a>
+      <a href="registrar-funcionario.html" class="nav-item"><span class="nav-icon">ï¼‹</span> Registrar</a>
+      <div class="nav-section-label">Ponto</div>
+      <a href="pontos-do-dia.html" class="nav-item"><span class="nav-icon">ðŸ•</span> Pontos do Dia</a>
+      <a href="relatorios.html" class="nav-item active"><span class="nav-icon">ðŸ“Š</span> RelatÃ³rios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='../index.html'">
+        <span class="nav-icon">âŽ‹</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTEÃšDO -->
+  <div class="main-content">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">â˜°</button>
+        <div class="page-breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">â€º</span>
+          <span class="breadcrumb-current">RelatÃ³rios</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-datetime">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="admin-profile">
+          <div class="admin-avatar" id="admin-avatar">CE</div>
+          <div class="admin-info">
+            <span class="admin-firstname" id="admin-firstname">Carlos</span>
+            <span class="admin-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- CabeÃ§alho + BotÃµes de aÃ§Ã£o -->
+      <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+        <div>
+          <h1 class="page-title">RelatÃ³rio de Ponto</h1>
+          <p class="page-subtitle">FrequÃªncia completa de todos os funcionÃ¡rios</p>
+        </div>
+
+        <!-- BotÃµes de exportaÃ§Ã£o (simulados) -->
+        <div class="action-bar no-print" style="margin-bottom:0;">
+          <div class="action-bar-right">
+            <button id="btn-gerar-pdf" class="btn btn-primary btn-lg">
+              ðŸ“„ Gerar PDF
+            </button>
+            <button id="btn-imprimir" class="btn btn-secondary btn-lg">
+              ðŸ–¨ï¸ Imprimir RelatÃ³rio
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           CABEÃ‡ALHO DO RELATÃ“RIO (visÃ­vel ao imprimir)
+           ===================================================== -->
+      <div class="report-date-bar">
+        <span class="report-date-label">ðŸ“… Data do relatÃ³rio:</span>
+        <span class="report-date-val" id="relatorio-data">â€”</span>
+        <span style="font-size:11px; color:var(--text-muted); margin-left:auto;">
+          Gerado por: <strong id="relatorio-gerado-por" style="color:var(--text-secondary);">â€”</strong>
+        </span>
+      </div>
+
+      <!-- =====================================================
+           RESUMO â€” TOTAL PRESENTES E AUSENTES
+           ===================================================== -->
+      <div class="report-summary">
+        <div class="report-summary-box green">
+          <div class="summary-label">âœ… Presentes</div>
+          <div class="summary-count" id="relatorio-presentes">â€”</div>
+          <div class="summary-sub">funcionÃ¡rios bateram ponto</div>
+        </div>
+        <div class="report-summary-box red">
+          <div class="summary-label">âŒ Ausentes</div>
+          <div class="summary-count" id="relatorio-ausentes">â€”</div>
+          <div class="summary-sub">funcionÃ¡rios sem registro</div>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           TABELA COMPLETA DO RELATÃ“RIO
+           ===================================================== -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">ðŸ“‹ Registro completo de frequÃªncia</h2>
+          <span style="font-size:12px; color:var(--text-muted);">Todos os funcionÃ¡rios do sistema</span>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>FuncionÃ¡rio</th>
+                <th>Entrada</th>
+                <th>SaÃ­da</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-relatorio">
+              <!-- Renderizado pelo main.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           OBSERVAÃ‡Ã•ES
+           ===================================================== -->
+      <div class="card no-print" style="margin-top:20px;">
+        <div class="card-header">
+          <h2 class="card-title">ðŸ“ ObservaÃ§Ãµes do dia</h2>
+        </div>
+        <textarea
+          class="form-input"
+          style="width:100%; min-height:100px; resize:vertical;"
+          placeholder="Adicione anotaÃ§Ãµes ou observaÃ§Ãµes sobre o dia de trabalhoâ€¦"
+        ></textarea>
+        <div style="margin-top:12px;">
+          <button class="btn btn-ghost btn-sm" id="btn-salvar-observacao">
+            ðŸ’¾ Salvar observaÃ§Ã£o
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../assets/js/main.js"></script>
+
+</body>
+</html>
+

@@ -1,18 +1,12 @@
-require('dotenv').config();
+'use strict'; 
 
-const mysql = require('mysql2');
+const database = require('../src/config/database');
 
-const db = mysql.createConnection({
-        database: process.env.DB,
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASS
-});
+async function initializeDatabase() {
+  await database.checkConnection();
+}
 
-db.connect((err) => {
-    if(err) {
-        console.error("Erro", err);
-         return
-    } 
-        console.log("Conectado no MySQL");
-});
+module.exports = {
+  ...database,
+  initializeDatabase
+};

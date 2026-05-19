@@ -1,0 +1,221 @@
+﻿<!DOCTYPE html>
+<!--
+  Views/admin/dashboard.html
+  Dashboard principal do administrador
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard â€” Sala do Futuro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2300e5ff'/><text y='22' x='5' font-size='18'>ðŸ«</text></svg>" />
+  <link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-layout">
+
+  <!-- ======================================================
+       SIDEBAR
+       ====================================================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">ðŸ«</div>
+      <div class="brand-text">
+        <span class="brand-name">Sala do Futuro</span>
+        <span class="brand-sub">Controle de Ponto</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item active">
+        <span class="nav-icon">âŠž</span> Dashboard
+      </a>
+
+      <div class="nav-section-label">FuncionÃ¡rios</div>
+      <a href="funcionarios.html" class="nav-item">
+        <span class="nav-icon">ðŸ‘¥</span> FuncionÃ¡rios
+      </a>
+      <a href="registrar-funcionario.html" class="nav-item">
+        <span class="nav-icon">ï¼‹</span> Registrar
+      </a>
+
+      <div class="nav-section-label">Ponto</div>
+      <a href="pontos-do-dia.html" class="nav-item">
+        <span class="nav-icon">ðŸ•</span> Pontos do Dia
+      </a>
+      <a href="relatorios.html" class="nav-item">
+        <span class="nav-icon">ðŸ“Š</span> RelatÃ³rios
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='../index.html'">
+        <span class="nav-icon">âŽ‹</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <!-- ======================================================
+       CONTEÃšDO PRINCIPAL
+       ====================================================== -->
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">â˜°</button>
+        <div class="page-breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">â€º</span>
+          <span class="breadcrumb-current">Dashboard</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-datetime">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="admin-profile">
+          <div class="admin-avatar" id="admin-avatar">CE</div>
+          <div class="admin-info">
+            <span class="admin-firstname" id="admin-firstname">Carlos</span>
+            <span class="admin-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ConteÃºdo -->
+    <main class="page-content">
+
+      <!-- CabeÃ§alho da pÃ¡gina -->
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">VisÃ£o geral do controle de ponto de hoje</p>
+      </div>
+
+      <!-- =====================================================
+           CARD SALA DO FUTURO â€” Destaque principal
+           ===================================================== -->
+      <div class="sala-do-futuro-card" onclick="window.location.href='funcionarios.html'" role="button" tabindex="0" aria-label="Ir para mÃ³dulo FuncionÃ¡rios">
+        <div class="sala-bg"></div>
+        <div class="sala-content">
+          <div class="sala-text">
+            <div class="sala-label">MÃ³dulo principal</div>
+            <h2 class="sala-title">Sala do<br/>Futuro</h2>
+            <p class="sala-desc">
+              Central de gestÃ£o de funcionÃ¡rios e controle de frequÃªncia.
+              Clique para acessar o mÃ³dulo completo de recursos humanos.
+            </p>
+          </div>
+          <div class="sala-visual">
+            <div class="sala-icon-ring">
+              <span class="sala-main-icon">ðŸ«</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           STATS RÃPIDOS
+           ===================================================== -->
+      <div class="stat-grid">
+        <div class="stat-card cyan">
+          <div class="stat-card-glow"></div>
+          <div class="stat-label">Total de funcionÃ¡rios</div>
+          <div class="stat-value" id="stat-total">â€”</div>
+          <div class="stat-meta">cadastrados no sistema</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-card-glow"></div>
+          <div class="stat-label">Presentes hoje</div>
+          <div class="stat-value" id="stat-presentes">â€”</div>
+          <div class="stat-meta">bateram ponto</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-card-glow"></div>
+          <div class="stat-label">Ausentes hoje</div>
+          <div class="stat-value" id="stat-ausentes">â€”</div>
+          <div class="stat-meta">sem registro de ponto</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-card-glow"></div>
+          <div class="stat-label">Taxa de presenÃ§a</div>
+          <div class="stat-value" id="stat-taxa">â€”</div>
+          <div class="stat-meta">hoje</div>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           ACESSO RÃPIDO â€” MÃ“DULO FUNCIONÃRIOS
+           ===================================================== -->
+      <div style="margin-bottom: 12px;">
+        <h2 style="font-family:var(--font-display); font-size:14px; font-weight:600; color:var(--text-muted); letter-spacing:0.1em; text-transform:uppercase;">Acesso rÃ¡pido</h2>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
+
+        <!-- Card: FuncionÃ¡rios -->
+        <a href="funcionarios.html" class="func-card">
+          <div class="func-card-accent"></div>
+          <div class="func-card-bg"></div>
+          <div class="func-card-inner">
+            <span class="func-card-icon">ðŸ‘¥</span>
+            <div class="func-card-name">FuncionÃ¡rios</div>
+            <div class="func-card-desc">Lista completa com status de ponto</div>
+            <span class="func-card-arrow">â†—</span>
+          </div>
+        </a>
+
+        <!-- Card: Registrar -->
+        <a href="registrar-funcionario.html" class="func-card">
+          <div class="func-card-accent" style="background:linear-gradient(90deg, var(--accent-violet), var(--accent-cyan))"></div>
+          <div class="func-card-bg"></div>
+          <div class="func-card-inner">
+            <span class="func-card-icon">âž•</span>
+            <div class="func-card-name">Registrar</div>
+            <div class="func-card-desc">Cadastrar novo funcionÃ¡rio</div>
+            <span class="func-card-arrow">â†—</span>
+          </div>
+        </a>
+
+        <!-- Card: Pontos do Dia -->
+        <a href="pontos-do-dia.html" class="func-card">
+          <div class="func-card-accent" style="background:linear-gradient(90deg, var(--accent-green), var(--accent-cyan))"></div>
+          <div class="func-card-bg"></div>
+          <div class="func-card-inner">
+            <span class="func-card-icon">ðŸ•</span>
+            <div class="func-card-name">Pontos</div>
+            <div class="func-card-desc">Registros de entrada e saÃ­da de hoje</div>
+            <span class="func-card-arrow">â†—</span>
+          </div>
+        </a>
+
+        <!-- Card: RelatÃ³rios -->
+        <a href="relatorios.html" class="func-card">
+          <div class="func-card-accent" style="background:linear-gradient(90deg, var(--accent-amber), var(--accent-red))"></div>
+          <div class="func-card-bg"></div>
+          <div class="func-card-inner">
+            <span class="func-card-icon">ðŸ“Š</span>
+            <div class="func-card-name">RelatÃ³rios</div>
+            <div class="func-card-desc">Gerar e imprimir relatÃ³rios de ponto</div>
+            <span class="func-card-arrow">â†—</span>
+          </div>
+        </a>
+
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../assets/js/main.js"></script>
+
+</body>
+</html>
+

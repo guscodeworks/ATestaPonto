@@ -1,0 +1,142 @@
+﻿<!DOCTYPE html>
+<!--
+  Views/admin/funcionarios.html
+  Lista de todos os funcionÃ¡rios cadastrados
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FuncionÃ¡rios â€” Sala do Futuro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2300e5ff'/><text y='22' x='5' font-size='18'>ðŸ«</text></svg>" />
+  <link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">ðŸ«</div>
+      <div class="brand-text">
+        <span class="brand-name">Sala do Futuro</span>
+        <span class="brand-sub">Controle de Ponto</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">âŠž</span> Dashboard</a>
+      <div class="nav-section-label">FuncionÃ¡rios</div>
+      <a href="funcionarios.html" class="nav-item active"><span class="nav-icon">ðŸ‘¥</span> FuncionÃ¡rios</a>
+      <a href="registrar-funcionario.html" class="nav-item"><span class="nav-icon">ï¼‹</span> Registrar</a>
+      <div class="nav-section-label">Ponto</div>
+      <a href="pontos-do-dia.html" class="nav-item"><span class="nav-icon">ðŸ•</span> Pontos do Dia</a>
+      <a href="relatorios.html" class="nav-item"><span class="nav-icon">ðŸ“Š</span> RelatÃ³rios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='../index.html'">
+        <span class="nav-icon">âŽ‹</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTEÃšDO -->
+  <div class="main-content">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">â˜°</button>
+        <div class="page-breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">â€º</span>
+          <span class="breadcrumb-current">FuncionÃ¡rios</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-datetime">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="admin-profile">
+          <div class="admin-avatar" id="admin-avatar">CE</div>
+          <div class="admin-info">
+            <span class="admin-firstname" id="admin-firstname">Carlos</span>
+            <span class="admin-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- CabeÃ§alho -->
+      <div class="page-header" style="display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px;">
+        <div>
+          <h1 class="page-title">FuncionÃ¡rios</h1>
+          <p class="page-subtitle">
+            <span id="total-funcionarios">â€”</span> funcionÃ¡rios cadastrados no sistema
+          </p>
+        </div>
+        <a href="registrar-funcionario.html" class="btn btn-primary">
+          ï¼‹ Registrar FuncionÃ¡rio
+        </a>
+      </div>
+
+      <!-- =====================================================
+           BARRA DE AÃ‡Ã•ES / BUSCA
+           ===================================================== -->
+      <div class="action-bar">
+        <div class="action-bar-left">
+          <div class="search-box">
+            <span class="search-icon">ðŸ”</span>
+            <input type="text" id="busca-funcionario" placeholder="Buscar por nome ou cargoâ€¦" />
+          </div>
+        </div>
+      </div>
+
+      <!-- =====================================================
+           GRID DE FUNCIONÃRIOS
+           ===================================================== -->
+      <div class="func-grid" id="lista-funcionarios">
+        <!-- Renderizado pelo main.js -->
+      </div>
+
+      <!-- =====================================================
+           TABELA COMPLETA
+           ===================================================== -->
+      <div class="card" style="margin-top:28px;">
+        <div class="card-header">
+          <h2 class="card-title">ðŸ“‹ Tabela completa</h2>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="tabela-funcionarios">
+            <thead>
+              <tr>
+                <th>FuncionÃ¡rio</th>
+                <th>Cargo</th>
+                <th>CPF</th>
+                <th>Status hoje</th>
+                <th>AÃ§Ãµes</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-func-tabela">
+              <!-- Renderizado via JS abaixo -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../assets/js/main.js"></script>
+
+</body>
+</html>
+

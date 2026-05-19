@@ -1,27 +1,19 @@
-require('dotenv').config();
+'use strict';
 
-const express = require('express');
-const path = require('path');
-const cors = require('cors');
-const bodyParser = require('body-parser');
+const app = require('./src/app');
+const env = require('./src/config/env');
+const { checkConnection } = require('./src/config/database');
 
-const app = express();
+async function bootstrap() {
+  try {
+    await checkConnection();
+    app.listen(env.PORT, () => {
+      console.log(`Servidor seguro de ponto iniciado na porta ${env.PORT}.`);
+    });
+  } catch (error) {
+    console.error('Falha ao inicializar servidor:', error.message);
+    process.exit(1);
+  }
+}
 
-app.use(cors());
-
-app.use(express.json({limit: '6mb'}));
-app.use(express.urlencoded({extended: true, limit: '6mb'}));
-
-app.use(express.static(path.join(__dirname, "views")));
-app.use(express.static(path.join(__dirname, "public")));
-
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(bodyParser.json({limit: '6mb'}));
-
-
-const port = process.env.PORT;
-app.listen(port, () => {
-    console.log(`Servidor rodando na ${port}`)
-});
-
+bootstrap();

@@ -1,0 +1,246 @@
+﻿<!DOCTYPE html>
+<!--
+  Views/admin/registrar-funcionario.html
+  FormulÃ¡rio para cadastrar novo funcionÃ¡rio
+-->
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrar FuncionÃ¡rio â€” Sala do Futuro</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%2300e5ff'/><text y='22' x='5' font-size='18'>ðŸ«</text></svg>" />
+  <link rel="stylesheet" href="../assets/css/style.css" />
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">ðŸ«</div>
+      <div class="brand-text">
+        <span class="brand-name">Sala do Futuro</span>
+        <span class="brand-sub">Controle de Ponto</span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">âŠž</span> Dashboard</a>
+      <div class="nav-section-label">FuncionÃ¡rios</div>
+      <a href="funcionarios.html" class="nav-item"><span class="nav-icon">ðŸ‘¥</span> FuncionÃ¡rios</a>
+      <a href="registrar-funcionario.html" class="nav-item active"><span class="nav-icon">ï¼‹</span> Registrar</a>
+      <div class="nav-section-label">Ponto</div>
+      <a href="pontos-do-dia.html" class="nav-item"><span class="nav-icon">ðŸ•</span> Pontos do Dia</a>
+      <a href="relatorios.html" class="nav-item"><span class="nav-icon">ðŸ“Š</span> RelatÃ³rios</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="window.location.href='../index.html'">
+        <span class="nav-icon">âŽ‹</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTEÃšDO -->
+  <div class="main-content">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">â˜°</button>
+        <div class="page-breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">â€º</span>
+          <a href="funcionarios.html" style="color:var(--text-muted); text-decoration:none;">FuncionÃ¡rios</a>
+          <span class="breadcrumb-sep">â€º</span>
+          <span class="breadcrumb-current">Registrar</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-datetime">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="admin-profile">
+          <div class="admin-avatar" id="admin-avatar">CE</div>
+          <div class="admin-info">
+            <span class="admin-firstname" id="admin-firstname">Carlos</span>
+            <span class="admin-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- CabeÃ§alho -->
+      <div class="page-header">
+        <h1 class="page-title">Registrar FuncionÃ¡rio</h1>
+        <p class="page-subtitle">Preencha os dados para cadastrar um novo membro da equipe</p>
+      </div>
+
+      <!-- =====================================================
+           LAYOUT: FormulÃ¡rio + Preview
+           ===================================================== -->
+      <div style="display:grid; grid-template-columns: 1fr 320px; gap:24px; align-items:start;">
+
+        <!-- Coluna principal: formulÃ¡rio -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">ðŸ“‹ Dados do funcionÃ¡rio</h2>
+            <span style="font-size:12px; color:var(--text-muted);">* Campos obrigatÃ³rios</span>
+          </div>
+
+          <form id="form-registro" novalidate>
+            <div class="form-grid">
+
+              <!-- Nome completo -->
+              <div class="form-group full">
+                <label for="input-nome">Nome completo *</label>
+                <input
+                  type="text"
+                  id="input-nome"
+                  class="form-input"
+                  placeholder="Ex.: Ana Beatriz Souza"
+                  required
+                  autocomplete="off"
+                />
+                <span class="form-help">Insira o nome como aparece no documento oficial.</span>
+              </div>
+
+              <!-- E-mail -->
+              <div class="form-group">
+                <label for="input-email">E-mail institucional *</label>
+                <input
+                  type="email"
+                  id="input-email"
+                  class="form-input"
+                  placeholder="nome@escola.edu.br"
+                  required
+                  autocomplete="off"
+                />
+              </div>
+
+              <!-- CPF -->
+              <div class="form-group">
+                <label for="input-cpf">CPF *</label>
+                <input
+                  type="text"
+                  id="input-cpf"
+                  class="form-input"
+                  placeholder="000.000.000-00"
+                  maxlength="14"
+                  required
+                />
+                <span class="form-help">Somente nÃºmeros â€” a mÃ¡scara Ã© aplicada automaticamente.</span>
+              </div>
+
+              <!-- Cargo -->
+              <div class="form-group full">
+                <label for="input-cargo">Cargo *</label>
+                <div class="select-wrapper">
+                  <select id="input-cargo" class="form-select" required>
+                    <option value="" disabled selected>Selecione o cargoâ€¦</option>
+                    <optgroup label="DocÃªncia">
+                      <option value="Professor">Professor</option>
+                      <option value="Professora">Professora</option>
+                    </optgroup>
+                    <optgroup label="GestÃ£o">
+                      <option value="Diretor">Diretor</option>
+                      <option value="Diretora">Diretora</option>
+                      <option value="Coordenador">Coordenador</option>
+                      <option value="Coordenadora">Coordenadora</option>
+                    </optgroup>
+                    <optgroup label="Administrativo">
+                      <option value="SecretÃ¡rio">SecretÃ¡rio</option>
+                      <option value="SecretÃ¡ria">SecretÃ¡ria</option>
+                      <option value="Auxiliar">Auxiliar Administrativo</option>
+                    </optgroup>
+                    <optgroup label="Suporte">
+                      <option value="Inspetor">Inspetor</option>
+                      <option value="Inspetora">Inspetora</option>
+                      <option value="Zelador">Zelador</option>
+                      <option value="Vigilante">Vigilante</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+            </div><!-- /.form-grid -->
+
+            <!-- BotÃµes -->
+            <div style="display:flex; gap:12px; margin-top:28px; padding-top:20px; border-top:1px solid var(--border-subtle);">
+              <button type="submit" id="btn-registrar" class="btn btn-primary btn-lg">
+                âœ“ Registrar FuncionÃ¡rio
+              </button>
+              <button type="button" class="btn btn-ghost btn-lg" id="btn-limpar-registro">
+                Limpar formulÃ¡rio
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- Coluna lateral: preview do cartÃ£o -->
+        <div>
+          <div class="card" style="position:sticky; top:80px;">
+            <div class="card-header">
+              <h2 class="card-title">ðŸ‘ PrÃ©-visualizaÃ§Ã£o</h2>
+            </div>
+
+            <!-- Preview do funcionÃ¡rio -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:12px; padding:12px 0;">
+              <div
+                id="preview-avatar"
+                style="
+                  width:72px; height:72px; border-radius:50%;
+                  background:linear-gradient(135deg, var(--accent-violet), var(--accent-cyan));
+                  display:flex; align-items:center; justify-content:center;
+                  font-family:var(--font-display); font-size:22px; font-weight:700;
+                  color:#fff; letter-spacing:0.04em;
+                  box-shadow:0 0 0 3px var(--accent-cyan-border);
+                "
+              >?</div>
+
+              <div style="text-align:center;">
+                <div id="preview-nome" style="font-family:var(--font-display); font-size:16px; font-weight:700; color:var(--text-primary);">
+                  Nome do FuncionÃ¡rio
+                </div>
+                <div id="preview-cargo" style="font-size:13px; color:var(--text-muted); margin-top:3px;">
+                  Cargo
+                </div>
+              </div>
+
+              <div style="width:100%; background:var(--bg-surface); border-radius:var(--radius-sm); padding:12px; margin-top:8px;">
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                  <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--text-muted);">E-mail</span>
+                    <span id="preview-email" style="color:var(--text-primary); font-weight:500;">â€”</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--text-muted);">CPF</span>
+                    <span id="preview-cpf" style="color:var(--text-primary); font-family:monospace;">â€”</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span style="color:var(--text-muted);">Status</span>
+                    <span class="badge badge-warning">Pendente de cadastro</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.grid -->
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+<script src="../assets/js/main.js"></script>
+
+</body>
+</html>
+
