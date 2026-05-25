@@ -52,3 +52,5 @@ Thumbs.db
 *.key
 *.p12
 *.pfx
+
+.sql

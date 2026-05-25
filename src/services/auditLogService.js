@@ -1,4 +1,3 @@
-const { execute } = require('../config/database');
 const { sanitizeForLog, logger } = require('../utils/logger');
 
 function mapLevel(level) {
@@ -20,19 +19,18 @@ async function registerAuditLog({
 }) {
   try {
     const safeMetadata = metadados ? sanitizeForLog(metadados) : null;
-    await execute(
-      `INSERT INTO audit_logs (evento, nivel, admin_id, funcionario_id, mensagem, ip_origem, metadados_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        String(evento || 'evento_desconhecido'),
-        mapLevel(nivel),
-        adminId,
-        funcionarioId,
-        String(mensagem || 'Sem mensagem'),
-        ipOrigem,
-        safeMetadata ? JSON.stringify(safeMetadata) : null
-      ]
-    );
+
+    // O schema atual (ponto (2).sql) nao possui tabela de auditoria persistente.
+    // Para evitar erros SQL, registramos os eventos apenas no logger da aplicacao.
+    logger.info('audit_evento', {
+      evento: String(evento || 'evento_desconhecido'),
+      nivel: mapLevel(nivel),
+      adminId,
+      funcionarioId,
+      mensagem: String(mensagem || 'Sem mensagem'),
+      ipOrigem,
+      metadados: safeMetadata
+    });
   } catch (error) {
     logger.error('Falha ao registrar log de auditoria', {
       error,

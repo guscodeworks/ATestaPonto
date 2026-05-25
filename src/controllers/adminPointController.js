@@ -3,12 +3,13 @@ const { maskCpf } = require('../utils/cpf');
 const { BadRequestError } = require('../utils/errors');
 const { registerAuditLog } = require('../services/auditLogService');
 
-const PUNCH_TYPE_LABELS = {
-  ENTRADA: 'ENTRADA',
-  SAIDA_ALMOCO: 'SAIDA_ALMOCO',
-  VOLTA_ALMOCO: 'VOLTA_ALMOCO',
-  SAIDA: 'SAIDA'
-};
+const EMPTY_PUNCH_TIME = '00:00:00';
+const PUNCH_STEPS = [
+  { key: 'entrada', tipo: 'ENTRADA', sequencia: 1 },
+  { key: 'saidaAlmoco', tipo: 'SAIDA_ALMOCO', sequencia: 2 },
+  { key: 'voltaAlmoco', tipo: 'VOLTA_ALMOCO', sequencia: 3 },
+  { key: 'saida', tipo: 'SAIDA', sequencia: 4 }
+];
 
 function getClientIp(req) {
   return req.headers['x-forwarded-for']?.split(',')?.[0]?.trim() || req.ip || null;
@@ -31,26 +32,70 @@ function parseReportDate(req) {
   return date;
 }
 
-function mapPunchesByEmployee(punchRows) {
-  const byEmployee = new Map();
-
-  punchRows.forEach((row) => {
-    const employeeId = Number(row.funcionario_id);
-    if (!byEmployee.has(employeeId)) {
-      byEmployee.set(employeeId, []);
-    }
-    byEmployee.get(employeeId).push(row);
-  });
-
-  return byEmployee;
+function normalizeTimeValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return EMPTY_PUNCH_TIME;
+  }
+  const candidate = raw.slice(0, 8);
+  if (/^\d{2}:\d{2}:\d{2}$/.test(candidate)) {
+    return candidate;
+  }
+  return EMPTY_PUNCH_TIME;
 }
 
-function summarizeEmployeeDay(employee, punches) {
-  const ordered = [...punches].sort((a, b) => Number(a.sequencia) - Number(b.sequencia));
-  const firstEntry = ordered.find((p) => p.tipo === PUNCH_TYPE_LABELS.ENTRADA) || null;
-  const finalExit = ordered.find((p) => p.tipo === PUNCH_TYPE_LABELS.SAIDA) || null;
+function hasPunchTime(value) {
+  return normalizeTimeValue(value) !== EMPTY_PUNCH_TIME;
+}
 
-  const status = ordered.length === 0 ? 'AUSENTE' : finalExit ? 'COMPLETO' : 'EM_ANDAMENTO';
+function findLunchColumnKey(row, prefix) {
+  return (
+    Object.keys(row || {}).find((key) =>
+      String(key || '')
+        .toLowerCase()
+        .startsWith(prefix)
+    ) || null
+  );
+}
+
+function readPunchTimesFromRow(row) {
+  const saidaAlmocoKey = findLunchColumnKey(row, 'saida_almo');
+  const voltaAlmocoKey = findLunchColumnKey(row, 'volta_almo');
+
+  return {
+    entrada: normalizeTimeValue(row?.entrada),
+    saidaAlmoco: normalizeTimeValue(saidaAlmocoKey ? row[saidaAlmocoKey] : null),
+    voltaAlmoco: normalizeTimeValue(voltaAlmocoKey ? row[voltaAlmocoKey] : null),
+    saida: normalizeTimeValue(row?.saida)
+  };
+}
+
+function toDateTime(date, time) {
+  if (!hasPunchTime(time)) {
+    return null;
+  }
+  return `${date} ${normalizeTimeValue(time)}`;
+}
+
+function buildPunchList(rowId, date, times) {
+  return PUNCH_STEPS
+    .filter((step) => hasPunchTime(times[step.key]))
+    .map((step) => ({
+      id: Number(rowId) * 10 + step.sequencia,
+      tipo: step.tipo,
+      sequencia: step.sequencia,
+      registrado_em: toDateTime(date, times[step.key])
+    }));
+}
+
+function summarizeEmployeeDay(employee, punchRow, date) {
+  const times = punchRow
+    ? readPunchTimesFromRow(punchRow)
+    : { entrada: EMPTY_PUNCH_TIME, saidaAlmoco: EMPTY_PUNCH_TIME, voltaAlmoco: EMPTY_PUNCH_TIME, saida: EMPTY_PUNCH_TIME };
+
+  const registros = punchRow ? buildPunchList(punchRow.id, date, times) : [];
+  const totalBatidas = registros.length;
+  const status = totalBatidas === 0 ? 'AUSENTE' : hasPunchTime(times.saida) ? 'COMPLETO' : 'EM_ANDAMENTO';
 
   return {
     funcionario: {
@@ -58,39 +103,42 @@ function summarizeEmployeeDay(employee, punches) {
       nome: employee.nome,
       email: employee.email,
       cpf: maskCpf(employee.cpf),
-      ativo: Boolean(employee.ativo)
+      ativo: Boolean(employee.ativo),
+      cargo_id: employee.cargo_id
     },
     status,
-    total_batidas: ordered.length,
-    entrada: firstEntry?.registrado_em || null,
-    saida: finalExit?.registrado_em || null,
-    registros: ordered.map((row) => ({
-      id: row.id,
-      tipo: row.tipo,
-      sequencia: row.sequencia,
-      registrado_em: row.registrado_em
-    }))
+    total_batidas: totalBatidas,
+    entrada: toDateTime(date, times.entrada),
+    saida: toDateTime(date, times.saida),
+    registros
   };
 }
 
 async function buildDailySnapshot(date) {
   const employees = await execute(
-    `SELECT id, nome, email, cpf, ativo
+    `SELECT id, nome, email, cpf, ativo, cargo_id
      FROM funcionarios
      ORDER BY nome ASC`
   );
 
   const punchRows = await execute(
-    `SELECT id, funcionario_id, tipo, sequencia, registrado_em
+    `SELECT *
      FROM registro_de_pontos
-     WHERE data_referencia = ?
-     ORDER BY funcionario_id ASC, sequencia ASC`,
+     WHERE data_referenciada = ?
+     ORDER BY funcionario_id ASC, id DESC`,
     [date]
   );
 
-  const byEmployee = mapPunchesByEmployee(punchRows);
+  const byEmployee = new Map();
+  punchRows.forEach((row) => {
+    const employeeId = Number(row.funcionario_id);
+    if (!byEmployee.has(employeeId)) {
+      byEmployee.set(employeeId, row);
+    }
+  });
+
   const summaries = employees.map((employee) =>
-    summarizeEmployeeDay(employee, byEmployee.get(Number(employee.id)) || [])
+    summarizeEmployeeDay(employee, byEmployee.get(Number(employee.id)) || null, date)
   );
 
   const activeSummaries = summaries.filter((item) => item.funcionario.ativo);
