@@ -48,6 +48,16 @@ function parsePort(value) {
   return parsed;
 }
 
+function resolveSchemaPath() {
+  const candidates = [
+    path.resolve(__dirname, '../../database/schema/ponto.sql'),
+    path.resolve(__dirname, '../../ponto (2).sql'),
+    path.resolve(__dirname, '../../ponto.sql')
+  ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+}
+
 async function main() {
   let connection;
 
@@ -66,16 +76,16 @@ async function main() {
       return;
     }
 
-    const sqlFilePath = path.resolve(__dirname, '../../database/schema/ponto.sql');
-    if (!fs.existsSync(sqlFilePath)) {
-      console.error('[initDatabase] Arquivo database/schema/ponto.sql nao encontrado.');
+    const sqlFilePath = resolveSchemaPath();
+    if (!sqlFilePath) {
+      console.error('[initDatabase] Nenhum arquivo de schema SQL encontrado (database/schema/ponto.sql, ponto (2).sql ou ponto.sql).');
       process.exitCode = 1;
       return;
     }
 
     const schemaSql = fs.readFileSync(sqlFilePath, 'utf8').replace(/^\uFEFF/, '').trim();
     if (!schemaSql) {
-      console.error('[initDatabase] database/schema/ponto.sql esta vazio.');
+      console.error(`[initDatabase] Arquivo SQL vazio: ${path.relative(process.cwd(), sqlFilePath)}`);
       process.exitCode = 1;
       return;
     }

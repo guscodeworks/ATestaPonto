@@ -1,14 +1,8 @@
 const { Router } = require('express');
-const {
-  loginFuncionario,
-  registerPunch
-} = require('../controllers/punchController');
+const { loginFuncionario, registerPunch } = require('../controllers/punchController');
 const { authenticateFuncionario } = require('../middlewares/authMiddleware');
 const { pointLimiter } = require('../middlewares/rateLimiters');
-const {
-  baterPontoValidator,
-  funcionarioLoginValidator
-} = require('../middlewares/validators');
+const { baterPontoValidator, funcionarioLoginValidator } = require('../middlewares/validators');
 const { MethodNotAllowedError } = require('../utils/errors');
 
 const router = Router();

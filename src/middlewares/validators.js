@@ -62,8 +62,8 @@ const createFuncionarioValidator = withValidation([
     .trim()
     .notEmpty()
     .withMessage('Nome e obrigatorio')
-    .isLength({ min: 3, max: 120 })
-    .withMessage('Nome deve ter entre 3 e 120 caracteres')
+    .isLength({ min: 3, max: 55 })
+    .withMessage('Nome deve ter entre 3 e 55 caracteres')
     .matches(/^[^<>]*$/)
     .withMessage('Nome contem caracteres invalidos')
     .escape(),
@@ -82,6 +82,11 @@ const createFuncionarioValidator = withValidation([
     .withMessage('Senha deve ser texto')
     .isLength({ min: 8, max: 72 })
     .withMessage('Senha deve ter entre 8 e 72 caracteres'),
+  body('cargo_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('cargo_id invalido')
+    .toInt(),
   body('ativo')
     .optional()
     .isIn(['true', 'false', true, false, 1, 0, '1', '0'])
@@ -94,8 +99,8 @@ const updateFuncionarioValidator = withValidation([
   body('nome')
     .optional()
     .trim()
-    .isLength({ min: 3, max: 120 })
-    .withMessage('Nome deve ter entre 3 e 120 caracteres')
+    .isLength({ min: 3, max: 55 })
+    .withMessage('Nome deve ter entre 3 e 55 caracteres')
     .matches(/^[^<>]*$/)
     .withMessage('Nome contem caracteres invalidos')
     .escape(),
@@ -108,6 +113,17 @@ const updateFuncionarioValidator = withValidation([
     .isEmail()
     .withMessage('Email invalido')
     .normalizeEmail({ gmail_remove_dots: false }),
+  body('senha')
+    .optional()
+    .isString()
+    .withMessage('Senha deve ser texto')
+    .isLength({ min: 8, max: 72 })
+    .withMessage('Senha deve ter entre 8 e 72 caracteres'),
+  body('cargo_id')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('cargo_id invalido')
+    .toInt(),
   body('ativo')
     .optional()
     .isIn(['true', 'false', true, false, 1, 0, '1', '0'])
