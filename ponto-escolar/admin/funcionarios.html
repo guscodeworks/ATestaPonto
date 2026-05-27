@@ -1,0 +1,240 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Funcionários — Sala do Futuro Admin</title>
+  <link rel="icon" href="/assets/img/favicon.svg"/>
+  <link rel="stylesheet" href="/public/assets/css/admin.css"/>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-wrap">
+
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">Sala do Futuro</span>
+        <span class="sidebar-brand-sub">Administração</span>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">CE</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Carlos Eduardo</div>
+        <div class="sidebar-user-role" id="sb-role">Administrador</div>
+      </div>
+      <div class="sidebar-admin-badge">ADMIN</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon">⊞</span> Dashboard</a>
+      <div class="sidebar-section-label">Funcionários</div>
+      <a href="/admin/funcionarios" class="nav-link active"><span class="nav-icon">👥</span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon">➕</span> Registrar</a>
+      <div class="sidebar-section-label">Ponto</div>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon">⏱</span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon">📊</span> Relatórios</a>
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon">⚙️</span> Configurações</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="window.location.href='../funcionario/login.html'">
+        <span class="nav-icon">⎋</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <div class="breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Funcionários</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="topbar-user">
+          <div class="topbar-avatar" id="admin-avatar">CE</div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name" id="admin-firstname">Carlos</span>
+            <span class="topbar-user-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <div class="page-header-row fade-in" style="margin-bottom:20px;">
+        <div>
+          <h1 class="page-title">Funcionários</h1>
+          <p class="page-subtitle"><span id="total-func">—</span> funcionários no sistema</p>
+        </div>
+        <a href="/admin/funcionarios/novo" class="ui-btn ui-btn-primary">
+          ➕ Registrar Funcionário
+        </a>
+      </div>
+
+      <!-- Action bar -->
+      <div class="action-bar fade-in">
+        <div class="action-bar-left">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="busca-funcionario" placeholder="Buscar por nome, CPF, cargo..."/>
+          </div>
+          <select class="filter-select" id="filtro-status">
+            <option value="">Todos os status</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+          </select>
+          <select class="filter-select" id="filtro-cargo">
+            <option value="">Todos os cargos</option>
+            <option value="Professor">Professor</option>
+            <option value="Professora">Professora</option>
+            <option value="Coordenador">Coordenador</option>
+            <option value="Diretora">Diretora</option>
+            <option value="Secretária">Secretária</option>
+            <option value="Inspetor">Inspetor</option>
+            <option value="Auxiliar">Auxiliar</option>
+          </select>
+        </div>
+        <div class="action-bar-right">
+          <button class="ui-btn ui-btn-secondary ui-btn-sm" onclick="toast('Exportação iniciada.', 'info')">⬇ Exportar</button>
+        </div>
+      </div>
+
+      <!-- Tabela desktop -->
+      <div class="ui-panel fade-in table-desktop">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Funcionário</th>
+                <th>Cargo</th>
+                <th>CPF</th>
+                <th>Telefone</th>
+                <th>Status</th>
+                <th>Ponto Hoje</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-funcionarios"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Cards mobile -->
+      <div id="cards-funcionarios" class="func-card-list fade-in cards-mobile" style="display:none;"></div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="ui-dialog-overlay" id="modal-editar">
+  <div class="ui-dialog-box">
+    <div class="ui-dialog-header">
+      <div class="ui-dialog-title">✏️ Editar Funcionário</div>
+      <button class="ui-dialog-close" onclick="fecharModal('modal-editar')">✕</button>
+    </div>
+    <div class="ui-dialog-body">
+      <input type="hidden" id="edit-id"/>
+      <div class="form-grid-2">
+        <div class="form-field full">
+          <label>Nome completo</label>
+          <div class="input-wrap">
+            <span class="field-icon">👤</span>
+            <input type="text" id="edit-nome" class="field-input" placeholder="Nome completo"/>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>E-mail</label>
+          <div class="input-wrap">
+            <span class="field-icon">✉️</span>
+            <input type="email" id="edit-email" class="field-input" placeholder="email@escola.edu.br"/>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>CPF</label>
+          <div class="input-wrap">
+            <span class="field-icon">🪪</span>
+            <input type="text" id="edit-cpf" class="field-input" readonly style="color:var(--text-300)"/>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Cargo</label>
+          <div class="select-wrap">
+            <select id="edit-cargo" class="field-select">
+              <option value="Professor">Professor</option>
+              <option value="Professora">Professora</option>
+              <option value="Coordenador">Coordenador</option>
+              <option value="Diretora">Diretora</option>
+              <option value="Secretária">Secretária</option>
+              <option value="Inspetor">Inspetor</option>
+              <option value="Auxiliar">Auxiliar</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Telefone</label>
+          <div class="input-wrap">
+            <span class="field-icon">📱</span>
+            <input type="text" id="edit-tel" class="field-input" placeholder="(11) 99999-0000"/>
+          </div>
+        </div>
+        <div class="form-field">
+          <label>Status</label>
+          <div class="select-wrap">
+            <select id="edit-status" class="field-select">
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ui-dialog-footer">
+      <button class="ui-btn ui-btn-ghost" onclick="fecharModal('modal-editar')">Cancelar</button>
+      <button class="ui-btn ui-btn-primary" onclick="salvarEdicao()">💾 Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+  <script src="/assets/js/admin/00-state.js"></script>
+  <script src="/assets/js/admin/01-helpers.js"></script>
+  <script src="/assets/js/admin/02-ui-core.js"></script>
+  <script src="/assets/js/admin/03-dashboard.js"></script>
+  <script src="/assets/js/admin/04-employees.js"></script>
+  <script src="/assets/js/admin/05-points.js"></script>
+  <script src="/assets/js/admin/06-reports.js"></script>
+  <script src="/assets/js/admin/07-register.js"></script>
+  <script src="/assets/js/admin/08-settings-login.js"></script>
+  <script src="/assets/js/admin/09-init.js"></script>
+<script>
+  function checkMobile() {
+    const isMobile = window.innerWidth <= 768;
+    document.querySelector('.table-desktop').style.display = isMobile ? 'none' : 'block';
+    document.getElementById('cards-funcionarios').style.display = isMobile ? 'flex' : 'none';
+  }
+  window.addEventListener('resize', checkMobile);
+  checkMobile();
+</script>
+</body>
+</html>
+
+
+
+
+

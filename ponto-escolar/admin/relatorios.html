@@ -1,0 +1,243 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Relatórios — Sala do Futuro Admin</title>
+  <link rel="icon" href="/assets/img/favicon.svg"/>
+  <link rel="stylesheet" href="/public/assets/css/admin.css"/>
+  <style>
+    @media print {
+      .app-sidebar, .topbar, .action-bar, .no-print, .toast-stack { display:none !important; }
+      .app-main { margin-left:0 !important; }
+      .page-content { padding:0 !important; }
+      body { background:#fff !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-wrap">
+
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">Sala do Futuro</span>
+        <span class="sidebar-brand-sub">Administração</span>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">CE</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Carlos Eduardo</div>
+        <div class="sidebar-user-role" id="sb-role">Administrador</div>
+      </div>
+      <div class="sidebar-admin-badge">ADMIN</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon">⊞</span> Dashboard</a>
+      <div class="sidebar-section-label">Funcionários</div>
+      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon">👥</span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon">➕</span> Registrar</a>
+      <div class="sidebar-section-label">Ponto</div>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon">⏱</span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link active"><span class="nav-icon">📊</span> Relatórios</a>
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon">⚙️</span> Configurações</a>
+    </nav>
+    <div class="sidebar-footer">
+
+      <button class="btn-logout" onclick="window.location.href='../funcionario/login.html'">
+        <span class="nav-icon">⎋</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <div class="breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Relatórios</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="topbar-user">
+          <div class="topbar-avatar" id="admin-avatar">CE</div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name" id="admin-firstname">Carlos</span>
+            <span class="topbar-user-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- Header + ações -->
+      <div class="page-header-row fade-in" style="margin-bottom:20px;">
+        <div>
+          <h1 class="page-title">Relatórios</h1>
+          <p class="page-subtitle">Frequência completa e histórico de pontos</p>
+        </div>
+        <div class="action-bar no-print" style="margin-bottom:0;">
+          <div class="action-bar-right">
+            <button id="btn-gerar-pdf" class="ui-btn ui-btn-primary">
+              <span class="btn-label">📄 Gerar PDF</span>
+              <div class="spinner"></div>
+            </button>
+            <button id="btn-imprimir" class="ui-btn ui-btn-secondary">🖨️ Imprimir</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="ui-panel fade-in no-print" style="margin-bottom:20px;">
+        <div style="padding:14px 20px;">
+          <div class="action-bar" style="margin-bottom:0;">
+            <div class="action-bar-left">
+              <select class="filter-select">
+                <option>Hoje</option>
+                <option>Esta semana</option>
+                <option selected>Este mês</option>
+                <option>Mês anterior</option>
+                <option>Há 2 meses</option>
+              </select>
+              <select class="filter-select">
+                <option value="">Todos os funcionários</option>
+              </select>
+              <select class="filter-select">
+                <option value="">Todos os status</option>
+                <option>Presentes</option>
+                <option>Ausentes</option>
+                <option>Parcial</option>
+              </select>
+            </div>
+            <span style="font-size:13px;color:var(--text-300);">Gerado por: <strong style="color:var(--text-700);" id="relatorio-gerado-por">—</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumo -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;" class="fade-in">
+        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--green-500);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-300);margin-bottom:8px;">✅ Presentes</div>
+          <div style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--text-900);line-height:1;" id="relatorio-presentes">—</div>
+          <div style="font-size:12px;color:var(--text-500);margin-top:4px;">funcionários bateram ponto</div>
+        </div>
+        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--red-500);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-300);margin-bottom:8px;">❌ Ausentes</div>
+          <div style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--text-900);line-height:1;" id="relatorio-ausentes">—</div>
+          <div style="font-size:12px;color:var(--text-500);margin-top:4px;">sem registro no período</div>
+        </div>
+        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--blue-600);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-300);margin-bottom:8px;">📅 Data</div>
+          <div style="font-size:14px;font-weight:600;color:var(--text-900);line-height:1.4;" id="relatorio-data">—</div>
+        </div>
+      </div>
+
+      <!-- Gráfico de barras horizontal -->
+      <div class="ui-panel fade-in" style="margin-bottom:20px;">
+        <div class="ui-panel-header">
+          <div class="ui-panel-title">Presença por dia da semana</div>
+        </div>
+        <div style="padding:20px 24px;">
+          <div class="chart-bar-group">
+            <div class="chart-bar-item">
+              <span class="chart-bar-label">Segunda</span>
+              <div class="chart-bar-track"><div class="chart-bar-fill green" style="width:88%"></div></div>
+              <span class="chart-bar-val">88%</span>
+            </div>
+            <div class="chart-bar-item">
+              <span class="chart-bar-label">Terça</span>
+              <div class="chart-bar-track"><div class="chart-bar-fill green" style="width:94%"></div></div>
+              <span class="chart-bar-val">94%</span>
+            </div>
+            <div class="chart-bar-item">
+              <span class="chart-bar-label">Quarta</span>
+              <div class="chart-bar-track"><div class="chart-bar-fill amber" style="width:75%"></div></div>
+              <span class="chart-bar-val">75%</span>
+            </div>
+            <div class="chart-bar-item">
+              <span class="chart-bar-label">Quinta</span>
+              <div class="chart-bar-track"><div class="chart-bar-fill green" style="width:100%"></div></div>
+              <span class="chart-bar-val">100%</span>
+            </div>
+            <div class="chart-bar-item">
+              <span class="chart-bar-label">Sexta</span>
+              <div class="chart-bar-track"><div class="chart-bar-fill amber" style="width:63%"></div></div>
+              <span class="chart-bar-val">63%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela completa -->
+      <div class="ui-panel fade-in">
+        <div class="ui-panel-header">
+          <div class="ui-panel-title">📋 Registro completo de frequência</div>
+          <span style="font-size:12px;color:var(--text-300);">Todos os funcionários</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Funcionário</th>
+                <th>Entrada</th>
+                <th>Pausa</th>
+                <th>Retorno</th>
+                <th>Saída</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-relatorio"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Observações -->
+      <div class="ui-panel no-print fade-in" style="margin-top:20px;margin-bottom:32px;">
+        <div class="ui-panel-header">
+          <div class="ui-panel-title">📝 Observações</div>
+        </div>
+        <div style="padding:16px 24px;">
+          <textarea class="field-textarea" placeholder="Adicione anotações sobre o período..."></textarea>
+          <div style="margin-top:12px;">
+            <button class="ui-btn ui-btn-ghost ui-btn-sm" onclick="toast('Observação salva!','success')">💾 Salvar observação</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+  <script src="/assets/js/admin/00-state.js"></script>
+  <script src="/assets/js/admin/01-helpers.js"></script>
+  <script src="/assets/js/admin/02-ui-core.js"></script>
+  <script src="/assets/js/admin/03-dashboard.js"></script>
+  <script src="/assets/js/admin/04-employees.js"></script>
+  <script src="/assets/js/admin/05-points.js"></script>
+  <script src="/assets/js/admin/06-reports.js"></script>
+  <script src="/assets/js/admin/07-register.js"></script>
+  <script src="/assets/js/admin/08-settings-login.js"></script>
+  <script src="/assets/js/admin/09-init.js"></script>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,311 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — Sala do Futuro Admin</title>
+  <link rel="icon" href="/assets/img/favicon.svg"/>
+  <link rel="stylesheet" href="/public/assets/css/admin.css"/>
+  <style>
+    .presence-chart-wrap {
+      display:flex; align-items:flex-end; gap:6px;
+      height:80px; padding: 0 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">Sala do Futuro</span>
+        <span class="sidebar-brand-sub">Administração</span>
+      </div>
+    </div>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">CE</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Carlos Eduardo</div>
+        <div class="sidebar-user-role" id="sb-role">Administrador</div>
+      </div>
+      <div class="sidebar-admin-badge">ADMIN</div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/admin/dashboard" class="nav-link active">
+        <span class="nav-icon">⊞</span> Dashboard
+      </a>
+
+      <div class="sidebar-section-label">Funcionários</div>
+      <a href="/admin/funcionarios" class="nav-link">
+        <span class="nav-icon">👥</span> Funcionários
+      </a>
+      <a href="/admin/funcionarios/novo" class="nav-link">
+        <span class="nav-icon">➕</span> Registrar
+      </a>
+
+      <div class="sidebar-section-label">Ponto</div>
+      <a href="/admin/pontos-do-dia" class="nav-link">
+        <span class="nav-icon">⏱</span> Pontos do Dia
+      </a>
+      <a href="/admin/relatorios" class="nav-link">
+        <span class="nav-icon">📊</span> Relatórios
+      </a>
+
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/admin/configuracoes" class="nav-link">
+        <span class="nav-icon">⚙️</span> Configurações
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="window.location.href='../funcionario/login.html'">
+        <span class="nav-icon">⎋</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="app-main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <div class="breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Dashboard</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="topbar-user" onclick="window.location.href='/admin/configuracoes'">
+          <div class="topbar-avatar" id="admin-avatar">CE</div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name" id="admin-firstname">Carlos</span>
+            <span class="topbar-user-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- Hero -->
+      <div class="dashboard-hero fade-in">
+        <div class="dashboard-hero-bg"></div>
+        <div class="dashboard-hero-glow"></div>
+        <div class="dashboard-hero-glow2"></div>
+        <div class="dashboard-hero-content">
+          <div>
+            <div class="hero-label">Painel Administrativo</div>
+            <div class="hero-title">Sala do Futuro</div>
+            <div class="hero-sub">Controle de frequência e gestão de equipe</div>
+          </div>
+          <div class="hero-right">
+            <div class="hero-quick-stat">
+              <div class="hero-qs-value" id="hero-presentes">—</div>
+              <div class="hero-qs-label">Presentes hoje</div>
+            </div>
+            <div class="hero-quick-stat">
+              <div class="hero-qs-value" id="hero-ausentes">—</div>
+              <div class="hero-qs-label">Ausentes hoje</div>
+            </div>
+            <div class="hero-quick-stat">
+              <div class="hero-qs-value" id="hero-total">—</div>
+              <div class="hero-qs-label">Total equipe</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="stat-row">
+        <div class="stat-card blue fade-in">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="stat-total">—</div>
+          <div class="stat-label">Funcionários</div>
+          <div class="stat-meta">cadastrados</div>
+        </div>
+        <div class="stat-card green fade-in">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-presentes">—</div>
+          <div class="stat-label">Presentes</div>
+          <div class="stat-meta">bateram ponto hoje</div>
+        </div>
+        <div class="stat-card red fade-in">
+          <div class="stat-icon">❌</div>
+          <div class="stat-value" id="stat-ausentes">—</div>
+          <div class="stat-label">Ausentes</div>
+          <div class="stat-meta">sem registro</div>
+        </div>
+        <div class="stat-card purple fade-in">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="stat-taxa">—</div>
+          <div class="stat-label">Taxa presença</div>
+          <div class="stat-meta">hoje</div>
+        </div>
+      </div>
+
+      <!-- Acesso rápido -->
+      <div class="quick-grid fade-in">
+        <a href="/admin/funcionarios" class="quick-card blue">
+          <div class="quick-card-icon">👥</div>
+          <div class="quick-card-text">
+            <div class="quick-card-title">Funcionários</div>
+            <div class="quick-card-desc">Gerenciar equipe</div>
+          </div>
+          <span class="quick-card-arrow">↗</span>
+        </a>
+        <a href="/admin/funcionarios/novo" class="quick-card purple">
+          <div class="quick-card-icon">➕</div>
+          <div class="quick-card-text">
+            <div class="quick-card-title">Registrar</div>
+            <div class="quick-card-desc">Novo funcionário</div>
+          </div>
+          <span class="quick-card-arrow">↗</span>
+        </a>
+        <a href="/admin/pontos-do-dia" class="quick-card green">
+          <div class="quick-card-icon">⏱</div>
+          <div class="quick-card-text">
+            <div class="quick-card-title">Pontos do Dia</div>
+            <div class="quick-card-desc">Registros de hoje</div>
+          </div>
+          <span class="quick-card-arrow">↗</span>
+        </a>
+        <a href="/admin/relatorios" class="quick-card amber">
+          <div class="quick-card-icon">📊</div>
+          <div class="quick-card-text">
+            <div class="quick-card-title">Relatórios</div>
+            <div class="quick-card-desc">Exportar dados</div>
+          </div>
+          <span class="quick-card-arrow">↗</span>
+        </a>
+      </div>
+
+      <!-- Grid: gráfico + alertas -->
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;margin-bottom:20px;" class="dash-grid">
+
+        <!-- Últimos registros -->
+        <div class="ui-panel fade-in">
+          <div class="ui-panel-header">
+            <div>
+              <div class="ui-panel-title">Últimos Registros de Ponto</div>
+              <div class="ui-panel-subtitle">Atualizados em tempo real</div>
+            </div>
+            <a href="/admin/pontos-do-dia" class="ui-btn ui-btn-ghost ui-btn-sm">Ver todos →</a>
+          </div>
+          <div class="table-wrap table-desktop">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Funcionário</th>
+                  <th>Entrada</th>
+                  <th>Saída</th>
+                  <th>Status</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-ultimos"></tbody>
+            </table>
+          </div>
+          <div id="cards-ultimos-mobile" class="cards-mobile" style="display:none;padding:14px;flex-direction:column;gap:10px;"></div>
+        </div>
+
+        <!-- Coluna lateral -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
+
+          <!-- Gráfico de presença semanal -->
+          <div class="ui-panel fade-in">
+            <div class="ui-panel-header">
+              <div class="ui-panel-title">Presença Semanal</div>
+            </div>
+            <div style="padding:16px 20px;">
+              <div class="presence-chart-wrap" id="grafico-presenca"></div>
+            </div>
+          </div>
+
+          <!-- Alertas -->
+          <div class="ui-panel fade-in">
+            <div class="ui-panel-header">
+              <div class="ui-panel-title">Alertas</div>
+            </div>
+            <div style="padding:14px 16px;">
+              <div class="notice-list" id="lista-alertas"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+  <script src="/assets/js/admin/00-state.js"></script>
+  <script src="/assets/js/admin/01-helpers.js"></script>
+  <script src="/assets/js/admin/02-ui-core.js"></script>
+  <script src="/assets/js/admin/03-dashboard.js"></script>
+  <script src="/assets/js/admin/04-employees.js"></script>
+  <script src="/assets/js/admin/05-points.js"></script>
+  <script src="/assets/js/admin/06-reports.js"></script>
+  <script src="/assets/js/admin/07-register.js"></script>
+  <script src="/assets/js/admin/08-settings-login.js"></script>
+  <script src="/assets/js/admin/09-init.js"></script>
+<script>
+  // Responsividade tabela→cards
+  function checkMobile() {
+    const isMobile = window.innerWidth <= 768;
+    const td = document.querySelector('.table-desktop');
+    const cm = document.getElementById('cards-ultimos-mobile');
+    const dg = document.querySelector('.dash-grid');
+    if (td) td.style.display = isMobile ? 'none' : 'block';
+    if (cm) cm.style.display = isMobile ? 'flex' : 'none';
+    if (dg) dg.style.gridTemplateColumns = isMobile ? '1fr' : '1fr 340px';
+  }
+  window.addEventListener('resize', checkMobile);
+  checkMobile();
+
+  // Preencher cards mobile dos últimos registros
+  document.addEventListener('DOMContentLoaded', () => {
+    const cardsMobile = document.getElementById('cards-ultimos-mobile');
+    if (cardsMobile) {
+      const lista = PONTOS_HOJE.slice(-5).reverse();
+      cardsMobile.innerHTML = lista.map(p => {
+        const func = getFuncionarioPorId(p.funcionarioId);
+        if (!func) return '';
+        return `
+          <div class="func-card-item">
+            <div class="func-card-avatar">${getIniciais(func.nome)}</div>
+            <div class="func-card-info">
+              <div class="func-card-name">${func.nome}</div>
+              <div class="func-card-cargo" style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:11px;color:var(--text-300);">Entrada: <b style="color:var(--text-700)">${p.entrada}</b></span>
+                <span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}" style="font-size:10px;padding:1px 7px;">${p.status==='completo'?'Completo':'Em andamento'}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  });
+</script>
+</body>
+</html>
+
+
+
+
+

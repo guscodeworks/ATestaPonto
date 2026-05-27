@@ -1,0 +1,210 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pontos do Dia — Sala do Futuro Admin</title>
+  <link rel="icon" href="/assets/img/favicon.svg"/>
+  <link rel="stylesheet" href="/public/assets/css/admin.css"/>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-wrap">
+
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">Sala do Futuro</span>
+        <span class="sidebar-brand-sub">Administração</span>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">CE</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Carlos Eduardo</div>
+        <div class="sidebar-user-role" id="sb-role">Administrador</div>
+      </div>
+      <div class="sidebar-admin-badge">ADMIN</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon">⊞</span> Dashboard</a>
+      <div class="sidebar-section-label">Funcionários</div>
+      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon">👥</span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon">➕</span> Registrar</a>
+      <div class="sidebar-section-label">Ponto</div>
+      <a href="/admin/pontos-do-dia" class="nav-link active"><span class="nav-icon">⏱</span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon">📊</span> Relatórios</a>
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon">⚙️</span> Configurações</a>
+    </nav>
+    <div class="sidebar-footer">
+
+      <button class="btn-logout" onclick="window.location.href='../funcionario/login.html'">
+
+        <span class="nav-icon">⎋</span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <div class="breadcrumb">
+          <span>Sala do Futuro</span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Pontos do Dia</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="topbar-user">
+          <div class="topbar-avatar" id="admin-avatar">CE</div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name" id="admin-firstname">Carlos</span>
+            <span class="topbar-user-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <div class="page-header-row fade-in" style="margin-bottom:20px;">
+        <div>
+          <h1 class="page-title">Pontos do Dia</h1>
+          <p class="page-subtitle">Registros de frequência de hoje em tempo real</p>
+        </div>
+        <a href="/admin/relatorios" class="ui-btn ui-btn-secondary">📊 Ver relatório completo</a>
+      </div>
+
+      <!-- Stats -->
+      <div class="stat-row" style="grid-template-columns:repeat(2,1fr);max-width:500px;margin-bottom:24px;">
+        <div class="stat-card green fade-in">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="count-presentes">—</div>
+          <div class="stat-label">Presentes</div>
+          <div class="stat-meta">bateram ponto</div>
+        </div>
+        <div class="stat-card red fade-in">
+          <div class="stat-icon">❌</div>
+          <div class="stat-value" id="count-ausentes">—</div>
+          <div class="stat-label">Ausentes</div>
+          <div class="stat-meta">sem registro</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar fade-in">
+        <button class="ui-tab active" data-tab="tab-presentes">✅ Presentes</button>
+        <button class="ui-tab" data-tab="tab-ausentes">❌ Ausentes</button>
+      </div>
+
+      <!-- Tab: Presentes -->
+      <div class="tab-panel active" id="tab-presentes">
+        <div class="ui-panel fade-in">
+          <div class="ui-panel-header">
+            <div class="ui-panel-title">Funcionários com ponto registrado</div>
+            <span style="font-size:12px;color:var(--text-300);">Atualizado em tempo real</span>
+          </div>
+          <!-- Tabela desktop -->
+          <div class="table-wrap table-desktop-p">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Funcionário</th>
+                  <th>Cargo</th>
+                  <th>Entrada</th>
+                  <th>Pausa</th>
+                  <th>Retorno</th>
+                  <th>Saída</th>
+                  <th>Status</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-presentes"></tbody>
+            </table>
+          </div>
+          <!-- Cards mobile -->
+          <div id="cards-presentes" class="cards-mobile" style="display:none;padding:14px;flex-direction:column;gap:10px;"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Ausentes -->
+      <div class="tab-panel" id="tab-ausentes">
+        <div class="ui-panel fade-in">
+          <div class="ui-panel-header">
+            <div class="ui-panel-title">Funcionários sem registro hoje</div>
+            <span style="font-size:12px;color:var(--text-300);">Atualizado em tempo real</span>
+          </div>
+          <!-- Tabela desktop -->
+          <div class="table-wrap table-desktop-a">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Funcionário</th>
+                  <th>Cargo</th>
+                  <th>Telefone</th>
+                  <th>Status</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-ausentes"></tbody>
+            </table>
+          </div>
+          <!-- Cards mobile -->
+          <div id="cards-ausentes" class="cards-mobile" style="display:none;padding:14px;flex-direction:column;gap:10px;"></div>
+        </div>
+
+        <div class="notice-item amber fade-in" style="margin-top:14px;">
+          <div class="notice-icon">⚠️</div>
+          <div class="notice-content">
+            <div class="notice-title">Notificações automáticas</div>
+            <div class="notice-desc">Após integração com back-end, funcionários ausentes podem ser notificados automaticamente.</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+  <script src="/assets/js/admin/00-state.js"></script>
+  <script src="/assets/js/admin/01-helpers.js"></script>
+  <script src="/assets/js/admin/02-ui-core.js"></script>
+  <script src="/assets/js/admin/03-dashboard.js"></script>
+  <script src="/assets/js/admin/04-employees.js"></script>
+  <script src="/assets/js/admin/05-points.js"></script>
+  <script src="/assets/js/admin/06-reports.js"></script>
+  <script src="/assets/js/admin/07-register.js"></script>
+  <script src="/assets/js/admin/08-settings-login.js"></script>
+  <script src="/assets/js/admin/09-init.js"></script>
+<script>
+  function checkMobile() {
+    const isMobile = window.innerWidth <= 768;
+    document.querySelectorAll('.table-desktop-p, .table-desktop-a').forEach(el => {
+      el.style.display = isMobile ? 'none' : 'block';
+    });
+    document.querySelectorAll('.cards-mobile').forEach(el => {
+      el.style.display = isMobile ? 'flex' : 'none';
+    });
+  }
+  window.addEventListener('resize', checkMobile);
+  checkMobile();
+</script>
+</body>
+</html>
+
+
+
+
+
