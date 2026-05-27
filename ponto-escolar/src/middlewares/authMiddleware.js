@@ -2,17 +2,16 @@ const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const { executeOne } = require('../config/database');
 const { ForbiddenError, UnauthorizedError } = require('../utils/errors');
-const { getAdminAuthCookie } = require('../utils/authCookie');
 
 function extractBearerToken(req) {
   const authHeader = req.headers.authorization;
   if (typeof authHeader !== 'string') {
-    return getAdminAuthCookie(req);
+    return null;
   }
 
   const [scheme, token] = authHeader.split(' ');
   if (!/^Bearer$/i.test(scheme) || !token) {
-    return getAdminAuthCookie(req);
+    return null;
   }
 
   return token.trim();

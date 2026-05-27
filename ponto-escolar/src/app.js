@@ -1,12 +1,20 @@
 'use strict';
 
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
+const session = require('express-session');
 const env = require('./config/env');
-const authRoutes = require('./routes/auth');
-const { createAdminPagesRouter } = require('./routes/pages/admin.routes');
+const apiRoutes = require('./routes');
+const { createPagesRouter } = require('./routes/pages.routes');
+const punchRoutes = require('./routes/punchRoutes');
+const { validateQrCode } = require('./services/qrCodeService');
+const { globalLimiter } = require('./middlewares/rateLimiters');
+const { notFoundMiddleware } = require('./middlewares/notFoundMiddleware');
+const { errorMiddleware } = require('./middlewares/errorMiddleware');
 
 const app = express();
 const viewsRoot = path.resolve(__dirname, '../views');
@@ -108,19 +116,41 @@ app.use('/assets', express.static(assetsRoot, staticOptions));
 
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: env.IS_PRODUCTION
+    }
+  })
+);
+app.use(globalLimiter);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ success: true, data: { status: 'ok' } });
 });
-
-app.use(authRoutes);
 
 function sendView(res, relativePath) {
   res.set(noCacheHtmlHeaders);
   res.sendFile(path.join(viewsRoot, relativePath));
 }
 
-app.get('/', (_req, res) => sendView(res, 'index.html'));
-app.use(createAdminPagesRouter({ sendView }));
+app.use(
+  createPagesRouter({
+    sendView,
+    validateQrCode,
+    schoolUnitCode: env.SCHOOL_UNIT_CODE,
+    noCacheHtmlHeaders
+  })
+);
+
+app.use('/ponto', punchRoutes);
+app.use('/api', apiRoutes);
+app.use(notFoundMiddleware);
+app.use(errorMiddleware);
 
 module.exports = app;
