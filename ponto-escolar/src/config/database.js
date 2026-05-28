@@ -1,4 +1,4 @@
-npm startconst mysql = require('mysql2/promise');
+const mysql = require('mysql2/promise');
 const env = require('./env');
 const { normalizeError } = require('../utils/errors');
 
