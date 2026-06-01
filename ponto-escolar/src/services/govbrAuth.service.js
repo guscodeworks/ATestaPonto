@@ -58,6 +58,8 @@ async function trocarCodePorToken({ code, codeVerifier }) {
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code: getRequiredParameter(code, 'code'),
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
     redirect_uri: config.redirectUri,
     code_verifier: getRequiredParameter(codeVerifier, 'codeVerifier')
   });

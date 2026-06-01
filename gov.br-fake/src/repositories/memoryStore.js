@@ -3,6 +3,7 @@
 const authCodes = new Map();
 const accessTokens = new Map();
 const pendingAuthorizeRequests = new Map();
+const fakeLoginSessions = new Map();
 
 function isRecordExpired(record, now = Date.now()) {
   if (!record) {
@@ -30,6 +31,7 @@ function cleanupExpiredRecords() {
   deleteExpiredFromMap(authCodes, now);
   deleteExpiredFromMap(accessTokens, now);
   deleteExpiredFromMap(pendingAuthorizeRequests, now);
+  deleteExpiredFromMap(fakeLoginSessions, now);
 }
 
 function startCleanup(intervalMs) {
@@ -81,10 +83,24 @@ function deletePendingAuthorizeRequest(id) {
   pendingAuthorizeRequests.delete(id);
 }
 
+function saveFakeLoginSession(id, session) {
+  fakeLoginSessions.set(id, session);
+  return session;
+}
+
+function getFakeLoginSession(id) {
+  return fakeLoginSessions.get(id) || null;
+}
+
+function deleteFakeLoginSession(id) {
+  fakeLoginSessions.delete(id);
+}
+
 module.exports = {
   authCodes,
   accessTokens,
   pendingAuthorizeRequests,
+  fakeLoginSessions,
   cleanupExpiredRecords,
   startCleanup,
   saveAuthCode,
@@ -95,5 +111,8 @@ module.exports = {
   deleteAccessToken,
   savePendingAuthorizeRequest,
   getPendingAuthorizeRequest,
-  deletePendingAuthorizeRequest
+  deletePendingAuthorizeRequest,
+  saveFakeLoginSession,
+  getFakeLoginSession,
+  deleteFakeLoginSession
 };

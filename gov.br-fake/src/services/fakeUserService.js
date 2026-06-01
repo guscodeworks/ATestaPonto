@@ -2,10 +2,21 @@
 
 const { fakeUsers } = require('../config/fakeUsers');
 
-const fakeUsersBySub = new Map(fakeUsers.map((user) => [user.sub, user]));
+const fakeUsersBySub = new Map();
+
+fakeUsers.forEach((user) => {
+  fakeUsersBySub.set(user.sub, user);
+  fakeUsersBySub.set(normalizeSub(user.sub), user);
+});
 
 function normalizeSub(value) {
-  return String(value || '').replace(/\D/g, '');
+  const normalized = String(value || '').trim();
+
+  if (/[A-Za-z]/.test(normalized)) {
+    return normalized;
+  }
+
+  return normalized.replace(/\D/g, '');
 }
 
 function findBySub(sub) {

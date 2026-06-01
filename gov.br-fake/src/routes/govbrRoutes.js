@@ -7,6 +7,7 @@ const router = Router();
 
 router.get('/authorize', govbrAuthController.showAuthorize);
 router.post('/login', govbrAuthController.login);
+router.get('/session', govbrAuthController.showSession);
 router.post('/token', govbrAuthController.exchangeToken);
 router.get('/userinfo', govbrAuthController.showUserInfo);
 

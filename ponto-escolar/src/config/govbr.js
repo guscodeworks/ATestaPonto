@@ -16,8 +16,26 @@ function getRequiredValue(name) {
   return value;
 }
 
+function getOptionalValue(name, fallbackValue = '') {
+  return String(process.env[name] || fallbackValue || '').trim();
+}
+
+function getRequiredFallbackValue(name, fallbackName) {
+  const value = getOptionalValue(name, process.env[fallbackName]);
+
+  if (!value) {
+    throwConfigError(`"${name}" or "${fallbackName}" is required`);
+  }
+
+  return value;
+}
+
 function getRequiredUrl(name) {
   const value = getRequiredValue(name);
+  return validateUrl(name, value);
+}
+
+function validateUrl(name, value) {
   let url;
 
   try {
@@ -33,28 +51,78 @@ function getRequiredUrl(name) {
   return url.toString();
 }
 
-function getAdminSubs() {
-  const subs = getRequiredValue('ADMIN_GOVBR_SUBS')
-    .split(',')
-    .map((sub) => sub.trim())
-    .filter(Boolean);
+function getOptionalUrl(name, fallbackValue) {
+  const value = getOptionalValue(name, fallbackValue);
 
-  if (subs.length === 0) {
-    throwConfigError('"ADMIN_GOVBR_SUBS" must include at least one subject');
+  if (!value) {
+    throwConfigError(`"${name}" is required`);
   }
 
-  return subs;
+  return validateUrl(name, value);
+}
+
+function getList(name) {
+  return getOptionalValue(name)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function getAdminSubs() {
+  return getList('ADMIN_GOVBR_SUBS');
+}
+
+function getAdminEmails() {
+  return getList('ADMIN_GOVBR_EMAILS').map((email) => email.toLowerCase());
+}
+
+function getFakeBaseUrl() {
+  return getOptionalValue('GOVBR_FAKE_BASE_URL').replace(/\/+$/, '');
+}
+
+function requireAtLeastOneAdminIdentifier(adminSubs, adminEmails) {
+  if (adminSubs.length === 0 && adminEmails.length === 0) {
+    throwConfigError('"ADMIN_GOVBR_SUBS" or "ADMIN_GOVBR_EMAILS" must include at least one value');
+  }
+}
+
+function getAuthorizeUrl(fakeBaseUrl) {
+  return getOptionalUrl(
+    'GOVBR_AUTHORIZE_URL',
+    fakeBaseUrl ? `${fakeBaseUrl}/fake-govbr/authorize` : ''
+  );
+}
+
+function getTokenUrl(fakeBaseUrl) {
+  return getOptionalUrl(
+    'GOVBR_TOKEN_URL',
+    fakeBaseUrl ? `${fakeBaseUrl}/fake-govbr/token` : ''
+  );
+}
+
+function getUserInfoUrl(fakeBaseUrl) {
+  return getOptionalUrl(
+    'GOVBR_USERINFO_URL',
+    fakeBaseUrl ? `${fakeBaseUrl}/fake-govbr/userinfo` : ''
+  );
 }
 
 function getGovbrConfig() {
+  const fakeBaseUrl = getFakeBaseUrl();
+  const adminSubs = getAdminSubs();
+  const adminEmails = getAdminEmails();
+
+  requireAtLeastOneAdminIdentifier(adminSubs, adminEmails);
+
   return Object.freeze({
-    authorizeUrl: getRequiredUrl('GOVBR_AUTHORIZE_URL'),
-    tokenUrl: getRequiredUrl('GOVBR_TOKEN_URL'),
-    userInfoUrl: getRequiredUrl('GOVBR_USERINFO_URL'),
-    clientId: getRequiredValue('GOVBR_CLIENT_ID'),
-    clientSecret: String(process.env.GOVBR_CLIENT_SECRET || '').trim(),
-    redirectUri: getRequiredUrl('GOVBR_REDIRECT_URI'),
-    adminSubs: Object.freeze(getAdminSubs())
+    authorizeUrl: getAuthorizeUrl(fakeBaseUrl),
+    tokenUrl: getTokenUrl(fakeBaseUrl),
+    userInfoUrl: getUserInfoUrl(fakeBaseUrl),
+    clientId: getRequiredFallbackValue('GOVBR_FAKE_CLIENT_ID', 'GOVBR_CLIENT_ID'),
+    clientSecret: getRequiredFallbackValue('GOVBR_FAKE_CLIENT_SECRET', 'GOVBR_CLIENT_SECRET'),
+    redirectUri: getOptionalUrl('GOVBR_FAKE_REDIRECT_URI', process.env.GOVBR_REDIRECT_URI),
+    adminSubs: Object.freeze(adminSubs),
+    adminEmails: Object.freeze(adminEmails)
   });
 }
 

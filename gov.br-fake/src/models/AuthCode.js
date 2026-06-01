@@ -1,8 +1,9 @@
 'use strict';
 
 class AuthCode {
-  constructor({ codeChallenge, redirectUri, clientId, userSub, expiresAt }) {
+  constructor({ codeChallenge, codeChallengeMethod, redirectUri, clientId, userSub, expiresAt }) {
     this.codeChallenge = String(codeChallenge || '').trim();
+    this.codeChallengeMethod = String(codeChallengeMethod || '').trim();
     this.redirectUri = String(redirectUri || '').trim();
     this.clientId = String(clientId || '').trim();
     this.userSub = String(userSub || '').trim();

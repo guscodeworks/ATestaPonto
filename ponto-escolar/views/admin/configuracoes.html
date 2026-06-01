@@ -386,20 +386,11 @@
 </script>
 <script src="/assets/js/auth.js"></script>
 <script>
-// Guard admin + logout
-if (!sessionStorage.getItem("admin_logged_in")) {
-  window.history.replaceState(null, "", "/admin/login");
-  window.location.replace("/admin/login");
-}
-window.history.pushState({ protected: true }, "");
-window.addEventListener("popstate", function () {
-  if (!sessionStorage.getItem("admin_logged_in")) window.location.replace("/admin/login");
-});
+// A rota ja e protegida pelo backend com req.session.admin.
 function fazerLogoutAdmin() {
   sessionStorage.clear();
   ["admin_logged_in","admin_nome","admin_cargo"].forEach(k => localStorage.removeItem(k));
-  window.history.replaceState(null, "", "/admin/login");
-  window.location.replace("/admin/login");
+  window.location.replace("/admin/auth/logout");
 }
 </script>
 </body>

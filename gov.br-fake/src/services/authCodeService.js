@@ -26,6 +26,7 @@ function generateAuthorizationCode() {
 
 function registerAuthorizationCode({
   codeChallenge,
+  codeChallengeMethod,
   redirectUri,
   clientId,
   userSub,
@@ -41,7 +42,8 @@ function registerAuthorizationCode({
 
   const code = generateAuthorizationCode();
   const authCode = new AuthCode({
-    codeChallenge: getRequiredString(codeChallenge, 'codeChallenge'),
+    codeChallenge: String(codeChallenge || '').trim(),
+    codeChallengeMethod: String(codeChallengeMethod || '').trim(),
     redirectUri: getRequiredString(redirectUri, 'redirectUri'),
     clientId: getRequiredString(clientId, 'clientId'),
     userSub: user.sub,

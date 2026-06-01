@@ -1,14 +1,19 @@
 'use strict';
 
 const express = require('express');
+const path = require('path');
 const homeRoutes = require('./routes/homeRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const govbrRoutes = require('./routes/govbrRoutes');
 
 const app = express();
+const publicRoot = path.resolve(__dirname, '../public');
+const assetsRoot = path.join(publicRoot, 'assets');
 
 app.disable('x-powered-by');
 
+app.use(express.static(publicRoot, { maxAge: '1h' }));
+app.use('/assets', express.static(assetsRoot, { maxAge: '1h' }));
 app.use(express.json({ limit: '20kb' }));
 app.use(express.urlencoded({ extended: false, limit: '20kb' }));
 
