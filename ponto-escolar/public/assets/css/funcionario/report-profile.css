@@ -1,0 +1,152 @@
+/* ============================================================
+   ÁREA DO FUNCIONÁRIO — Relatório & Perfil
+   Herda design system do Admin
+   ============================================================ */
+
+/* ---- Filtros do relatório ---- */
+.report-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---- Tabela de relatório ---- */
+.report-table-wrap { overflow-x: auto; }
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.report-table thead th {
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text-300);
+  background: var(--bg-surface-2);
+  border-bottom: 1px solid var(--border-light);
+  white-space: nowrap;
+}
+
+.report-table tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text-700);
+  vertical-align: middle;
+}
+
+.report-table tbody tr:last-child td { border-bottom: none; }
+.report-table tbody tr:hover td { background: var(--bg-surface-2); }
+
+.td-date { font-weight: 600; color: var(--text-900); }
+.td-time { font-family: var(--font-mono); font-size: 13px; color: var(--text-700); }
+
+/* Badge adicional */
+.badge-extra { background: var(--blue-50); color: var(--blue-700); border: 1px solid rgba(26,101,200,0.2); }
+
+/* ---- Cards do relatório mobile ---- */
+.report-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.report-card-item {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-lg);
+  padding: 16px;
+}
+
+.rc-date {
+  font-size: 14px; font-weight: 700; color: var(--text-900);
+}
+
+.rc-times {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.rc-time-item { display: flex; flex-direction: column; gap: 3px; }
+.rc-time-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-300); }
+.rc-time-val   { font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: var(--text-900); }
+.rc-time-val.empty { color: var(--text-300); }
+
+.rc-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 8px;
+}
+
+.rc-total {
+  font-family: var(--font-mono); font-size: 16px; font-weight: 700;
+  color: var(--blue-700);
+}
+
+/* ---- Perfil ---- */
+.profile-hero {
+  background: linear-gradient(135deg, var(--blue-900) 0%, #1a3a6e 100%);
+  border-radius: var(--r-xl);
+  padding: 32px 36px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  color: white;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.profile-avatar-wrap {
+  position: relative; z-index: 1; flex-shrink: 0;
+}
+
+.profile-avatar {
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--purple-600), var(--blue-500));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; color: white;
+  box-shadow: 0 0 0 4px rgba(255,255,255,0.15);
+}
+
+.profile-info { position: relative; z-index: 1; }
+.profile-name  { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 4px; }
+.profile-cargo { font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+.profile-id    { font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 12px; }
+.profile-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.profile-section-title {
+  font-size: 14px; font-weight: 700; color: var(--text-900);
+  display: flex; align-items: center; gap: 8px;
+}
+
+.profile-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.profile-field { display: flex; flex-direction: column; gap: 4px; }
+.profile-field-label { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-300); }
+.profile-field-value { font-size: 14px; font-weight: 600; color: var(--text-900); }
+
+/* Força de senha */
+.pw-form { display: flex; flex-direction: column; gap: 18px; }
+.pw-form-actions { display: flex; gap: 10px; flex-wrap: wrap; }

@@ -1,0 +1,66 @@
+﻿/* ============================================================
+   RESPONSIVIDADE
+   ============================================================ */
+
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  .menu-toggle {
+    display: flex;
+  }
+
+  .sala-content {
+    flex-direction: column;
+    padding: 28px 24px;
+  }
+
+  .sala-visual { display: none; }
+
+  .sala-title { font-size: 30px; }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .page-content { padding: 20px 16px; }
+}
+
+@media (max-width: 600px) {
+  .topbar { padding: 0 16px; }
+
+  .topbar-datetime { display: none; }
+
+  .admin-info { display: none; }
+
+  .stat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-bar-left, .action-bar-right {
+    flex-direction: column;
+  }
+
+  .search-box input { width: 100%; }
+  .search-box { flex: 1; }
+}
+

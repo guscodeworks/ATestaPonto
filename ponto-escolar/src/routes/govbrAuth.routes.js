@@ -9,6 +9,7 @@ const {
 
 const router = Router();
 
+router.get('/start', iniciarLoginGovbr);
 router.get('/login', iniciarLoginGovbr);
 router.get('/callback', concluirLoginGovbr);
 router.get('/logout', sairGovbr);

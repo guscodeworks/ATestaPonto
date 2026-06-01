@@ -1,0 +1,10 @@
+/* Funcionário CSS Manifest — usa o mesmo design system do Admin */
+@import url("./admin/base.css");
+@import url("./admin/dashboard.css");
+@import url("./admin/data-and-forms.css");
+@import url("./admin/components.css");
+@import url("./admin/auth.css");
+@import url("./admin/responsive.css");
+@import url("./funcionario/ponto.css");
+@import url("./funcionario/report-profile.css");
+@import url("./funcionario/responsive-func.css");

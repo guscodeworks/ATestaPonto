@@ -6,7 +6,7 @@ function ensureAdminAuthenticated(req, res, next) {
     !req.session.admin ||
     req.session.admin.authProvider !== 'govbr'
   ) {
-    return res.redirect('/auth/govbr/login');
+    return res.redirect('/admin/auth/start');
   }
 
   req.user = req.session.admin;

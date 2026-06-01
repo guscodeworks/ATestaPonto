@@ -6,7 +6,7 @@ const ensureAdminAuthenticated = require("../../middlewares/ensureAdminAuthentic
 function createAdminPagesRouter({ sendView }) {
   const router = Router();
 
-  router.get("/admin/login", (_req, res) => res.redirect("/admin/dashboard"));
+  router.get("/admin/login", (_req, res) => res.redirect("/admin/auth/start"));
   router.get("/admin", ensureAdminAuthenticated, (_req, res) =>
     res.redirect("/admin/dashboard")
   );

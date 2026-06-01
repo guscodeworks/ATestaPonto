@@ -135,6 +135,7 @@ app.get('/health', (req, res) => {
   res.status(200).json({ success: true, data: { status: 'ok' } });
 });
 
+app.use('/admin/auth', govbrAuthRoutes);
 app.use('/auth/govbr', govbrAuthRoutes);
 
 function sendView(res, relativePath) {
