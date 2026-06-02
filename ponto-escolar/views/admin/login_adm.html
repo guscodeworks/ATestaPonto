@@ -1,119 +1,20 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Acesso Administrador — Sala do Futuro</title>
-  <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link rel="stylesheet" href="/public/assets/css/admin.css"/>
+  <meta http-equiv="refresh" content="0; url=../ponto-login.html"/>
+  <title>Redirecionando…</title>
+  <style>
+    body { font-family: sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f0f4f8; margin: 0; }
+    p { color: #3a5068; font-size: 1rem; }
+  </style>
 </head>
 <body>
-
-<div class="login-page">
-
-  <!-- Painel visual -->
-  <div class="login-panel login-panel--visual">
-    <div class="login-geo"></div>
-    <div class="login-grid-lines"></div>
-    <div class="login-visual-inner">
-      <div class="login-visual-icon">🏫</div>
-      <div class="login-visual-title">Sala do Futuro</div>
-      <p class="login-visual-desc">Painel Administrativo.<br/>Gerencie funcionários, pontos e relatórios com total controle.</p>
-
-      <div style="margin-top:40px;display:flex;flex-direction:column;gap:14px;text-align:left;">
-        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 16px;">
-          <span style="font-size:22px;">👥</span>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:white;">Gestão completa</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.5);">Cadastre, edite e gerencie funcionários</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 16px;">
-          <span style="font-size:22px;">📊</span>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:white;">Relatórios detalhados</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.5);">Exporte dados em PDF e Excel</div>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 16px;">
-          <span style="font-size:22px;">⏱</span>
-          <div>
-            <div style="font-size:13px;font-weight:600;color:white;">Controle de ponto</div>
-            <div style="font-size:12px;color:rgba(255,255,255,0.5);">Visualize e ajuste registros em tempo real</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Formulário -->
-  <div class="login-panel">
-    <div class="login-form-panel">
-
-      <div class="login-logo">
-        <div class="login-logo-mark">🏫</div>
-        <span class="login-logo-name">Sala do Futuro</span>
-      </div>
-
-      <h1 class="login-heading">Acesso Administrativo</h1>
-      <p class="login-sub">Entre com suas credenciais de administrador</p>
-
-      <form id="form-login" novalidate>
-        <div class="form-field" style="margin-bottom:18px;">
-          <label for="login-user">Usuário / E-mail</label>
-          <div class="input-wrap">
-            <span class="field-icon">👤</span>
-            <input type="text" id="login-user" class="field-input" placeholder="admin@escola.edu.br" autocomplete="username"/>
-          </div>
-        </div>
-
-        <div class="form-field" style="margin-bottom:10px;">
-          <label for="login-senha">Senha</label>
-          <div class="input-wrap">
-            <span class="field-icon">🔒</span>
-            <input type="password" id="login-senha" class="field-input" placeholder="••••••••" autocomplete="current-password"/>
-            <button type="button" id="toggle-pw" class="toggle-pw" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-300);cursor:pointer;font-size:16px;padding:4px;">👁</button>
-          </div>
-        </div>
-
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-500);cursor:pointer;">
-            <input type="checkbox" style="accent-color:var(--blue-600);"/> Lembrar acesso
-          </label>
-          <a href="#" style="font-size:13px;color:var(--blue-600);font-weight:500;">Esqueci a senha</a>
-        </div>
-
-        <button type="submit" class="btn-login" id="btn-login">
-          <span class="btn-label">Entrar no painel</span>
-          <div class="spinner"></div>
-        </button>
-      </form>
-
-      <div class="login-divider"><span>ou</span></div>
-      <p class="login-func-link">
-        É funcionário? <a href="/login">Acesse sua área</a>
-      </p>
-
-    </div>
-  </div>
-</div>
-
-<div class="toast-stack" id="toast-stack"></div>
-
-  <script src="/assets/js/admin/00-state.js"></script>
-  <script src="/assets/js/admin/01-helpers.js"></script>
-  <script src="/assets/js/admin/02-ui-core.js"></script>
-  <script src="/assets/js/admin/03-dashboard.js"></script>
-  <script src="/assets/js/admin/04-employees.js"></script>
-  <script src="/assets/js/admin/05-points.js"></script>
-  <script src="/assets/js/admin/06-reports.js"></script>
-  <script src="/assets/js/admin/07-register.js"></script>
-  <script src="/assets/js/admin/08-settings-login.js"></script>
-  <script src="/assets/js/admin/09-init.js"></script>
-
+  <p>Redirecionando para o login GOV.BR…</p>
+  <script>
+    localStorage.removeItem('ponto_escolar_auth');
+    sessionStorage.removeItem('ponto_escolar_auth');
+    window.location.replace('../ponto-login.html');
+  </script>
 </body>
 </html>
-
-
-
-

@@ -1,0 +1,40 @@
+/* ============================================================
+   ÁREA DO FUNCIONÁRIO — Responsividade extra
+   ============================================================ */
+
+/* Bottom nav só aparece em mobile */
+@media (max-width: 768px) {
+  .bottom-nav { display: block; }
+  .page-content { padding-bottom: 80px; }
+
+  .ponto-time { font-size: 36px; }
+
+  .ponto-hero { padding: 24px 20px; }
+
+  .profile-hero {
+    flex-direction: column;
+    text-align: center;
+    padding: 28px 20px;
+  }
+
+  .profile-field-grid { grid-template-columns: 1fr; }
+
+  .rc-times { grid-template-columns: repeat(2, 1fr); }
+
+  .report-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .report-filters .filter-select,
+  .report-filters .btn { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .ponto-btn { width: 90px; height: 90px; }
+  .ponto-btn-icon { font-size: 22px; }
+  .ponto-time { font-size: 30px; }
+
+  .confirm-time { font-size: 26px; }
+  .ponto-confirm-card { padding: 28px 20px; }
+}

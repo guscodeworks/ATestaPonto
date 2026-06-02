@@ -1,0 +1,23 @@
+{
+  "name": "govbr-fake",
+  "version": "0.1.0",
+  "description": "Simulador local e demonstrativo do Gov.br/Login Unico para integracao tecnica.",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check src/server.js"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.2",
+    "cors": "^2.8.6",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.22.4",
+    "path": "^0.12.7",
+    "qrcode": "^1.5.4"
+  }
+}
