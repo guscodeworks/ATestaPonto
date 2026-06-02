@@ -88,9 +88,28 @@ async function loginFuncionario(req, res, next) {
   }
 }
 
-function logoutAdmin(_req, res) {
+function getGovbrFakeHomeUrl() {
+  return String(process.env.GOVBR_FAKE_BASE_URL || 'http://localhost:4000').trim();
+}
+
+function logoutAdmin(req, res) {
   res.setHeader('Set-Cookie', buildClearAdminAuthCookie());
-  return res.status(200).json({ message: 'Logout realizado com sucesso' });
+  res.clearCookie('connect.sid', { path: '/' });
+
+  if (req.session && typeof req.session.destroy === 'function') {
+    req.session.destroy(() => {});
+  }
+
+  const redirectTo = getGovbrFakeHomeUrl();
+
+  if (req.method === 'GET') {
+    return res.redirect(redirectTo);
+  }
+
+  return res.status(200).json({
+    message: 'Logout realizado com sucesso',
+    redirectTo
+  });
 }
 
 module.exports = {

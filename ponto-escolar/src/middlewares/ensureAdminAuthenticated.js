@@ -1,15 +1,19 @@
 'use strict';
 
+const { verificarSeUsuarioGovbrEhAdmin } = require('../services/adminAuthorization.service');
+
 function ensureAdminAuthenticated(req, res, next) {
+  const admin = req.session && req.session.admin;
+
   if (
-    !req.session ||
-    !req.session.admin ||
-    req.session.admin.authProvider !== 'govbr'
+    !admin ||
+    admin.authProvider !== 'govbr' ||
+    !verificarSeUsuarioGovbrEhAdmin(admin)
   ) {
     return res.redirect('/admin/auth/start');
   }
 
-  req.user = req.session.admin;
+  req.user = admin;
   return next();
 }
 

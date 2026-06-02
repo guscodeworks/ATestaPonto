@@ -1,7 +1,6 @@
 /* ============================================================
    PDF / IMPRESSAO
    ============================================================ */
-
 function gerarPDF() {
   const btn = document.getElementById('btn-gerar-pdf');
   if (!btn) return;
@@ -42,29 +41,9 @@ function iniciarConfiguracoes() {
    A rota real ja e protegida pelo backend com req.session.admin.
    ============================================================ */
 
-const ADMIN_AUTH_STORAGE_KEY = 'ponto_escolar_auth';
-
-function carregarAuthAdmin() {
-  try {
-    const raw = localStorage.getItem(ADMIN_AUTH_STORAGE_KEY)
-      || sessionStorage.getItem(ADMIN_AUTH_STORAGE_KEY)
-      || '{}';
-    const auth = JSON.parse(raw);
-    return auth && auth.admin ? auth : null;
-  } catch (_error) {
-    return null;
-  }
-}
-
-function salvarAuthAdmin(token, admin) {
-  const payload = JSON.stringify({ token, admin });
-  localStorage.setItem(ADMIN_AUTH_STORAGE_KEY, payload);
-  sessionStorage.setItem(ADMIN_AUTH_STORAGE_KEY, payload);
-}
-
 function limparAuthAdmin() {
-  localStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
-  sessionStorage.removeItem(ADMIN_AUTH_STORAGE_KEY);
+  localStorage.removeItem('ponto_escolar_auth');
+  sessionStorage.removeItem('ponto_escolar_auth');
   sessionStorage.removeItem('admin_logged_in');
   localStorage.removeItem('admin_logged_in');
   localStorage.removeItem('admin_nome');
@@ -89,7 +68,12 @@ function aplicarAdminGovbr(admin) {
 }
 
 function sincronizarSessaoAdmin() {
-  fetch('/api/admin/auth/me')
+  fetch('/api/admin/auth/me', {
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json'
+    }
+  })
     .then((response) => {
       if (response.status === 401) {
         window.location.replace(caminhoLogin());
@@ -107,11 +91,6 @@ function sincronizarSessaoAdmin() {
 }
 
 function validarSessaoAdmin() {
-  const auth = carregarAuthAdmin();
-  if (auth) {
-    aplicarAdminGovbr(auth.admin);
-  }
-
   sincronizarSessaoAdmin();
   return true;
 }

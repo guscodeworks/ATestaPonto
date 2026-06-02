@@ -132,6 +132,18 @@ function createFakeSession(res) {
   }));
 }
 
+function clearFakeSession(req, res) {
+  const sessionId = getCookie(req, FAKE_SESSION_COOKIE);
+
+  if (sessionId) {
+    memoryStore.deleteFakeLoginSession(sessionId);
+  }
+
+  res.setHeader('Set-Cookie', buildCookie(FAKE_SESSION_COOKIE, '', {
+    maxAge: 0
+  }));
+}
+
 function getAuthenticatedUser(req) {
   memoryStore.cleanupExpiredRecords();
 
@@ -200,7 +212,8 @@ function showAuthorize(req, res, next) {
 
 function login(req, res, next) {
   try {
-    const sub = String(req.body.sub || env.fakeAdminSub).trim();
+    const body = req.body || {};
+    const sub = String(body.sub || env.fakeAdminSub).trim();
     if (sub && !fakeUserService.findBySub(sub)) {
       throw requestError('Usuario fake nao encontrado.', 401, 'INVALID_FAKE_USER');
     }
@@ -235,6 +248,11 @@ function showSession(req, res) {
     authenticated: true,
     user
   });
+}
+
+function logout(req, res) {
+  clearFakeSession(req, res);
+  return res.redirect('/govbr');
 }
 
 function exchangeToken(req, res) {
@@ -341,6 +359,7 @@ function showUserInfo(req, res) {
 module.exports = {
   showAuthorize,
   login,
+  logout,
   showSession,
   exchangeToken,
   showUserInfo
