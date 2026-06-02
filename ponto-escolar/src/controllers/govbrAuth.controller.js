@@ -11,8 +11,12 @@ const {
 const { verificarSeUsuarioGovbrEhAdmin } = require('../services/adminAuthorization.service');
 const { buildClearAdminAuthCookie } = require('../utils/authCookie');
 
-function getGovbrFakeHomeUrl() {
-  return String(process.env.GOVBR_FAKE_BASE_URL || 'http://localhost:4000').trim();
+function getGovbrFakeLogoutUrl() {
+  const baseUrl = String(process.env.GOVBR_FAKE_BASE_URL || 'http://localhost:4000')
+    .trim()
+    .replace(/\/+$/, '');
+
+  return `${baseUrl}/fake-govbr/logout`;
 }
 
 function matchesState(receivedState, storedState) {
@@ -155,7 +159,7 @@ async function sairGovbr(req, res, next) {
   res.clearCookie('connect.sid', { path: '/' });
 
   if (!req.session) {
-    return res.redirect(getGovbrFakeHomeUrl());
+    return res.redirect(getGovbrFakeLogoutUrl());
   }
 
   try {
@@ -163,7 +167,7 @@ async function sairGovbr(req, res, next) {
     delete req.session.oauthGovbr;
     await destroySession(req);
 
-    return res.redirect(getGovbrFakeHomeUrl());
+    return res.redirect(getGovbrFakeLogoutUrl());
   } catch (error) {
     return next(error);
   }

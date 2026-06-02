@@ -1,35 +1,44 @@
 "use strict";
 
 const { Router } = require("express");
-const ensureAdminAuthenticated = require("../../middlewares/ensureAdminAuthenticated");
+const requireAdmin = require("../../middlewares/ensureAdminAuthenticated");
+const { sairGovbr } = require("../../controllers/govbrAuth.controller");
+
+function renderAdminView(sendView, viewPath) {
+  return (_req, res) => sendView(res, viewPath);
+}
+
+function redirectTo(path) {
+  return (_req, res) => res.redirect(path);
+}
 
 function createAdminPagesRouter({ sendView }) {
   const router = Router();
+  const dashboardPage = renderAdminView(sendView, "admin/dashboard.html");
+  const funcionariosPage = renderAdminView(sendView, "admin/funcionarios.html");
+  const registrarFuncionarioPage = renderAdminView(sendView, "admin/registrar-funcionario.html");
+  const pontosPage = renderAdminView(sendView, "admin/pontos-do-dia.html");
+  const relatoriosPage = renderAdminView(sendView, "admin/relatorios.html");
+  const configuracoesPage = renderAdminView(sendView, "admin/configuracoes.html");
 
   router.get("/admin/login", (_req, res) => res.redirect("/admin/auth/start"));
-  router.get("/admin", ensureAdminAuthenticated, (_req, res) =>
-    res.redirect("/admin/dashboard")
-  );
-  router.get("/admin/dashboard", ensureAdminAuthenticated, (_req, res) =>
-    sendView(res, "admin/dashboard.html")
-  );
-  router.get("/admin/funcionarios", ensureAdminAuthenticated, (_req, res) =>
-    sendView(res, "admin/funcionarios.html")
-  );
-  router.get(
-    "/admin/funcionarios/novo",
-    ensureAdminAuthenticated,
-    (_req, res) => sendView(res, "admin/registrar-funcionario.html")
-  );
-  router.get("/admin/pontos-do-dia", ensureAdminAuthenticated, (_req, res) =>
-    sendView(res, "admin/pontos-do-dia.html")
-  );
-  router.get("/admin/relatorios", ensureAdminAuthenticated, (_req, res) =>
-    sendView(res, "admin/relatorios.html")
-  );
-  router.get("/admin/configuracoes", ensureAdminAuthenticated, (_req, res) =>
-    sendView(res, "admin/configuracoes.html")
-  );
+  router.get("/admin/logout", sairGovbr);
+
+  router.get("/admin", requireAdmin, redirectTo("/admin/dashboard"));
+  router.get("/admin/index", requireAdmin, redirectTo("/admin/dashboard"));
+  router.get("/admin/dashboard", requireAdmin, dashboardPage);
+
+  router.get("/admin/funcionario", requireAdmin, funcionariosPage);
+  router.get("/admin/funcionarios", requireAdmin, funcionariosPage);
+  router.get("/admin/funcionarios/novo", requireAdmin, registrarFuncionarioPage);
+  router.get("/admin/registrar-funcionario", requireAdmin, redirectTo("/admin/funcionarios/novo"));
+
+  router.get("/admin/pontos", requireAdmin, pontosPage);
+  router.get("/admin/pontos-do-dia", requireAdmin, pontosPage);
+  router.get("/admin/relatorios", requireAdmin, relatoriosPage);
+
+  router.get("/admin/configuracao", requireAdmin, configuracoesPage);
+  router.get("/admin/configuracoes", requireAdmin, configuracoesPage);
 
   return router;
 }
