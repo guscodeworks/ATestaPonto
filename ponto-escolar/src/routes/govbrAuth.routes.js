@@ -9,7 +9,7 @@ const {
 
 const router = Router();
 
-router.get('/start', iniciarLoginGovbr);
+router.get('/start', (_req, res) => res.redirect('/auth/govbr/login'));
 router.get('/login', iniciarLoginGovbr);
 router.get('/callback', concluirLoginGovbr);
 router.get('/logout', sairGovbr);

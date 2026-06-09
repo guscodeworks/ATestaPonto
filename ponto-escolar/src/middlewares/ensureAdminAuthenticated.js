@@ -10,7 +10,7 @@ function ensureAdminAuthenticated(req, res, next) {
     admin.authProvider !== 'govbr' ||
     !verificarSeUsuarioGovbrEhAdmin(admin)
   ) {
-    return res.redirect('/admin/auth/start');
+    return res.redirect('/auth/govbr/login');
   }
 
   req.user = admin;

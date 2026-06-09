@@ -187,9 +187,8 @@
 <script>
 const funcionarioToken = sessionStorage.getItem('funcionario_token');
 const funcionarioData = JSON.parse(sessionStorage.getItem('funcionario_data') || 'null');
-const funcionarioQrCode = String(sessionStorage.getItem('funcionario_qr_code') || '').trim();
 
-if (!funcionarioToken || !funcionarioData || !funcionarioQrCode) {
+if (!funcionarioToken || !funcionarioData) {
   window.location.href = '/login';
 }
 
@@ -351,12 +350,6 @@ function registroFromResponse(ponto) {
 async function baterPonto() {
   if (etapa >= SEQUENCIA.length || registrando) return;
 
-  if (!funcionarioQrCode) {
-    toast('Sessão de acesso inválida. Escaneie o QR Code novamente.', 'error');
-    setTimeout(() => { window.location.href = '/login'; }, 1200);
-    return;
-  }
-
   if (!navigator.onLine) {
     toast('Sem internet. Verifique sua conexão e tente novamente.', 'error');
     return;
@@ -370,8 +363,7 @@ async function baterPonto() {
     const data = await apiRequest('/pontos/registrar', {
       method: 'POST',
       body: {
-        ...location,
-        qrCode: funcionarioQrCode
+        ...location
       }
     });
 
@@ -388,10 +380,6 @@ async function baterPonto() {
   } catch (error) {
     const message = error.message || 'Falha ao registrar ponto.';
     toast(message, 'error');
-    if (/qr code|expirado/i.test(message)) {
-      setTimeout(() => { window.location.href = '/ponto/acessar'; }, 1400);
-      return;
-    }
     if (/sessao|token/i.test(message)) {
       setTimeout(sair, 1600);
     }
@@ -432,7 +420,6 @@ function sair() {
   sessionStorage.removeItem('funcionario_data');
   sessionStorage.removeItem('func_nome');
   sessionStorage.removeItem('func_cpf');
-  sessionStorage.removeItem('funcionario_qr_code');
   window.location.href = '/login';
 }
 </script>

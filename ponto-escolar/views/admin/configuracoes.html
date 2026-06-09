@@ -390,7 +390,7 @@
 function fazerLogoutAdmin() {
   sessionStorage.clear();
   ["admin_logged_in","admin_nome","admin_cargo"].forEach(k => localStorage.removeItem(k));
-  window.location.replace("/admin/auth/logout");
+  window.location.replace("/auth/govbr/logout");
 }
 </script>
 </body>

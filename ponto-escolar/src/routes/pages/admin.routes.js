@@ -2,7 +2,6 @@
 
 const { Router } = require("express");
 const requireAdmin = require("../../middlewares/ensureAdminAuthenticated");
-const { sairGovbr } = require("../../controllers/govbrAuth.controller");
 
 function renderAdminView(sendView, viewPath) {
   return (_req, res) => sendView(res, viewPath);
@@ -21,8 +20,8 @@ function createAdminPagesRouter({ sendView }) {
   const relatoriosPage = renderAdminView(sendView, "admin/relatorios.html");
   const configuracoesPage = renderAdminView(sendView, "admin/configuracoes.html");
 
-  router.get("/admin/login", (_req, res) => res.redirect("/admin/auth/start"));
-  router.get("/admin/logout", sairGovbr);
+  router.get("/admin/login", redirectTo("/auth/govbr/login"));
+  router.get("/admin/logout", redirectTo("/auth/govbr/logout"));
 
   router.get("/admin", requireAdmin, redirectTo("/admin/dashboard"));
   router.get("/admin/index", requireAdmin, redirectTo("/admin/dashboard"));
@@ -37,7 +36,6 @@ function createAdminPagesRouter({ sendView }) {
   router.get("/admin/pontos-do-dia", requireAdmin, pontosPage);
   router.get("/admin/relatorios", requireAdmin, relatoriosPage);
 
-  router.get("/admin/configuracao", requireAdmin, configuracoesPage);
   router.get("/admin/configuracoes", requireAdmin, configuracoesPage);
 
   return router;

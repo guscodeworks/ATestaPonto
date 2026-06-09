@@ -1,29 +1,55 @@
-﻿/* ============================================================
-   FUNCIONÁRIOS — LISTA / TABELA
+/* ============================================================
+   FUNCIONARIOS - LISTA / TABELA
    ============================================================ */
 
+function atualizarFiltroCargo() {
+  const filtroCargo = document.getElementById('filtro-cargo');
+  if (!filtroCargo) return;
+
+  const valorAtual = filtroCargo.value;
+  const cargos = [...new Set(FUNCIONARIOS.map(f => f.cargo).filter(Boolean))].sort();
+  filtroCargo.innerHTML = [
+    '<option value="">Todos os cargos</option>',
+    ...cargos.map(cargo => `<option value="${escapeHtml(cargo)}">${escapeHtml(cargo)}</option>`),
+  ].join('');
+  if (cargos.includes(valorAtual)) {
+    filtroCargo.value = valorAtual;
+  }
+}
+
+function funcionarioPassaNoFiltro(funcionario, filtro) {
+  const termo = String(filtro || '').toLowerCase();
+  if (!termo) return true;
+
+  return [
+    funcionario.nome,
+    funcionario.cpf,
+    funcionario.email,
+    funcionario.cargo,
+  ].some((campo) => String(campo || '').toLowerCase().includes(termo));
+}
+
 function renderizarFuncionarios(filtro = '') {
-  const tbody   = document.getElementById('tbody-funcionarios');
+  const tbody = document.getElementById('tbody-funcionarios');
   const cardList = document.getElementById('cards-funcionarios');
   const elTotal = document.getElementById('total-func');
 
-  let lista = FUNCIONARIOS.filter(f =>
-    f.nome.toLowerCase().includes(filtro.toLowerCase()) ||
-    f.cpf.includes(filtro) ||
-    f.email.toLowerCase().includes(filtro.toLowerCase()) ||
-    f.cargo.toLowerCase().includes(filtro.toLowerCase())
-  );
+  atualizarFiltroCargo();
 
+  let lista = FUNCIONARIOS.filter(f => funcionarioPassaNoFiltro(f, filtro));
   const filtroStatus = document.getElementById('filtro-status');
-  const filtroCargo  = document.getElementById('filtro-cargo');
+  const filtroCargo = document.getElementById('filtro-cargo');
+
   if (filtroStatus && filtroStatus.value) lista = lista.filter(f => f.status === filtroStatus.value);
-  if (filtroCargo  && filtroCargo.value)  lista = lista.filter(f => f.cargo  === filtroCargo.value);
+  if (filtroCargo && filtroCargo.value) lista = lista.filter(f => f.cargo === filtroCargo.value);
 
   if (elTotal) elTotal.textContent = lista.length;
 
   if (tbody) {
-    if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum funcionário encontrado</div></div></td></tr>`;
+    if (ADMIN_DATA_ERROR && !FUNCIONARIOS.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Nao foi possivel carregar funcionarios</div><div style="font-size:12px;color:var(--text-300);">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
+    } else if (!lista.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum funcionario encontrado</div></div></td></tr>`;
     } else {
       tbody.innerHTML = lista.map(f => `
         <tr>
@@ -31,20 +57,20 @@ function renderizarFuncionarios(filtro = '') {
             <div class="td-user">
               <div class="td-avatar">${getIniciais(f.nome)}</div>
               <div>
-                <div class="td-name">${f.nome}</div>
-                <div class="td-email">${f.email}</div>
+                <div class="td-name">${escapeHtml(f.nome)}</div>
+                <div class="td-email">${escapeHtml(f.email || 'Sem e-mail')}</div>
               </div>
             </div>
           </td>
-          <td>${f.cargo}</td>
-          <td class="td-mono">${f.cpf}</td>
-          <td>${f.tel}</td>
+          <td>${escapeHtml(f.cargo)}</td>
+          <td class="td-mono">${escapeHtml(f.cpf || '—')}</td>
+          <td>${escapeHtml(f.tel || 'Nao disponivel na API')}</td>
           <td><span class="badge ${f.status==='ativo'?'badge-active':'badge-inactive'}">${f.status==='ativo'?'Ativo':'Inativo'}</span></td>
           <td><span class="badge ${funcionarioBateuPonto(f.id)?'badge-ok':'badge-absent'}">${funcionarioBateuPonto(f.id)?'Presente':'Ausente'}</span></td>
           <td>
             <div style="display:flex;gap:6px;">
-              <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${f.id})">✏️ Editar</button>
-              <button class="btn btn-danger btn-sm" onclick="confirmarExclusao(${f.id},'${f.nome}')">🗑️</button>
+              <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${Number(f.id)})">✏️ Editar</button>
+              <button class="btn ${f.status==='ativo'?'btn-danger':'btn-ghost'} btn-sm" onclick="confirmarExclusao(${Number(f.id)})">${f.status==='ativo'?'Desativar':'Ativar'}</button>
             </div>
           </td>
         </tr>
@@ -54,18 +80,18 @@ function renderizarFuncionarios(filtro = '') {
 
   if (cardList) {
     if (!lista.length) {
-      cardList.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum funcionário encontrado</div></div>`;
+      cardList.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum funcionario encontrado</div></div>`;
     } else {
       cardList.innerHTML = lista.map(f => `
         <div class="func-card-item fade-in">
           <div class="func-card-avatar">${getIniciais(f.nome)}</div>
           <div class="func-card-info">
-            <div class="func-card-name">${f.nome}</div>
-            <div class="func-card-cargo">${f.cargo} · <span class="${funcionarioBateuPonto(f.id)?'':''}" style="color:${funcionarioBateuPonto(f.id)?'var(--green-600)':'var(--red-600)'}">${funcionarioBateuPonto(f.id)?'Presente':'Ausente'}</span></div>
+            <div class="func-card-name">${escapeHtml(f.nome)}</div>
+            <div class="func-card-cargo">${escapeHtml(f.cargo)} · <span style="color:${funcionarioBateuPonto(f.id)?'var(--green-600)':'var(--red-600)'}">${funcionarioBateuPonto(f.id)?'Presente':'Ausente'}</span></div>
           </div>
           <div class="func-card-actions">
-            <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${f.id})">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="confirmarExclusao(${f.id},'${f.nome}')">🗑️</button>
+            <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${Number(f.id)})">✏️</button>
+            <button class="btn ${f.status==='ativo'?'btn-danger':'btn-ghost'} btn-sm" onclick="confirmarExclusao(${Number(f.id)})">${f.status==='ativo'?'Desativar':'Ativar'}</button>
           </div>
         </div>
       `).join('');
@@ -73,11 +99,24 @@ function renderizarFuncionarios(filtro = '') {
   }
 }
 
-function confirmarExclusao(id, nome) {
-  if (confirm(`Remover "${nome}" do sistema? Esta ação não pode ser desfeita.`)) {
-    FUNCIONARIOS = FUNCIONARIOS.filter(f => f.id !== id);
-    renderizarFuncionarios();
-    toast(`Funcionário "${nome}" removido.`, 'success');
+async function confirmarExclusao(id) {
+  const funcionario = getFuncionarioPorId(id);
+  if (!funcionario) return;
+
+  const ativar = funcionario.status !== 'ativo';
+  const acao = ativar ? 'ativar' : 'desativar';
+  const confirmado = confirm(`Deseja ${acao} "${funcionario.nome}"?`);
+  if (!confirmado) return;
+
+  try {
+    await adminApiFetch(`${ADMIN_ENDPOINTS.funcionarios}/${Number(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ ativo: ativar }),
+    });
+    toast(`Funcionario ${ativar ? 'ativado' : 'desativado'} com sucesso.`, 'success');
+    await recarregarDadosAdminTela();
+  } catch (error) {
+    toast(error.message || 'Nao foi possivel alterar o status.', 'error');
   }
 }
 
@@ -86,36 +125,68 @@ function abrirEdicao(id) {
   if (!f) return;
 
   const modal = document.getElementById('modal-editar');
-  if (!modal) { toast('Redirecionando para edição...','info'); return; }
+  if (!modal) { toast('Tela de edicao indisponivel.','info'); return; }
 
-  document.getElementById('edit-id').value    = f.id;
-  document.getElementById('edit-nome').value  = f.nome;
+  document.getElementById('edit-id').value = f.id;
+  document.getElementById('edit-nome').value = f.nome;
   document.getElementById('edit-email').value = f.email;
-  document.getElementById('edit-cpf').value   = f.cpf;
-  document.getElementById('edit-cargo').value = f.cargo;
-  document.getElementById('edit-tel').value   = f.tel;
+  document.getElementById('edit-cpf').value = f.cpf;
   document.getElementById('edit-status').value = f.status;
+
+  const cargoSelect = document.getElementById('edit-cargo');
+  if (cargoSelect) {
+    const option = [...cargoSelect.options].find((item) => item.value === f.cargo || item.textContent === f.cargo);
+    if (option) cargoSelect.value = option.value;
+    cargoSelect.disabled = true;
+    cargoSelect.title = 'A API admin atual aceita cargo_id, mas nao expoe endpoint de cargos para editar por nome.';
+  }
+
+  const telInput = document.getElementById('edit-tel');
+  if (telInput) {
+    telInput.value = f.tel || 'Nao disponivel na API';
+    telInput.readOnly = true;
+    telInput.title = 'Telefone ainda nao existe no contrato da API de funcionarios.';
+  }
 
   modal.classList.add('show');
 }
 
-function salvarEdicao() {
-  const id = parseInt(document.getElementById('edit-id').value);
-  const idx = FUNCIONARIOS.findIndex(f => f.id === id);
-  if (idx < 0) return;
-  FUNCIONARIOS[idx].nome   = document.getElementById('edit-nome').value.trim();
-  FUNCIONARIOS[idx].email  = document.getElementById('edit-email').value.trim();
-  FUNCIONARIOS[idx].cargo  = document.getElementById('edit-cargo').value;
-  FUNCIONARIOS[idx].tel    = document.getElementById('edit-tel').value.trim();
-  FUNCIONARIOS[idx].status = document.getElementById('edit-status').value;
+async function salvarEdicao() {
+  const id = Number(document.getElementById('edit-id')?.value);
+  if (!id) return;
 
-  fecharModal('modal-editar');
-  renderizarFuncionarios();
-  toast('Funcionário atualizado com sucesso!', 'success');
+  const payload = {
+    nome: document.getElementById('edit-nome')?.value.trim(),
+    email: document.getElementById('edit-email')?.value.trim(),
+    ativo: document.getElementById('edit-status')?.value === 'ativo',
+  };
+
+  if (!payload.nome || !payload.email) {
+    toast('Nome e e-mail sao obrigatorios.', 'warning');
+    return;
+  }
+
+  try {
+    const response = await adminApiFetch(`${ADMIN_ENDPOINTS.funcionarios}/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+    const funcionarioAtualizado = getApiData(response)?.funcionario;
+    if (funcionarioAtualizado) {
+      const idx = FUNCIONARIOS.findIndex(f => Number(f.id) === id);
+      const normalizado = normalizarFuncionarioApi(funcionarioAtualizado);
+      if (idx >= 0) FUNCIONARIOS[idx] = normalizado;
+    }
+
+    fecharModal('modal-editar');
+    toast('Funcionario atualizado com sucesso.', 'success');
+    await recarregarDadosAdminTela();
+  } catch (error) {
+    toast(error.message || 'Nao foi possivel atualizar o funcionario.', 'error');
+  }
 }
 
 function fecharModal(id) {
   const m = document.getElementById(id);
   if (m) m.classList.remove('show');
 }
-

@@ -8,7 +8,7 @@
 'use strict';
 
 /* ============================================================
-   DADOS GLOBAIS (simulados — integrar com back-end)
+   ESTADO GLOBAL (carregado pelas APIs reais do back-end)
    ============================================================ */
 const togglePwButton = document.getElementById('toggle-pw');
 if (togglePwButton) {
@@ -23,26 +23,176 @@ if (togglePwButton) {
   });
 }
 const ADMIN = {
-  nome: 'Carlos Eduardo',
+  nome: 'Administrador',
   cargo: 'Administrador',
 };
 
-let FUNCIONARIOS = [
-  { id:1, nome:'Ana Beatriz Souza',    cargo:'Professora',      email:'ana@escola.edu.br',      cpf:'111.222.333-44', tel:'(11) 99001-0001', status:'ativo',   admissao:'15/03/2020' },
-  { id:2, nome:'Bruno Lima',           cargo:'Coordenador',     email:'bruno@escola.edu.br',    cpf:'222.333.444-55', tel:'(11) 99001-0002', status:'ativo',   admissao:'08/07/2019' },
-  { id:3, nome:'Carla Ferreira',       cargo:'Secretária',      email:'carla@escola.edu.br',    cpf:'333.444.555-66', tel:'(11) 99001-0003', status:'ativo',   admissao:'22/01/2021' },
-  { id:4, nome:'Diego Moraes',         cargo:'Professor',       email:'diego@escola.edu.br',    cpf:'444.555.666-77', tel:'(11) 99001-0004', status:'ativo',   admissao:'10/02/2022' },
-  { id:5, nome:'Elaine Rodrigues',     cargo:'Diretora',        email:'elaine@escola.edu.br',   cpf:'555.666.777-88', tel:'(11) 99001-0005', status:'ativo',   admissao:'05/09/2018' },
-  { id:6, nome:'Fernando Costa',       cargo:'Inspetor',        email:'fernando@escola.edu.br', cpf:'666.777.888-99', tel:'(11) 99001-0006', status:'inativo', admissao:'30/11/2021' },
-  { id:7, nome:'Gabriela Mendes',      cargo:'Professora',      email:'gabi@escola.edu.br',     cpf:'777.888.999-00', tel:'(11) 99001-0007', status:'ativo',   admissao:'17/04/2023' },
-  { id:8, nome:'Henrique Alves',       cargo:'Auxiliar',        email:'henrique@escola.edu.br', cpf:'888.999.000-11', tel:'(11) 99001-0008', status:'ativo',   admissao:'01/06/2022' },
-];
+let FUNCIONARIOS = [];
+let PONTOS_HOJE = [];
+let AUSENTES_HOJE = [];
+let RELATORIO_PONTOS = [];
+let RESUMO_PONTOS = {
+  total_funcionarios: 0,
+  total_ativos: 0,
+  presentes: 0,
+  ausentes: 0,
+  taxa_presenca_percent: 0,
+};
+let DATA_REFERENCIA_PONTOS = null;
+let DATA_REFERENCIA_RELATORIO = null;
+let ADMIN_DATA_ERROR = null;
 
-const PONTOS_HOJE = [
-  { id:1, funcionarioId:1, entrada:'07:55', pausa:'12:00', retorno:'13:00', saida:'17:05', status:'completo' },
-  { id:2, funcionarioId:2, entrada:'08:02', pausa:'12:05', retorno:'13:05', saida:null,    status:'presente' },
-  { id:3, funcionarioId:4, entrada:'07:48', pausa:'12:00', retorno:'13:00', saida:'17:00', status:'completo' },
-  { id:4, funcionarioId:5, entrada:'07:30', pausa:'11:58', retorno:'12:58', saida:'17:00', status:'completo' },
-  { id:5, funcionarioId:7, entrada:'08:10', pausa:null,    retorno:null,    saida:null,    status:'presente' },
-];
+const ADMIN_ENDPOINTS = {
+  funcionarios: '/api/admin/funcionarios',
+  pontosHoje: '/api/admin/pontos/hoje',
+  pontosRelatorio: '/api/admin/pontos/relatorio',
+  pontosResumo: '/api/admin/pontos/resumo',
+};
+
+function getApiData(payload) {
+  return payload && payload.data ? payload.data : payload;
+}
+
+async function adminApiFetch(path, options = {}) {
+  const headers = {
+    Accept: 'application/json',
+    ...(options.headers || {}),
+  };
+
+  if (options.body && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const response = await fetch(path, {
+    credentials: 'same-origin',
+    ...options,
+    headers,
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const payload = contentType.includes('application/json')
+    ? await response.json().catch(() => null)
+    : null;
+
+  if (!response.ok) {
+    const message =
+      payload?.message ||
+      payload?.error?.message ||
+      payload?.errors?.[0]?.msg ||
+      `Falha na API (${response.status})`;
+    const error = new Error(message);
+    error.status = response.status;
+    error.payload = payload;
+    throw error;
+  }
+
+  return payload;
+}
+
+async function carregarFuncionariosAdmin() {
+  const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.funcionarios}?limit=100`);
+  const data = getApiData(payload);
+  FUNCIONARIOS = Array.isArray(data?.items)
+    ? data.items.map(normalizarFuncionarioApi)
+    : [];
+}
+
+async function carregarPontosHojeAdmin() {
+  const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosHoje);
+  const data = getApiData(payload);
+
+  DATA_REFERENCIA_PONTOS = data?.data_referencia || null;
+  RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+  PONTOS_HOJE = Array.isArray(data?.presentes)
+    ? data.presentes.map(normalizarResumoPontoApi)
+    : [];
+  AUSENTES_HOJE = Array.isArray(data?.ausentes)
+    ? data.ausentes.map((item) => normalizarResumoPontoApi(item).funcionario)
+    : [];
+}
+
+async function carregarResumoAdmin() {
+  const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosResumo);
+  const data = getApiData(payload);
+
+  DATA_REFERENCIA_PONTOS = data?.data_referencia || DATA_REFERENCIA_PONTOS;
+  RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+}
+
+async function carregarRelatorioAdmin(dataReferencia) {
+  const query = dataReferencia ? `?data=${encodeURIComponent(dataReferencia)}` : '';
+  const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.pontosRelatorio}${query}`);
+  const data = getApiData(payload);
+
+  DATA_REFERENCIA_RELATORIO = data?.data_referencia || null;
+  RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+  RELATORIO_PONTOS = Array.isArray(data?.items)
+    ? data.items.map(normalizarResumoPontoApi)
+    : [];
+}
+
+async function carregarDadosAdmin(options = {}) {
+  ADMIN_DATA_ERROR = null;
+
+  const includeEmployees = options.includeEmployees !== false;
+  const includeToday = options.includeToday !== false;
+  const includeSummary = options.includeSummary === true;
+  const includeReport = options.includeReport === true;
+  const loaders = [];
+
+  if (includeEmployees) loaders.push(carregarFuncionariosAdmin());
+  if (includeToday) loaders.push(carregarPontosHojeAdmin());
+  if (includeSummary) loaders.push(carregarResumoAdmin());
+  if (includeReport) loaders.push(carregarRelatorioAdmin(options.dataReferencia));
+
+  if (!loaders.length) {
+    return true;
+  }
+
+  const results = await Promise.allSettled(loaders);
+  const rejected = results.find((result) => result.status === 'rejected');
+
+  if (rejected) {
+    ADMIN_DATA_ERROR = rejected.reason;
+    if (ADMIN_DATA_ERROR.status === 401) {
+      window.location.replace('/auth/govbr/login');
+    }
+    return false;
+  }
+
+  sincronizarFuncionariosNosPontos();
+  return true;
+}
+
+function sincronizarFuncionariosNosPontos() {
+  if (typeof getFuncionarioPorId !== 'function') return;
+
+  PONTOS_HOJE = PONTOS_HOJE.map((ponto) => ({
+    ...ponto,
+    funcionario: getFuncionarioPorId(ponto.funcionarioId) || ponto.funcionario,
+  }));
+  AUSENTES_HOJE = AUSENTES_HOJE.map((funcionario) =>
+    getFuncionarioPorId(funcionario.id) || funcionario
+  );
+  RELATORIO_PONTOS = RELATORIO_PONTOS.map((ponto) => ({
+    ...ponto,
+    funcionario: getFuncionarioPorId(ponto.funcionarioId) || ponto.funcionario,
+  }));
+}
+
+async function recarregarDadosAdminTela() {
+  await carregarDadosAdmin({
+    includeEmployees: true,
+    includeToday: true,
+    includeSummary: true,
+    includeReport: Boolean(document.getElementById('tbody-relatorio')),
+  });
+
+  if (typeof renderizarStats === 'function') renderizarStats();
+  if (typeof renderizarUltimosRegistros === 'function') renderizarUltimosRegistros();
+  if (typeof renderizarAlertas === 'function') renderizarAlertas();
+  if (typeof renderizarFuncionarios === 'function') renderizarFuncionarios();
+  if (typeof renderizarPontosHoje === 'function') renderizarPontosHoje();
+  if (typeof renderizarRelatorio === 'function') renderizarRelatorio();
+}
 

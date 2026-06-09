@@ -36,7 +36,7 @@ function qrCodeRule() {
     .customSanitizer(getQrCodeCandidate)
     .trim()
     .notEmpty()
-    .withMessage('QR Code e obrigatorio')
+    .withMessage('Link de ponto e obrigatorio')
     .custom((value) => {
       const normalized = String(value || '').trim();
 
@@ -53,7 +53,7 @@ function qrCodeRule() {
         // Mantem a mensagem padrao abaixo.
       }
 
-      throw new Error('QR Code invalido');
+      throw new Error('Link de ponto invalido');
     });
 }
 
@@ -165,11 +165,11 @@ const paginationValidator = withValidation([
   query('q').optional().trim().isLength({ max: 120 }).withMessage('q deve ter no maximo 120 caracteres').escape()
 ]);
 
-const qrTokenIdParamValidator = withValidation([
-  param('id').isInt({ min: 1 }).withMessage('ID do token invalido').toInt()
+const qrShortcutIdParamValidator = withValidation([
+  param('id').isInt({ min: 1 }).withMessage('ID do link de ponto invalido').toInt()
 ]);
 
-const validateQrTokenValidator = withValidation([
+const validateQrShortcutValidator = withValidation([
   qrCodeRule()
 ]);
 
@@ -210,8 +210,8 @@ module.exports = {
   updateFuncionarioValidator,
   funcionarioStatusValidator,
   paginationValidator,
-  qrTokenIdParamValidator,
-  validateQrTokenValidator,
+  qrShortcutIdParamValidator,
+  validateQrShortcutValidator,
   funcionarioLoginValidator,
   baterPontoValidator
 };

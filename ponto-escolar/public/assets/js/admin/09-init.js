@@ -1,8 +1,7 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   iniciarRelogio();
-  iniciarLogin(); // mantida por compatibilidade; não faz mais nada
+  iniciarLogin();
 
-  // Guard de rota: se não houver sessão GOV.BR válida, redireciona para ponto-login.html
   const sessaoValida = validarSessaoAdmin();
   if (!sessaoValida) return;
 
@@ -10,6 +9,28 @@ document.addEventListener('DOMContentLoaded', () => {
   iniciarLogoutAdmin();
   iniciarSidebar();
   iniciarTabs();
+
+  const precisaFuncionarios = Boolean(document.querySelector(
+    '#tbody-funcionarios,#cards-funcionarios,#tbody-presentes,#tbody-ausentes,#tbody-relatorio,#tbody-ultimos,#stat-total,#form-registro'
+  ));
+  const precisaPontosHoje = Boolean(document.querySelector(
+    '#tbody-presentes,#tbody-ausentes,#tbody-ultimos,#stat-presentes,#count-presentes,#tbody-funcionarios'
+  ));
+  const precisaResumo = Boolean(document.querySelector(
+    '#stat-total,#hero-presentes,#relatorio-presentes'
+  ));
+  const precisaRelatorio = Boolean(document.getElementById('tbody-relatorio'));
+
+  await carregarDadosAdmin({
+    includeEmployees: precisaFuncionarios,
+    includeToday: precisaPontosHoje,
+    includeSummary: precisaResumo,
+    includeReport: precisaRelatorio,
+  });
+
+  if (ADMIN_DATA_ERROR && ADMIN_DATA_ERROR.status !== 401) {
+    toast(ADMIN_DATA_ERROR.message || 'Nao foi possivel carregar dados administrativos.', 'error');
+  }
 
   renderizarStats();
   renderizarUltimosRegistros();
@@ -22,12 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
   iniciarFormRegistro();
   iniciarConfiguracoes();
 
-  const btnPDF      = document.getElementById('btn-gerar-pdf');
+  const btnPDF = document.getElementById('btn-gerar-pdf');
   const btnImprimir = document.getElementById('btn-imprimir');
-  if (btnPDF)      btnPDF.addEventListener('click', gerarPDF);
+  if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
   if (btnImprimir) btnImprimir.addEventListener('click', imprimirRelatorio);
 
-  // Modal fechar ao clicar fora
   document.querySelectorAll('.ui-dialog-overlay').forEach(m => {
     m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
   });

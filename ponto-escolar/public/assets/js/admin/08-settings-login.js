@@ -6,7 +6,7 @@ function gerarPDF() {
   if (!btn) return;
   btn.classList.add('loading');
   setTimeout(() => {
-    toast('PDF gerado com sucesso!', 'success');
+    toast('Geracao de PDF ainda nao integrada. Use imprimir por enquanto.', 'info');
     btn.classList.remove('loading');
   }, 1800);
 }
@@ -51,7 +51,7 @@ function limparAuthAdmin() {
 }
 
 function caminhoLogin() {
-  return '/admin/auth/start';
+  return '/auth/govbr/login';
 }
 
 function aplicarAdminGovbr(admin) {
@@ -96,7 +96,7 @@ function validarSessaoAdmin() {
 }
 
 function iniciarLogin() {
-  // Login local removido. O fluxo comeca em /admin/auth/start.
+  // Login local removido. O fluxo comeca em /auth/govbr/login.
 }
 
 function iniciarLogoutAdmin() {
@@ -106,7 +106,7 @@ function iniciarLogoutAdmin() {
     button.addEventListener('click', (event) => {
       event.preventDefault();
       limparAuthAdmin();
-      window.location.href = '/admin/auth/logout';
+      window.location.href = '/auth/govbr/logout';
     });
   });
 }

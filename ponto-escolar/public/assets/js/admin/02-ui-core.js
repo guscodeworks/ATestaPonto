@@ -98,22 +98,23 @@ function mostrarToast(msg, tipo) { toast(msg, tipo); }
    ============================================================ */
 
 function renderizarStats() {
-  const ativos = FUNCIONARIOS.filter(f => f.status === 'ativo').length;
-  const presentes = PONTOS_HOJE.length;
-  const ausentes = getFuncionariosSemPonto().length;
+  const ativos = RESUMO_PONTOS.total_ativos || FUNCIONARIOS.filter(f => f.status === 'ativo').length;
+  const total = RESUMO_PONTOS.total_funcionarios || FUNCIONARIOS.length;
+  const presentes = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
+  const ausentes = RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
+  const taxa = RESUMO_PONTOS.taxa_presenca_percent || (ativos > 0 ? Math.round((presentes/ativos)*100) : 0);
 
   const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
 
-  set('stat-total',     FUNCIONARIOS.length);
+  set('stat-total',     total);
   set('stat-ativos',    ativos);
   set('stat-presentes', presentes);
   set('stat-ausentes',  ausentes);
-  set('stat-taxa',      ativos > 0 ? Math.round((presentes/ativos)*100)+'%' : '—');
+  set('stat-taxa',      ativos > 0 ? taxa+'%' : '—');
   set('stat-registros', PONTOS_HOJE.length);
 
   // Dashboard hero
   set('hero-presentes', presentes);
   set('hero-ausentes',  ausentes);
-  set('hero-total',     FUNCIONARIOS.length);
+  set('hero-total',     total);
 }
-

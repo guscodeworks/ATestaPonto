@@ -17,7 +17,7 @@ function getBaseUrl(req) {
   return host ? `${protocol}://${host}` : '';
 }
 
-async function generateQrToken(req, res, next) {
+async function generateQrShortcut(req, res, next) {
   try {
     const qrCode = await createQrCode({
       adminId: req.auth.id,
@@ -28,7 +28,7 @@ async function generateQrToken(req, res, next) {
     await registerAuditLog({
       evento: 'qr_code_gerado',
       adminId: req.auth.id,
-      mensagem: 'Administrador gerou QR Code de ponto',
+      mensagem: 'Administrador gerou QR Code como atalho para a tela de ponto',
       ipOrigem: getClientIp(req),
       metadados: { qr_code_id: qrCode.id, unidade_codigo: qrCode.unidade_codigo, expira_em: qrCode.expira_em }
     });
@@ -37,6 +37,8 @@ async function generateQrToken(req, res, next) {
       success: true,
       data: {
         qrCode,
+        qrLink: qrCode,
+        // Alias legado: o QR atual e um link de acesso rapido, nao um token de autorizacao.
         qrToken: qrCode
       }
     });
@@ -45,7 +47,7 @@ async function generateQrToken(req, res, next) {
   }
 }
 
-async function listQrTokens(req, res, next) {
+async function listQrShortcuts(req, res, next) {
   try {
     const result = await listQrCodes({
       page: req.query.page,
@@ -61,7 +63,7 @@ async function listQrTokens(req, res, next) {
   }
 }
 
-async function deactivateQrToken(req, res, next) {
+async function deactivateQrShortcut(req, res, next) {
   try {
     const qrCodeId = Number(req.params.id);
     const deactivated = await deactivateQrCode(qrCodeId);
@@ -73,7 +75,7 @@ async function deactivateQrToken(req, res, next) {
     await registerAuditLog({
       evento: 'qr_code_desativado',
       adminId: req.auth.id,
-      mensagem: 'Administrador desativou QR Code de ponto',
+      mensagem: 'Administrador desativou atalho de QR Code de ponto',
       ipOrigem: getClientIp(req),
       metadados: { qr_code_id: qrCodeId }
     });
@@ -90,7 +92,7 @@ async function deactivateQrToken(req, res, next) {
   }
 }
 
-async function validateQrToken(req, res, next) {
+async function validateQrShortcut(req, res, next) {
   try {
     const qrCodeValue = String(req.body.qrCode || req.body.qr_code || req.body.qrToken || '').trim();
     const validation = await validateQrCode(qrCodeValue, {
@@ -99,10 +101,10 @@ async function validateQrToken(req, res, next) {
 
     if (!validation.valid) {
       await registerAuditLog({
-        evento: 'tentativa_qr_invalido',
+        evento: 'tentativa_link_ponto_invalido',
         nivel: 'WARN',
         adminId: req.auth.id,
-        mensagem: 'Tentativa de validacao de QR Code invalido',
+        mensagem: 'Tentativa de conferir link de ponto invalido',
         ipOrigem: getClientIp(req),
         metadados: { status: validation.status }
       });
@@ -114,6 +116,8 @@ async function validateQrToken(req, res, next) {
         valido: validation.valid,
         status: validation.status,
         qrCode: validation.qrCode,
+        qrLink: validation.qrCode,
+        // Alias legado: mantido para clientes antigos que ainda leem qrToken.
         qrToken: validation.qrCode
       }
     });
@@ -123,8 +127,8 @@ async function validateQrToken(req, res, next) {
 }
 
 module.exports = {
-  generateQrToken,
-  listQrTokens,
-  deactivateQrToken,
-  validateQrToken
+  generateQrShortcut,
+  listQrShortcuts,
+  deactivateQrShortcut,
+  validateQrShortcut
 };

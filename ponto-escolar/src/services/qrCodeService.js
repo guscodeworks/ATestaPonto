@@ -1,6 +1,6 @@
 const env = require('../config/env');
 
-const QR_CONTEXT = 'ACESSO_FUNCIONARIO';
+const QR_CONTEXT = 'ATALHO_PONTO_FUNCIONARIO';
 const FIXED_QR_ID = 1;
 const FIXED_QR_ACCESS_PATH = '/ponto/acessar';
 
@@ -40,7 +40,7 @@ function buildFixedQrPayload({ unidadeCodigo = env.SCHOOL_UNIT_CODE, baseUrl = '
 
   return {
     id: FIXED_QR_ID,
-    token_hint: 'acesso-fixo',
+    token_hint: 'atalho-fixo',
     contexto: QR_CONTEXT,
     unidade_codigo: getUnitCode(unidadeCodigo),
     ativo: true,
@@ -98,7 +98,7 @@ async function validateQrCode(qrCode, { unidadeCodigo = env.SCHOOL_UNIT_CODE } =
 
   return {
     valid: isValid,
-    status: isValid ? 'valido' : 'rota_invalida',
+    status: isValid ? 'link_de_ponto' : 'rota_invalida',
     qrCode: isValid ? mapQrCode(payload) : null
   };
 }

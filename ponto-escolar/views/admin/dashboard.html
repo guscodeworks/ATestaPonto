@@ -67,7 +67,7 @@
     </nav>
 
     <div class="sidebar-footer">
-      <button class="btn-logout" onclick="window.location.href='/admin/auth/logout'">
+      <button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'">
         <span class="nav-icon">⎋</span> Sair do sistema
       </button>
     </div>
@@ -278,29 +278,6 @@
   window.addEventListener('resize', checkMobile);
   checkMobile();
 
-  // Preencher cards mobile dos últimos registros
-  document.addEventListener('DOMContentLoaded', () => {
-    const cardsMobile = document.getElementById('cards-ultimos-mobile');
-    if (cardsMobile) {
-      const lista = PONTOS_HOJE.slice(-5).reverse();
-      cardsMobile.innerHTML = lista.map(p => {
-        const func = getFuncionarioPorId(p.funcionarioId);
-        if (!func) return '';
-        return `
-          <div class="func-card-item">
-            <div class="func-card-avatar">${getIniciais(func.nome)}</div>
-            <div class="func-card-info">
-              <div class="func-card-name">${func.nome}</div>
-              <div class="func-card-cargo" style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">
-                <span style="font-size:11px;color:var(--text-300);">Entrada: <b style="color:var(--text-700)">${p.entrada}</b></span>
-                <span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}" style="font-size:10px;padding:1px 7px;">${p.status==='completo'?'Completo':'Em andamento'}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-  });
 </script>
 </body>
 </html>

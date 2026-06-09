@@ -51,7 +51,7 @@
     </nav>
     <div class="sidebar-footer">
 
-      <button class="btn-logout" onclick="window.location.href='/admin/auth/logout'">
+      <button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'">
         <span class="nav-icon">⎋</span> Sair do sistema
       </button>
     </div>
@@ -153,31 +153,9 @@
           <div class="ui-panel-title">Presença por dia da semana</div>
         </div>
         <div style="padding:20px 24px;">
-          <div class="chart-bar-group">
-            <div class="chart-bar-item">
-              <span class="chart-bar-label">Segunda</span>
-              <div class="chart-bar-track"><div class="chart-bar-fill green" style="width:88%"></div></div>
-              <span class="chart-bar-val">88%</span>
-            </div>
-            <div class="chart-bar-item">
-              <span class="chart-bar-label">Terça</span>
-              <div class="chart-bar-track"><div class="chart-bar-fill green" style="width:94%"></div></div>
-              <span class="chart-bar-val">94%</span>
-            </div>
-            <div class="chart-bar-item">
-              <span class="chart-bar-label">Quarta</span>
-              <div class="chart-bar-track"><div class="chart-bar-fill amber" style="width:75%"></div></div>
-              <span class="chart-bar-val">75%</span>
-            </div>
-            <div class="chart-bar-item">
-              <span class="chart-bar-label">Quinta</span>
-              <div class="chart-bar-track"><div class="chart-bar-fill green" style="width:100%"></div></div>
-              <span class="chart-bar-val">100%</span>
-            </div>
-            <div class="chart-bar-item">
-              <span class="chart-bar-label">Sexta</span>
-              <div class="chart-bar-track"><div class="chart-bar-fill amber" style="width:63%"></div></div>
-              <span class="chart-bar-val">63%</span>
+          <div class="chart-bar-group" id="chart-presenca-semanal">
+            <div class="empty-state" style="padding:8px 0;">
+              <div class="empty-title">Resumo semanal sem API real</div>
             </div>
           </div>
         </div>
@@ -214,7 +192,7 @@
         <div style="padding:16px 24px;">
           <textarea class="field-textarea" placeholder="Adicione anotações sobre o período..."></textarea>
           <div style="margin-top:12px;">
-            <button class="ui-btn ui-btn-ghost ui-btn-sm" onclick="toast('Observação salva!','success')">💾 Salvar observação</button>
+            <button class="ui-btn ui-btn-ghost ui-btn-sm" onclick="toast('Observacoes ainda nao possuem API de persistencia.','info')">💾 Salvar observação</button>
           </div>
         </div>
       </div>
