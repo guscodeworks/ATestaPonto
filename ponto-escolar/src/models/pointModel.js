@@ -1,6 +1,6 @@
-'use strict';
+"use strict";
 
-const database = require('../config/database');
+const database = require("../config/database");
 
 function getClient(client) {
   return client || database;
@@ -31,22 +31,43 @@ async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   );
 }
 
-async function createFirstPunch(client, { funcionarioId, date, time, emptyTime }) {
+async function listRowsByDate(date) {
+  return database.execute(
+    `SELECT *
+     FROM registro_de_pontos
+     WHERE data_referenciada = ?
+     ORDER BY funcionario_id ASC, id DESC`,
+    [date]
+  );
+}
+
+async function createFirstPunch(
+  client,
+  { funcionarioId, date, time, emptyTime }
+) {
   return getClient(client).execute(
-    'INSERT INTO registro_de_pontos VALUES (NULL, ?, ?, ?, ?, ?, ?)',
+    "INSERT INTO registro_de_pontos VALUES (NULL, ?, ?, ?, ?, ?, ?)",
     [funcionarioId, date, time, emptyTime, emptyTime, emptyTime]
   );
 }
 
 async function replacePunchRow(client, { rowId, funcionarioId, date, times }) {
   await getClient(client).execute(
-    'DELETE FROM registro_de_pontos WHERE id = ?',
+    "DELETE FROM registro_de_pontos WHERE id = ?",
     [rowId]
   );
 
   return getClient(client).execute(
-    'INSERT INTO registro_de_pontos VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [rowId, funcionarioId, date, times.entrada, times.saidaAlmoco, times.voltaAlmoco, times.saida]
+    "INSERT INTO registro_de_pontos VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [
+      rowId,
+      funcionarioId,
+      date,
+      times.entrada,
+      times.saidaAlmoco,
+      times.voltaAlmoco,
+      times.saida,
+    ]
   );
 }
 
@@ -54,6 +75,7 @@ module.exports = {
   withTransaction,
   findByEmployeeAndDate,
   findByEmployeeAndDateForUpdate,
+  listRowsByDate,
   createFirstPunch,
-  replacePunchRow
+  replacePunchRow,
 };
