@@ -4,7 +4,7 @@ btn.addEventListener("click", async () => {
 
     const cpf = document.getElementById("cpf").value.trim();
 
-    if(cpf === ""){
+    if (cpf === "") {
         alert("Digite seu CPF.");
         return;
     }
@@ -22,12 +22,15 @@ btn.addEventListener("click", async () => {
             body: JSON.stringify({ cpf })
         });
 
-        if(!response.ok){
+        if (!response.ok) {
             throw new Error("Falha no login fake.");
         }
 
         alert("Login realizado com sucesso!");
-        window.location.href = "/";
+
+        // Redireciona para visual.html
+        window.location.href = "/visual.html";
+
     } catch (error) {
         alert(error.message || "Falha no login fake.");
         btn.disabled = false;

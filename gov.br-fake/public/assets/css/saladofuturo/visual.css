@@ -142,6 +142,13 @@ nav li i{
     justify-content:space-between;
     align-items:center;
     box-shadow:0 4px 15px rgba(0,0,0,.08);
+    cursor:pointer;
+    transition:all .3s ease;
+}
+
+.gerenciar-card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 8px 20px rgba(0,0,0,.12);
 }
 
 .card-text span{

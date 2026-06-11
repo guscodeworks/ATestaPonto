@@ -1,10 +1,5 @@
-document
-.getElementById("btnGerenciar")
-.addEventListener("click", () => {
+const gerenciarCard = document.getElementById("gerenciarCard");
 
-    // Troque pelo caminho do dashboard admin
-
-    window.location.href =
-    "views/admin/dashboard.html";
-
+gerenciarCard.addEventListener("click", () => {
+    window.location.href = "views/admin/dashboard.html";
 });
