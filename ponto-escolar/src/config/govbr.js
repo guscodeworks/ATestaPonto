@@ -1,5 +1,6 @@
 "use strict";
 
+<<<<<<< HEAD
 require("dotenv").config({ quiet: true });
 
 function throwConfigError(message) {
@@ -118,6 +119,9 @@ function getUserInfoUrl(fakeBaseUrl) {
     fakeBaseUrl ? `${fakeBaseUrl}/fake-govbr/userinfo` : ""
   );
 }
+=======
+const env = require("./env");
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
 
 function getClientId() {
   return isProduction()
@@ -165,6 +169,7 @@ function assertProductionProvider(config) {
 }
 
 function getGovbrConfig() {
+<<<<<<< HEAD
   const fakeBaseUrl = getFakeBaseUrl();
   const adminSubs = getAdminSubs();
   const adminEmails = getAdminEmails();
@@ -185,6 +190,19 @@ function getGovbrConfig() {
 
   assertProductionProvider(config);
   return Object.freeze(config);
+=======
+  // Gov.br autentica a identidade; Ponto Escolar autoriza o admin.
+  return Object.freeze({
+    authorizeUrl: env.GOVBR_AUTHORIZE_URL,
+    tokenUrl: env.GOVBR_TOKEN_URL,
+    userInfoUrl: env.GOVBR_USERINFO_URL,
+    clientId: env.GOVBR_CLIENT_ID,
+    clientSecret: env.GOVBR_CLIENT_SECRET,
+    redirectUri: env.GOVBR_REDIRECT_URI,
+    adminSubs: env.ADMIN_GOVBR_SUBS,
+    adminEmails: env.ADMIN_GOVBR_EMAILS,
+  });
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
 }
 
 module.exports = {

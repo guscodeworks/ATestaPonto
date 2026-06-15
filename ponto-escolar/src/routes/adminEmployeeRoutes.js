@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 'use strict';
 
 /**
@@ -13,11 +14,15 @@
  */
 
 const { Router } = require('express');
+=======
+const { Router } = require("express");
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
 const {
   createEmployee,
   listEmployees,
   updateEmployee,
   setEmployeeStatus,
+<<<<<<< HEAD
 } = require('../controllers/adminEmployeeController');
 const { sensitiveLimiter } = require('../middlewares/rateLimiters');
 const { requireRole } = require('../middlewares/role.middleware');
@@ -64,6 +69,31 @@ router.patch(
   '/:id/status',
   sensitiveLimiter,
   validate(statusFuncionarioSchema),
+=======
+} = require("../controllers/adminEmployeeController");
+const { sensitiveLimiter } = require("../middlewares/rateLimiters");
+const {
+  createFuncionarioValidator,
+  updateFuncionarioValidator,
+  funcionarioStatusValidator,
+  paginationValidator,
+} = require("../middlewares/validators");
+
+const router = Router();
+
+router.get("/", paginationValidator, listEmployees);
+router.post("/", sensitiveLimiter, createFuncionarioValidator, createEmployee);
+router.patch(
+  "/:id",
+  sensitiveLimiter,
+  updateFuncionarioValidator,
+  updateEmployee
+);
+router.patch(
+  "/:id/status",
+  sensitiveLimiter,
+  funcionarioStatusValidator,
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
   setEmployeeStatus
 );
 

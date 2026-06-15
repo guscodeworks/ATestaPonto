@@ -15,10 +15,16 @@ function createAdminPagesRouter({ sendView }) {
   const router = Router();
   const dashboardPage = renderAdminView(sendView, "admin/dashboard.html");
   const funcionariosPage = renderAdminView(sendView, "admin/funcionarios.html");
-  const registrarFuncionarioPage = renderAdminView(sendView, "admin/registrar-funcionario.html");
+  const registrarFuncionarioPage = renderAdminView(
+    sendView,
+    "admin/registrar-funcionario.html"
+  );
   const pontosPage = renderAdminView(sendView, "admin/pontos-do-dia.html");
   const relatoriosPage = renderAdminView(sendView, "admin/relatorios.html");
-  const configuracoesPage = renderAdminView(sendView, "admin/configuracoes.html");
+  const configuracoesPage = renderAdminView(
+    sendView,
+    "admin/configuracoes.html"
+  );
 
   router.get("/admin/login", redirectTo("/auth/govbr/login"));
   router.get("/admin/logout", redirectTo("/auth/govbr/logout"));
@@ -29,8 +35,16 @@ function createAdminPagesRouter({ sendView }) {
 
   router.get("/admin/funcionario", requireAdmin, funcionariosPage);
   router.get("/admin/funcionarios", requireAdmin, funcionariosPage);
-  router.get("/admin/funcionarios/novo", requireAdmin, registrarFuncionarioPage);
-  router.get("/admin/registrar-funcionario", requireAdmin, redirectTo("/admin/funcionarios/novo"));
+  router.get(
+    "/admin/funcionarios/novo",
+    requireAdmin,
+    registrarFuncionarioPage
+  );
+  router.get(
+    "/admin/registrar-funcionario",
+    requireAdmin,
+    redirectTo("/admin/funcionarios/novo")
+  );
 
   router.get("/admin/pontos", requireAdmin, pontosPage);
   router.get("/admin/pontos-do-dia", requireAdmin, pontosPage);

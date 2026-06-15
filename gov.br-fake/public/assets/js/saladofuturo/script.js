@@ -1,4 +1,3 @@
-require('dotenv').config();
 const serverBtn = document.getElementById("serverBtn");
 const loginBox = document.querySelector(".login-box");
 const greeting = loginBox ? loginBox.querySelector("h1") : null;
@@ -17,47 +16,53 @@ async function carregarSessaoFake() {
             }
         });
 
-        if(!response.ok){
+        if (!response.ok) {
             return null;
         }
 
-        return response.json();
+        return await response.json();
     } catch (_error) {
         return null;
     }
 }
 
 function aplicarSessao(session) {
-    if(!session || !session.authenticated || !session.user){
+    if (!session || !session.authenticated || !session.user) {
         return;
     }
 
     authenticatedUser = session.user;
 
-    if(greeting){
-        greeting.textContent = "Olá, " + (authenticatedUser.name || "Servidor") + "!";
+    if (greeting) {
+        greeting.textContent =
+            "Olá, " + (authenticatedUser.name || "Servidor") + "!";
     }
 
-    if(description){
-        description.textContent = "Você está logado no gov.br-fake como " + (authenticatedUser.email || "admin local") + ".";
+    if (description) {
+        description.textContent =
+            "Você está logado no gov.br-fake como " +
+            (authenticatedUser.email || "admin local") +
+            ".";
     }
 
-    if(buttonSpan){
+    if (buttonSpan) {
         buttonSpan.textContent = "Acessar";
     }
 
-    if(buttonTitle){
+    if (buttonTitle) {
         buttonTitle.textContent = "Gerenciar pontos";
     }
 }
 
 serverBtn.addEventListener("click", () => {
-    if(authenticatedUser){
-        window.location.href = process.env.API_URL;
+    if (authenticatedUser) {
+        // Redireciona para o dashboard após login
+        window.location.href = "/visual.html";
         return;
     }
 
-    window.location.href = "govbr.html";
+    // Redireciona para a tela de login gov.br fake
+    window.location.href = "/govbr.html";
 });
 
 carregarSessaoFake().then(aplicarSessao);

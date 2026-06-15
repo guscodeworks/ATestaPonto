@@ -1,7 +1,5 @@
 "use strict";
 
-require("dotenv").config({ quiet: true });
-
 const express = require("express");
 const path = require("path");
 const helmet = require("helmet");

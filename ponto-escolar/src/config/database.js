@@ -1,6 +1,6 @@
-const mysql = require('mysql2/promise');
-const env = require('./env');
-const { normalizeError } = require('../utils/errors');
+const mysql = require("mysql2/promise");
+const env = require("./env");
+const { normalizeError } = require("../utils/errors");
 
 const pool = mysql.createPool({
   host: env.DB_HOST,
@@ -11,16 +11,16 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: env.DB_CONNECTION_LIMIT,
   queueLimit: 0,
-  timezone: 'Z',
-  decimalNumbers: true
+  timezone: "Z",
+  decimalNumbers: true,
 });
 
 function assertSqlAndParams(sql, params) {
-  if (typeof sql !== 'string' || sql.trim() === '') {
-    throw new TypeError('SQL must be a non-empty string');
+  if (typeof sql !== "string" || sql.trim() === "") {
+    throw new TypeError("SQL must be a non-empty string");
   }
   if (!Array.isArray(params)) {
-    throw new TypeError('SQL params must be an array');
+    throw new TypeError("SQL params must be an array");
   }
 }
 
@@ -40,8 +40,8 @@ async function executeOne(sql, params = []) {
 }
 
 async function withTransaction(callback) {
-  if (typeof callback !== 'function') {
-    throw new TypeError('Transaction callback must be a function');
+  if (typeof callback !== "function") {
+    throw new TypeError("Transaction callback must be a function");
   }
 
   const connection = await pool.getConnection();
@@ -57,7 +57,7 @@ async function withTransaction(callback) {
       executeOne: async (sql, params = []) => {
         const rows = await tx.execute(sql, params);
         return Array.isArray(rows) ? rows[0] || null : rows;
-      }
+      },
     };
 
     const result = await callback(tx, connection);
@@ -76,7 +76,7 @@ async function withTransaction(callback) {
 }
 
 async function checkConnection() {
-  await execute('SELECT 1');
+  await execute("SELECT 1");
 }
 
 async function closePool() {
@@ -89,5 +89,5 @@ module.exports = {
   executeOne,
   withTransaction,
   checkConnection,
-  closePool
+  closePool,
 };

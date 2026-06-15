@@ -1,31 +1,31 @@
-'use strict';
+"use strict";
 
-const employeeModel = require('../models/employeeModel');
-const pointModel = require('../models/pointModel');
-const { maskCpf } = require('../utils/cpf');
+const employeeModel = require("../models/employeeModel");
+const pointModel = require("../models/pointModel");
+const { maskCpf } = require("../utils/cpf");
 const {
   EMPTY_PUNCH_TIME,
   PUNCH_TYPES,
   hasPunchTime,
   normalizeTimeValue,
-  readPunchTimesFromRow
-} = require('../utils/punch');
-const { BadRequestError } = require('../utils/errors');
-const { registerAuditLog } = require('./auditLogService');
+  readPunchTimesFromRow,
+} = require("../utils/punch");
+const { BadRequestError } = require("../utils/errors");
+const { registerAuditLog } = require("./auditLogService");
 
 const PUNCH_STEPS = [
-  { key: 'entrada', tipo: PUNCH_TYPES[0], sequencia: 1 },
-  { key: 'saidaAlmoco', tipo: PUNCH_TYPES[1], sequencia: 2 },
-  { key: 'voltaAlmoco', tipo: PUNCH_TYPES[2], sequencia: 3 },
-  { key: 'saida', tipo: PUNCH_TYPES[3], sequencia: 4 }
+  { key: "entrada", tipo: PUNCH_TYPES[0], sequencia: 1 },
+  { key: "saidaAlmoco", tipo: PUNCH_TYPES[1], sequencia: 2 },
+  { key: "voltaAlmoco", tipo: PUNCH_TYPES[2], sequencia: 3 },
+  { key: "saida", tipo: PUNCH_TYPES[3], sequencia: 4 },
 ];
 
 function getTodayDateInSaoPaulo() {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).format(new Date());
 }
 
@@ -33,7 +33,7 @@ function resolveReportDate(value) {
   const date = String(value || getTodayDateInSaoPaulo()).trim();
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new BadRequestError('Data invalida. Use o formato YYYY-MM-DD');
+    throw new BadRequestError("Data invalida. Use o formato YYYY-MM-DD");
   }
 
   const parsed = new Date(`${date}T00:00:00.000Z`);
@@ -53,14 +53,14 @@ function toDateTime(date, time) {
 }
 
 function buildPunchList(rowId, date, times) {
-  return PUNCH_STEPS
-    .filter((step) => hasPunchTime(times[step.key]))
-    .map((step) => ({
+  return PUNCH_STEPS.filter((step) => hasPunchTime(times[step.key])).map(
+    (step) => ({
       id: Number(rowId) * 10 + step.sequencia,
       tipo: step.tipo,
       sequencia: step.sequencia,
-      registrado_em: toDateTime(date, times[step.key])
-    }));
+      registrado_em: toDateTime(date, times[step.key]),
+    })
+  );
 }
 
 function getEmptyPunchTimes() {
@@ -68,19 +68,22 @@ function getEmptyPunchTimes() {
     entrada: EMPTY_PUNCH_TIME,
     saidaAlmoco: EMPTY_PUNCH_TIME,
     voltaAlmoco: EMPTY_PUNCH_TIME,
-    saida: EMPTY_PUNCH_TIME
+    saida: EMPTY_PUNCH_TIME,
   };
 }
 
 function summarizeEmployeeDay(employee, punchRow, date) {
-  const times = punchRow ? readPunchTimesFromRow(punchRow) : getEmptyPunchTimes();
+  const times = punchRow
+    ? readPunchTimesFromRow(punchRow)
+    : getEmptyPunchTimes();
   const registros = punchRow ? buildPunchList(punchRow.id, date, times) : [];
   const totalBatidas = registros.length;
-  const status = totalBatidas === 0
-    ? 'AUSENTE'
-    : hasPunchTime(times.saida)
-      ? 'COMPLETO'
-      : 'EM_ANDAMENTO';
+  const status =
+    totalBatidas === 0
+      ? "AUSENTE"
+      : hasPunchTime(times.saida)
+      ? "COMPLETO"
+      : "EM_ANDAMENTO";
 
   return {
     funcionario: {
@@ -89,13 +92,13 @@ function summarizeEmployeeDay(employee, punchRow, date) {
       email: employee.email,
       cpf: maskCpf(employee.cpf),
       ativo: Boolean(employee.ativo),
-      cargo_id: employee.cargo_id
+      cargo_id: employee.cargo_id,
     },
     status,
     total_batidas: totalBatidas,
     entrada: toDateTime(date, times.entrada),
     saida: toDateTime(date, times.saida),
-    registros
+    registros,
   };
 }
 
@@ -128,10 +131,9 @@ function buildSummary(summaries) {
       total_ativos: totalAtivos,
       presentes: totalPresentes,
       ausentes: ausentes.length,
-      taxa_presenca_percent: totalAtivos > 0
-        ? Math.round((totalPresentes / totalAtivos) * 100)
-        : 0
-    }
+      taxa_presenca_percent:
+        totalAtivos > 0 ? Math.round((totalPresentes / totalAtivos) * 100) : 0,
+    },
   };
 }
 
@@ -140,7 +142,11 @@ async function buildDailySnapshot(date) {
   const punchRows = await pointModel.listRowsByDate(date);
   const byEmployee = indexLatestPunchRowsByEmployee(punchRows);
   const summaries = employees.map((employee) =>
-    summarizeEmployeeDay(employee, byEmployee.get(Number(employee.id)) || null, date)
+    summarizeEmployeeDay(
+      employee,
+      byEmployee.get(Number(employee.id)) || null,
+      date
+    )
   );
   const { presentes, ausentes, resumo } = buildSummary(summaries);
 
@@ -151,7 +157,7 @@ async function buildDailySnapshot(date) {
     presentes,
     ausentes,
     relatorio: summaries,
-    resumo
+    resumo,
   };
 }
 
@@ -163,7 +169,7 @@ async function getTodayPoints({ data } = {}) {
     data_referencia: snapshot.date,
     resumo: snapshot.resumo,
     presentes: snapshot.presentes,
-    ausentes: snapshot.ausentes
+    ausentes: snapshot.ausentes,
   };
 }
 
@@ -172,17 +178,17 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}) {
   const snapshot = await buildDailySnapshot(date);
 
   await registerAuditLog({
-    evento: 'relatorio_consultado',
+    evento: "relatorio_consultado",
     adminId,
-    mensagem: 'Administrador consultou relatorio de ponto',
+    mensagem: "Administrador consultou relatorio de ponto",
     ipOrigem,
-    metadados: { data_referencia: date }
+    metadados: { data_referencia: date },
   });
 
   return {
     data_referencia: snapshot.date,
     resumo: snapshot.resumo,
-    items: snapshot.relatorio
+    items: snapshot.relatorio,
   };
 }
 
@@ -192,7 +198,7 @@ async function getDashboardSummary() {
 
   return {
     data_referencia: snapshot.date,
-    resumo: snapshot.resumo
+    resumo: snapshot.resumo,
   };
 }
 
@@ -204,5 +210,5 @@ module.exports = {
   buildDailySnapshot,
   getTodayPoints,
   getDailyReport,
-  getDashboardSummary
+  getDashboardSummary,
 };

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 "use strict";
 
 const crypto = require("crypto");
@@ -27,6 +28,67 @@ function getSaoPauloDateParts(referenceDate = new Date()) {
     year: Number(map.year),
     month: Number(map.month),
     day: Number(map.day),
+=======
+const env = require("../config/env");
+
+const QR_CONTEXT = "ATALHO_PONTO_FUNCIONARIO";
+const FIXED_QR_ID = 1;
+const FIXED_QR_ACCESS_PATH = "/ponto/acessar";
+
+function getUnitCode(unidadeCodigo = env.SCHOOL_UNIT_CODE) {
+  const normalized = String(unidadeCodigo || "DEFAULT")
+    .trim()
+    .toUpperCase();
+  return normalized || "DEFAULT";
+}
+
+function buildAccessUrl(baseUrl = "") {
+  const normalizedBaseUrl = String(baseUrl || "")
+    .trim()
+    .replace(/\/+$/, "");
+  return normalizedBaseUrl
+    ? `${normalizedBaseUrl}${FIXED_QR_ACCESS_PATH}`
+    : FIXED_QR_ACCESS_PATH;
+}
+
+function normalizeAccessPath(value) {
+  const normalized = String(value || "").trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  try {
+    return new URL(normalized).pathname.replace(/\/+$/, "") || "/";
+  } catch (_error) {
+    const path = normalized.startsWith("/") ? normalized : `/${normalized}`;
+    return path.replace(/\/+$/, "") || "/";
+  }
+}
+
+function isFixedAccessQr(value) {
+  return normalizeAccessPath(value).toLowerCase() === FIXED_QR_ACCESS_PATH;
+}
+
+function buildFixedQrPayload({
+  unidadeCodigo = env.SCHOOL_UNIT_CODE,
+  baseUrl = "",
+} = {}) {
+  const accessUrl = buildAccessUrl(baseUrl);
+
+  return {
+    id: FIXED_QR_ID,
+    token_hint: "atalho-fixo",
+    contexto: QR_CONTEXT,
+    unidade_codigo: getUnitCode(unidadeCodigo),
+    ativo: true,
+    valido_de: null,
+    expira_em: null,
+    criado_em: null,
+    desativado_em: null,
+    qr_code: accessUrl,
+    url: accessUrl,
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
   };
 }
 
@@ -101,6 +163,7 @@ function mapQrCode(row, includeSecret = false) {
   };
 }
 
+<<<<<<< HEAD
 function buildDailyQrPayload({
   unidadeCodigo = env.SCHOOL_UNIT_CODE,
   baseUrl = "",
@@ -132,16 +195,22 @@ function buildDailyQrPayload({
   };
 }
 
+=======
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
 async function createQrCode({
   unidadeCodigo = env.SCHOOL_UNIT_CODE,
   baseUrl = "",
 } = {}) {
+<<<<<<< HEAD
   const payload = buildDailyQrPayload({
     unidadeCodigo,
     baseUrl,
     referenceDate: new Date(),
   });
   return mapQrCode(payload, true);
+=======
+  return mapQrCode(buildFixedQrPayload({ unidadeCodigo, baseUrl }), true);
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
 }
 
 async function listQrCodes({ page = 1, limit = 20 } = {}) {
@@ -160,6 +229,7 @@ async function listQrCodes({ page = 1, limit = 20 } = {}) {
   };
 }
 
+<<<<<<< HEAD
 async function validateQrCode(qrCode, {
   unidadeCodigo = env.SCHOOL_UNIT_CODE,
   referenceDate = new Date(),
@@ -171,6 +241,18 @@ async function validateQrCode(qrCode, {
   return {
     valid: isValid,
     status: isValid ? "ativo" : "invalido_ou_expirado",
+=======
+async function validateQrCode(
+  qrCode,
+  { unidadeCodigo = env.SCHOOL_UNIT_CODE } = {}
+) {
+  const isValid = isFixedAccessQr(qrCode);
+  const payload = buildFixedQrPayload({ unidadeCodigo });
+
+  return {
+    valid: isValid,
+    status: isValid ? "link_de_ponto" : "rota_invalida",
+>>>>>>> 705dbbabe53cc90e5ba85259f8a91f61b02fc21a
     qrCode: isValid ? mapQrCode(payload) : null,
   };
 }

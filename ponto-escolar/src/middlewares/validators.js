@@ -1,6 +1,6 @@
-const { body, param, query } = require('express-validator');
-const { isValidCpf, normalizeCpf } = require('../utils/cpf');
-const { validateRequest } = require('./validateRequest');
+const { body, param, query } = require("express-validator");
+const { isValidCpf, normalizeCpf } = require("../utils/cpf");
+const { validateRequest } = require("./validateRequest");
 
 const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
 const QR_ACCESS_PATH_REGEX = /^\/?ponto\/acessar\/?$/i;
@@ -9,38 +9,43 @@ function withValidation(rules) {
   return [...rules, validateRequest];
 }
 
-function cpfRule(field = 'cpf', required = true) {
+function cpfRule(field = "cpf", required = true) {
   const chain = body(field).customSanitizer((value) => normalizeCpf(value));
   if (required) {
-    chain.notEmpty().withMessage('CPF e obrigatorio');
+    chain.notEmpty().withMessage("CPF e obrigatorio");
   } else {
     chain.optional();
   }
   return chain
     .isLength({ min: 11, max: 11 })
-    .withMessage('CPF deve ter 11 digitos')
+    .withMessage("CPF deve ter 11 digitos")
     .custom((value) => {
       if (!isValidCpf(value)) {
-        throw new Error('CPF invalido');
+        throw new Error("CPF invalido");
       }
       return true;
     });
 }
 
 function getQrCodeCandidate(value, { req }) {
-  return String(value || req.body.qr_code || req.body.qrCode || req.body.qrToken || '');
+  return String(
+    value || req.body.qr_code || req.body.qrCode || req.body.qrToken || ""
+  );
 }
 
 function qrCodeRule() {
-  return body('qrCode')
+  return body("qrCode")
     .customSanitizer(getQrCodeCandidate)
     .trim()
     .notEmpty()
-    .withMessage('Link de ponto e obrigatorio')
+    .withMessage("Link de ponto e obrigatorio")
     .custom((value) => {
-      const normalized = String(value || '').trim();
+      const normalized = String(value || "").trim();
 
-      if (QR_TOKEN_REGEX.test(normalized) || QR_ACCESS_PATH_REGEX.test(normalized)) {
+      if (
+        QR_TOKEN_REGEX.test(normalized) ||
+        QR_ACCESS_PATH_REGEX.test(normalized)
+      ) {
         return true;
       }
 
@@ -53,155 +58,179 @@ function qrCodeRule() {
         // Mantem a mensagem padrao abaixo.
       }
 
-      throw new Error('Link de ponto invalido');
+      throw new Error("Link de ponto invalido");
     });
 }
 
 const adminLoginValidator = withValidation([
-  body('email')
+  body("email")
     .trim()
     .notEmpty()
-    .withMessage('Email e obrigatorio')
+    .withMessage("Email e obrigatorio")
     .isLength({ max: 150 })
-    .withMessage('Email muito longo')
+    .withMessage("Email muito longo")
     .isEmail()
-    .withMessage('Email invalido')
+    .withMessage("Email invalido")
     .normalizeEmail({ gmail_remove_dots: false }),
-  body('senha')
+  body("senha")
     .isString()
-    .withMessage('Senha deve ser texto')
+    .withMessage("Senha deve ser texto")
     .isLength({ min: 8, max: 72 })
-    .withMessage('Senha deve ter entre 8 e 72 caracteres')
+    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
 ]);
 
 const createFuncionarioValidator = withValidation([
-  body('nome')
+  body("nome")
     .trim()
     .notEmpty()
-    .withMessage('Nome e obrigatorio')
+    .withMessage("Nome e obrigatorio")
     .isLength({ min: 3, max: 55 })
-    .withMessage('Nome deve ter entre 3 e 55 caracteres')
+    .withMessage("Nome deve ter entre 3 e 55 caracteres")
     .matches(/^[^<>]*$/)
-    .withMessage('Nome contem caracteres invalidos')
+    .withMessage("Nome contem caracteres invalidos")
     .escape(),
-  cpfRule('cpf', true),
-  body('email')
+  cpfRule("cpf", true),
+  body("email")
     .trim()
     .notEmpty()
-    .withMessage('Email e obrigatorio')
+    .withMessage("Email e obrigatorio")
     .isLength({ max: 150 })
-    .withMessage('Email muito longo')
+    .withMessage("Email muito longo")
     .isEmail()
-    .withMessage('Email invalido')
+    .withMessage("Email invalido")
     .normalizeEmail({ gmail_remove_dots: false }),
-  body('senha')
+  body("senha")
     .isString()
-    .withMessage('Senha deve ser texto')
+    .withMessage("Senha deve ser texto")
     .isLength({ min: 8, max: 72 })
-    .withMessage('Senha deve ter entre 8 e 72 caracteres'),
-  body('cargo_id')
+    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
+  body("cargo_id")
     .optional()
     .isInt({ min: 1 })
-    .withMessage('cargo_id invalido')
+    .withMessage("cargo_id invalido")
     .toInt(),
-  body('ativo')
+  body("ativo")
     .optional()
-    .isIn(['true', 'false', true, false, 1, 0, '1', '0'])
-    .withMessage('ativo deve ser booleano')
-    .toBoolean()
+    .isIn(["true", "false", true, false, 1, 0, "1", "0"])
+    .withMessage("ativo deve ser booleano")
+    .toBoolean(),
 ]);
 
 const updateFuncionarioValidator = withValidation([
-  param('id').isInt({ min: 1 }).withMessage('ID de funcionario invalido').toInt(),
-  body('nome')
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID de funcionario invalido")
+    .toInt(),
+  body("nome")
     .optional()
     .trim()
     .isLength({ min: 3, max: 55 })
-    .withMessage('Nome deve ter entre 3 e 55 caracteres')
+    .withMessage("Nome deve ter entre 3 e 55 caracteres")
     .matches(/^[^<>]*$/)
-    .withMessage('Nome contem caracteres invalidos')
+    .withMessage("Nome contem caracteres invalidos")
     .escape(),
-  cpfRule('cpf', false),
-  body('email')
+  cpfRule("cpf", false),
+  body("email")
     .optional()
     .trim()
     .isLength({ max: 150 })
-    .withMessage('Email muito longo')
+    .withMessage("Email muito longo")
     .isEmail()
-    .withMessage('Email invalido')
+    .withMessage("Email invalido")
     .normalizeEmail({ gmail_remove_dots: false }),
-  body('senha')
+  body("senha")
     .optional()
     .isString()
-    .withMessage('Senha deve ser texto')
+    .withMessage("Senha deve ser texto")
     .isLength({ min: 8, max: 72 })
-    .withMessage('Senha deve ter entre 8 e 72 caracteres'),
-  body('cargo_id')
+    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
+  body("cargo_id")
     .optional()
     .isInt({ min: 1 })
-    .withMessage('cargo_id invalido')
+    .withMessage("cargo_id invalido")
     .toInt(),
-  body('ativo')
+  body("ativo")
     .optional()
-    .isIn(['true', 'false', true, false, 1, 0, '1', '0'])
-    .withMessage('ativo deve ser booleano')
-    .toBoolean()
+    .isIn(["true", "false", true, false, 1, 0, "1", "0"])
+    .withMessage("ativo deve ser booleano")
+    .toBoolean(),
 ]);
 
 const funcionarioStatusValidator = withValidation([
-  param('id').isInt({ min: 1 }).withMessage('ID de funcionario invalido').toInt(),
-  body('ativo')
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID de funcionario invalido")
+    .toInt(),
+  body("ativo")
     .notEmpty()
-    .withMessage('ativo e obrigatorio')
-    .isIn(['true', 'false', true, false, 1, 0, '1', '0'])
-    .withMessage('ativo deve ser booleano')
-    .toBoolean()
+    .withMessage("ativo e obrigatorio")
+    .isIn(["true", "false", true, false, 1, 0, "1", "0"])
+    .withMessage("ativo deve ser booleano")
+    .toBoolean(),
 ]);
 
 const paginationValidator = withValidation([
-  query('page').optional().isInt({ min: 1 }).withMessage('page deve ser >= 1').toInt(),
-  query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit deve ser entre 1 e 100').toInt(),
-  query('ativo').optional().isIn(['true', 'false', '1', '0']).withMessage('ativo invalido').toBoolean(),
-  query('q').optional().trim().isLength({ max: 120 }).withMessage('q deve ter no maximo 120 caracteres').escape()
+  query("page")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("page deve ser >= 1")
+    .toInt(),
+  query("limit")
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage("limit deve ser entre 1 e 100")
+    .toInt(),
+  query("ativo")
+    .optional()
+    .isIn(["true", "false", "1", "0"])
+    .withMessage("ativo invalido")
+    .toBoolean(),
+  query("q")
+    .optional()
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage("q deve ter no maximo 120 caracteres")
+    .escape(),
 ]);
 
 const qrShortcutIdParamValidator = withValidation([
-  param('id').isInt({ min: 1 }).withMessage('ID do link de ponto invalido').toInt()
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID do link de ponto invalido")
+    .toInt(),
 ]);
 
-const validateQrShortcutValidator = withValidation([
-  qrCodeRule()
-]);
+const validateQrShortcutValidator = withValidation([qrCodeRule()]);
 
 const funcionarioLoginValidator = withValidation([
-  body('login')
+  body("login")
     .optional()
     .trim()
     .isLength({ min: 3, max: 150 })
-    .withMessage('Login invalido'),
-  cpfRule('cpf', false),
-  body('senha')
+    .withMessage("Login invalido"),
+  cpfRule("cpf", false),
+  body("senha")
     .isString()
-    .withMessage('Senha deve ser texto')
+    .withMessage("Senha deve ser texto")
     .isLength({ min: 8, max: 72 })
-    .withMessage('Senha deve ter entre 8 e 72 caracteres')
+    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
 ]);
 
 const baterPontoValidator = withValidation([
-  body('latitude')
+  body("latitude")
     .notEmpty()
-    .withMessage('Localizacao obrigatoria para bater ponto')
+    .withMessage("Localizacao obrigatoria para bater ponto")
     .bail()
     .isFloat({ min: -90, max: 90 })
-    .withMessage('latitude invalida')
+    .withMessage("latitude invalida")
     .toFloat(),
-  body('longitude')
+  body("longitude")
     .notEmpty()
-    .withMessage('Localizacao obrigatoria para bater ponto')
+    .withMessage("Localizacao obrigatoria para bater ponto")
     .bail()
     .isFloat({ min: -180, max: 180 })
-    .withMessage('longitude invalida')
-    .toFloat()
+    .withMessage("longitude invalida")
+    .toFloat(),
 ]);
 
 module.exports = {
@@ -213,5 +242,5 @@ module.exports = {
   qrShortcutIdParamValidator,
   validateQrShortcutValidator,
   funcionarioLoginValidator,
-  baterPontoValidator
+  baterPontoValidator,
 };

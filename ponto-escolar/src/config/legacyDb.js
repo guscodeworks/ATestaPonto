@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
 // Backward-compatible adapter for older imports.
-const database = require('./database');
+const database = require("./database");
 
 async function initializeDatabase() {
   await database.checkConnection();
@@ -9,5 +9,5 @@ async function initializeDatabase() {
 
 module.exports = {
   ...database,
-  initializeDatabase
+  initializeDatabase,
 };

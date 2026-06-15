@@ -1,12 +1,16 @@
-'use strict';
+"use strict";
 
-const bcrypt = require('bcrypt');
-const { maskCpf } = require('../utils/cpf');
-const { BadRequestError, ConflictError, NotFoundError } = require('../utils/errors');
-const { registerAuditLog } = require('./auditLogService');
-const employeeModel = require('../models/employeeModel');
-const loginModel = require('../models/loginModel');
-const cargoModel = require('../models/cargoModel');
+const bcrypt = require("bcrypt");
+const { maskCpf } = require("../utils/cpf");
+const {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+} = require("../utils/errors");
+const { registerAuditLog } = require("./auditLogService");
+const employeeModel = require("../models/employeeModel");
+const loginModel = require("../models/loginModel");
+const cargoModel = require("../models/cargoModel");
 
 function mapEmployee(employee) {
   return {
@@ -19,7 +23,7 @@ function mapEmployee(employee) {
     primeiro_acesso: Boolean(employee.primeiro_acesso),
     cargo_id: employee.cargo_id,
     cargo_nome: employee.cargo_nome || null,
-    login_id: employee.login_id
+    login_id: employee.login_id,
   };
 }
 
@@ -27,7 +31,7 @@ async function resolveCargoId(tx, requestedCargoId) {
   if (requestedCargoId) {
     const cargo = await cargoModel.findByIdForUpdate(tx, requestedCargoId);
     if (!cargo) {
-      throw new BadRequestError('cargo_id informado nao existe');
+      throw new BadRequestError("cargo_id informado nao existe");
     }
     return Number(cargo.id);
   }
@@ -41,10 +45,12 @@ async function resolveCargoId(tx, requestedCargoId) {
 }
 
 async function createEmployee(body, { adminId, ipOrigem } = {}) {
-  const nome = String(body.nome || '').trim();
-  const cpf = String(body.cpf || '').trim();
-  const email = String(body.email || '').trim().toLowerCase();
-  const senha = String(body.senha || '');
+  const nome = String(body.nome || "").trim();
+  const cpf = String(body.cpf || "").trim();
+  const email = String(body.email || "")
+    .trim()
+    .toLowerCase();
+  const senha = String(body.senha || "");
   const ativo = body.ativo === undefined ? true : Boolean(body.ativo);
   const requestedCargoId = body.cargo_id ? Number(body.cargo_id) : null;
   const senhaHash = await bcrypt.hash(senha, 12);
@@ -52,17 +58,17 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const employeeId = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists) {
-      throw new ConflictError('CPF ja cadastrado');
+      throw new ConflictError("CPF ja cadastrado");
     }
 
     const emailExists = await employeeModel.findByEmailForUpdate(tx, email);
     if (emailExists) {
-      throw new ConflictError('Email ja cadastrado');
+      throw new ConflictError("Email ja cadastrado");
     }
 
     const loginCpfExists = await loginModel.findByCpfForUpdate(tx, cpf);
     if (loginCpfExists) {
-      throw new ConflictError('CPF ja cadastrado');
+      throw new ConflictError("CPF ja cadastrado");
     }
 
     const cargoId = await resolveCargoId(tx, requestedCargoId);
@@ -76,7 +82,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       senhaHash,
       ativo,
       cargoId,
-      loginId
+      loginId,
     });
     return result.insertId;
   });
@@ -84,16 +90,20 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const created = await employeeModel.findById(employeeId);
 
   await registerAuditLog({
-    evento: 'funcionario_cadastrado',
+    evento: "funcionario_cadastrado",
     adminId,
     funcionarioId: employeeId,
-    mensagem: 'Cadastro de funcionario realizado',
+    mensagem: "Cadastro de funcionario realizado",
     ipOrigem,
-    metadados: { cpf: created.cpf, email: created.email, cargo_id: created.cargo_id }
+    metadados: {
+      cpf: created.cpf,
+      email: created.email,
+      cargo_id: created.cargo_id,
+    },
   });
 
   return {
-    funcionario: mapEmployee(created)
+    funcionario: mapEmployee(created),
   };
 }
 
@@ -102,18 +112,23 @@ async function listEmployees(query = {}) {
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
   const offset = (page - 1) * limit;
   const ativo = query.ativo;
-  const q = String(query.q || '').trim();
+  const q = String(query.q || "").trim();
 
   const totalRows = await employeeModel.countEmployees({ ativo, q });
-  const employees = await employeeModel.listEmployees({ ativo, q, limit, offset });
+  const employees = await employeeModel.listEmployees({
+    ativo,
+    q,
+    limit,
+    offset,
+  });
 
   return {
     items: employees.map(mapEmployee),
     pagination: {
       page,
       limit,
-      total: Number(totalRows?.total || 0)
-    }
+      total: Number(totalRows?.total || 0),
+    },
   };
 }
 
@@ -134,13 +149,13 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     cargoId !== undefined;
 
   if (!hasAnyField) {
-    throw new BadRequestError('Nenhum campo para atualizar foi enviado');
+    throw new BadRequestError("Nenhum campo para atualizar foi enviado");
   }
 
   await employeeModel.withTransaction(async (tx) => {
     const existing = await employeeModel.findByIdForUpdate(tx, employeeId);
     if (!existing) {
-      throw new NotFoundError('Funcionario nao encontrado');
+      throw new NotFoundError("Funcionario nao encontrado");
     }
 
     const fields = {};
@@ -148,14 +163,22 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     if (cpf !== undefined) {
       const normalizedCpf = String(cpf).trim();
       if (normalizedCpf !== existing.cpf) {
-        const cpfExists = await employeeModel.findCpfConflictForUpdate(tx, normalizedCpf, employeeId);
+        const cpfExists = await employeeModel.findCpfConflictForUpdate(
+          tx,
+          normalizedCpf,
+          employeeId
+        );
         if (cpfExists) {
-          throw new ConflictError('CPF ja cadastrado');
+          throw new ConflictError("CPF ja cadastrado");
         }
 
-        const loginCpfExists = await loginModel.findCpfConflictForUpdate(tx, normalizedCpf, existing.login_id);
+        const loginCpfExists = await loginModel.findCpfConflictForUpdate(
+          tx,
+          normalizedCpf,
+          existing.login_id
+        );
         if (loginCpfExists) {
-          throw new ConflictError('CPF ja cadastrado');
+          throw new ConflictError("CPF ja cadastrado");
         }
 
         await loginModel.updateCpf(tx, existing.login_id, normalizedCpf);
@@ -165,10 +188,14 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
 
     if (email !== undefined) {
       const normalizedEmail = String(email).trim().toLowerCase();
-      if (normalizedEmail !== String(existing.email || '').toLowerCase()) {
-        const emailExists = await employeeModel.findEmailConflictForUpdate(tx, normalizedEmail, employeeId);
+      if (normalizedEmail !== String(existing.email || "").toLowerCase()) {
+        const emailExists = await employeeModel.findEmailConflictForUpdate(
+          tx,
+          normalizedEmail,
+          employeeId
+        );
         if (emailExists) {
-          throw new ConflictError('Email ja cadastrado');
+          throw new ConflictError("Email ja cadastrado");
         }
       }
       fields.email = normalizedEmail;
@@ -185,7 +212,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     if (cargoId !== undefined) {
       const cargo = await cargoModel.findByIdForUpdate(tx, Number(cargoId));
       if (!cargo) {
-        throw new BadRequestError('cargo_id informado nao existe');
+        throw new BadRequestError("cargo_id informado nao existe");
       }
       fields.cargoId = Number(cargoId);
     }
@@ -202,37 +229,45 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
   const updated = await employeeModel.findById(employeeId);
 
   await registerAuditLog({
-    evento: 'funcionario_alterado',
+    evento: "funcionario_alterado",
     adminId,
     funcionarioId: employeeId,
-    mensagem: 'Dados de funcionario alterados',
+    mensagem: "Dados de funcionario alterados",
     ipOrigem,
-    metadados: { cpf: updated.cpf, email: updated.email, cargo_id: updated.cargo_id }
+    metadados: {
+      cpf: updated.cpf,
+      email: updated.email,
+      cargo_id: updated.cargo_id,
+    },
   });
 
   return {
-    funcionario: mapEmployee(updated)
+    funcionario: mapEmployee(updated),
   };
 }
 
-async function setEmployeeStatus(employeeId, ativo, { adminId, ipOrigem } = {}) {
+async function setEmployeeStatus(
+  employeeId,
+  ativo,
+  { adminId, ipOrigem } = {}
+) {
   const result = await employeeModel.updateEmployeeStatus(employeeId, ativo);
 
   if (!result.affectedRows) {
-    throw new NotFoundError('Funcionario nao encontrado');
+    throw new NotFoundError("Funcionario nao encontrado");
   }
 
   await registerAuditLog({
-    evento: ativo ? 'funcionario_ativado' : 'funcionario_desativado',
+    evento: ativo ? "funcionario_ativado" : "funcionario_desativado",
     adminId,
     funcionarioId: employeeId,
-    mensagem: ativo ? 'Funcionario ativado' : 'Funcionario desativado',
-    ipOrigem
+    mensagem: ativo ? "Funcionario ativado" : "Funcionario desativado",
+    ipOrigem,
   });
 
   return {
     id: employeeId,
-    ativo
+    ativo,
   };
 }
 
@@ -240,5 +275,5 @@ module.exports = {
   createEmployee,
   listEmployees,
   updateEmployee,
-  setEmployeeStatus
+  setEmployeeStatus,
 };
