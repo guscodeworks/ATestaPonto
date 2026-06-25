@@ -5,7 +5,7 @@ const dotenv = require("dotenv");
 dotenv.config({ quiet: true });
 
 const DEFAULT_PORT = "4000";
-const DEFAULT_HOST = "0.0.0.0";
+const DEFAULT_HOST = "127.0.0.1" || "0.0.0.0";
 
 function parsePort(value) {
   const raw = String(value || DEFAULT_PORT).trim();
