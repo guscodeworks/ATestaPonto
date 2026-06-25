@@ -1,0 +1,92 @@
+/* ============================================================
+   SALA DO FUTURO FAKE — DESIGN SYSTEM
+   Variáveis globais de cores, tipografia, espaçamento e sombras
+   ============================================================ */
+
+:root {
+  /* Cores institucionais */
+  --color-primary: #1351B4;
+  --color-primary-dark: #0C2D6B;
+  --color-primary-light: #2E7CF6;
+  --color-secondary: #168821;
+  --color-accent: #FFCD07;
+
+  /* Neutros */
+  --color-bg: #F4F6FB;
+  --color-surface: #FFFFFF;
+  --color-border: #E1E6EE;
+  --color-text: #1A2233;
+  --color-text-muted: #5C6B7A;
+  --color-text-light: #FFFFFF;
+
+  /* Estados */
+  --color-success: #168821;
+  --color-error: #D9534F;
+  --color-warning: #FFCD07;
+
+  /* Gradientes */
+  --gradient-primary: linear-gradient(135deg, #1351B4 0%, #2E7CF6 60%, #58A6FF 100%);
+  --gradient-dark: linear-gradient(135deg, #0C2D6B 0%, #1351B4 100%);
+  --gradient-soft: linear-gradient(135deg, #EAF1FF 0%, #F4F6FB 100%);
+
+  /* Tipografia */
+  --font-base: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.875rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.25rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.25rem;
+
+  /* Espaçamento */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+
+  /* Bordas e raios */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Sombras */
+  --shadow-sm: 0 2px 8px rgba(19, 81, 180, 0.08);
+  --shadow-md: 0 6px 20px rgba(19, 81, 180, 0.12);
+  --shadow-lg: 0 12px 32px rgba(12, 45, 107, 0.18);
+
+  /* Transições */
+  --transition-fast: 0.18s ease;
+  --transition-base: 0.3s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: var(--font-base);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}

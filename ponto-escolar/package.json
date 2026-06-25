@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Backend seguro para ponto escolar institucional",
   "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js",
     "start:ponto": "node server.js",
