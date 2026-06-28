@@ -83,6 +83,13 @@ async function findForPunchLoginByEmail(email) {
   );
 }
 
+async function findActiveForLegacyLoginByCpf(cpf) {
+  return database.executeOne(
+    "SELECT id, cpf, nome, primeiro_acesso FROM funcionarios WHERE cpf = ? AND ativo = 1 LIMIT 1",
+    [cpf]
+  );
+}
+
 async function findByCpfForUpdate(client, cpf) {
   return getClient(client).executeOne(
     "SELECT id FROM funcionarios WHERE cpf = ? LIMIT 1 FOR UPDATE",
@@ -212,6 +219,7 @@ module.exports = {
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
   findForPunchLoginByEmail,
+  findActiveForLegacyLoginByCpf,
   findByCpfForUpdate,
   findByEmailForUpdate,
   findCpfConflictForUpdate,

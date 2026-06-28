@@ -1,56 +1,24 @@
 "use strict";
 
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const { execute, executeOne } = require("../config/database");
+const authService = require("../services/authService");
 const {
   buildAdminAuthCookie,
   buildClearAdminAuthCookie,
 } = require("../utils/authCookie");
 
-function normalizeCpf(value) {
-  return String(value || "").replace(/\D/g, "");
-}
-
-function signToken(id, role) {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "8h",
-  });
-}
-
 async function loginAdmin(req, res, next) {
   try {
-    const email = String(req.body.email || "")
-      .trim()
-      .toLowerCase();
-    const senha = String(req.body.senha || "");
     const unauthorizedMessage = "E-mail ou senha incorretos";
+    const result = await authService.loginAdmin(req.body);
 
-    if (!email || !senha) {
+    if (!result.token) {
       return res.status(401).json({ message: unauthorizedMessage });
     }
 
-    const admin = await executeOne(
-      "SELECT id, email, senha_hash FROM admins WHERE email = ? AND ativo = 1 LIMIT 1",
-      [email]
-    );
-    const senhaValida = admin
-      ? await bcrypt.compare(senha, admin.senha_hash)
-      : false;
-
-    if (!admin || !senhaValida) {
-      return res.status(401).json({ message: unauthorizedMessage });
-    }
-
-    const token = signToken(admin.id, "admin");
-
-    await execute("UPDATE admins SET ultimo_login_em = NOW() WHERE id = ?", [
-      admin.id,
-    ]);
-    res.setHeader("Set-Cookie", buildAdminAuthCookie(token));
+    res.setHeader("Set-Cookie", buildAdminAuthCookie(result.token));
 
     return res.status(200).json({
-      token,
+      token: result.token,
     });
   } catch (error) {
     return next(error);
@@ -59,40 +27,16 @@ async function loginAdmin(req, res, next) {
 
 async function loginFuncionario(req, res, next) {
   try {
-    const cpf = normalizeCpf(req.body.cpf);
-    const senha = String(req.body.senha || "");
     const unauthorizedMessage = "CPF ou senha incorretos";
+    const result = await authService.loginFuncionario(req.body);
 
-    if (!cpf || !senha) {
+    if (!result.token) {
       return res.status(401).json({ message: unauthorizedMessage });
     }
-
-    const login = await executeOne(
-      "SELECT id, cpf, senha FROM login WHERE cpf = ? LIMIT 1",
-      [cpf]
-    );
-    const senhaValida = login
-      ? await bcrypt.compare(senha, login.senha)
-      : false;
-
-    if (!login || !senhaValida) {
-      return res.status(401).json({ message: unauthorizedMessage });
-    }
-
-    const funcionario = await executeOne(
-      "SELECT id, cpf, nome, primeiro_acesso FROM funcionarios WHERE cpf = ? AND ativo = 1 LIMIT 1",
-      [cpf]
-    );
-
-    if (!funcionario) {
-      return res.status(401).json({ message: unauthorizedMessage });
-    }
-
-    const token = signToken(funcionario.id, "funcionario");
 
     return res.status(200).json({
-      token,
-      primeiro_acesso: Boolean(funcionario.primeiro_acesso),
+      token: result.token,
+      primeiro_acesso: result.primeiro_acesso,
     });
   } catch (error) {
     return next(error);

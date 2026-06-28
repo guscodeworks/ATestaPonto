@@ -20,6 +20,13 @@ async function findCpfConflictForUpdate(client, cpf, excludedLoginId) {
   );
 }
 
+async function findCredentialsByCpf(cpf) {
+  return database.executeOne(
+    "SELECT id, cpf, senha FROM login WHERE cpf = ? LIMIT 1",
+    [cpf]
+  );
+}
+
 async function createLogin(client, { cpf, senhaHash }) {
   return getClient(client).execute(
     "INSERT INTO login (cpf, senha) VALUES (?, ?)",
@@ -44,6 +51,7 @@ async function updateSenha(client, loginId, senhaHash) {
 module.exports = {
   findByCpfForUpdate,
   findCpfConflictForUpdate,
+  findCredentialsByCpf,
   createLogin,
   updateCpf,
   updateSenha,
