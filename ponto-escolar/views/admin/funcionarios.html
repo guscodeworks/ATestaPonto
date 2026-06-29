@@ -15,7 +15,7 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-mark"><img src="/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">Sala do Futuro</span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -31,19 +31,19 @@
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
-      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon">⊞</span> Dashboard</a>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
       <div class="sidebar-section-label">Funcionários</div>
-      <a href="/admin/funcionarios" class="nav-link active"><span class="nav-icon">👥</span> Funcionários</a>
-      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon">➕</span> Registrar</a>
+      <a href="/admin/funcionarios" class="nav-link active"><span class="nav-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
       <div class="sidebar-section-label">Ponto</div>
-      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon">⏱</span> Pontos do Dia</a>
-      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon">📊</span> Relatórios</a>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
       <div class="sidebar-section-label">Sistema</div>
-      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon">⚙️</span> Configurações</a>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon"><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'">
-        <span class="nav-icon">⎋</span> Sair do sistema
+        <span class="nav-icon"><img src="/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
       </button>
     </div>
   </aside>
@@ -52,7 +52,7 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <button class="menu-toggle" id="menu-toggle"><img src="/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
           <span>Sala do Futuro</span>
           <span class="breadcrumb-sep">›</span>
@@ -82,7 +82,7 @@
           <p class="page-subtitle"><span id="total-func">—</span> funcionários no sistema</p>
         </div>
         <a href="/admin/funcionarios/novo" class="ui-btn ui-btn-primary">
-          ➕ Registrar Funcionário
+          <img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"> Registrar Funcionário
         </a>
       </div>
 
@@ -90,7 +90,7 @@
       <div class="action-bar fade-in">
         <div class="action-bar-left">
           <div class="search-box">
-            <span class="search-icon">🔍</span>
+            <span class="search-icon"><img src="/icons/search.svg" alt="" aria-hidden="true" width="18" height="18"></span>
             <input type="text" id="busca-funcionario" placeholder="Buscar por nome, CPF, cargo..."/>
           </div>
           <select class="filter-select" id="filtro-status">
@@ -110,7 +110,7 @@
           </select>
         </div>
         <div class="action-bar-right">
-          <button class="ui-btn ui-btn-secondary ui-btn-sm" onclick="toast('Exportacao de funcionarios ainda nao possui endpoint.', 'info')">⬇ Exportar</button>
+          <button class="ui-btn ui-btn-secondary ui-btn-sm" onclick="toast('Exportacao de funcionarios ainda nao possui endpoint.', 'info')"><img src="/icons/download.svg" alt="" aria-hidden="true" width="18" height="18"> Exportar</button>
         </div>
       </div>
 
@@ -145,7 +145,7 @@
 <div class="ui-dialog-overlay" id="modal-editar">
   <div class="ui-dialog-box">
     <div class="ui-dialog-header">
-      <div class="ui-dialog-title">✏️ Editar Funcionário</div>
+      <div class="ui-dialog-title"><img src="/icons/pencil.svg" alt="" aria-hidden="true" width="18" height="18"> Editar Funcionário</div>
       <button class="ui-dialog-close" onclick="fecharModal('modal-editar')">✕</button>
     </div>
     <div class="ui-dialog-body">
@@ -154,21 +154,21 @@
         <div class="form-field full">
           <label>Nome completo</label>
           <div class="input-wrap">
-            <span class="field-icon">👤</span>
+            <span class="field-icon"><img src="/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span>
             <input type="text" id="edit-nome" class="field-input" placeholder="Nome completo"/>
           </div>
         </div>
         <div class="form-field">
           <label>E-mail</label>
           <div class="input-wrap">
-            <span class="field-icon">✉️</span>
+            <span class="field-icon"><img src="/icons/mail.svg" alt="" aria-hidden="true" width="18" height="18"></span>
             <input type="email" id="edit-email" class="field-input" placeholder="email@escola.edu.br"/>
           </div>
         </div>
         <div class="form-field">
           <label>CPF</label>
           <div class="input-wrap">
-            <span class="field-icon">🪪</span>
+            <span class="field-icon"><img src="/icons/badge.svg" alt="" aria-hidden="true" width="18" height="18"></span>
             <input type="text" id="edit-cpf" class="field-input" readonly style="color:var(--text-300)"/>
           </div>
         </div>
@@ -189,7 +189,7 @@
         <div class="form-field">
           <label>Telefone</label>
           <div class="input-wrap">
-            <span class="field-icon">📱</span>
+            <span class="field-icon"><img src="/icons/smartphone.svg" alt="" aria-hidden="true" width="18" height="18"></span>
             <input type="text" id="edit-tel" class="field-input" placeholder="(11) 99999-0000"/>
           </div>
         </div>
@@ -206,7 +206,7 @@
     </div>
     <div class="ui-dialog-footer">
       <button class="ui-btn ui-btn-ghost" onclick="fecharModal('modal-editar')">Cancelar</button>
-      <button class="ui-btn ui-btn-primary" onclick="salvarEdicao()">💾 Salvar alterações</button>
+      <button class="ui-btn ui-btn-primary" onclick="salvarEdicao()"><img src="/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar alterações</button>
     </div>
   </div>
 </div>
@@ -233,7 +233,6 @@
 </script>
 </body>
 </html>
-
 
 
 

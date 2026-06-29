@@ -1,10 +1,5 @@
 const pointReportService = require("../services/pointReportService");
-
-function getClientIp(req) {
-  return (
-    req.headers["x-forwarded-for"]?.split(",")?.[0]?.trim() || req.ip || {}
-  );
-}
+const { getClientIp } = require("../utils/request");
 
 async function getTodayPoints(req, res, next) {
   try {

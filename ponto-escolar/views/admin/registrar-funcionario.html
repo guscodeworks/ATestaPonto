@@ -3,9 +3,14 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Registrar Funcionário — Sala do Futuro Admin</title>
+	  <title>Registrar Funcionário — Sala do Futuro Admin</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
   <link rel="stylesheet" href="/assets/css/admin.css"/>
+  <style>
+    .registrar-layout {
+      display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start;
+    }
+  </style>
 </head>
 <body>
 
@@ -15,7 +20,7 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-mark"><img src="/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">Sala do Futuro</span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -31,21 +36,21 @@
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
-      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon">⊞</span> Dashboard</a>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
       <div class="sidebar-section-label">Funcionários</div>
-      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon">👥</span> Funcionários</a>
-      <a href="/admin/funcionarios/novo" class="nav-link active"><span class="nav-icon">➕</span> Registrar</a>
+      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link active"><span class="nav-icon"><img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
       <div class="sidebar-section-label">Ponto</div>
-      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon">⏱</span> Pontos do Dia</a>
-      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon">📊</span> Relatórios</a>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
       <div class="sidebar-section-label">Sistema</div>
-      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon">⚙️</span> Configurações</a>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon"><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
     </nav>
     <div class="sidebar-footer">
 
       <button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'">
 
-        <span class="nav-icon">⎋</span> Sair do sistema
+        <span class="nav-icon"><img src="/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
       </button>
     </div>
   </aside>
@@ -54,7 +59,7 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <button class="menu-toggle" id="menu-toggle"><img src="/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
           <span>Sala do Futuro</span>
           <span class="breadcrumb-sep">›</span>
@@ -85,13 +90,13 @@
         <p class="page-subtitle">Preencha os dados para cadastrar um novo membro da equipe</p>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start;" class="registrar-layout">
+      <div class="registrar-layout">
 
         <!-- Formulário principal -->
         <div class="ui-panel fade-in">
           <div class="ui-panel-header">
             <div>
-              <div class="ui-panel-title">📋 Dados do Funcionário</div>
+              <div class="ui-panel-title"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true" width="18" height="18"> Dados do Funcionário</div>
               <div class="ui-panel-subtitle">* Campos obrigatórios</div>
             </div>
           </div>
@@ -102,7 +107,7 @@
                 <div class="form-field full">
                   <label>Nome completo *</label>
                   <div class="input-wrap">
-                    <span class="field-icon">👤</span>
+                    <span class="field-icon"><img src="/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                     <input type="text" id="input-nome" class="field-input" placeholder="Ex.: Ana Beatriz Souza" required autocomplete="off"/>
                   </div>
                   <span class="field-help">Como aparece no documento oficial</span>
@@ -111,7 +116,7 @@
                 <div class="form-field">
                   <label>E-mail institucional *</label>
                   <div class="input-wrap">
-                    <span class="field-icon">✉️</span>
+                    <span class="field-icon"><img src="/icons/mail.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                     <input type="email" id="input-email" class="field-input" placeholder="nome@escola.edu.br" required/>
                   </div>
                 </div>
@@ -119,7 +124,7 @@
                 <div class="form-field">
                   <label>CPF *</label>
                   <div class="input-wrap">
-                    <span class="field-icon">🪪</span>
+                    <span class="field-icon"><img src="/icons/badge.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                     <input type="text" id="input-cpf" class="field-input" placeholder="000.000.000-00" maxlength="14" required/>
                   </div>
                 </div>
@@ -127,7 +132,7 @@
                 <div class="form-field">
                   <label>Telefone</label>
                   <div class="input-wrap">
-                    <span class="field-icon">📱</span>
+                    <span class="field-icon"><img src="/icons/smartphone.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                     <input type="text" id="input-tel" class="field-input" placeholder="(11) 99999-0000" maxlength="15"/>
                   </div>
                 </div>
@@ -166,7 +171,7 @@
 
               <!-- Senha automática -->
               <div style="background:var(--blue-50);border:1px solid rgba(26,101,200,0.2);border-radius:var(--r-md);padding:14px 16px;margin-bottom:22px;display:flex;align-items:flex-start;gap:10px;">
-                <span style="font-size:18px;">🔑</span>
+                <span style="font-size:18px;"><img src="/icons/key-round.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                 <div>
                   <div style="font-size:13px;font-weight:700;color:var(--blue-700);">Senha gerada automaticamente</div>
                   <div style="font-size:12px;color:var(--text-500);margin-top:2px;">A senha padrão será o CPF sem formatação. O funcionário poderá alterá-la no primeiro acesso.</div>
@@ -175,7 +180,7 @@
 
               <div style="display:flex;gap:12px;padding-top:16px;border-top:1px solid var(--border-light);">
                 <button type="submit" id="btn-registrar" class="ui-btn ui-btn-primary ui-btn-lg">
-                  <span class="btn-label">✓ Registrar Funcionário</span>
+                  <span class="btn-label"><img src="/icons/check.svg" alt="" aria-hidden="true" width="18" height="18"> Registrar Funcionário</span>
                   <div class="spinner"></div>
                 </button>
                 <button type="button" class="ui-btn ui-btn-ghost ui-btn-lg" onclick="document.getElementById('form-registro').reset();">
@@ -190,7 +195,7 @@
         <!-- Preview -->
         <div class="fade-in">
           <div class="preview-card">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-300);margin-bottom:16px;">👁 Pré-visualização</div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-300);margin-bottom:16px;"><img src="/icons/eye.svg" alt="" aria-hidden="true" width="18" height="18"> Pré-visualização</div>
             <div class="preview-avatar" id="preview-avatar">FN</div>
             <div class="preview-name" id="preview-nome">Nome do Funcionário</div>
             <div class="preview-cargo" id="preview-cargo">Cargo</div>
@@ -233,8 +238,6 @@
   <script src="/assets/js/admin/09-init.js"></script>
 </body>
 </html>
-
-
 
 
 

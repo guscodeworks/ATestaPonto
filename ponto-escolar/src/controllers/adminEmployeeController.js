@@ -1,12 +1,7 @@
 "use strict";
 
 const employeeService = require("../services/employeeService");
-
-function getClientIp(req) {
-  return (
-    req.headers["x-forwarded-for"]?.split(",")?.[0]?.trim() || req.ip || {}
-  );
-}
+const { getClientIp } = require("../utils/request");
 
 function getAuditContext(req) {
   return {

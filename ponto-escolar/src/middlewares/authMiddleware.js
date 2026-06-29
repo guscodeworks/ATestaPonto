@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
-const { executeOne } = require("../config/database");
+const authService = require("../services/authService");
 const { ForbiddenError, UnauthorizedError } = require("../utils/errors");
 
 function extractBearerToken(req) {
@@ -37,10 +37,7 @@ async function authenticateFuncionario(req, _res, next) {
       throw new UnauthorizedError("Sessao do funcionario invalida");
     }
 
-    const funcionario = await executeOne(
-      "SELECT id, cpf, nome, email, ativo FROM funcionarios WHERE id = ? LIMIT 1",
-      [funcionarioId]
-    );
+    const funcionario = await authService.findUserByToken(funcionarioId);
 
     if (!funcionario || !funcionario.ativo) {
       throw new UnauthorizedError("Funcionario inexistente ou inativo");

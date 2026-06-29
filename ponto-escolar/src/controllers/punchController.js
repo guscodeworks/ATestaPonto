@@ -1,16 +1,7 @@
 "use strict";
 
 const punchService = require("../services/punchService");
-
-function getClientIp(req) {
-  return (
-    req.headers["x-forwarded-for"]?.split(",")?.[0]?.trim() || req.ip || {}
-  );
-}
-
-function getClientUserAgent(req) {
-  return String(req.headers["user-agent"] || "").slice(0, 255) || {};
-}
+const { getClientIp, getClientUserAgent } = require("../utils/request");
 
 async function loginFuncionario(req, res, next) {
   try {

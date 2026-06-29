@@ -70,7 +70,12 @@ async function loginFuncionario(body) {
   };
 }
 
+async function findUserByToken(funcionarioId) {
+  return employeeModel.findById(funcionarioId);
+}
+
 module.exports = {
+  findUserByToken,
   loginAdmin,
   loginFuncionario,
 };

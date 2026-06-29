@@ -46,7 +46,6 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        "upgrade-insecure-requests": {}, // ← remove o upgrade forçado de HTTP→HTTPS
       },
     },
   })
@@ -96,7 +95,7 @@ app.use(
     const origin = req.headers.origin;
 
     if (isAllowedRequestOrigin(req, origin)) {
-      return callback({}, {
+      return callback(null, {
         ...corsBaseOptions,
         origin: true,
       });
