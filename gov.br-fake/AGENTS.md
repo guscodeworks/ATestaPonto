@@ -1,91 +1,165 @@
 # AGENTS.md — gov.br-fake
 
-## Objetivo
+## 1. Identidade do projeto
 
 Este projeto é um simulador técnico local do Gov.br/Login Único.
 
-Ele existe porque o objetivo final é apresentar o sistema Ponto Escolar para o Estado/Gov.br, demonstrando como ficaria a integração com autenticação Gov.br na prática.
+Ele existe para demonstração, estudo e apresentação do fluxo de autenticação Gov.br usado pelo projeto `ponto-escolar`.
 
-Como ainda não existem credenciais oficiais, autorização institucional ou permissão para usar diretamente a API real do Gov.br/Login Único, este projeto simula esse ambiente de forma local, didática e funcional.
+O `gov.br-fake` **não é produção** e **não substitui o Gov.br real**.
 
-O `gov.br-fake` não substitui o Gov.br real.
+---
 
-Ele serve apenas para demonstrar como o `ponto-escolar` se comportaria caso estivesse integrado oficialmente ao Gov.br.
+## 2. Papel do simulador
 
-## Papel do gov.br-fake
-
-O `gov.br-fake` simula o papel do Gov.br.
+O `gov.br-fake` simula apenas a etapa de autenticação.
 
 Ele responde:
 
-Quem é esse usuário?
+* quem é o usuário;
+* se o login simulado foi aceito;
+* dados básicos simulados via `/userinfo`.
 
-Ele NÃO decide:
+Ele não decide:
 
-Esse usuário pode acessar o dashboard do Ponto Escolar?
+* se o usuário é admin do Ponto Escolar;
+* se o usuário pode acessar `/admin/dashboard`;
+* regras internas de permissão do sistema principal.
 
-Essa decisão pertence ao `ponto-escolar`.
+**Gov.br autentica. Ponto Escolar autoriza.**
 
-## Regras obrigatórias
+---
 
-- Tratar como ambiente de simulação técnica.
-- Deixar claro que é ambiente local/demonstrativo.
-- Não coletar dados reais.
-- Não armazenar CPF real.
-- Não se passar pelo Gov.br real em ambiente público.
-- Não enviar `access_token` pela URL.
-- O `access_token` só deve ser gerado no endpoint de token.
-- Não misturar código com o projeto `ponto-escolar`.
-- Não decidir permissão final de admin do sistema Ponto Escolar.
+## 3. Separação com `ponto-escolar`
 
-## Fluxo esperado
+* Não misturar código do `gov.br-fake` dentro do `ponto-escolar`.
+* Não copiar regras internas do `ponto-escolar` para o simulador.
+* Não implementar autorização final de admin dentro do simulador.
+* O `ponto-escolar` pode consumir este simulador via variáveis de ambiente durante apresentações.
 
-Usuário acessa o `gov.br-fake`.
+---
 
-Depois:
+## 4. Regras obrigatórias
 
-1. Visualiza uma tela simulada do Gov.br.
-2. Faz login no simulador.
-3. Clica em `Gerenciar pontos`.
-4. O fluxo OAuth simulado é iniciado.
-5. O usuário é redirecionado para o `ponto-escolar`.
-6. O `ponto-escolar` valida o usuário e decide se libera o dashboard.
+* Tratar sempre como ambiente local, técnico e demonstrativo.
+* Não usar como produção.
+* Não coletar dados reais.
+* Não armazenar CPF real.
+* Não se passar pelo Gov.br real em ambiente público.
+* Não usar marca, layout ou comportamento de forma que pareça serviço oficial em produção.
+* Não enviar `access_token` pela URL.
+* O `access_token` só deve ser emitido pelo endpoint de token.
+* Não decidir permissão administrativa do Ponto Escolar.
+* Não criar regra fake que libere admin no sistema principal.
 
-## Rotas esperadas
+---
 
-Rotas possíveis do simulador:
+## 5. Fluxo esperado
 
-- `/`
-- `/govbr`
-- `/govbr/login`
-- `/govbr/logout`
-- `/govbr/gerenciar-pontos`
-- `/fake-govbr/authorize`
-- `/fake-govbr/token`
-- `/fake-govbr/userinfo`
+Fluxo correto da integração simulada:
 
-## Regra sobre o botão Gerenciar pontos
+1. Usuário inicia ação no `ponto-escolar`.
+2. `ponto-escolar` redireciona para o `gov.br-fake`.
+3. `gov.br-fake` mostra tela simulada de login.
+4. Usuário faz login no simulador.
+5. Simulador retorna `code` para o callback do `ponto-escolar`.
+6. `ponto-escolar` troca `code` por token no simulador.
+7. `ponto-escolar` busca `/userinfo`.
+8. `ponto-escolar` decide se o usuário tem permissão administrativa.
 
-O botão `Gerenciar pontos` NÃO deve chamar direto o callback:
+---
 
-`/auth/govbr/callback`
+## 6. Regra sobre `Gerenciar pontos`
+
+O botão `Gerenciar pontos` não deve chamar diretamente:
+
+```txt
+/auth/govbr/callback
+```
 
 O correto é iniciar o fluxo pelo `ponto-escolar`, normalmente em:
 
-`http://localhost:3000/auth/govbr/login`
+```txt
+http://localhost:3000/auth/govbr/login
+```
 
-Assim o `ponto-escolar` cria:
+Assim o `ponto-escolar` cria e controla:
 
-- state
-- codeVerifier
-- codeChallenge
+* `state`;
+* `codeVerifier`;
+* `codeChallenge`;
+* sessão temporária OAuth;
+* validação do callback.
 
-E só depois recebe o callback.
+---
 
-## Segurança
+## 7. Rotas esperadas
 
-- Não mandar token na URL.
-- Não mandar dados sensíveis na URL.
-- Não coletar dados reais.
-- Não usar como produção.
-- Não autorizar admin dentro do simulador.
+Rotas possíveis do simulador:
+
+* `/`
+* `/govbr`
+* `/govbr/login`
+* `/govbr/logout`
+* `/govbr/gerenciar-pontos`
+* `/fake-govbr/authorize`
+* `/fake-govbr/token`
+* `/fake-govbr/userinfo`
+
+Não criar rotas que substituam a autorização interna do `ponto-escolar`.
+
+---
+
+## 8. Segurança
+
+* Não mandar token na URL.
+* Não mandar dados sensíveis na URL.
+* Não coletar dados reais.
+* Não salvar dados reais no banco ou em arquivos.
+* Não usar secrets reais.
+* Não expor credenciais.
+* Não remover validações do fluxo OAuth simulado.
+* Não autorizar admin dentro do simulador.
+
+---
+
+## 9. Regras de edição para o Codex
+
+Antes de alterar qualquer arquivo:
+
+1. Leia o `AGENTS.md` do workspace geral.
+2. Leia este `AGENTS.md`.
+3. Analise o código real existente.
+4. Entenda o escopo da tarefa.
+5. Faça a menor alteração possível.
+6. Se houver conflito entre este arquivo e o código real, explique antes de alterar.
+
+Proibido sem pedido explícito:
+
+* mexer no `ponto-escolar`;
+* copiar código do simulador para o sistema principal;
+* criar fluxo de autorização admin no simulador;
+* alterar rotas principais do OAuth simulado;
+* criar dados reais ou credenciais reais;
+* trocar a arquitetura do projeto sem necessidade.
+
+---
+
+## 10. Git e testes
+
+* Não fazer commit sem autorização explícita.
+* Não fazer push sem autorização explícita.
+* Commits, quando solicitados, devem ser atômicos e descritivos.
+* Não misturar alterações de `gov.br-fake` e `ponto-escolar` no mesmo commit.
+* Testar o fluxo OAuth simulado quando possível.
+* Se não for possível testar, informar o motivo e sugerir validação manual.
+
+---
+
+## 11. Prioridade final
+
+> O `gov.br-fake` apenas simula autenticação.
+>
+> A autorização administrativa pertence ao `ponto-escolar`.
+>
+> Token válido nunca deve significar permissão administrativa.

@@ -2,63 +2,87 @@
 
 ## Projetos neste workspace
 
-Este workspace possui dois projetos separados:
+| Projeto         | Papel                                                          |
+| --------------- | -------------------------------------------------------------- |
+| `gov.br-fake`   | Simulador técnico local do Gov.br/Login Único. Não é produção. |
+| `ponto-escolar` | Sistema principal de controle de ponto escolar.                |
 
-- `gov.br-fake`
-  - Simulador técnico local do Gov.br/Login Único.
+---
 
-- `ponto-escolar`
-  - Sistema principal Ponto Escolar.
+## Regra de ouro antes de qualquer ação
 
-## Regra principal
+1. Identifique em qual pasta você está trabalhando.
+2. Leia o `AGENTS.md` interno da pasta do projeto antes de alterar qualquer arquivo.
+3. Se não houver `AGENTS.md` interno, aplique as regras deste arquivo.
+4. Respeite o escopo pedido. Não refatore, mova ou renomeie arquivos sem necessidade clara.
 
-Não misturar os dois projetos.
+---
 
-Antes de alterar qualquer arquivo, identifique em qual pasta está trabalhando.
+## Isolamento entre projetos
 
-Se estiver em `gov.br-fake`, trate como simulador técnico local do Gov.br.
+* Nunca misture código, lógica ou dados de `gov.br-fake` dentro de `ponto-escolar`, e vice-versa.
+* Cada projeto tem seu próprio contexto, dependências e regras internas.
+* Não altere arquivos dos dois projetos na mesma tarefa, salvo pedido explícito.
 
-Se estiver em `ponto-escolar`, trate como sistema principal Ponto Escolar.
+---
 
-## Papel de cada projeto
+## Arquitetura de autenticação e autorização
 
-### gov.br-fake
+* **Gov.br ou simulador autentica:** confirma a identidade do usuário.
+* **Ponto Escolar autoriza:** decide se o usuário tem permissão administrativa.
+* Token válido **não** implica permissão de admin.
+* A permissão de admin é decidida internamente pelo `ponto-escolar`, nunca apenas pelo token.
 
-O `gov.br-fake` existe para simular como seria a integração com o Gov.br/Login Único, já que ainda não existem credenciais oficiais ou permissão para consumir a API real.
+---
 
-Ele é usado para apresentação, estudo e demonstração técnica.
+## Regras de segurança
 
-Ele não é produção.
+* Nunca envie token pela URL.
+* Nunca aceite token vindo do front-end como prova de login.
+* Nunca libere dashboard apenas pela existência de um token.
+* Nunca coloque lógica fake de perfil `Admin/Funcionário` dentro do sistema real.
+* Nunca exponha credenciais, secrets, tokens ou chaves em código, logs ou commits.
+* Variáveis sensíveis devem vir de `.env` ou configuração segura equivalente.
 
-### ponto-escolar
+---
 
-O `ponto-escolar` é o projeto principal.
+## Regras de Git
 
-Ele representa o sistema real de controle de ponto escolar.
+* Não faça commit sem autorização explícita.
+* Não faça push sem autorização explícita.
+* Commits, quando solicitados, devem ser atômicos e descritivos.
+* Nunca faça commit de `.env` com dados reais, tokens, secrets ou credenciais.
+* Não altere arquivos de outro projeto no mesmo commit.
+* Antes de mudanças grandes, sugira verificar `git status` e a branch atual.
 
-Ele deve estar preparado para usar o Gov.br real futuramente, mas durante apresentação pode consumir o `gov.br-fake` como simulador.
+---
 
-## Regra de arquitetura
+## Fluxo de edição
 
-Gov.br autentica.
+1. Leia o `AGENTS.md` do projeto-alvo.
+2. Entenda o escopo da tarefa.
+3. Liste os arquivos relevantes antes de alterar.
+4. Faça a alteração mínima necessária.
+5. Teste ou indique como testar, quando possível.
+6. Revise se o isolamento entre projetos foi respeitado.
+7. Ao final, informe arquivos alterados e resumo técnico curto.
 
-Ponto Escolar autoriza.
+---
 
-Isso significa:
+## Sobre o `gov.br-fake`
 
-- O Gov.br ou simulador confirma quem é o usuário.
-- O Ponto Escolar decide se esse usuário pode acessar o dashboard admin.
+Existe para simular a integração com Gov.br/Login Único enquanto não há credenciais oficiais.
 
-## Regra de ouro
+É usado para apresentação, estudo e demonstração técnica.
 
-Token válido não significa permissão administrativa.
+Nunca deve vazar lógica fake para o `ponto-escolar`.
 
-A permissão de admin deve ser decidida internamente pelo `ponto-escolar`.
+---
 
-## Proibido
+## Sobre o `ponto-escolar`
 
-- Misturar código do `gov.br-fake` dentro do `ponto-escolar`.
-- Colocar lógica fake de escolher Admin/Funcionário dentro do sistema real.
-- Enviar token pela URL.
-- Aceitar token vindo do front-end como prova de login.
-- Liberar dashboard apenas porque existe token.
+Projeto principal e real.
+
+Deve estar preparado para usar o Gov.br real no futuro.
+
+Durante demonstrações, pode consumir o `gov.br-fake` como simulador, mas essa dependência é de apresentação, não de produção.

@@ -4,9 +4,12 @@
   "description": "Simulador local e demonstrativo do Gov.br/Login Unico para integracao tecnica.",
   "private": true,
   "main": "src/server.js",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server.js",
-    "check": "node --check src/server.js"
+    "check": "node --check server.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
