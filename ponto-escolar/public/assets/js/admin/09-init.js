@@ -11,13 +11,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   iniciarTabs();
 
   const precisaFuncionarios = Boolean(document.querySelector(
-    '#tbody-funcionarios,#cards-funcionarios,#tbody-presentes,#tbody-ausentes,#tbody-relatorio,#tbody-ultimos,#stat-total,#form-registro'
+    '#tbody-funcionarios,#cards-funcionarios,#tbody-presentes,#tbody-ausentes,#tbody-relatorio,#tbody-ultimos,#stat-total,#form-registro,#grafico-presenca'
   ));
   const precisaPontosHoje = Boolean(document.querySelector(
-    '#tbody-presentes,#tbody-ausentes,#tbody-ultimos,#stat-presentes,#count-presentes,#tbody-funcionarios'
+    '#tbody-presentes,#tbody-ausentes,#tbody-ultimos,#stat-presentes,#count-presentes,#tbody-funcionarios,#grafico-presenca'
   ));
   const precisaResumo = Boolean(document.querySelector(
-    '#stat-total,#hero-presentes,#relatorio-presentes'
+    '#stat-total,#hero-presentes,#relatorio-presentes,#grafico-presenca'
   ));
   const precisaRelatorio = Boolean(document.getElementById('tbody-relatorio'));
 

@@ -190,9 +190,9 @@ async function recarregarDadosAdminTela() {
 
   if (typeof renderizarStats === 'function') renderizarStats();
   if (typeof renderizarUltimosRegistros === 'function') renderizarUltimosRegistros();
+  if (typeof renderizarGrafico === 'function') renderizarGrafico();
   if (typeof renderizarAlertas === 'function') renderizarAlertas();
   if (typeof renderizarFuncionarios === 'function') renderizarFuncionarios();
   if (typeof renderizarPontosHoje === 'function') renderizarPontosHoje();
   if (typeof renderizarRelatorio === 'function') renderizarRelatorio();
 }
-

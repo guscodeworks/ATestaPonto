@@ -5,3 +5,10 @@
 @import url("./admin/components.css");
 @import url("./admin/auth.css");
 @import url("./admin/responsive.css");
+@import url("./admin/identidade-visual.css");
+
+/* TEMP_DEBUG_VISUAL_DASHBOARD */
+.dashboard-page .ui-panel,
+.dashboard-page .stat-card {
+  outline: 1px solid #F01414;
+}
