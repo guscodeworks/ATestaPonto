@@ -29,6 +29,13 @@ textarea {
   box-shadow: none;
 }
 
+.app-sidebar .sidebar-brand-mark img {
+  width: 26px;
+  height: 26px;
+  display: block;
+  filter: brightness(0) saturate(100%) invert(25%) sepia(95%) saturate(3218%) hue-rotate(219deg) brightness(97%) contrast(98%);
+}
+
 .app-sidebar .sidebar-user-avatar {
   background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
   border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-surface));
@@ -72,18 +79,21 @@ textarea {
 }
 
 .app-sidebar .sidebar-nav .nav-link .nav-icon img {
-  filter: none;
-  opacity: 0.82;
-  transition: opacity var(--transition);
+  width: 18px;
+  height: 18px;
+  display: block;
+  filter: brightness(0) saturate(100%) invert(8%) sepia(0%) saturate(120%) hue-rotate(167deg) brightness(98%) contrast(98%);
+  opacity: 0.68;
+  transition: filter var(--transition), opacity var(--transition);
 }
 
 .app-sidebar .sidebar-nav .nav-link:hover .nav-icon img {
-  opacity: 1;
+  opacity: 0.9;
 }
 
 .app-sidebar .sidebar-nav .nav-link.active .nav-icon img {
-  filter: none;
-  opacity: 0.9;
+  filter: brightness(0) saturate(100%) invert(25%) sepia(95%) saturate(3218%) hue-rotate(219deg) brightness(97%) contrast(98%);
+  opacity: 1;
 }
 
 .app-sidebar .btn-logout {
@@ -96,13 +106,38 @@ textarea {
 }
 
 .app-sidebar .btn-logout .nav-icon img {
-  filter: none;
-  opacity: 0.62;
-  transition: opacity var(--transition);
+  width: 18px;
+  height: 18px;
+  display: block;
+  filter: brightness(0) saturate(100%) invert(8%) sepia(0%) saturate(120%) hue-rotate(167deg) brightness(98%) contrast(98%);
+  opacity: 0.55;
+  transition: filter var(--transition), opacity var(--transition);
 }
 
 .app-sidebar .btn-logout:hover .nav-icon img {
-  opacity: 1;
+  opacity: 0.82;
+}
+
+.menu-toggle {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-toggle img,
+.field-icon img,
+.search-icon img,
+.ui-panel-title img,
+.card-title img,
+.settings-nav-item img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%);
+  opacity: 0.7;
 }
 
 .card,
@@ -164,6 +199,41 @@ textarea {
   transform: none;
 }
 
+.ui-btn,
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+  border-radius: var(--radius-btn);
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  background: var(--color-surface);
+  box-shadow: none;
+  transition: background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
+}
+
+.ui-btn img,
+.btn img,
+.btn-label img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%);
+  opacity: 0.78;
+}
+
 .ui-btn-primary,
 .btn-primary {
   background: var(--color-primary);
@@ -172,39 +242,12 @@ textarea {
   color: var(--color-bg);
 }
 
-.ui-btn {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 8px 14px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-btn);
-  color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1;
-  text-decoration: none;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background var(--transition), border-color var(--transition), color var(--transition);
-}
-
-.ui-btn img,
-.btn img,
-.btn-label img {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
 .ui-btn-primary img,
 .btn-primary img,
 .ui-btn-primary .btn-label img,
 .btn-primary .btn-label img {
   filter: brightness(0) invert(1);
+  opacity: 1;
 }
 
 .btn-label {
@@ -213,42 +256,70 @@ textarea {
   gap: 8px;
 }
 
-.ui-btn:hover {
+.ui-btn:hover,
+.btn:hover {
   background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-bg));
   color: var(--color-primary);
+}
+
+.ui-btn:focus-visible,
+.btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, var(--color-surface));
+  outline-offset: 2px;
 }
 
 .ui-btn-ghost {
   background: transparent;
+  border-color: transparent;
 }
 
-.ui-btn-secondary {
+.btn-ghost {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+  color: color-mix(in srgb, var(--color-text) 66%, var(--color-bg));
+}
+
+.ui-btn-secondary,
+.btn-secondary {
   background: var(--color-surface);
-  border-color: var(--border-medium);
-  color: var(--text-700);
+  border-color: color-mix(in srgb, var(--color-text) 14%, var(--color-bg));
+  color: color-mix(in srgb, var(--color-text) 76%, var(--color-bg));
 }
 
-.ui-btn-secondary:hover {
+.ui-btn-secondary:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
   background: color-mix(in srgb, var(--color-text) 4%, var(--color-surface));
-  border-color: var(--border-strong);
+  border-color: color-mix(in srgb, var(--color-text) 24%, var(--color-bg));
   color: var(--color-text);
 }
 
-.ui-btn-sm {
+.ui-btn-sm,
+.btn-sm {
   min-height: 30px;
   padding: 6px 10px;
   font-size: 13px;
 }
 
-.ui-btn-lg {
-  min-height: 42px;
-  padding: 11px 18px;
+.ui-btn-lg,
+.btn-lg {
+  min-height: 40px;
+  padding: 10px 16px;
   font-size: 15px;
 }
 
 .ui-btn-primary:hover,
 .btn-primary:hover {
-  background: color-mix(in srgb, var(--color-primary) 86%, var(--color-text));
+  background: color-mix(in srgb, var(--color-primary) 92%, var(--color-text));
+  border-color: color-mix(in srgb, var(--color-primary) 92%, var(--color-text));
+  color: var(--color-bg);
+}
+
+.ui-btn-primary:hover img,
+.btn-primary:hover img {
+  filter: brightness(0) invert(1);
+  opacity: 1;
 }
 
 .ui-panel-padded {

@@ -57,6 +57,10 @@ function iniciarFormRegistro() {
     if (el) { el.addEventListener('input', atualizarPreview); el.addEventListener('change', atualizarPreview); }
   });
 
+  form.addEventListener('reset', () => {
+    window.requestAnimationFrame(atualizarPreview);
+  });
+
   form.addEventListener('submit', async e => {
     e.preventDefault();
     const nome = document.getElementById('input-nome')?.value.trim();

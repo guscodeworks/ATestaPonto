@@ -8,11 +8,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/admin.css"/>
-  <style>
-    .registrar-layout {
-      display:grid;grid-template-columns:1fr 300px;gap:24px;align-items:start;
-    }
-  </style>
 </head>
 <body>
 
@@ -24,7 +19,7 @@
     <div class="sidebar-brand">
       <div class="sidebar-brand-mark"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
-        <span class="sidebar-brand-name">Sala do Futuro</span>
+        <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
       </div>
     </div>
@@ -63,7 +58,7 @@
       <div class="topbar-left">
         <button class="menu-toggle" id="menu-toggle"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
-          <span>Sala do Futuro</span>
+          <span>ATesta<span class="brand-accent">Ponto</span></span>
           <span class="breadcrumb-sep">›</span>
           <a href="/admin/funcionarios">Funcionários</a>
           <span class="breadcrumb-sep">›</span>
@@ -102,10 +97,10 @@
               <div class="ui-panel-subtitle">* Campos obrigatórios</div>
             </div>
           </div>
-          <div style="padding:24px;">
+          <div class="ui-panel-padded">
             <form id="form-registro" novalidate>
 
-              <div class="form-grid-2" style="margin-bottom:18px;">
+              <div class="form-grid-2">
                 <div class="form-field full">
                   <label>Nome completo *</label>
                   <div class="input-wrap">
@@ -142,7 +137,7 @@
                 <div class="form-field full">
                   <label>Cargo *</label>
                   <div class="select-wrap">
-                    <select id="input-cargo" class="field-select" required style="padding-left:14px;">
+                    <select id="input-cargo" class="field-select no-icon" required>
                       <option value="" disabled selected>Selecione o cargo...</option>
                       <optgroup label="Docência">
                         <option value="Professor">Professor</option>
@@ -185,7 +180,7 @@
                   <span class="btn-label"><img src="/assets/icons/check.svg" alt="" aria-hidden="true" width="18" height="18"> Registrar Funcionário</span>
                   <div class="spinner"></div>
                 </button>
-                <button type="button" class="ui-btn ui-btn-secondary ui-btn-lg" onclick="document.getElementById('form-registro').reset();">
+                <button type="reset" class="ui-btn ui-btn-secondary ui-btn-lg">
                   Limpar
                 </button>
               </div>

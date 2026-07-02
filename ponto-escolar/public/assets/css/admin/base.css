@@ -242,6 +242,8 @@ button { font-family: var(--font); cursor: pointer; }
 .app-main {
   margin-left: var(--sidebar-w);
   flex: 1;
+  width: calc(100% - var(--sidebar-w));
+  min-width: 0;
   min-height: 100vh;
   display: flex;
   flex-direction: column;

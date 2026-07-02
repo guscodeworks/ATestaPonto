@@ -24,7 +24,7 @@
   /* Sidebar */
   .app-sidebar { transform: translateX(-100%); }
   .app-sidebar.open { transform: translateX(0); }
-  .app-main { margin-left: 0; }
+  .app-main { margin-left: 0; width: 100%; }
   .menu-toggle { display: block; }
 
   /* Topbar */
@@ -50,7 +50,7 @@
   .dashboard-page .quick-grid { grid-template-columns: 1fr; }
 
   /* Registrar: sidebar escondida */
-  .registrar-layout { grid-template-columns: 1fr !important; }
+  .registrar-layout { grid-template-columns: 1fr; }
   .preview-card { position: static; }
 }
 

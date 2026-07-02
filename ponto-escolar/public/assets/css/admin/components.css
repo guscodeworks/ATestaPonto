@@ -74,6 +74,95 @@
   border-top: 1px solid var(--border-light);
 }
 
+.ui-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--color-text) 54%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.ui-dialog-overlay.show {
+  display: flex;
+}
+
+.ui-dialog-box {
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-hover);
+}
+
+.ui-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+}
+
+.ui-dialog-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.ui-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+  background: color-mix(in srgb, var(--color-bg) 68%, var(--color-surface));
+}
+
+.ui-dialog-box .form-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 18px;
+}
+
+.ui-dialog-box .form-field,
+.ui-dialog-box .input-wrap {
+  min-width: 0;
+}
+
+.ui-dialog-box .field-input,
+.ui-dialog-box .field-select {
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  .ui-dialog-overlay {
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .ui-dialog-box {
+    max-height: calc(100vh - 32px);
+  }
+
+  .ui-dialog-header,
+  .ui-dialog-body,
+  .ui-dialog-footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .ui-dialog-box .form-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ============================================================
    GRÁFICO DE BARRAS (puro CSS)
    ============================================================ */
@@ -257,16 +346,17 @@
 .empty-state {
   min-height: 150px;
   margin: 18px;
-  padding: 30px 24px;
+  padding: 32px 24px;
   text-align: center;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-  border: 1px solid var(--border-light);
+  border: 1px solid color-mix(in srgb, var(--color-text) 8%, var(--color-bg));
   border-radius: var(--radius-card);
-  background: color-mix(in srgb, var(--color-bg) 70%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-bg) 62%, var(--color-surface));
+  color: var(--color-text);
 }
-.empty-icon  { font-size: 34px; opacity: 0.42; line-height: 1; }
-.empty-title { font-size: 15px; font-weight: 700; color: var(--text-500); }
-.empty-desc  { font-size: 13px; color: var(--text-500); max-width: 260px; line-height: 1.45; }
+.empty-icon  { font-size: 32px; opacity: 0.34; line-height: 1; }
+.empty-title { font-size: 15px; font-weight: 700; color: var(--color-text); }
+.empty-desc  { font-size: 13px; color: color-mix(in srgb, var(--color-text) 62%, var(--color-bg)); max-width: 280px; line-height: 1.45; }
 
 /* Sidebar overlay */
 .sidebar-overlay {
