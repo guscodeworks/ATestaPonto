@@ -6,12 +6,7 @@ const {
   validateQrCode,
 } = require("../services/qrCodeService");
 const { registerAuditLog } = require("../services/auditLogService");
-
-function getClientIp(req) {
-  return (
-    req.headers["x-forwarded-for"]?.split(",")?.[0]?.trim() || req.ip || {}
-  );
-}
+const { getClientIp } = require("../utils/request");
 
 function getBaseUrl(req) {
   const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";

@@ -61,7 +61,7 @@ function iniciarSidebar() {
    ============================================================ */
 
 function iniciarTabs() {
-  const tabBtns = document.querySelectorAll('.tab-btn[data-tab]');
+  const tabBtns = document.querySelectorAll('.tab-btn[data-tab], .ui-tab[data-tab]');
   if (!tabBtns.length) return;
   tabBtns.forEach(btn => {
     btn.addEventListener('click', () => {

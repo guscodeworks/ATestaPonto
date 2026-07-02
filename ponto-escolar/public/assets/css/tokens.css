@@ -1,0 +1,32 @@
+:root {
+  /* Paleta ATestaPonto — extraída da logo */
+  --color-primary:       #1450F0;
+  --color-primary-hover: #0040CC;
+  --color-accent:        #F01414;
+  --color-bg:            #F8F9FC;
+  --color-surface:       #FFFFFF;
+  --color-text:          #141414;
+  --color-text-muted:    #6B7280;
+  --color-success:       #0c7c4e;
+  --color-success-bg:    #ecfbf4;
+  --color-warning:       #d97706;
+  --color-warning-bg:    #fffbeb;
+  --color-danger:        #b91c1c;
+  --color-danger-bg:     #fff5f5;
+  --color-info:          #1251a3;
+  --color-info-bg:       #eef5ff;
+
+  /* Tipografia */
+  --font-main: 'Inter', sans-serif;
+
+  /* Forma */
+  --radius-card:   10px;
+  --radius-btn:    6px;
+
+  /* Sombras */
+  --shadow-card:   0 2px 8px rgba(20, 80, 240, 0.08);
+  --shadow-hover:  0 6px 16px rgba(20, 80, 240, 0.14);
+
+  /* Transição padrão */
+  --transition:    0.18s ease;
+}

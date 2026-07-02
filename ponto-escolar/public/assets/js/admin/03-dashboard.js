@@ -26,8 +26,8 @@ function renderizarUltimosRegistros() {
               </div>
             </div>
           </td>
-          <td class="td-mono">${p.entrada || '<span style="color:var(--text-300)">—</span>'}</td>
-          <td class="td-mono">${p.saida || '<span style="color:var(--text-300)">—</span>'}</td>
+          <td class="td-mono">${p.entrada || '<span class="muted-dash">—</span>'}</td>
+          <td class="td-mono">${p.saida || '<span class="muted-dash">—</span>'}</td>
           <td><span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span></td>
           <td>
             <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')">✏️ Ajustar</button>
@@ -46,9 +46,9 @@ function renderizarUltimosRegistros() {
           <div class="func-card-avatar">${getIniciais(func.nome)}</div>
           <div class="func-card-info">
             <div class="func-card-name">${escapeHtml(func.nome)}</div>
-            <div class="func-card-cargo" style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;">
-              <span style="font-size:11px;color:var(--text-300);">Entrada: <b style="color:var(--text-700)">${p.entrada || '—'}</b></span>
-              <span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}" style="font-size:10px;padding:1px 7px;">${p.status==='completo'?'Completo':'Em andamento'}</span>
+            <div class="func-card-cargo mobile-point-meta">
+              <span class="mobile-point-entry">Entrada: <b>${p.entrada || '—'}</b></span>
+              <span class="badge mobile-point-status ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span>
             </div>
           </div>
         </div>
@@ -65,12 +65,67 @@ function renderizarGrafico() {
   const container = document.getElementById('grafico-presenca');
   if (!container) return;
 
+  const pendentes = PONTOS_HOJE.filter((ponto) => ponto.status !== 'completo' || !ponto.saida).length;
+  const presentesResumo = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
+  const presentes = Math.max(presentesResumo - pendentes, 0);
+  const ausentes = RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
+  const total = presentes + pendentes + ausentes;
+
+  if (!total) {
+    container.innerHTML = `
+      <div class="daily-presence-empty">
+        <div class="daily-presence-empty-title">Sem dados para hoje</div>
+        <div class="daily-presence-empty-desc">Os registros do dia aparecerao aqui assim que houver funcionarios ativos ou marcacoes de ponto.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const categorias = [
+    { label: 'Presentes', value: presentes, tone: 'success' },
+    { label: 'Pendentes', value: pendentes, tone: 'warning' },
+    { label: 'Ausentes', value: ausentes, tone: 'danger' },
+  ];
+
   container.innerHTML = `
-    <div class="empty-state" style="padding:8px 0;">
-      <div class="empty-title" style="font-size:12px;">Sem API semanal</div>
-      <div style="font-size:11px;color:var(--text-300);margin-top:4px;">Resumo semanal ainda nao possui endpoint real.</div>
+    <div class="daily-presence-chart" role="img" aria-label="Distribuicao de presenca de hoje: ${presentes} presentes, ${pendentes} pendentes e ${ausentes} ausentes.">
+      <div class="daily-presence-summary">
+        <div>
+          <div class="daily-presence-total">${total}</div>
+          <div class="daily-presence-caption">funcionarios ativos</div>
+        </div>
+        <div class="daily-presence-caption">${DATA_REFERENCIA_PONTOS ? formatarDataReferencia(DATA_REFERENCIA_PONTOS) : 'Hoje'}</div>
+      </div>
+      <div class="daily-presence-bars">
+        ${categorias.map((item) => {
+          const percent = total > 0 ? Math.round((item.value / total) * 100) : 0;
+          return `
+            <div class="daily-presence-row">
+              <div class="daily-presence-label">${item.label}</div>
+              <div class="daily-presence-track" aria-hidden="true">
+                <span class="daily-presence-fill ${item.tone}" data-width="${percent}%"></span>
+              </div>
+              <div class="daily-presence-value">${item.value}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      <div class="daily-presence-legend" aria-hidden="true">
+        ${categorias.map((item) => `
+          <span class="daily-presence-legend-item ${item.tone}">
+            <span class="daily-presence-dot"></span>
+            ${item.label}
+          </span>
+        `).join('')}
+      </div>
     </div>
   `;
+
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.daily-presence-fill').forEach((bar) => {
+      bar.style.width = bar.dataset.width || '0%';
+    });
+  });
 }
 
 /* ============================================================
@@ -110,4 +165,3 @@ function renderizarAlertas() {
     </div>
   `).join('');
 }
-

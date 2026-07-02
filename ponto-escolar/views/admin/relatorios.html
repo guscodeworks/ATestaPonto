@@ -3,15 +3,20 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Relatórios — Sala do Futuro Admin</title>
+  <title>Relatórios</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/admin.css"/>
   <style>
+    .report-summary-grid {
+      display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;
+    }
     @media print {
       .app-sidebar, .topbar, .action-bar, .no-print, .toast-stack { display:none !important; }
       .app-main { margin-left:0 !important; }
       .page-content { padding:0 !important; }
-      body { background:#fff !important; }
+      body { background:var(--color-surface) !important; }
     }
   </style>
 </head>
@@ -23,9 +28,9 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark">🏫</div>
+      <div class="sidebar-brand-mark"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
-        <span class="sidebar-brand-name">Sala do Futuro</span>
+        <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
       </div>
     </div>
@@ -39,20 +44,20 @@
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
-      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon">⊞</span> Dashboard</a>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
       <div class="sidebar-section-label">Funcionários</div>
-      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon">👥</span> Funcionários</a>
-      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon">➕</span> Registrar</a>
+      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
       <div class="sidebar-section-label">Ponto</div>
-      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon">⏱</span> Pontos do Dia</a>
-      <a href="/admin/relatorios" class="nav-link active"><span class="nav-icon">📊</span> Relatórios</a>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link active"><span class="nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
       <div class="sidebar-section-label">Sistema</div>
-      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon">⚙️</span> Configurações</a>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
     </nav>
     <div class="sidebar-footer">
 
       <button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'">
-        <span class="nav-icon">⎋</span> Sair do sistema
+        <span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
       </button>
     </div>
   </aside>
@@ -61,9 +66,9 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle">☰</button>
+        <button class="menu-toggle" id="menu-toggle"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
-          <span>Sala do Futuro</span>
+          <span>ATesta<span class="brand-accent">Ponto</span></span>
           <span class="breadcrumb-sep">›</span>
           <span class="breadcrumb-current">Relatórios</span>
         </div>
@@ -94,10 +99,10 @@
         <div class="action-bar no-print" style="margin-bottom:0;">
           <div class="action-bar-right">
             <button id="btn-gerar-pdf" class="ui-btn ui-btn-primary">
-              <span class="btn-label">📄 Gerar PDF</span>
+              <span class="btn-label"><img src="/assets/icons/file-text.svg" alt="" aria-hidden="true" width="18" height="18"> Gerar PDF</span>
               <div class="spinner"></div>
             </button>
-            <button id="btn-imprimir" class="ui-btn ui-btn-secondary">🖨️ Imprimir</button>
+            <button id="btn-imprimir" class="ui-btn ui-btn-secondary"><img src="/assets/icons/printer.svg" alt="" aria-hidden="true" width="18" height="18"> Imprimir</button>
           </div>
         </div>
       </div>
@@ -124,26 +129,26 @@
                 <option>Parcial</option>
               </select>
             </div>
-            <span style="font-size:13px;color:var(--text-300);">Gerado por: <strong style="color:var(--text-700);" id="relatorio-gerado-por">—</strong></span>
+            <span style="font-size:13px;color:var(--color-text-muted);">Gerado por: <strong style="color:var(--color-text);" id="relatorio-gerado-por">—</strong></span>
           </div>
         </div>
       </div>
 
       <!-- Resumo -->
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;" class="fade-in">
-        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--green-500);">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-300);margin-bottom:8px;">✅ Presentes</div>
-          <div style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--text-900);line-height:1;" id="relatorio-presentes">—</div>
-          <div style="font-size:12px;color:var(--text-500);margin-top:4px;">funcionários bateram ponto</div>
+      <div class="report-summary-grid fade-in">
+        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--color-primary);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);margin-bottom:8px;"><img src="/assets/icons/circle-check.svg" alt="" aria-hidden="true" width="18" height="18"> Presentes</div>
+          <div style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--color-text);line-height:1;" id="relatorio-presentes">—</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">funcionários bateram ponto</div>
         </div>
-        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--red-500);">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-300);margin-bottom:8px;">❌ Ausentes</div>
-          <div style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--text-900);line-height:1;" id="relatorio-ausentes">—</div>
-          <div style="font-size:12px;color:var(--text-500);margin-top:4px;">sem registro no período</div>
+        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--color-accent);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);margin-bottom:8px;"><img src="/assets/icons/circle-x.svg" alt="" aria-hidden="true" width="18" height="18"> Ausentes</div>
+          <div style="font-family:var(--font-mono);font-size:32px;font-weight:700;color:var(--color-text);line-height:1;" id="relatorio-ausentes">—</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-top:4px;">sem registro no período</div>
         </div>
-        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--blue-600);">
-          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-300);margin-bottom:8px;">📅 Data</div>
-          <div style="font-size:14px;font-weight:600;color:var(--text-900);line-height:1.4;" id="relatorio-data">—</div>
+        <div class="ui-panel ui-panel-padded" style="border-top:3px solid var(--color-primary);">
+          <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);margin-bottom:8px;"><img src="/assets/icons/calendar-days.svg" alt="" aria-hidden="true" width="18" height="18"> Data</div>
+          <div style="font-size:14px;font-weight:600;color:var(--color-text);line-height:1.4;" id="relatorio-data">—</div>
         </div>
       </div>
 
@@ -155,7 +160,7 @@
         <div style="padding:20px 24px;">
           <div class="chart-bar-group" id="chart-presenca-semanal">
             <div class="empty-state" style="padding:8px 0;">
-              <div class="empty-title">Resumo semanal sem API real</div>
+              <div class="empty-title">—</div>
             </div>
           </div>
         </div>
@@ -164,8 +169,8 @@
       <!-- Tabela completa -->
       <div class="ui-panel fade-in">
         <div class="ui-panel-header">
-          <div class="ui-panel-title">📋 Registro completo de frequência</div>
-          <span style="font-size:12px;color:var(--text-300);">Todos os funcionários</span>
+          <div class="ui-panel-title"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="18" height="18"> Registro completo de frequência</div>
+          <span style="font-size:12px;color:var(--color-text-muted);">Todos os funcionários</span>
         </div>
         <div class="table-wrap">
           <table class="data-table">
@@ -187,12 +192,12 @@
       <!-- Observações -->
       <div class="ui-panel no-print fade-in" style="margin-top:20px;margin-bottom:32px;">
         <div class="ui-panel-header">
-          <div class="ui-panel-title">📝 Observações</div>
+          <div class="ui-panel-title"><img src="/assets/icons/notebook-pen.svg" alt="" aria-hidden="true" width="18" height="18"> Observações</div>
         </div>
         <div style="padding:16px 24px;">
           <textarea class="field-textarea" placeholder="Adicione anotações sobre o período..."></textarea>
-          <div style="margin-top:12px;">
-            <button class="ui-btn ui-btn-ghost ui-btn-sm" onclick="toast('Observacoes ainda nao possuem API de persistencia.','info')">💾 Salvar observação</button>
+          <div class="form-actions" style="margin-top:12px;">
+            <button class="ui-btn ui-btn-ghost ui-btn-sm" onclick="toast('Observacoes ainda nao possuem API de persistencia.','info')"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar observação</button>
           </div>
         </div>
       </div>
@@ -214,8 +219,3 @@
   <script src="/assets/js/admin/09-init.js"></script>
 </body>
 </html>
-
-
-
-
-
