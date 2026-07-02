@@ -46,6 +46,7 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "upgrade-insecure-requests": null, // ← remove o upgrade forçado de HTTP→HTTPS
       },
     },
   })
