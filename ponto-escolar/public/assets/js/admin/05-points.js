@@ -9,6 +9,8 @@ function renderizarPontosHoje() {
   const cardA = document.getElementById('cards-ausentes');
   const icon = (name) => `<img src="/assets/icons/${name}.svg" alt="" aria-hidden="true" width="18" height="18">`;
 
+  // Junta cada registro de ponto com seus dados de funcionário e descarta
+  // entradas cujo funcionário não pôde ser resolvido (dado inconsistente).
   const lista = PONTOS_HOJE.map((p) => ({
     p,
     func: getFuncionarioPorId(p.funcionarioId) || p.funcionario,
@@ -16,6 +18,8 @@ function renderizarPontosHoje() {
 
   if (tbodyP) {
     if (ADMIN_DATA_ERROR && !lista.length) {
+      // Diferencia "erro ao carregar" de "sem presentes hoje": só mostra a
+      // mensagem de erro da API quando não há nenhum dado disponível.
       tbodyP.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${icon('triangle-alert')}</div><div class="empty-title">Nao foi possivel carregar pontos</div><div class="pontos-empty-desc">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
     } else {
       tbodyP.innerHTML = lista.length ? lista.map(({ p, func }) => `
@@ -44,6 +48,7 @@ function renderizarPontosHoje() {
   }
 
   if (cardP) {
+    // Versão em cards da mesma lista de presentes, para o layout mobile.
     cardP.innerHTML = lista.length ? lista.map(({ p, func }) => `
       <div class="func-card-item fade-in">
         <div class="func-card-avatar">${getIniciais(func.nome)}</div>
@@ -96,6 +101,8 @@ function renderizarPontosHoje() {
     `).join('') : `<div class="empty-state"><div class="empty-icon">${icon('circle-check')}</div><div class="empty-title">Nenhum ausente ativo hoje</div></div>`;
   }
 
+  // Prioriza os totais já calculados pela API; usa o tamanho das listas
+  // locais como fallback caso o resumo não esteja disponível.
   const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
   set('count-presentes', RESUMO_PONTOS.presentes || lista.length);
   set('count-ausentes', RESUMO_PONTOS.ausentes || ausentes.length);

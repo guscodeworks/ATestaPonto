@@ -2,10 +2,14 @@
 
 const database = require("../config/database");
 
+// Permite que as queries participem de uma transação (client passado explicitamente)
+// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
 function getClient(client) {
   return client || database;
 }
 
+// FOR UPDATE bloqueia a linha para evitar condição de corrida ao criar/atualizar
+// um login com o mesmo CPF concorrentemente dentro de uma transação.
 async function findByCpfForUpdate(client, cpf) {
   return getClient(client).executeOne(
     "SELECT id FROM login WHERE cpf = ? LIMIT 1 FOR UPDATE",
@@ -13,6 +17,8 @@ async function findByCpfForUpdate(client, cpf) {
   );
 }
 
+// Verifica se o CPF já está em uso por outro login (id <> excludedLoginId),
+// necessário na atualização para não bloquear o próprio registro como "conflito".
 async function findCpfConflictForUpdate(client, cpf, excludedLoginId) {
   return getClient(client).executeOne(
     "SELECT id FROM login WHERE cpf = ? AND id <> ? LIMIT 1 FOR UPDATE",

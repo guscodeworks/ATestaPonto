@@ -20,6 +20,8 @@ function iniciarRelogio() {
    ============================================================ */
 
 function renderizarPerfil() {
+  // Atualiza tanto os elementos da topbar quanto os da sidebar,
+  // pois o perfil do admin é exibido em dois lugares da tela.
   const els = {
     avatar:  document.getElementById('admin-avatar'),
     nome:    document.getElementById('admin-firstname'),
@@ -61,6 +63,8 @@ function iniciarSidebar() {
    ============================================================ */
 
 function iniciarTabs() {
+  // Suporta duas convenções de classe ('.tab-btn' e '.ui-tab') para
+  // cobrir diferentes trechos de HTML que já existem na página.
   const tabBtns = document.querySelectorAll('.tab-btn[data-tab], .ui-tab[data-tab]');
   if (!tabBtns.length) return;
   tabBtns.forEach(btn => {
@@ -81,12 +85,16 @@ function iniciarTabs() {
 
 function toast(msg, tipo = 'success') {
   const icons = { success:'✅', error:'❌', info:'ℹ️', warning:'⚠️' };
+  // Aceita os dois IDs de container possíveis, por compatibilidade com
+  // diferentes versões do HTML da página.
   const stack = document.getElementById('toast-stack') || document.getElementById('toast-container');
   if (!stack) return;
   const el = document.createElement('div');
   el.className = `toast toast-${tipo}`;
   el.innerHTML = `<span class="toast-icon">${icons[tipo]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
   stack.appendChild(el);
+  // Some com fade + deslocamento antes de remover do DOM, para não cortar
+  // a animação de saída do toast.
   setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(20px)'; el.style.transition='all 0.3s ease'; setTimeout(()=>el.remove(),300); }, 3500);
 }
 
@@ -98,6 +106,8 @@ function mostrarToast(msg, tipo) { toast(msg, tipo); }
    ============================================================ */
 
 function renderizarStats() {
+  // Prioriza os valores já calculados pela API (RESUMO_PONTOS) e só
+  // recalcula localmente como fallback, caso o resumo não tenha vindo.
   const ativos = RESUMO_PONTOS.total_ativos || FUNCIONARIOS.filter(f => f.status === 'ativo').length;
   const total = RESUMO_PONTOS.total_funcionarios || FUNCIONARIOS.length;
   const presentes = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;

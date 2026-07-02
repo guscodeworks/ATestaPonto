@@ -76,7 +76,8 @@ function requireAdminAuth() {
 function requireFuncAuth() {
   const loggedIn = sessionStorage.getItem(AUTH_KEYS.funcLoggedIn);
   if (!loggedIn) {
-    // Redireciona para login do funcionário (relativo)
+    // Login do funcionário é acessado por caminho relativo; ajusta o
+    // prefixo conforme a página atual já estar ou não dentro de /funcionario/.
     const base = window.location.pathname.includes('/funcionario/') ? '' : 'funcionario/';
     window.location.replace(base + 'login.html');
     return false;

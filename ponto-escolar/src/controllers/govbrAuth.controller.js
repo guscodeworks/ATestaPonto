@@ -17,6 +17,7 @@ const {
 } = require("../services/adminAuthorization.service");
 const { buildClearAdminAuthCookie } = require("../utils/authCookie");
 
+// URL do logout do mock/fake do Gov.br usado em ambientes de desenvolvimento/teste.
 function getGovbrFakeLogoutUrl() {
   const baseUrl = String(
     process.env.GOVBR_FAKE_BASE_URL || "http://127.0.0.1:4000"
@@ -27,6 +28,9 @@ function getGovbrFakeLogoutUrl() {
   return `${baseUrl}/fake-govbr/logout`;
 }
 
+// Comparação em tempo constante para evitar timing attack na validação do state OAuth.
+// O check de tamanho é necessário pois crypto.timingSafeEqual lança erro se os buffers
+// tiverem tamanhos diferentes.
 function matchesState(receivedState, storedState) {
   const received = Buffer.from(String(receivedState || ""), "utf8");
   const stored = Buffer.from(String(storedState || ""), "utf8");
@@ -37,6 +41,7 @@ function matchesState(receivedState, storedState) {
   );
 }
 
+// Wrappers em Promise pois a API de sessão do express-session é baseada em callback.
 function regenerateSession(req) {
   return new Promise((resolve, reject) => {
     req.session.regenerate((error) => {
@@ -76,6 +81,8 @@ function destroySession(req) {
   });
 }
 
+// Remove os dados temporários do fluxo OAuth (state/codeVerifier) da sessão,
+// evitando reuso em tentativas futuras de callback.
 async function clearOauthSession(req) {
   if (!req.session || !req.session.oauthGovbr) {
     return;
@@ -87,6 +94,8 @@ async function clearOauthSession(req) {
 
 async function iniciarLoginGovbr(req, res, next) {
   try {
+    // Fluxo PKCE: state protege contra CSRF, codeVerifier/codeChallenge contra
+    // interceptação do authorization code.
     const state = gerarTextoSeguro();
     const codeVerifier = gerarTextoSeguro();
     const codeChallenge = gerarCodeChallenge(codeVerifier);
@@ -105,6 +114,8 @@ async function iniciarLoginGovbr(req, res, next) {
 
 async function concluirLoginGovbr(req, res, next) {
   try {
+    // Callback nunca deve receber access_token diretamente na query string;
+    // presença desse parâmetro indica tentativa de injeção/fluxo indevido (implicit flow).
     if ("access_token" in req.query) {
       await clearOauthSession(req);
       throw new BadRequestError(
@@ -128,11 +139,14 @@ async function concluirLoginGovbr(req, res, next) {
       );
     }
 
+    // Validação do state contra CSRF: o valor deve corresponder ao gerado no início do fluxo.
     if (!matchesState(state, oauthSession.state)) {
       await clearOauthSession(req);
       throw new UnauthorizedError("State Gov.br invalido.");
     }
 
+    // Dados de PKCE já cumpriram seu papel e são descartados antes da troca do code,
+    // impedindo reuso em caso de callback duplicado.
     await clearOauthSession(req);
 
     const tokenResponse = await trocarCodePorToken({
@@ -151,6 +165,7 @@ async function concluirLoginGovbr(req, res, next) {
 
     const userInfo = await buscarUserInfo(accessToken);
 
+    // Regra de negócio: apenas usuários Gov.br autorizados como admin podem acessar o painel.
     if (!verificarSeUsuarioGovbrEhAdmin(userInfo)) {
       throw new ForbiddenError("Acesso negado.");
     }
@@ -163,6 +178,7 @@ async function concluirLoginGovbr(req, res, next) {
       loginAt: new Date().toISOString(),
     };
 
+    // Regeneração da sessão antes de gravar dados de admin previne session fixation.
     await regenerateSession(req);
     req.session.admin = adminSession;
     await saveSession(req);
@@ -193,6 +209,7 @@ async function sairGovbr(req, res, next) {
 }
 
 function consultarSessaoAdmin(req, res) {
+  // Exige sessão de admin autenticada especificamente via Gov.br (não aceita outros provedores).
   if (
     !req.session ||
     !req.session.admin ||

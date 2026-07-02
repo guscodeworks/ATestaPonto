@@ -6,6 +6,8 @@
   const remember = document.getElementById('remember');
   const toastStack = document.getElementById('toast-stack');
 
+  // Aborta a inicialização inteira se qualquer elemento essencial da tela
+  // de login não existir, evitando erros parciais de referência nula.
   if (!cpfInput || !senhaInput || !togglePw || !btnLogin || !remember || !toastStack) {
     return;
   }
@@ -29,6 +31,9 @@
       body: options.body ? JSON.stringify(options.body) : undefined
     });
     const payload = await response.json().catch(() => ({}));
+    // Trata tanto falha HTTP quanto sucesso HTTP com corpo indicando erro
+    // de negócio (`success: false`), já que a API pode usar qualquer um
+    // dos dois formatos para sinalizar falha.
     if (!response.ok || payload.success === false) {
       throw new Error(payload?.error?.message || 'Falha ao comunicar com o servidor.');
     }
@@ -40,6 +45,8 @@
   }
 
   cpfInput.addEventListener('input', function () {
+    // Máscara aplicada progressivamente: cada replace assume que o
+    // anterior já formatou o trecho correspondente do CPF.
     let v = this.value.replace(/\D/g, '');
     if (v.length > 11) v = v.slice(0, 11);
     v = v.replace(/(\d{3})(\d)/, '$1.$2');
@@ -65,6 +72,8 @@
     cpfInput.classList.remove('has-error');
     senhaInput.classList.remove('has-error');
 
+    // Checagem de conectividade antes de tentar a requisição, para dar
+    // um feedback mais claro do que um erro genérico de rede.
     if (!navigator.onLine) {
       toast('Sem internet. Verifique sua conexão e tente novamente.', 'error');
       return;
@@ -100,6 +109,8 @@
       sessionStorage.setItem('func_nome', data.funcionario?.nome || '');
       sessionStorage.setItem('func_cpf', cpf);
 
+      // "Lembrar CPF": salva apenas o CPF (nunca a senha) em localStorage
+      // para pré-preencher o campo em acessos futuros.
       if (remember.checked && validarCPF(cpfInput.value)) {
         localStorage.setItem('func_saved_cpf', cpfInput.value);
       }
@@ -113,6 +124,8 @@
     }
   });
 
+  // Permite submeter o login pressionando Enter em qualquer lugar da
+  // página, não apenas com foco nos campos do formulário.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') btnLogin.click();
   });

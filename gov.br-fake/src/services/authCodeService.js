@@ -24,6 +24,8 @@ function generateAuthorizationCode() {
   return generateSecureToken('fake_code');
 }
 
+// Cria e persiste um authorization code vinculado a um usuário fake existente,
+// seguindo o fluxo Authorization Code (com suporte opcional a PKCE via codeChallenge).
 function registerAuthorizationCode({
   codeChallenge,
   codeChallengeMethod,
@@ -58,6 +60,9 @@ function registerAuthorizationCode({
   };
 }
 
+// Consome (lê e invalida) um authorization code, garantindo que ele só possa ser
+// trocado por um token uma única vez — o delete ocorre sempre, mesmo se o code já
+// estiver expirado, para não deixar registros expirados "reaproveitáveis" na store.
 function consumeAuthorizationCode(code) {
   memoryStore.cleanupExpiredRecords();
 
@@ -66,6 +71,9 @@ function consumeAuthorizationCode(code) {
 
   memoryStore.deleteAuthCode(normalizedCode);
 
+  // Atenção: `memoryStore.getAuthCode` retorna "{}" (não `undefined`) quando o code
+  // não existe, então `!authCode` nunca é verdadeiro aqui. Nesse caso o fluxo cai em
+  // `authCode.isExpired()`, mas "{}" não possui esse método — ver Sugestões de melhoria.
   if (!authCode || authCode.isExpired()) {
     return {};
   }

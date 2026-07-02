@@ -26,6 +26,8 @@ function createAdminPagesRouter({ sendView }) {
     "admin/configuracoes.html"
   );
 
+  // Login/logout de admin não têm view própria: o fluxo real é delegado ao
+  // OAuth do Gov.br (rotas /auth/govbr/*).
   router.get("/admin/login", redirectTo("/auth/govbr/login"));
   router.get("/admin/logout", redirectTo("/auth/govbr/logout"));
 
@@ -33,6 +35,7 @@ function createAdminPagesRouter({ sendView }) {
   router.get("/admin/index", requireAdmin, redirectTo("/admin/dashboard"));
   router.get("/admin/dashboard", requireAdmin, dashboardPage);
 
+  // Rotas alternativas/legadas mantidas por compatibilidade, apontando para a mesma view.
   router.get("/admin/funcionario", requireAdmin, funcionariosPage);
   router.get("/admin/funcionarios", requireAdmin, funcionariosPage);
   router.get(
@@ -40,6 +43,7 @@ function createAdminPagesRouter({ sendView }) {
     requireAdmin,
     registrarFuncionarioPage
   );
+  // Rota antiga de cadastro de funcionário, redirecionada para a URL atual.
   router.get(
     "/admin/registrar-funcionario",
     requireAdmin,

@@ -18,6 +18,9 @@ function isAdminPage() {
   return path === '/admin' || path.startsWith('/admin/');
 }
 
+// Sempre retorna false: atualmente não existe uma rota de "bater ponto"
+// pública (sem login) nesta aplicação. Mantido como stub para uso futuro
+// caso essa rota venha a existir.
 function isPublicPunchPage() {
   return false;
 }

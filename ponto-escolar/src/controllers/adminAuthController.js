@@ -1,5 +1,8 @@
 const adminAuthService = require("../services/adminAuthService");
 
+// Prioriza o header X-Forwarded-For (proxy/load balancer) e cai para o IP
+// direto da conexão como fallback, para registrar a origem real da
+// requisição mesmo atrás de proxies.
 function getClientIp(req) {
   return (
     req.headers["x-forwarded-for"]?.split(",")?.[0]?.trim() || req.ip || {}
@@ -8,6 +11,8 @@ function getClientIp(req) {
 
 async function loginAdmin(req, res, next) {
   try {
+    // IP de origem é repassado ao service para fins de auditoria/log de
+    // login, não para validação nesta camada.
     const result = await adminAuthService.loginAdmin(req.body, {
       ipOrigem: getClientIp(req),
     });

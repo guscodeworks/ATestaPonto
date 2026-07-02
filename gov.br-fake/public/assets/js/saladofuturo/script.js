@@ -7,6 +7,9 @@ const buttonTitle = serverBtn ? serverBtn.querySelector("h2") : null;
 
 let authenticatedUser = null;
 
+// Consulta a sessao do mock do Gov.br (ambiente de dev/teste), sem lancar erro
+// visivel ao usuario caso a chamada falhe — a pagina simplesmente permanece
+// no estado "nao autenticado".
 async function carregarSessaoFake() {
     try {
         const response = await fetch("/fake-govbr/session", {
@@ -26,6 +29,8 @@ async function carregarSessaoFake() {
     }
 }
 
+// Atualiza a tela (saudacao, descricao e texto do botao) para refletir que o
+// usuario ja esta autenticado, sem recarregar a pagina.
 function aplicarSessao(session) {
     if (!session || !session.authenticated || !session.user) {
         return;

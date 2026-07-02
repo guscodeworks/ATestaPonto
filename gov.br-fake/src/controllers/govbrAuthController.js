@@ -9,6 +9,9 @@ const { validateS256 } = require('../services/pkceService');
 const fakeUserService = require('../services/fakeUserService');
 const memoryStore = require('../repositories/memoryStore');
 
+// Controller que simula um provedor de identidade nos moldes do govbr (Authorization Code +
+// PKCE), usado apenas em ambientes de desenvolvimento/demonstração para testar o fluxo de
+// login sem depender do provedor real.
 const FAKE_SESSION_COOKIE = 'govbr_fake_session';
 const POST_LOGIN_REDIRECT_PATH = '/visual.html';
 
@@ -26,10 +29,14 @@ function getRequiredString(value, name) {
   return normalized;
 }
 
+// Comparação em tempo constante para evitar ataques de timing na validação do redirect_uri.
+// Hoje só existe um redirect_uri permitido (integração com o Ponto Escolar).
 function isAllowedRedirectUri(redirectUri) {
   return timingSafeStringEquals(redirectUri, env.pontoEscolarRedirectUri);
 }
 
+// Autenticação do client OAuth2 (client_id/client_secret) via comparação em tempo
+// constante, para mitigar ataques de timing.
 function validateClient(clientId, clientSecret) {
   return (
     timingSafeStringEquals(clientId, env.clientId) &&
@@ -37,6 +44,8 @@ function validateClient(clientId, clientSecret) {
   );
 }
 
+// Extrai client_id/client_secret do header "Authorization: Basic base64(id:secret)",
+// conforme previsto pela RFC 6749 para autenticação de clients no token endpoint.
 function getBasicCredentials(req) {
   const authorization = String(req.headers.authorization || '').trim();
 
@@ -63,6 +72,7 @@ function getBasicCredentials(req) {
   }
 }
 
+// Formata a resposta de erro seguindo o padrão OAuth2 (error / error_description).
 function sendOAuthError(res, error, statusCode = 400) {
   return res.status(statusCode).json({
     error: error.code || 'invalid_request',
@@ -70,6 +80,8 @@ function sendOAuthError(res, error, statusCode = 400) {
   });
 }
 
+// Monta o header Set-Cookie manualmente (sem lib externa).
+// O atributo "Secure" só é adicionado em produção, para permitir testes locais via HTTP.
 function buildCookie(name, value, options = {}) {
   const parts = [
     `${name}=${encodeURIComponent(value)}`,
@@ -89,6 +101,10 @@ function buildCookie(name, value, options = {}) {
   return parts.join('; ');
 }
 
+// Faz o parse manual do header Cookie em busca do cookie informado.
+// Atenção: quando o cookie não é encontrado, o retorno é "{}" (objeto vazio) em vez de
+// undefined/string vazia. Como "{}" é truthy em JS, isso afeta os `if` que consomem o
+// retorno desta função em outros pontos do arquivo (ver Sugestões de melhoria).
 function getCookie(req, name) {
   return String(req.headers.cookie || '')
     .split(';')
@@ -107,6 +123,9 @@ function getCookie(req, name) {
     }, {});
 }
 
+// Recupera as informações do usuário fake "admin", único perfil que de fato autentica
+// nesta simulação (ver observação em `login`). O papel "admin" é fixo porque este
+// provedor fake não implementa outros níveis de acesso.
 function getFakeAdminUserInfo() {
   const user = fakeUserService.findBySub(env.fakeAdminSub);
   const userInfo = fakeUserService.toUserInfo(user);
@@ -121,6 +140,8 @@ function getFakeAdminUserInfo() {
   };
 }
 
+// Cria uma sessão fake em memória (não persistida), sempre associada ao usuário admin
+// configurado via env — independente de qual "sub" foi enviado no login (ver `login`).
 function createFakeSession(res) {
   const sessionId = generateSecureToken('fake_session');
   memoryStore.saveFakeLoginSession(sessionId, {
@@ -145,17 +166,22 @@ function clearFakeSession(req, res) {
   }));
 }
 
+// Verifica se existe uma sessão fake válida associada ao cookie da requisição.
+// Aproveita a chamada para limpar registros expirados da store em memória (housekeeping).
 function getAuthenticatedUser(req) {
   memoryStore.cleanupExpiredRecords();
 
   const sessionId = getCookie(req, FAKE_SESSION_COOKIE);
   if (!sessionId) {
+    // "Sem sessão": por conta do retorno de `getCookie`, este `{}` é truthy para quem
+    // chama esta função (ex.: `if (!getAuthenticatedUser(req))` não detecta esse caso).
     return {};
   }
 
   const session = memoryStore.getFakeLoginSession(sessionId);
   if (!session || session.expiresAt <= Date.now()) {
     memoryStore.deleteFakeLoginSession(sessionId);
+    // Mesma observação acima: este retorno "vazio" também é truthy para o chamador.
     return {};
   }
 
@@ -171,6 +197,7 @@ function showAuthorize(req, res, next) {
     const codeChallenge = String(req.query.code_challenge || '').trim();
     const codeChallengeMethod = String(req.query.code_challenge_method || '').trim();
 
+    // Este provedor fake só suporta o fluxo "Authorization Code".
     if (responseType !== 'code') {
       throw requestError('response_type invalido.');
     }
@@ -183,14 +210,18 @@ function showAuthorize(req, res, next) {
       throw requestError('redirect_uri invalido.', 400, 'INVALID_REDIRECT_URI');
     }
 
+    // PKCE é opcional, mas se o client enviar code_challenge, o método precisa ser S256.
     if (codeChallenge && codeChallengeMethod !== 'S256') {
       throw requestError('code_challenge_method invalido.');
     }
 
+    // Deveria redirecionar para a tela de login quando não há sessão ativa — porém, ver
+    // observação em `getAuthenticatedUser`/`getCookie` sobre o retorno "{}" ser truthy.
     if (!getAuthenticatedUser(req)) {
       return res.redirect('/govbr');
     }
 
+    // Authorization code vinculado ao usuário admin fake (ver `createFakeSession`).
     const { code } = registerAuthorizationCode({
       codeChallenge,
       codeChallengeMethod,
@@ -214,6 +245,9 @@ function showAuthorize(req, res, next) {
 function login(req, res, next) {
   try {
     const body = req.body || {};
+    // O "sub" enviado é apenas validado (precisa existir entre os usuários fake),
+    // mas a sessão criada logo abaixo sempre representa o usuário admin — `createFakeSession`
+    // ignora o sub recebido. Ou seja, hoje só é possível autenticar como admin.
     const sub = String(body.sub || env.fakeAdminSub).trim();
     if (sub && !fakeUserService.findBySub(sub)) {
       throw requestError('Usuario fake nao encontrado.', 401, 'INVALID_FAKE_USER');
@@ -249,6 +283,7 @@ function logout(req, res) {
 
 function exchangeToken(req, res) {
   try {
+    // Credenciais do client podem vir no body ou via HTTP Basic Auth (RFC 6749).
     const basicCredentials = getBasicCredentials(req);
     const code = getRequiredString(req.body.code, 'code');
     const clientId = String(req.body.client_id || basicCredentials.clientId || '').trim();
@@ -271,6 +306,8 @@ function exchangeToken(req, res) {
       );
     }
 
+    // O authorization code é de uso único: `consumeAuthorizationCode` deve invalidá-lo
+    // ao ser lido, prevenindo reuso (replay).
     const authCode = consumeAuthorizationCode(code);
 
     if (
@@ -284,6 +321,8 @@ function exchangeToken(req, res) {
       );
     }
 
+    // Se o authorize foi iniciado com PKCE (code_challenge), o token endpoint precisa
+    // validar o code_verifier correspondente antes de emitir o token.
     if (authCode.codeChallenge && !validateS256({
       codeVerifier,
       codeChallenge: authCode.codeChallenge
@@ -308,6 +347,9 @@ function exchangeToken(req, res) {
   }
 }
 
+// Extrai o token do header "Authorization: Bearer <token>".
+// Mesmo padrão de `getCookie`: quando ausente/mal formado, retorna "{}" (objeto vazio)
+// em vez de string vazia/undefined — ver Sugestões de melhoria.
 function extractBearerToken(req) {
   const authorization = String(req.headers.authorization || '').trim();
   const [scheme, token] = authorization.split(' ');
@@ -333,6 +375,8 @@ function showUserInfo(req, res) {
       throw requestError('Token invalido ou expirado.', 401, 'UNAUTHORIZED');
     }
 
+    // Endpoint estilo OIDC UserInfo. O papel "admin" é fixo pois este provedor fake
+    // não modela outros perfis de acesso (mesma regra de `getFakeAdminUserInfo`).
     return res.status(200).json({
       ...userInfo,
       role: 'admin'

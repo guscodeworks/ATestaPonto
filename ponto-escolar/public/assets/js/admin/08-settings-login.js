@@ -5,6 +5,8 @@ function gerarPDF() {
   const btn = document.getElementById('btn-gerar-pdf');
   if (!btn) return;
   btn.classList.add('loading');
+  // Funcionalidade pendente: o setTimeout simula o tempo de geração
+  // apenas para dar feedback visual, mas nenhum PDF é gerado de fato.
   setTimeout(() => {
     toast('Geracao de PDF ainda nao integrada. Use imprimir por enquanto.', 'info');
     btn.classList.remove('loading');
@@ -13,6 +15,8 @@ function gerarPDF() {
 
 function imprimirRelatorio() {
   toast('Abrindo janela de impressao...', 'info');
+  // Pequeno atraso para o toast ser percebido pelo usuário antes que o
+  // diálogo de impressão do navegador (bloqueante) seja aberto.
   setTimeout(() => window.print(), 600);
 }
 
@@ -42,6 +46,8 @@ function iniciarConfiguracoes() {
    ============================================================ */
 
 function limparAuthAdmin() {
+  // Remove tanto as chaves atuais quanto nomes legados de versões
+  // anteriores da autenticação, para não deixar resíduo de sessão.
   localStorage.removeItem('ponto_escolar_auth');
   sessionStorage.removeItem('ponto_escolar_auth');
   sessionStorage.removeItem('admin_logged_in');
@@ -60,6 +66,8 @@ function aplicarAdminGovbr(admin) {
   }
 
   ADMIN.nome = admin.nome || admin.name || ADMIN.nome;
+  // Cargo fixo: nesta tela todo usuário autenticado via gov.br é tratado
+  // como Administrador, independente do que a API retorne.
   ADMIN.cargo = 'Administrador';
 
   if (typeof renderizarPerfil === 'function') {
@@ -75,6 +83,8 @@ function sincronizarSessaoAdmin() {
     }
   })
     .then((response) => {
+      // Sessão inválida/expirada: redireciona direto para o login do
+      // gov.br em vez de deixar a tela em estado inconsistente.
       if (response.status === 401) {
         window.location.replace(caminhoLogin());
         return null;
@@ -101,6 +111,8 @@ function iniciarLogin() {
 
 function iniciarLogoutAdmin() {
   document.querySelectorAll('.btn-logout').forEach((button) => {
+    // Remove handlers antigos (inline onclick e listeners anteriores)
+    // antes de anexar o novo, evitando duplicidade de logout.
     button.onclick = null;
     button.removeAttribute('onclick');
     button.addEventListener('click', (event) => {

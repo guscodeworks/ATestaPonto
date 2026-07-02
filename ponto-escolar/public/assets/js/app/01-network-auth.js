@@ -6,6 +6,8 @@
     timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
   } = options;
 
+  // AbortController garante que a requisição seja cancelada caso
+  // ultrapasse o tempo limite configurado, evitando chamadas penduradas.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -42,6 +44,8 @@
 
     if (!response.ok) {
       const message = payload?.error?.message || `Erro na requisição (${response.status})`;
+      // 401 em uma requisição autenticada indica token inválido/expirado:
+      // limpa o estado local para forçar novo login na próxima checagem.
       if (response.status === 401 && auth) {
         clearAuthState();
       }
@@ -50,6 +54,8 @@
 
     return payload?.data;
   } catch (error) {
+    // AbortError vem do timeout do AbortController; traduzido para uma
+    // mensagem amigável em vez do erro técnico original.
     if (error.name === 'AbortError') {
       throw new Error('Tempo de requisição excedido. Tente novamente.');
     }
@@ -71,6 +77,8 @@ function renderAdminProfile(admin) {
     firstName.textContent = getPrimeiroNome(admin?.nome || 'Administrador');
   }
   if (role) {
+    // Cargo fixo: todo admin autenticado é exibido como 'Administrador',
+    // independente do que a API retornar.
     role.textContent = 'Administrador';
   }
 
@@ -93,6 +101,8 @@ async function ensureAuthenticatedAdmin() {
     if (!admin) {
       throw new Error('Sessão inválida');
     }
+    // Reescreve o estado salvo com os dados atualizados do admin,
+    // mantendo o mesmo token já validado.
     saveAuthState(token, admin);
     renderAdminProfile(admin);
     return admin;
@@ -122,4 +132,3 @@ function attachCpfMask(inputId) {
     input.value = applyCpfMask(input.value);
   });
 }
-

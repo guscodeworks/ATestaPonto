@@ -22,8 +22,14 @@ async function loginAdmin(body, { ipOrigem } = {}) {
   }
 
   const admin = await adminModel.findByEmail(email);
+  // senhaCorreta é avaliada como false (sem chamar bcrypt.compare) quando o
+  // admin não existe, evitando expor timing diferente entre "email não existe"
+  // e "senha incorreta" de forma óbvia — ainda assim, a mensagem de erro final
+  // é a mesma nos dois casos.
   const senhaCorreta = admin ? await bcrypt.compare(senha, admin.senha_hash) : false;
 
+  // Falha de login (email inexistente, senha errada ou admin inativo) sempre
+  // retorna a mesma mensagem genérica, para não revelar qual condição falhou.
   if (!admin || !senhaCorreta || !admin.ativo) {
     await registerAuditLog({
       evento: "admin_login_invalido",

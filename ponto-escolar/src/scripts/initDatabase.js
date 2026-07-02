@@ -10,6 +10,8 @@ const REQUIRED_ENV = IS_PRODUCTION
   ? ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME']
   : ['DB_HOST', 'DB_USER', 'DB_NAME'];
 
+// Suporta DB_PASS como alias legado de DB_PASSWORD, para compatibilidade com
+// configurações antigas de ambiente que ainda usam o nome de variável anterior.
 function resolveDbPassword() {
   const dbPassword = process.env.DB_PASSWORD;
   if (typeof dbPassword === 'string' && dbPassword.trim().length > 0) {
@@ -31,6 +33,9 @@ function getMissingEnvVars() {
   });
 }
 
+// Restringe o nome do banco a caracteres seguros, pois ele é interpolado
+// diretamente na query (CREATE DATABASE / USE) sem parametrização — não é
+// possível usar placeholders (?) para nomes de banco/tabela no MySQL.
 function isSafeDatabaseName(name) {
   return /^[A-Za-z0-9_]+$/.test(name);
 }
@@ -48,6 +53,9 @@ function parsePort(value) {
   return parsed;
 }
 
+// Tenta localizar o arquivo de schema em múltiplos caminhos possíveis,
+// dando preferência ao local padrão do projeto e caindo para nomes alternativos
+// (incluindo variações históricas do arquivo) caso o padrão não exista.
 function resolveSchemaPath() {
   const candidates = [
     path.resolve(__dirname, '../../database/schema/ponto.sql'),
@@ -83,6 +91,8 @@ async function main() {
       return;
     }
 
+    // Remove o BOM (caractere invisível que alguns editores/downloads adicionam
+    // no início do arquivo), que quebraria a execução do SQL se não fosse tratado.
     const schemaSql = fs.readFileSync(sqlFilePath, 'utf8').replace(/^\uFEFF/, '').trim();
     if (!schemaSql) {
       console.error(`[initDatabase] Arquivo SQL vazio: ${path.relative(process.cwd(), sqlFilePath)}`);
@@ -95,10 +105,14 @@ async function main() {
       port: parsePort(process.env.DB_PORT),
       user: process.env.DB_USER,
       password: resolveDbPassword(),
+      // multipleStatements habilitado pois o schema.sql normalmente contém
+      // vários comandos SQL separados por ";" em um único arquivo.
       multipleStatements: true,
       charset: 'utf8mb4'
     });
 
+    // Cria o banco caso ainda não exista, evitando falha em uma primeira
+    // execução do script em um ambiente totalmente novo.
     await connection.query(
       `CREATE DATABASE IF NOT EXISTS \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
     );

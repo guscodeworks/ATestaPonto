@@ -5,6 +5,9 @@
   iniciarTabs();
   iniciarLogin();
 
+  // Primeira renderização usa apenas o estado global local (ainda vazio
+  // neste ponto); os dados reais chegam depois via recarregarDadosAdminTela()
+  // ou chamada equivalente que popula FUNCIONARIOS/PONTOS_HOJE.
   renderizarStats();
   renderizarUltimosRegistros();
   renderizarGrafico();
