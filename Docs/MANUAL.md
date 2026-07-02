@@ -25,7 +25,7 @@ Sistema web para controle de presença de funcionários em ambiente escolar. Sub
 
 ### O que é o Sistema
 
-O Sistema de Presença nas Escolas (**Ponto-Escolar**) é uma aplicação web desenvolvida para controlar a presença de funcionários em ambiente escolar. O sistema substitui o controle manual de presença por um processo digital, seguro e rastreável.
+O Sistema de Presença nas Escolas (**AtestaPonto**) é uma aplicação web desenvolvida para controlar a presença de funcionários em ambiente escolar. O sistema substitui o controle manual de presença por um processo digital, seguro e rastreável.
 
 Ao acessar o sistema, o funcionário precisa escanear um QR Code disponível na escola, fazer login com seu CPF e senha e registrar sua entrada ou saída. Todas as ações ficam registradas no banco de dados, permitindo que os administradores acompanhem a presença de forma prática.
 
@@ -137,6 +137,8 @@ ponto-escolar/
 └── public/
     └── assets/
 ```
+
+
 
 | Arquivo / Pasta | Função |
 |---|---|
