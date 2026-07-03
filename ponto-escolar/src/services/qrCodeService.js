@@ -1,5 +1,10 @@
 const env = require("../config/env");
 
+// Este projeto usa um QR Code fixo/unico (nao gerado dinamicamente por
+// registro em banco), sempre apontando para a mesma rota de acesso ao ponto.
+// As funcoes abaixo simulam a interface de um CRUD real de QR Codes para
+// manter compatibilidade com o restante da API, mas sempre retornam este
+// mesmo payload fixo.
 const QR_CONTEXT = "ATALHO_PONTO_FUNCIONARIO";
 const FIXED_QR_ID = 1;
 const FIXED_QR_ACCESS_PATH = "/ponto/acessar";
@@ -20,6 +25,8 @@ function buildAccessUrl(baseUrl = "") {
     : FIXED_QR_ACCESS_PATH;
 }
 
+// Extrai apenas o caminho (pathname) do valor recebido, aceitando tanto uma
+// URL completa (lida de um QR Code real) quanto um caminho relativo avulso.
 function normalizeAccessPath(value) {
   const normalized = String(value || "").trim();
 
@@ -35,6 +42,9 @@ function normalizeAccessPath(value) {
   }
 }
 
+// Como so existe um QR Code fixo no sistema, "validar" um QR Code significa
+// apenas conferir se o caminho lido corresponde exatamente a rota de acesso
+// esperada.
 function isFixedAccessQr(value) {
   return normalizeAccessPath(value).toLowerCase() === FIXED_QR_ACCESS_PATH;
 }
@@ -60,6 +70,9 @@ function buildFixedQrPayload({
   };
 }
 
+// includeSecret controla se os campos qr_code/url (o conteudo real do link)
+// aparecem na resposta — usado para nao expor o link em listagens gerais,
+// apenas quando o QR Code e explicitamente criado/consultado.
 function mapQrCode(row, includeSecret = false) {
   if (!row) {
     return {};
@@ -86,6 +99,8 @@ async function createQrCode({
   return mapQrCode(buildFixedQrPayload({ unidadeCodigo, baseUrl }), true);
 }
 
+// Simula uma listagem paginada real: como so existe 1 QR Code fixo, apenas a
+// primeira pagina retorna esse unico item; demais paginas retornam lista vazia.
 async function listQrCodes({ page = 1, limit = 20 } = {}) {
   const safePage = Math.max(Number(page || 1), 1);
   const safeLimit = Math.min(Math.max(Number(limit || 20), 1), 100);
@@ -116,6 +131,8 @@ async function validateQrCode(
   };
 }
 
+// Desativacao nao se aplica ao QR Code fixo (nao ha o que desativar), entao
+// sempre retorna false para sinalizar que a operacao nao teve efeito.
 async function deactivateQrCode(_id) {
   return false;
 }

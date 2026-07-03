@@ -3,6 +3,9 @@
 const employeeService = require("../services/employeeService");
 const { getClientIp } = require("../utils/request");
 
+// Contexto de auditoria: identifica quem fez a ação (admin autenticado)
+// e de onde (IP), para ser registrado junto às operações que alteram
+// dados de funcionários (criação, edição, mudança de status).
 function getAuditContext(req) {
   return {
     adminId: req.auth.id,

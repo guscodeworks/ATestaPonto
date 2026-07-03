@@ -2,6 +2,8 @@
 
 const database = require("../config/database");
 
+// Permite que as queries participem de uma transação (client passado explicitamente)
+// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
 function getClient(client) {
   return client || database;
 }
@@ -20,6 +22,8 @@ async function findByEmployeeAndDate(funcionarioId, date) {
   );
 }
 
+// FOR UPDATE bloqueia a linha do dia para evitar que duas batidas de ponto
+// simultâneas do mesmo funcionário no mesmo dia gerem condição de corrida.
 async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   return getClient(client).executeOne(
     `SELECT *
@@ -41,6 +45,9 @@ async function listRowsByDate(date) {
   );
 }
 
+// Cria a primeira batida do dia (entrada): os demais horários (saída almoço,
+// volta almoço, saída) ainda não ocorreram e são preenchidos com o mesmo valor
+// "vazio" (emptyTime) até serem registrados nas batidas seguintes.
 async function createFirstPunch(
   client,
   { funcionarioId, date, time, emptyTime }
@@ -51,6 +58,9 @@ async function createFirstPunch(
   );
 }
 
+// Regrava a linha do dia inteira (delete + insert) em vez de um UPDATE parcial,
+// preservando o mesmo rowId para manter a referência já usada em outras partes
+// do sistema (ex: relatórios) enquanto atualiza todos os horários de uma vez.
 async function replacePunchRow(client, { rowId, funcionarioId, date, times }) {
   await getClient(client).execute(
     "DELETE FROM registro_de_pontos WHERE id = ?",

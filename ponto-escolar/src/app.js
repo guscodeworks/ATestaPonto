@@ -21,12 +21,16 @@ const assetsRoot = path.join(publicRoot, "assets");
 const staticOptions = {
   maxAge: "1h",
 };
+// Views HTML nunca devem ser cacheadas pelo navegador, pois seu conteudo
+// depende do estado de sessao (admin logado, etc) no momento da requisicao.
 const noCacheHtmlHeaders = {
   "Cache-Control": "no-store, max-age=0",
   Pragma: "no-cache",
   Expires: "0",
 };
 
+// Sem Origin (ex: chamadas server-to-server, curl) sempre passa; com Origin,
+// so libera "*" fora de producao (ambiente de dev/teste), nunca em producao.
 function isAllowedOrigin(origin) {
   if (!origin) {
     return true;
@@ -38,14 +42,20 @@ function isAllowedOrigin(origin) {
 }
 
 app.disable("x-powered-by");
+// Necessario para que req.ip e "secure" (cookie) reflitam corretamente o
+// protocolo/IP originais quando a aplicacao roda atras de um proxy reverso.
 app.set("trust proxy", 1);
 
 app.use(
   helmet({
+    // Assets estaticos (imagens, fontes, etc) precisam ser acessiveis mesmo
+    // se consumidos de uma origem diferente (ex: app servido por IP na LAN).
     crossOriginResourcePolicy: { policy: "cross-origin" }, // ← seguro para LAN/IP
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        // Aplicacao pode ser acessada via HTTP puro em rede local (sem TLS),
+        // entao o upgrade automatico para HTTPS quebraria o acesso nesse cenario.
         "upgrade-insecure-requests": null, // ← remove o upgrade forçado de HTTP→HTTPS
       },
     },
@@ -59,6 +69,10 @@ function getRequestHost(req) {
     .toLowerCase();
 }
 
+// Requisicoes vindas do mesmo host (ex: front-end servido pela propria
+// aplicacao) sao sempre permitidas, mesmo sem estarem na allowlist de
+// CORS_ORIGINS — evita a necessidade de configurar a propria origem do app
+// na lista de origens externas permitidas.
 function isSameHostOrigin(req, origin) {
   if (!origin) {
     return true;
@@ -122,6 +136,8 @@ app.use(
     cookie: {
       httpOnly: true,
       sameSite: "lax",
+      // Cookie so exige HTTPS em producao, pois em dev/LAN o acesso pode ser
+      // via HTTP puro (ver observacao do CSP acima).
       secure: env.IS_PRODUCTION,
     },
   })
@@ -132,6 +148,9 @@ app.get("/health", (req, res) => {
   res.status(200).json({ success: true, data: { status: "ok" } });
 });
 
+// Preserva querystring (ex: ?code=...&state=...) ao redirecionar URLs antigas
+// de callback OAuth para a rota atual, essencial para nao perder os parametros
+// que o Gov.br envia de volta no callback.
 function redirectPreservingQuery(targetPath) {
   return (req, res) => {
     const queryStartIndex = req.originalUrl.indexOf("?");
@@ -141,6 +160,8 @@ function redirectPreservingQuery(targetPath) {
   };
 }
 
+// Rotas legadas de autenticacao de admin (antes de migrar para /auth/govbr/*),
+// mantidas para nao quebrar links/integracoes antigas.
 app.get("/admin/auth", (_req, res) => res.redirect("/auth/govbr/login"));
 app.get("/admin/auth/start", (_req, res) => res.redirect("/auth/govbr/login"));
 app.get("/admin/auth/login", (_req, res) => res.redirect("/auth/govbr/login"));
@@ -151,6 +172,8 @@ app.get(
 app.get("/admin/auth/logout", (_req, res) =>
   res.redirect("/auth/govbr/logout")
 );
+// Redirect 307 preserva o metodo POST original (diferente do 302/301 padrao,
+// que forcaria GET), caso algum cliente antigo faca logout via POST.
 app.post("/admin/auth/logout", (_req, res) =>
   res.redirect(307, "/auth/govbr/logout")
 );

@@ -22,6 +22,9 @@ const {
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
+// Usa "sv-SE" apenas pelo formato de saida (ISO-like, ano-mes-dia), fixando o
+// fuso de Sao Paulo independente de onde o servidor roda, para que a data/hora
+// do ponto reflita sempre o horario local da escola.
 function getSaoPauloDateTime(referenceDate = new Date()) {
   const formatter = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "America/Sao_Paulo",
@@ -47,6 +50,9 @@ function getSaoPauloDateTime(referenceDate = new Date()) {
   };
 }
 
+// Regra de negocio central do ponto por geolocalizacao: a batida so e aceita
+// se a localizacao enviada estiver dentro do raio permitido a partir das
+// coordenadas da escola (ambos configuraveis via env).
 function validateLocation(latitude, longitude) {
   const distanceCheck = isWithinRadius(
     { latitude: env.SCHOOL_LATITUDE, longitude: env.SCHOOL_LONGITUDE },
@@ -76,6 +82,9 @@ function mapFuncionario(funcionario) {
   };
 }
 
+// Login flexivel: aceita CPF ou email digitados no mesmo campo "login", ou
+// enviados separadamente (compatibilidade com diferentes formatos de payload).
+// A deteccao de email e feita pela presenca de "@" no valor informado.
 function resolveLogin(body = {}) {
   const rawLogin = String(body.login || body.email || body.cpf || "").trim();
   const cpf = normalizeCpf(rawLogin || body.cpf);
@@ -91,6 +100,8 @@ function resolveLogin(body = {}) {
     cpf,
     email,
     senha,
+    // CPF mascarado no log de auditoria para nao expor o dado completo,
+    // mesmo em tentativas de login invalidas.
     auditLogin: email || maskCpf(cpf),
   };
 }
@@ -110,6 +121,8 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
     ? await bcrypt.compare(login.senha, String(funcionario.senha || ""))
     : false;
 
+  // Falha de credenciais (usuario inexistente ou senha errada) sempre retorna
+  // a mesma mensagem generica, para nao revelar qual condicao falhou.
   if (!funcionario || !senhaCorreta) {
     await registerAuditLog({
       evento: "funcionario_login_invalido",
@@ -121,6 +134,9 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
     throw new UnauthorizedError("CPF/email ou senha invalidos");
   }
 
+  // Checagem de "ativo" so ocorre apos validar a senha, evitando que um
+  // atacante descubra (por diferenca de erro) quais contas existem mas estao
+  // inativas.
   if (!funcionario.ativo) {
     throw new ForbiddenError("Funcionario inativo");
   }
@@ -163,6 +179,10 @@ async function registerPunch(
   const { date, time, dateTime } = getSaoPauloDateTime(new Date());
 
   try {
+    // Toda a leitura+decisao+escrita da batida roda em uma transacao com
+    // FOR UPDATE na linha do funcionario e na linha do dia, para evitar que
+    // duas batidas quase simultaneas do mesmo funcionario gerem uma condicao
+    // de corrida (ex: duas "entradas" no mesmo dia).
     const punch = await pointModel.withTransaction(async (tx) => {
       const funcionario = await employeeModel.findForPunchRegisterByIdForUpdate(
         tx,
@@ -188,6 +208,8 @@ async function registerPunch(
       let type = PUNCH_TYPES[0];
 
       if (!existingRow) {
+        // Primeira batida do dia para este funcionario: cria a linha do dia
+        // com a "entrada" preenchida e os demais horarios vazios.
         const insertResult = await pointModel.createFirstPunch(tx, {
           funcionarioId: funcionario.id,
           date,
@@ -199,6 +221,8 @@ async function registerPunch(
         const times = readPunchTimesFromRow(existingRow);
         const nextPunch = resolveNextPunch(times);
 
+        // resolveNextPunch retorna {} quando as 4 batidas do dia ja foram
+        // registradas, impedindo uma quinta batida no mesmo dia.
         if (!nextPunch) {
           throw new ConflictError("Funcionario ja realizou 4 batidas hoje");
         }
@@ -207,6 +231,8 @@ async function registerPunch(
         type = nextPunch.type;
         times[nextPunch.field] = time;
 
+        // Regrava a linha do dia inteira com o novo horario preenchido
+        // (ver observacao sobre replacePunchRow no repository de pointModel).
         await pointModel.replacePunchRow(tx, {
           rowId: existingRow.id,
           funcionarioId: funcionario.id,
@@ -252,6 +278,9 @@ async function registerPunch(
       funcionario: mapFuncionario(punch.funcionario),
     };
   } catch (error) {
+    // Rede de seguranca contra condicao de corrida que escape do lock FOR UPDATE
+    // (ex: race entre criar a linha do dia pela primeira vez), convertendo o erro
+    // de constraint do banco em uma mensagem de negocio amigavel.
     if (error.code === "ER_DUP_ENTRY") {
       throw new ConflictError("Registro duplicado de ponto detectado");
     }

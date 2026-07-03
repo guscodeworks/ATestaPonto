@@ -4,7 +4,11 @@ const fs = require("fs");
 const path = require("path");
 
 const rootDir = path.resolve(__dirname, "..");
+// Único diretório autorizado a falar diretamente com o banco (SQL/execute*),
+// concentrando o acesso a dados na camada de models.
 const allowedDbAccessDirs = new Set(["models"]);
+// Camadas consideradas parte da arquitetura em runtime; usadas para ignorar
+// scripts, testes, configs etc. que não precisam seguir as regras de fronteira.
 const runtimeLayerDirs = new Set([
   "controllers",
   "middlewares",
@@ -12,6 +16,8 @@ const runtimeLayerDirs = new Set([
   "routes",
   "services",
 ]);
+// Módulos que encapsulam a conexão real com o banco; só podem ser importados
+// pela camada de models (ver regra abaixo).
 const dbConfigFiles = new Set([
   "src/config/database.js",
   "src/config/legacyDb.js",
@@ -25,6 +31,7 @@ function getRelative(filePath) {
   return toPosix(path.relative(path.resolve(rootDir, ".."), filePath));
 }
 
+// Extrai o nome da camada a partir do caminho relativo (ex: "src/controllers/x.js" -> "controllers").
 function getLayer(filePath) {
   const relative = getRelative(filePath);
   const parts = relative.split("/");
@@ -45,6 +52,8 @@ function walk(dir) {
   });
 }
 
+// Remove comentários antes das checagens de conteúdo (SQL literal, uso de execute etc.)
+// para evitar falsos positivos vindos de código comentado/exemplos em comentários.
 function stripComments(content) {
   return content
     .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -63,6 +72,10 @@ function collectRequires(content) {
   return requires;
 }
 
+// Resolve o require relativo para um caminho absoluto no projeto, testando as
+// variações possíveis de resolução do Node (arquivo direto, .js, index.js).
+// Requires de pacotes (não iniciados com ".") são ignorados, pois as regras de
+// fronteira só se aplicam a módulos internos do próprio projeto.
 function resolveRequire(fromFile, requiredPath) {
   if (!requiredPath.startsWith(".")) {
     return "";
@@ -75,6 +88,8 @@ function resolveRequire(fromFile, requiredPath) {
     path.join(basePath, "index.js"),
   ];
   const resolved = candidates.find((candidate) => fs.existsSync(candidate));
+  // Se nenhum candidato existir de fato, assume ".js" como melhor palpite,
+  // para que a violação ainda seja reportada com um caminho legível.
   return resolved ? getRelative(resolved) : getRelative(`${basePath}.js`);
 }
 
@@ -86,12 +101,18 @@ function addViolation(violations, file, rule, detail) {
   });
 }
 
+// Heurística para detectar SQL "cru" embutido no código: procura um comando SQL
+// seguido, a até 120 caracteres de distância, de uma cláusula típica (FROM/INTO/etc).
+// Não é um parser real de SQL — é propositalmente tolerante para pegar a maioria
+// dos casos práticos sem falso-negativos.
 function hasSqlLiteral(content) {
   const sqlPattern =
     /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b[\s\S]{0,120}\b(FROM|INTO|TABLE|SET|VALUES|WHERE)\b/i;
   return sqlPattern.test(stripComments(content));
 }
 
+// Detecta uso direto de helpers de execução de query (execute/executeOne/executeMany)
+// ou do pool de conexões, que deveriam existir apenas dentro da camada de models.
 function hasDirectExecuteUsage(content) {
   const source = stripComments(content);
   return (
@@ -104,6 +125,8 @@ function hasDirectExecuteUsage(content) {
   );
 }
 
+// Valida, para um único arquivo, todas as regras de dependência entre camadas
+// (Clean Architecture / MVC) definidas para este projeto.
 function checkFile(file, violations) {
   const layer = getLayer(file);
   if (!runtimeLayerDirs.has(layer)) {
@@ -116,6 +139,8 @@ function checkFile(file, violations) {
     resolveRequire(file, requiredPath)
   );
 
+  // Regra: controllers/middlewares/routes não podem acessar models diretamente,
+  // devem sempre passar pela camada de services (limite de responsabilidade).
   if (
     ["controllers", "middlewares", "routes"].includes(layer) &&
     resolvedRequires.some((requiredPath) => requiredPath.startsWith("src/models/"))
@@ -128,6 +153,8 @@ function checkFile(file, violations) {
     );
   }
 
+  // Regra: apenas models podem importar os adaptadores de banco de dados,
+  // centralizando toda a configuração/conexão de acesso a dados em um único ponto.
   if (
     ["controllers", "middlewares", "routes", "services"].includes(layer) &&
     resolvedRequires.some((requiredPath) => dbConfigFiles.has(requiredPath))
@@ -140,6 +167,9 @@ function checkFile(file, violations) {
     );
   }
 
+  // Regra: models não podem depender de services, para preservar o fluxo
+  // unidirecional de dependências (routes/controllers -> services -> models),
+  // evitando dependência circular entre camadas.
   if (
     layer === "models" &&
     resolvedRequires.some((requiredPath) => requiredPath.startsWith("src/services/"))
@@ -171,6 +201,9 @@ function checkFile(file, violations) {
   }
 }
 
+// Ponto de entrada do script: percorre todos os arquivos .js do projeto,
+// valida as regras de fronteira entre camadas e sinaliza falha (exit code 1)
+// para uso em CI/lint, sem interromper a execução no meio da varredura.
 function main() {
   const violations = [];
   const files = walk(rootDir);

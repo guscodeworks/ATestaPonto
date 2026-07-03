@@ -2,9 +2,13 @@ const { body, param, query } = require("express-validator");
 const { isValidCpf, normalizeCpf } = require("../utils/cpf");
 const { validateRequest } = require("./validateRequest");
 
+// Token de QR Code de ponto: 64 caracteres hexadecimais.
 const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
+// Caminho aceito para links de acesso via QR Code (com ou sem barra inicial/final).
 const QR_ACCESS_PATH_REGEX = /^\/?ponto\/acessar\/?$/i;
 
+// Encadeia o middleware de validação (validateRequest) após as regras do express-validator,
+// centralizando o tratamento de erros de validação em um único lugar.
 function withValidation(rules) {
   return [...rules, validateRequest];
 }
@@ -27,6 +31,8 @@ function cpfRule(field = "cpf", required = true) {
     });
 }
 
+// Aceita o QR code em diferentes nomes de campo (compatibilidade com versões antigas
+// do app/frontend que enviavam qr_code ou qrToken em vez de qrCode).
 function getQrCodeCandidate(value, { req }) {
   return String(
     value || req.body.qr_code || req.body.qrCode || req.body.qrToken || ""
@@ -42,6 +48,7 @@ function qrCodeRule() {
     .custom((value) => {
       const normalized = String(value || "").trim();
 
+      // Aceita tanto o token puro quanto o caminho relativo de acesso.
       if (
         QR_TOKEN_REGEX.test(normalized) ||
         QR_ACCESS_PATH_REGEX.test(normalized)
@@ -49,13 +56,15 @@ function qrCodeRule() {
         return true;
       }
 
+      // Também aceita a URL completa lida pelo QR Code (ex: https://dominio/ponto/acessar),
+      // extraindo e validando apenas o pathname.
       try {
         const url = new URL(normalized);
         if (QR_ACCESS_PATH_REGEX.test(url.pathname)) {
           return true;
         }
       } catch (_error) {
-        // Mantem a mensagem padrao abaixo.
+        // Valor não é uma URL válida; cai no erro padrão abaixo.
       }
 
       throw new Error("Link de ponto invalido");
@@ -109,6 +118,8 @@ const createFuncionarioValidator = withValidation([
     .isInt({ min: 1 })
     .withMessage("cargo_id invalido")
     .toInt(),
+  // Aceita diferentes representações de booleano pois o valor pode chegar como
+  // string (form-data/querystring) ou como boolean/number (JSON).
   body("ativo")
     .optional()
     .isIn(["true", "false", true, false, 1, 0, "1", "0"])
@@ -202,6 +213,9 @@ const qrShortcutIdParamValidator = withValidation([
 
 const validateQrShortcutValidator = withValidation([qrCodeRule()]);
 
+// Login e CPF são ambos opcionais aqui pois o funcionário pode autenticar-se por
+// qualquer um dos dois; a obrigatoriedade de ao menos um deles é resolvida na
+// camada de serviço, não na validação de formato.
 const funcionarioLoginValidator = withValidation([
   body("login")
     .optional()

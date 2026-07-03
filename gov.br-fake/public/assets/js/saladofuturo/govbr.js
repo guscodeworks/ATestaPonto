@@ -9,9 +9,12 @@ btn.addEventListener("click", async () => {
         return;
     }
 
+    // Desabilita o botao durante a requisicao para evitar duplo clique/duplo envio.
     btn.disabled = true;
 
     try {
+        // Endpoint "fake-govbr": simula o login do Gov.br apenas para ambiente
+        // de desenvolvimento/teste, sem depender da integracao OAuth real.
         const response = await fetch("/fake-govbr/login", {
             method: "POST",
             credentials: "same-origin",
@@ -33,6 +36,7 @@ btn.addEventListener("click", async () => {
 
     } catch (error) {
         alert(error.message || "Falha no login fake.");
+        // Reabilita o botao apenas em caso de erro, permitindo nova tentativa.
         btn.disabled = false;
     }
 });

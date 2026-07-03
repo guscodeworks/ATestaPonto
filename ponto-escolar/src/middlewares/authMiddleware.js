@@ -32,6 +32,7 @@ async function authenticateFuncionario(req, _res, next) {
       throw new ForbiddenError("Acesso de funcionario obrigatorio");
     }
 
+    // Fallback para "id" cobre tokens legados que ainda não usavam a claim padrão "sub".
     const funcionarioId = Number(payload.sub || payload.id || 0);
     if (!Number.isInteger(funcionarioId) || funcionarioId <= 0) {
       throw new UnauthorizedError("Sessao do funcionario invalida");
@@ -39,6 +40,8 @@ async function authenticateFuncionario(req, _res, next) {
 
     const funcionario = await authService.findUserByToken(funcionarioId);
 
+    // Token válido não garante que o funcionário ainda existe ou está ativo
+    // (ex: demissão/desligamento após a emissão do token).
     if (!funcionario || !funcionario.ativo) {
       throw new UnauthorizedError("Funcionario inexistente ou inativo");
     }
@@ -53,6 +56,8 @@ async function authenticateFuncionario(req, _res, next) {
 
     return next();
   } catch (error) {
+    // Traduz erros internos do jsonwebtoken para respostas de autenticação
+    // consistentes com o restante da API, sem vazar detalhes da lib.
     if (error.name === "TokenExpiredError") {
       return next(
         new UnauthorizedError("Sessao expirada. Faca login novamente.")
