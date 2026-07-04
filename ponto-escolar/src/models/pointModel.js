@@ -22,8 +22,9 @@ async function findByEmployeeAndDate(funcionarioId, date) {
   );
 }
 
-// FOR UPDATE bloqueia a linha do dia para evitar que duas batidas de ponto
-// simultâneas do mesmo funcionário no mesmo dia gerem condição de corrida.
+/**
+ * Trava o registro do dia para decidir a proxima batida sem corrida entre requisicoes.
+ */
 async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   return getClient(client).executeOne(
     `SELECT *
@@ -35,6 +36,9 @@ async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   );
 }
 
+/**
+ * Ordena por funcionario e id recente para o relatorio usar a linha mais nova por pessoa.
+ */
 async function listRowsByDate(date) {
   return database.execute(
     `SELECT *
@@ -58,9 +62,9 @@ async function createFirstPunch(
   );
 }
 
-// Regrava a linha do dia inteira (delete + insert) em vez de um UPDATE parcial,
-// preservando o mesmo rowId para manter a referência já usada em outras partes
-// do sistema (ex: relatórios) enquanto atualiza todos os horários de uma vez.
+/**
+ * Mantem o id da linha ao atualizar as quatro batidas do dia.
+ */
 async function replacePunchRow(client, { rowId, funcionarioId, date, times }) {
   await getClient(client).execute(
     "DELETE FROM registro_de_pontos WHERE id = ?",

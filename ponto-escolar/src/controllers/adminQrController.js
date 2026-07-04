@@ -9,11 +9,15 @@ const { registerAuditLog } = require("../services/auditLogService");
 const { getClientIp } = require("../utils/request");
 
 function getBaseUrl(req) {
+  // O QR precisa refletir o host acessado quando a aplicacao roda atras de proxy.
   const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const host = req.get("host");
   return host ? `${protocol}://${host}` : "";
 }
 
+/**
+ * Gera o atalho de ponto usado pelo administrador sem transformar o QR em credencial.
+ */
 async function generateQrShortcut(req, res, next) {
   try {
     const qrCode = await createQrCode({

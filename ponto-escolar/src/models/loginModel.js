@@ -8,8 +8,9 @@ function getClient(client) {
   return client || database;
 }
 
-// FOR UPDATE bloqueia a linha para evitar condição de corrida ao criar/atualizar
-// um login com o mesmo CPF concorrentemente dentro de uma transação.
+/**
+ * Trava o CPF do login junto com a transacao do funcionario.
+ */
 async function findByCpfForUpdate(client, cpf) {
   return getClient(client).executeOne(
     "SELECT id FROM login WHERE cpf = ? LIMIT 1 FOR UPDATE",
@@ -17,8 +18,9 @@ async function findByCpfForUpdate(client, cpf) {
   );
 }
 
-// Verifica se o CPF já está em uso por outro login (id <> excludedLoginId),
-// necessário na atualização para não bloquear o próprio registro como "conflito".
+/**
+ * Verifica conflito sem acusar o proprio login durante alteracao de CPF.
+ */
 async function findCpfConflictForUpdate(client, cpf, excludedLoginId) {
   return getClient(client).executeOne(
     "SELECT id FROM login WHERE cpf = ? AND id <> ? LIMIT 1 FOR UPDATE",

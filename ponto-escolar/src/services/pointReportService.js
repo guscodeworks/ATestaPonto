@@ -13,9 +13,7 @@ const {
 const { BadRequestError } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
-// Mapeia cada uma das 4 batidas esperadas por dia (entrada, saida almoco, volta
-// almoco, saida) para seu tipo e ordem de sequencia, usado tanto para montar a
-// lista de registros quanto para calcular o status do dia.
+// A ordem do relatorio segue a mesma sequencia usada para registrar as batidas.
 const PUNCH_STEPS = [
   { key: "entrada", tipo: PUNCH_TYPES[0], sequencia: 1 },
   { key: "saidaAlmoco", tipo: PUNCH_TYPES[1], sequencia: 2 },
@@ -57,6 +55,7 @@ function toDateTime(date, time) {
 // já que a tabela guarda os 4 horarios em colunas de uma unica linha por dia,
 // e nao existe um id individual por batida no banco.
 function buildPunchList(rowId, date, times) {
+  // IDs derivados mantem cada batida enderecavel sem criar novas linhas no banco.
   return PUNCH_STEPS.filter((step) => hasPunchTime(times[step.key])).map(
     (step) => ({
       id: Number(rowId) * 10 + step.sequencia,
@@ -150,9 +149,9 @@ function buildSummary(summaries) {
   };
 }
 
-// Monta a visao consolidada do dia (todos os funcionarios x suas batidas),
-// reaproveitada pelos tres endpoints publicos deste service (hoje, relatorio
-// e resumo do dashboard), evitando triplicar a logica de cruzamento de dados.
+/**
+ * A visao diaria nasce em memoria para nao alterar registros durante consultas.
+ */
 async function buildDailySnapshot(date) {
   const employees = await employeeModel.listForPointReport();
   const punchRows = await pointModel.listRowsByDate(date);

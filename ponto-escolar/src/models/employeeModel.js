@@ -12,8 +12,7 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-// Query base reutilizada em múltiplas consultas que precisam do nome do cargo junto
-// com os dados do funcionário, evitando duplicar o JOIN em cada função.
+// Centraliza as colunas usadas nas telas administrativas para evitar consultas divergentes.
 const EMPLOYEE_WITH_CARGO_SELECT = `
   SELECT f.id, f.cpf, f.nome, f.email, f.ativo, f.criado_em, f.primeiro_acesso, f.cargo_id, f.login_id, c.nome AS cargo_nome
   FROM funcionarios f
@@ -51,8 +50,9 @@ async function findById(employeeId, client) {
   );
 }
 
-// FOR UPDATE bloqueia a linha do funcionário para evitar condição de corrida em
-// atualizações concorrentes (ex: duas requisições de update simultâneas) dentro de transação.
+/**
+ * Trava o cadastro antes de atualizar campos que tambem afetam login e cargo.
+ */
 async function findByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
     "SELECT id, cpf, email, ativo, cargo_id, login_id FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
@@ -60,8 +60,9 @@ async function findByIdForUpdate(client, employeeId) {
   );
 }
 
-// Bloqueia a linha durante o registro de ponto para evitar que o mesmo funcionário
-// seja desativado/alterado concorrentemente enquanto o ponto está sendo processado.
+/**
+ * Trava o funcionario durante o registro de ponto para evitar batidas concorrentes.
+ */
 async function findForPunchRegisterByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
     `SELECT id, cpf, nome, email, ativo
@@ -133,6 +134,9 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
   );
 }
 
+/**
+ * Reaproveita os filtros de listagem e contagem para manter paginacao coerente.
+ */
 async function countEmployees(filters = {}) {
   const { whereClause, params } = buildEmployeeFilters(filters);
 
@@ -177,8 +181,9 @@ async function createEmployee(
   );
 }
 
-// Constrói a query de UPDATE dinamicamente, incluindo apenas os campos realmente
-// enviados (via hasOwnProperty), permitindo atualização parcial dos dados do funcionário.
+/**
+ * Monta somente as colunas alteradas para preservar campos fora da requisicao.
+ */
 async function updateEmployee(client, employeeId, fields) {
   const columns = [];
   const values = [];

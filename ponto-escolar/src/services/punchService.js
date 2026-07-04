@@ -22,9 +22,9 @@ const {
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
-// Usa "sv-SE" apenas pelo formato de saida (ISO-like, ano-mes-dia), fixando o
-// fuso de Sao Paulo independente de onde o servidor roda, para que a data/hora
-// do ponto reflita sempre o horario local da escola.
+/**
+ * Usa o fuso da escola para separar dias de ponto, independente do fuso do servidor.
+ */
 function getSaoPauloDateTime(referenceDate = new Date()) {
   const formatter = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "America/Sao_Paulo",
@@ -50,9 +50,9 @@ function getSaoPauloDateTime(referenceDate = new Date()) {
   };
 }
 
-// Regra de negocio central do ponto por geolocalizacao: a batida so e aceita
-// se a localizacao enviada estiver dentro do raio permitido a partir das
-// coordenadas da escola (ambos configuraveis via env).
+/**
+ * Valida se o funcionario esta dentro do raio permitido antes de abrir a transacao.
+ */
 function validateLocation(latitude, longitude) {
   const distanceCheck = isWithinRadius(
     { latitude: env.SCHOOL_LATITUDE, longitude: env.SCHOOL_LONGITUDE },
@@ -114,6 +114,9 @@ async function findFuncionarioForLogin({ cpf, email }) {
   return employeeModel.findForPunchLoginByCpf(cpf);
 }
 
+/**
+ * Autentica funcionario pelo fluxo proprio, separado do login administrativo Gov.br.
+ */
 async function loginFuncionario(body, { ipOrigem } = {}) {
   const login = resolveLogin(body);
   const funcionario = await findFuncionarioForLogin(login);
@@ -164,6 +167,9 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   };
 }
 
+/**
+ * O service escolhe a proxima batida para manter a sequencia fora do controller.
+ */
 async function registerPunch(
   { funcionarioId, latitude, longitude },
   { ipOrigem, userAgent } = {}
@@ -184,6 +190,7 @@ async function registerPunch(
     // duas batidas quase simultaneas do mesmo funcionario gerem uma condicao
     // de corrida (ex: duas "entradas" no mesmo dia).
     const punch = await pointModel.withTransaction(async (tx) => {
+      // Bloqueios no funcionario e no dia evitam duas batidas concorrentes na mesma sequencia.
       const funcionario = await employeeModel.findForPunchRegisterByIdForUpdate(
         tx,
         funcionarioId

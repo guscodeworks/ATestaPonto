@@ -21,8 +21,7 @@ async function loginFuncionario(req, res, next) {
 
 async function registerPunch(req, res, next) {
   try {
-    // funcionarioId vem do middleware de autenticação (req.auth), não do body,
-    // evitando que o funcionário registre ponto em nome de outro.
+    // O controlador envia identidade e contexto; o servico decide a regra do ponto.
     const result = await punchService.registerPunch(
       {
         funcionarioId: req.auth.id,

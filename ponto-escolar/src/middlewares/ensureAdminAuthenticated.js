@@ -4,6 +4,9 @@ const {
   verificarSeUsuarioGovbrEhAdmin,
 } = require("../services/adminAuthorization.service");
 
+/**
+ * Protege paginas admin: Gov.br autentica, ATestaPonto autoriza.
+ */
 function ensureAdminAuthenticated(req, res, next) {
   const admin = req.session && req.session.admin;
 

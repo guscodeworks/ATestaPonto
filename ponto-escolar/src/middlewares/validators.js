@@ -13,6 +13,9 @@ function withValidation(rules) {
   return [...rules, validateRequest];
 }
 
+/**
+ * Normaliza CPF antes de validar para bloquear formatos diferentes do mesmo documento.
+ */
 function cpfRule(field = "cpf", required = true) {
   const chain = body(field).customSanitizer((value) => normalizeCpf(value));
   if (required) {
@@ -48,7 +51,7 @@ function qrCodeRule() {
     .custom((value) => {
       const normalized = String(value || "").trim();
 
-      // Aceita tanto o token puro quanto o caminho relativo de acesso.
+      // O QR atual aceita link de acesso; tokens antigos continuam validos na entrada.
       if (
         QR_TOKEN_REGEX.test(normalized) ||
         QR_ACCESS_PATH_REGEX.test(normalized)
@@ -56,8 +59,9 @@ function qrCodeRule() {
         return true;
       }
 
-      // Também aceita a URL completa lida pelo QR Code (ex: https://dominio/ponto/acessar),
-      // extraindo e validando apenas o pathname.
+      /* Também aceita a URL completa lida pelo QR Code (ex: https://dominio/ponto/acessar),
+       extraindo e validando apenas o pathname.
+       */
       try {
         const url = new URL(normalized);
         if (QR_ACCESS_PATH_REGEX.test(url.pathname)) {
@@ -118,8 +122,10 @@ const createFuncionarioValidator = withValidation([
     .isInt({ min: 1 })
     .withMessage("cargo_id invalido")
     .toInt(),
-  // Aceita diferentes representações de booleano pois o valor pode chegar como
-  // string (form-data/querystring) ou como boolean/number (JSON).
+  
+  /* Aceita diferentes representações de booleano pois o valor pode chegar como
+   string (form-data/querystring) ou como boolean/number (JSON).
+  */
   body("ativo")
     .optional()
     .isIn(["true", "false", true, false, 1, 0, "1", "0"])

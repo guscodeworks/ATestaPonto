@@ -7,6 +7,7 @@ const { getClientIp } = require("../utils/request");
 // e de onde (IP), para ser registrado junto às operações que alteram
 // dados de funcionários (criação, edição, mudança de status).
 function getAuditContext(req) {
+  // Centraliza os dados de auditoria para manter as funcoes focadas no HTTP.
   return {
     adminId: req.auth.id,
     ipOrigem: getClientIp(req),

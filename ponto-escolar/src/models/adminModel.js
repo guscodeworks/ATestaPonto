@@ -9,9 +9,9 @@ async function findByEmail(email) {
   );
 }
 
-// Usada especificamente no fluxo de autenticação: já filtra por ativo = 1 e traz
-// apenas os campos necessários para validar credenciais, evitando checar o status
-// separadamente após a consulta.
+/**
+ * A consulta impede que um admin desativado reutilize credenciais antigas.
+ */
 async function findActiveCredentialsByEmail(email) {
   return database.executeOne(
     "SELECT id, email, senha_hash FROM admins WHERE email = ? AND ativo = 1 LIMIT 1",

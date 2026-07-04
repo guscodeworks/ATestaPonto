@@ -8,8 +8,9 @@ function getClient(client) {
   return client || database;
 }
 
-// FOR UPDATE bloqueia a linha para evitar condição de corrida quando múltiplas
-// requisições tentam ler/alterar o mesmo cargo concorrentemente dentro de uma transação.
+/**
+ * Usa o cliente da transacao para travar o cargo enquanto o funcionario e salvo.
+ */
 async function findByIdForUpdate(client, cargoId) {
   return getClient(client).executeOne(
     "SELECT id FROM cargo WHERE id = ? LIMIT 1 FOR UPDATE",
@@ -17,8 +18,9 @@ async function findByIdForUpdate(client, cargoId) {
   );
 }
 
-// Busca o cargo de menor ID como "padrão" quando nenhum cargo específico é informado,
-// já bloqueando a linha (FOR UPDATE) para uso dentro de transação.
+/**
+ * Busca o cargo base dentro da transacao para impedir criacoes duplicadas.
+ */
 async function findDefaultForUpdate(client) {
   return getClient(client).executeOne(
     "SELECT id FROM cargo ORDER BY id ASC LIMIT 1 FOR UPDATE"

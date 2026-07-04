@@ -17,6 +17,9 @@ function extractBearerToken(req) {
   return token.trim();
 }
 
+/**
+ * Protege rotas de funcionario com JWT proprio, sem passar pelo fluxo admin Gov.br.
+ */
 async function authenticateFuncionario(req, _res, next) {
   try {
     const token = extractBearerToken(req);
@@ -38,6 +41,7 @@ async function authenticateFuncionario(req, _res, next) {
       throw new UnauthorizedError("Sessao do funcionario invalida");
     }
 
+    // O token identifica; o banco confirma se o funcionario ainda pode bater ponto.
     const funcionario = await authService.findUserByToken(funcionarioId);
 
     // Token válido não garante que o funcionário ainda existe ou está ativo
