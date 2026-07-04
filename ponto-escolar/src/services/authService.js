@@ -22,6 +22,9 @@ function signToken(id, role) {
   });
 }
 
+// Diferente do fluxo de admin visto no authService.js (que lança BadRequestError/
+// UnauthorizedError), aqui qualquer falha de validação ou credencial invalida
+// retorna um objeto vazio ({}) em vez de lançar erro.
 async function loginAdmin(body) {
   const email = normalizeEmail(body.email);
   const senha = String(body.senha || "");
@@ -58,6 +61,9 @@ async function loginFuncionario(body) {
     return {};
   }
 
+  // Credenciais (tabela login) e dados do funcionario (tabela funcionarios) ficam
+  // em modelos separados; um login valido nao garante que o funcionario vinculado
+  // ainda esteja ativo, entao essa checagem e feita em uma segunda consulta.
   const funcionario = await employeeModel.findActiveForLegacyLoginByCpf(cpf);
 
   if (!funcionario) {

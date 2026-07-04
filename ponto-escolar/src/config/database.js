@@ -2,6 +2,11 @@ const mysql = require("mysql2/promise");
 const env = require("./env");
 const { normalizeError } = require("../utils/errors");
 
+// timezone 'Z': força o driver a tratar/converter datas em UTC, evitando
+// que o fuso horário do processo Node interfira na leitura/escrita de
+// campos DATETIME/TIMESTAMP.
+// decimalNumbers: retorna colunas DECIMAL/NEWDECIMAL como number em vez de
+// string, poupando conversões manuais no restante da aplicação.
 const pool = mysql.createPool({
   host: env.DB_HOST,
   port: env.DB_PORT,
@@ -30,12 +35,18 @@ async function execute(sql, params = []) {
     const [rows] = await pool.execute(sql, params);
     return rows;
   } catch (error) {
+    // Erros do driver são normalizados para um formato único de erro da
+    // aplicação, evitando vazar detalhes específicos do mysql2 para as
+    // camadas superiores.
     throw normalizeError(error);
   }
 }
 
 async function executeOne(sql, params = []) {
   const rows = await execute(sql, params);
+  // Retorna sempre um objeto: o primeiro registro encontrado, ou um
+  // objeto vazio caso a consulta não retorne linhas — evita que quem
+  // chamar precise checar undefined separadamente.
   return Array.isArray(rows) ? rows[0] || {} : rows;
 }
 
@@ -48,6 +59,9 @@ async function withTransaction(callback) {
   try {
     await connection.beginTransaction();
 
+    // Objeto `tx` espelha a API de execute/executeOne do módulo, mas
+    // vinculado à mesma conexão da transação, garantindo que todas as
+    // queries do callback façam parte da mesma transação.
     const tx = {
       execute: async (sql, params = []) => {
         assertSqlAndParams(sql, params);
@@ -71,6 +85,8 @@ async function withTransaction(callback) {
     }
     throw normalizeError(error);
   } finally {
+    // Libera a conexão de volta ao pool independentemente do resultado
+    // (sucesso, erro na query, ou falha no rollback).
     connection.release();
   }
 }

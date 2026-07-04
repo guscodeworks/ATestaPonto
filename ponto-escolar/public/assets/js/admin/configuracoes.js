@@ -3,6 +3,8 @@
 
   const checkIcon = '<img src="/icons/check.svg" alt="" aria-hidden="true" width="18" height="18">';
   const xIcon = '<img src="/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">';
+  // Matriz estática de permissões (Admin x Funcionário) exibida na tela de
+  // configurações. Não vem de API: é definida diretamente aqui no front-end.
   const permissoes = [
     ['Dashboard geral', checkIcon, xIcon],
     ['Ver todos os pontos', checkIcon, xIcon],
@@ -20,6 +22,9 @@
       return;
     }
 
+    // Localiza o cabeçalho da tabela pelo conteúdo textual das colunas
+    // ('Recurso', 'Admin', 'Funcionário'), já que não há um ID ou classe
+    // fixa marcando essa linha no HTML.
     const cabecalho = Array.from(painel.querySelectorAll('div')).find((element) => {
       const colunas = Array.from(element.children);
       return colunas.length === 3
@@ -28,6 +33,8 @@
         && colunas[2].textContent.trim() === 'Funcionário';
     });
     const tabela = cabecalho && cabecalho.parentElement;
+    // Guarda de re-renderização: evita duplicar as linhas caso esta função
+    // seja chamada mais de uma vez (ex.: reabertura do painel).
     if (!tabela || tabela.dataset.permissoesRenderizadas === '1') {
       return;
     }
@@ -54,6 +61,8 @@
   }
 
   function fazerLogoutAdmin() {
+    // Limpa toda a sessionStorage (não só chaves específicas) e apenas as
+    // chaves conhecidas da localStorage, antes de redirecionar ao logout gov.br.
     sessionStorage.clear();
     ['admin_logged_in', 'admin_nome', 'admin_cargo'].forEach(k => localStorage.removeItem(k));
     window.location.replace('/auth/govbr/logout');

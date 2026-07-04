@@ -2,6 +2,8 @@
 
 const database = require("../config/database");
 
+// Permite que as queries participem de uma transação (client passado explicitamente)
+// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
 function getClient(client) {
   return client || database;
 }
@@ -47,6 +49,9 @@ async function listRowsByDate(date) {
   );
 }
 
+// Cria a primeira batida do dia (entrada): os demais horários (saída almoço,
+// volta almoço, saída) ainda não ocorreram e são preenchidos com o mesmo valor
+// "vazio" (emptyTime) até serem registrados nas batidas seguintes.
 async function createFirstPunch(
   client,
   { funcionarioId, date, time, emptyTime }

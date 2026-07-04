@@ -10,6 +10,8 @@ const REQUIRED_ENV = IS_PRODUCTION
   ? ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME']
   : ['DB_HOST', 'DB_USER', 'DB_NAME'];
 
+// Suporta DB_PASS como alias legado de DB_PASSWORD, para compatibilidade com
+// configurações antigas de ambiente que ainda usam o nome de variável anterior.
 function resolveDbPassword() {
   const dbPassword = process.env.DB_PASSWORD;
   if (typeof dbPassword === 'string' && dbPassword.trim().length > 0) {
@@ -54,6 +56,9 @@ function getCliArg(name) {
   return arg.slice(prefix.length).trim();
 }
 
+// Restringe o arquivo SQL a ficar dentro do diretório do projeto (impedindo
+// path traversal como "--file=../../etc/algo.sql") e exige extensão .sql,
+// já que este script permite executar qualquer arquivo informado via CLI.
 function resolveSqlFile(fileArg) {
   if (!fileArg) {
     throw new Error('Informe o arquivo SQL com --file=caminho/do/arquivo.sql');
@@ -78,6 +83,9 @@ function resolveSqlFile(fileArg) {
   return absolutePath;
 }
 
+// Script utilitário de linha de comando para rodar manualmente um arquivo .sql
+// arbitrário (ex: migrações avulsas ou scripts de correção) contra o banco
+// configurado no ambiente, fora do fluxo de inicialização padrão (initDatabase.js).
 async function main() {
   let connection;
 
@@ -90,6 +98,8 @@ async function main() {
     }
 
     const sqlFilePath = resolveSqlFile(getCliArg('file'));
+    // Remove o BOM (caractere invisível que alguns editores/downloads adicionam
+    // no início do arquivo), que quebraria a execução do SQL se não fosse tratado.
     const sql = fs.readFileSync(sqlFilePath, 'utf8').replace(/^\uFEFF/, '').trim();
 
     if (!sql) {
@@ -104,6 +114,8 @@ async function main() {
       user: process.env.DB_USER,
       password: resolveDbPassword(),
       database: process.env.DB_NAME,
+      // multipleStatements habilitado pois o arquivo pode conter vários
+      // comandos SQL separados por ";".
       multipleStatements: true,
       charset: 'utf8mb4'
     });

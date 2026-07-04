@@ -5,6 +5,8 @@
   const statTaxa = document.getElementById('stat-taxa');
 
   if (statTotal) {
+    // Usa total_ativos como principal e cai para total_funcionarios caso
+    // a API não retorne a contagem de ativos separadamente.
     statTotal.textContent = String(summary.total_ativos ?? summary.total_funcionarios ?? 0);
   }
   if (statPresentes) {
@@ -26,4 +28,3 @@ async function initDashboardPage() {
     mostrarToast(sanitizeMessage(error.message, 'Falha ao carregar dashboard.'), 'error');
   }
 }
-

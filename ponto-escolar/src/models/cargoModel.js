@@ -2,6 +2,8 @@
 
 const database = require("../config/database");
 
+// Permite que as queries participem de uma transação (client passado explicitamente)
+// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
 function getClient(client) {
   return client || database;
 }
@@ -25,6 +27,8 @@ async function findDefaultForUpdate(client) {
   );
 }
 
+// Cria o cargo padrão usado quando a tabela ainda não possui nenhum registro,
+// com horário comercial padrão (08h às 17h) como valor inicial.
 async function createDefault(client) {
   return getClient(client).execute(
     `INSERT INTO cargo (nome, hora_entrada, hora_saida)
