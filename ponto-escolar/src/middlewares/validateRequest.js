@@ -1,6 +1,9 @@
 const { validationResult } = require("express-validator");
 const { ValidationError } = require("../utils/errors");
 
+/**
+ * A API devolve erros de validacao no mesmo contrato das regras de negocio.
+ */
 function validateRequest(req, _res, next) {
   const result = validationResult(req);
 

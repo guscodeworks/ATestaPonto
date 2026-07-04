@@ -2,10 +2,15 @@
 
 const database = require("../config/database");
 
+// Permite que as queries participem de uma transação (client passado explicitamente)
+// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
 function getClient(client) {
   return client || database;
 }
 
+/**
+ * Usa o cliente da transacao para travar o cargo enquanto o funcionario e salvo.
+ */
 async function findByIdForUpdate(client, cargoId) {
   return getClient(client).executeOne(
     "SELECT id FROM cargo WHERE id = ? LIMIT 1 FOR UPDATE",
@@ -13,12 +18,17 @@ async function findByIdForUpdate(client, cargoId) {
   );
 }
 
+/**
+ * Busca o cargo base dentro da transacao para impedir criacoes duplicadas.
+ */
 async function findDefaultForUpdate(client) {
   return getClient(client).executeOne(
     "SELECT id FROM cargo ORDER BY id ASC LIMIT 1 FOR UPDATE"
   );
 }
 
+// Cria o cargo padrão usado quando a tabela ainda não possui nenhum registro,
+// com horário comercial padrão (08h às 17h) como valor inicial.
 async function createDefault(client) {
   return getClient(client).execute(
     `INSERT INTO cargo (nome, hora_entrada, hora_saida)

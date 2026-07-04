@@ -1,10 +1,5 @@
 const pointReportService = require("../services/pointReportService");
-
-function getClientIp(req) {
-  return (
-    req.headers["x-forwarded-for"]?.split(",")?.[0]?.trim() || req.ip || {}
-  );
-}
+const { getClientIp } = require("../utils/request");
 
 async function getTodayPoints(req, res, next) {
   try {
@@ -23,6 +18,9 @@ async function getTodayPoints(req, res, next) {
 
 async function getDailyReport(req, res, next) {
   try {
+    // Diferente de getTodayPoints, o relatório diário registra quem o
+    // gerou e de onde (adminId/ipOrigem), possivelmente para auditoria
+    // de acesso a dados de frequência.
     const result = await pointReportService.getDailyReport({
       data: req.query.data,
       adminId: req.auth.id,

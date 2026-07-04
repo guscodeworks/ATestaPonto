@@ -24,6 +24,8 @@ function generateAccessToken() {
   return generateSecureToken('fake_access');
 }
 
+// Emite um access token vinculado a um usuário fake existente, seguindo o padrão
+// OAuth2 "Bearer" (usado na troca de authorization code por token).
 function registerAccessToken({
   userSub,
   ttlMs = env.accessTokenTtlMs
@@ -52,12 +54,19 @@ function registerAccessToken({
   };
 }
 
+// Resolve as informações públicas do usuário a partir de um access token, usado
+// pelo endpoint /userinfo. Tokens ausentes ou expirados são descartados da store
+// (housekeeping) e tratados como "sem usuário".
 function findUserInfoByAccessToken(accessToken) {
   memoryStore.cleanupExpiredRecords();
 
   const token = getRequiredString(accessToken, 'accessToken');
   const tokenRecord = memoryStore.getAccessToken(token);
 
+  // Atenção: `memoryStore.getAccessToken` retorna "{}" (não `undefined`) quando o
+  // token não existe, então `!tokenRecord` nunca é verdadeiro aqui. O fluxo cai em
+  // `tokenRecord.isExpired()`, mas "{}" não possui esse método — mesmo bug já
+  // identificado em `authCodeService.consumeAuthorizationCode`. Ver Sugestões de melhoria.
   if (!tokenRecord || tokenRecord.isExpired()) {
     memoryStore.deleteAccessToken(token);
     return {};

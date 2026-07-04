@@ -6,6 +6,8 @@ const { getAuthenticatedUser } = require('./govbrAuthController');
 
 const viewsRoot = path.resolve(__dirname, '../../views');
 
+// Envia uma view estática sempre com headers de no-cache, garantindo que o navegador
+// não guarde em cache páginas sensíveis ao estado de autenticação (login/logout).
 function sendView(res, relativePath) {
   res.set({
     'Cache-Control': 'no-store, max-age=0',
@@ -16,6 +18,8 @@ function sendView(res, relativePath) {
 }
 
 function showHome(req, res) {
+  // Usuário já autenticado não deve ver a home/landing novamente; vai direto para a
+  // área logada. Nota: ver observação sobre `getAuthenticatedUser` nas Sugestões de melhoria.
   if (getAuthenticatedUser(req)) {
     res.set({
       'Cache-Control': 'no-store, max-age=0',
@@ -33,6 +37,7 @@ function showGovbrPage(_req, res) {
 }
 
 function showVisualPage(req, res) {
+  // Área logada: exige sessão fake válida, senão volta para a tela de login simulada.
   if (!getAuthenticatedUser(req)) {
     return res.redirect('/govbr');
   }
@@ -41,6 +46,8 @@ function showVisualPage(req, res) {
 }
 
 function startPontoEscolarAdmin(req, res) {
+  // Ponto de entrada para o sistema externo "Ponto Escolar": exige autenticação
+  // prévia neste provedor fake antes de redirecionar.
   if (!getAuthenticatedUser(req)) {
     return res.redirect('/govbr');
   }
@@ -48,6 +55,8 @@ function startPontoEscolarAdmin(req, res) {
   return res.redirect(env.pontoEscolarStartUrl);
 }
 
+// Endpoint informativo, útil para descobrir rapidamente todas as rotas expostas
+// por este simulador durante o desenvolvimento/integração.
 function showServiceInfo(_req, res) {
   return res.status(200).json({
     success: true,

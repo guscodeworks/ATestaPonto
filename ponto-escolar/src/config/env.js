@@ -4,8 +4,13 @@ dotenv.config({ quiet: true });
 
 const DEFAULT_GOVBR_FAKE_BASE_URL = "http://127.0.0.1:4000";
 const GOVBR_CALLBACK_PATH = "/auth/govbr/callback";
+// Path antigo do callback gov.br, mantido apenas para migrar
+// automaticamente redirect URIs configuradas com o valor legado.
 const LEGACY_GOVBR_CALLBACK_PATH = "/admin/auth/callback";
 
+// Lista de segredos comuns/triviais rejeitados mesmo que passem no
+// critério de comprimento e complexidade, para evitar configuração
+// insegura por descuido (ex.: copiar um valor de exemplo da documentação).
 const WEAK_SECRETS = new Set([
   "secret",
   "changeme",
@@ -41,6 +46,9 @@ function getRequiredVar(name, fallbackValue) {
   return value;
 }
 
+// Suporta variáveis com nome alternativo (ex.: DB_PASSWORD vs DB_PASS),
+// permitindo compatibilidade com diferentes convenções de .env sem exigir
+// que o operador renomeie variáveis já configuradas em produção.
 function getOptionalAliasedVar(primaryName, fallbackName) {
   return getOptionalVar(primaryName) || getOptionalVar(fallbackName);
 }
@@ -81,6 +89,9 @@ function parseFloatValue(value, name, min, max) {
   return parsed;
 }
 
+// Exige pelo menos 3 das 4 categorias de caracteres (minúsculas,
+// maiúsculas, números, especiais) como aproximação simples de entropia,
+// sem depender de bibliotecas externas de análise de força de senha.
 function hasStrongEntropy(secret) {
   const hasLower = /[a-z]/.test(secret);
   const hasUpper = /[A-Z]/.test(secret);
@@ -92,6 +103,10 @@ function hasStrongEntropy(secret) {
   return categories >= 3;
 }
 
+// Validação de segredos (JWT_SECRET, SESSION_SECRET): comprimento mínimo,
+// não estar na lista de valores triviais, e ter variedade de caracteres.
+// Falha rápido na inicialização em vez de permitir a aplicação subir com
+// um segredo fraco.
 function validateSecret(name, secret) {
   const normalized = secret.trim();
   if (normalized.length < 32) {
@@ -106,6 +121,8 @@ function validateSecret(name, secret) {
   return normalized;
 }
 
+// Aceita tanto um número puro de segundos quanto o formato abreviado
+// usado por bibliotecas de JWT (ex.: '15m', '8h', '7d').
 function validateExpiresIn(value, name) {
   const normalized = value.trim();
   if (!/^\d+[smhd]$/.test(normalized) && !/^\d+$/.test(normalized)) {
@@ -141,6 +158,10 @@ function normalizeBaseUrl(value) {
   return value ? value.replace(/\/+$/, "") : "";
 }
 
+// Permite configurar cada endpoint do gov.br explicitamente (produção) ou
+// derivá-lo automaticamente a partir de uma base URL de um mock/fake
+// gov.br local (desenvolvimento/testes), evitando repetir a URL completa
+// em várias variáveis de ambiente durante o desenvolvimento.
 function getGovbrEndpointUrl(name, fakeBaseUrl, fakePath) {
   const explicitUrl = getOptionalUrl(name);
   if (explicitUrl) {
@@ -164,6 +185,9 @@ function getGovbrRedirectUri() {
   }
   const redirectUrl = new URL(validateUrl("GOVBR_REDIRECT_URI", value));
 
+  // Corrige automaticamente configurações antigas que ainda apontam para
+  // o path de callback legado, evitando quebrar ambientes que não
+  // atualizaram a variável de ambiente após a mudança de rota.
   if (redirectUrl.pathname === LEGACY_GOVBR_CALLBACK_PATH) {
     redirectUrl.pathname = GOVBR_CALLBACK_PATH;
   }
@@ -181,6 +205,8 @@ function validateCorsOrigins(rawOrigins, isProduction) {
     throwEnvError('"CORS_ORIGIN" must include at least one origin');
   }
 
+  // Curinga '*' é aceitável em desenvolvimento, mas bloqueado em produção
+  // por ser uma configuração insegura (libera CORS para qualquer origem).
   if (isProduction && origins.includes("*")) {
     throwEnvError('"CORS_ORIGIN" cannot contain "*" in production');
   }
@@ -212,6 +238,9 @@ function validateAdminEmails(emails) {
   });
 }
 
+// Regra de negócio: o sistema precisa de pelo menos uma forma de
+// identificar quem é administrador (por sub do gov.br ou por e-mail);
+// sem isso, ninguém conseguiria ser reconhecido como admin no login.
 function requireAtLeastOneAdminIdentifier(adminSubs, adminEmails) {
   if (adminSubs.length === 0 && adminEmails.length === 0) {
     throwEnvError(
@@ -243,10 +272,16 @@ const sessionSecret = validateSecret(
   getRequiredVar("SESSION_SECRET")
 );
 
+// Os dois segredos protegem mecanismos de autenticação diferentes (JWT e
+// sessão); reutilizar o mesmo valor reduziria a segurança caso um dos
+// dois seja comprometido.
 if (jwtSecret === sessionSecret) {
   throwEnvError('"JWT_SECRET" and "SESSION_SECRET" must be different');
 }
 
+// Em produção não há base de gov.br "fake" por padrão — a integração real
+// deve ser usada. Em outros ambientes, cai para um mock local se não for
+// configurado explicitamente.
 const govbrFakeBaseUrl = normalizeBaseUrl(
   getOptionalUrl(
     "GOVBR_FAKE_BASE_URL",
@@ -268,6 +303,9 @@ const env = {
   DB_HOST: getRequiredVar("DB_HOST"),
   DB_PORT: parseInteger(getOptionalVar("DB_PORT", "3306"), "DB_PORT", 1, 65535),
   DB_USER: getRequiredVar("DB_USER"),
+  // Em produção, exige a senha explicitamente (sem fallback vazio);
+  // em outros ambientes, aceita string vazia para facilitar setups locais
+  // sem senha de banco.
   DB_PASSWORD: IS_PRODUCTION
     ? getRequiredAliasedVar("DB_PASSWORD", "DB_PASS")
     : dbPassword,
@@ -283,6 +321,8 @@ const env = {
     getRequiredVar("JWT_EXPIRES_IN"),
     "JWT_EXPIRES_IN"
   ),
+  // Expiração mais curta que o JWT padrão: tokens de funcionário (usados
+  // no fluxo de bater ponto) têm uma janela de validade menor por padrão.
   FUNCIONARIO_JWT_EXPIRES_IN: validateExpiresIn(
     getOptionalVar("FUNCIONARIO_JWT_EXPIRES_IN", "20m"),
     "FUNCIONARIO_JWT_EXPIRES_IN"
@@ -291,8 +331,13 @@ const env = {
   SCHOOL_LATITUDE: schoolLatitude,
   SCHOOL_LONGITUDE: schoolLongitude,
   SCHOOL_UNIT_CODE: getOptionalVar("SCHOOL_UNIT_CODE", "DEFAULT") || "DEFAULT",
+  // Aliases de compatibilidade: mesmo valor de latitude/longitude da
+  // escola, exposto também sob nomes genéricos (COMPANY_*) para código
+  // que trata a unidade escolar como uma "empresa" genericamente.
   COMPANY_LATITUDE: schoolLatitude,
   COMPANY_LONGITUDE: schoolLongitude,
+  // Raio (em metros) a partir da localização da escola dentro do qual o
+  // funcionário pode registrar ponto — regra de geolocalização do sistema.
   ALLOWED_RADIUS_METERS: parseFloatValue(
     getRequiredVar("ALLOWED_RADIUS_METERS"),
     "ALLOWED_RADIUS_METERS",

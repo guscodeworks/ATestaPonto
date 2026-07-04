@@ -6,6 +6,8 @@ function renderizarGraficoSemanalRelatorio() {
   const container = document.getElementById('chart-presenca-semanal');
   if (!container) return;
 
+  // Placeholder intencional: o backend atual só expõe relatório diário,
+  // então o agregado semanal ainda não pode ser calculado/exibido.
   container.innerHTML = `
     <div class="empty-state" style="padding:8px 0;">
       <div class="empty-icon">📊</div>
@@ -21,6 +23,10 @@ function renderizarRelatorio() {
   const elPres = document.getElementById('relatorio-presentes');
   const elAus = document.getElementById('relatorio-ausentes');
   const elGerado = document.getElementById('relatorio-gerado-por');
+  // Se o relatório vindo da API estiver vazio, monta uma versão local a
+  // partir de FUNCIONARIOS + PONTOS_HOJE, marcando como 'ausente' quem
+  // não tiver batido ponto — garante que a tabela nunca fique vazia por
+  // falta de dados de relatório específico.
   const itens = RELATORIO_PONTOS.length ? RELATORIO_PONTOS : FUNCIONARIOS.map((func) => {
     const ponto = PONTOS_HOJE.find(x => Number(x.funcionarioId) === Number(func.id));
     return ponto || {
@@ -45,6 +51,8 @@ function renderizarRelatorio() {
   if (!tbody) return;
 
   if (ADMIN_DATA_ERROR && !itens.length) {
+    // Só exibe a mensagem de erro da API quando não há nenhum item para
+    // mostrar; caso contrário, prefere exibir os dados disponíveis.
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Nao foi possivel carregar relatorio</div><div style="font-size:12px;color:var(--text-300);">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
     return;
   }

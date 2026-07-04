@@ -12,6 +12,8 @@ const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const cargoModel = require("../models/cargoModel");
 
+// CPF sempre mascarado ao sair da API, evitando expor o dado completo em
+// respostas/listagens (o valor completo só é usado internamente para lógica).
 function mapEmployee(employee) {
   return {
     id: employee.id,
@@ -27,6 +29,9 @@ function mapEmployee(employee) {
   };
 }
 
+// Se nenhum cargo for informado, usa o cargo de menor ID como padrão; caso a
+// tabela de cargos esteja vazia, cria um cargo padrão sob demanda para garantir
+// que todo funcionário sempre tenha um cargo_id válido.
 async function resolveCargoId(tx, requestedCargoId) {
   if (requestedCargoId) {
     const cargo = await cargoModel.findByIdForUpdate(tx, requestedCargoId);
@@ -36,6 +41,7 @@ async function resolveCargoId(tx, requestedCargoId) {
     return Number(cargo.id);
   }
 
+  // O cargo padrao nasce na mesma transacao para nao deixar funcionario sem cargo.
   const defaultCargo = await cargoModel.findDefaultForUpdate(tx);
   if (!defaultCargo) {
     const result = await cargoModel.createDefault(tx);
@@ -44,6 +50,9 @@ async function resolveCargoId(tx, requestedCargoId) {
   return Number(defaultCargo.id);
 }
 
+/**
+ * Cria funcionario e login juntos para evitar credencial sem cadastro ativo.
+ */
 async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const nome = String(body.nome || "").trim();
   const cpf = String(body.cpf || "").trim();
@@ -55,6 +64,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const requestedCargoId = body.cargo_id ? Number(body.cargo_id) : {};
   const senhaHash = await bcrypt.hash(senha, 12);
 
+  // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
   const employeeId = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists) {
@@ -66,6 +76,8 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       throw new ConflictError("Email ja cadastrado");
     }
 
+    // CPF também precisa ser único na tabela de login (credenciais), que é
+    // separada da tabela de funcionarios.
     const loginCpfExists = await loginModel.findByCpfForUpdate(tx, cpf);
     if (loginCpfExists) {
       throw new ConflictError("CPF ja cadastrado");
@@ -132,6 +144,9 @@ async function listEmployees(query = {}) {
   };
 }
 
+/**
+ * Atualiza dados do funcionario e credenciais sem separar o login do cadastro.
+ */
 async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
   const nome = body.nome;
   const cpf = body.cpf;
@@ -140,6 +155,8 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
   const ativo = body.ativo;
   const cargoId = body.cargo_id;
 
+  // Atualização é parcial (PATCH): ao menos um campo precisa ter sido enviado,
+  // senão a requisição não teria efeito algum.
   const hasAnyField =
     nome !== undefined ||
     cpf !== undefined ||
@@ -152,6 +169,10 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     throw new BadRequestError("Nenhum campo para atualizar foi enviado");
   }
 
+  // Toda a validação de conflito + atualização roda em transação, com os
+  // registros bloqueados via FOR UPDATE (findByIdForUpdate, findCpfConflictForUpdate
+  // etc.), evitando que duas requisições concorrentes criem uma duplicidade de
+  // CPF/email que passaria despercebida se as checagens fossem feitas fora da transação.
   await employeeModel.withTransaction(async (tx) => {
     const existing = await employeeModel.findByIdForUpdate(tx, employeeId);
     if (!existing) {
@@ -162,6 +183,8 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
 
     if (cpf !== undefined) {
       const normalizedCpf = String(cpf).trim();
+      // Só verifica conflito de CPF se o valor realmente mudou, evitando que o
+      // próprio funcionário conflite consigo mesmo ao reenviar o mesmo CPF.
       if (normalizedCpf !== existing.cpf) {
         const cpfExists = await employeeModel.findCpfConflictForUpdate(
           tx,
@@ -172,6 +195,8 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
           throw new ConflictError("CPF ja cadastrado");
         }
 
+        // O CPF também vive na tabela de login, então o conflito precisa ser
+        // checado lá também antes de propagar a alteração.
         const loginCpfExists = await loginModel.findCpfConflictForUpdate(
           tx,
           normalizedCpf,
@@ -181,6 +206,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
           throw new ConflictError("CPF ja cadastrado");
         }
 
+        // CPF tambem identifica o login do funcionario, entao as duas tabelas mudam juntas.
         await loginModel.updateCpf(tx, existing.login_id, normalizedCpf);
         fields.cpf = normalizedCpf;
       }
@@ -218,8 +244,12 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     }
 
     if (senha !== undefined) {
+      // Senha do funcionário vive na tabela de login (credenciais), então
+      // a alteração precisa ser replicada lá além de registrada em `fields`
+      // para o UPDATE da tabela funcionarios.
       const senhaHash = await bcrypt.hash(String(senha), 12);
       fields.senhaHash = senhaHash;
+      // A senha duplicada no login e no cadastro precisa continuar sincronizada.
       await loginModel.updateSenha(tx, existing.login_id, senhaHash);
     }
 

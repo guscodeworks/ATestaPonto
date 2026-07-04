@@ -27,6 +27,8 @@
   }
 }
 
+// Mapeia o status bruto do item de relatório para o estilo visual (badge)
+// e o rótulo exibido ao usuário.
 function mapReportRowToStatus(item) {
   if (item.status === 'COMPLETO') {
     return { css: 'badge-success', label: 'Ponto completo' };
@@ -44,10 +46,11 @@ function bindTabs() {
       const targetId = button.dataset.tab;
       tabButtons.forEach((btn) => btn.classList.remove('active'));
       button.classList.add('active');
+      // Usa a classe 'hidden' para ocultar os painéis não selecionados,
+      // em vez de alternar 'active' como em outras implementações de tabs.
       document.querySelectorAll('.tab-panel').forEach((panel) => {
         panel.classList.toggle('hidden', panel.id !== targetId);
       });
     });
   });
 }
-

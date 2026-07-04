@@ -22,9 +22,10 @@ async function registerAuditLog({
   metadados = {},
 }) {
   try {
+    // Logs de auditoria passam pela sanitizacao para nao gravar CPF, token ou senha em claro.
     const safeMetadata = metadados ? sanitizeForLog(metadados) : {};
 
-    // O schema atual (ponto (2).sql) nao possui tabela de auditoria persistente.
+    // O schema atual nao possui tabela de auditoria persistente.
     // Para evitar erros SQL, registramos os eventos apenas no logger da aplicacao.
     logger.info("audit_evento", {
       evento: String(evento || "evento_desconhecido"),
