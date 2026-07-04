@@ -6,6 +6,9 @@ function getClient(client) {
   return client || database;
 }
 
+/**
+ * Usa o cliente da transacao para travar o cargo enquanto o funcionario e salvo.
+ */
 async function findByIdForUpdate(client, cargoId) {
   return getClient(client).executeOne(
     "SELECT id FROM cargo WHERE id = ? LIMIT 1 FOR UPDATE",
@@ -13,6 +16,9 @@ async function findByIdForUpdate(client, cargoId) {
   );
 }
 
+/**
+ * Busca o cargo base dentro da transacao para impedir criacoes duplicadas.
+ */
 async function findDefaultForUpdate(client) {
   return getClient(client).executeOne(
     "SELECT id FROM cargo ORDER BY id ASC LIMIT 1 FOR UPDATE"

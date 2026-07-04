@@ -20,6 +20,9 @@ async function findByEmployeeAndDate(funcionarioId, date) {
   );
 }
 
+/**
+ * Trava o registro do dia para decidir a proxima batida sem corrida entre requisicoes.
+ */
 async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   return getClient(client).executeOne(
     `SELECT *
@@ -31,6 +34,9 @@ async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   );
 }
 
+/**
+ * Ordena por funcionario e id recente para o relatorio usar a linha mais nova por pessoa.
+ */
 async function listRowsByDate(date) {
   return database.execute(
     `SELECT *
@@ -51,6 +57,9 @@ async function createFirstPunch(
   );
 }
 
+/**
+ * Mantem o id da linha ao atualizar as quatro batidas do dia.
+ */
 async function replacePunchRow(client, { rowId, funcionarioId, date, times }) {
   await getClient(client).execute(
     "DELETE FROM registro_de_pontos WHERE id = ?",

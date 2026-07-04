@@ -46,6 +46,7 @@ function isPunchRegistrationRequest(req) {
   );
 }
 
+// O fluxo de ponto tem limite proprio para nao disputar cota com navegacao geral.
 const globalLimiter = createLimiter({
   name: "global",
   windowMs: 15 * 60 * 1000,
@@ -53,6 +54,7 @@ const globalLimiter = createLimiter({
   skip: isPunchRegistrationRequest,
 });
 
+// Tentativas de login falhas consomem cota para reduzir forca bruta.
 const loginLimiter = createLimiter({
   name: "login",
   windowMs: 15 * 60 * 1000,

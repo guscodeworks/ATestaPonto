@@ -41,6 +41,9 @@ async function parseJsonResponse(response, operation) {
   return data;
 }
 
+/**
+ * Monta a autorizacao Gov.br com PKCE para manter o token fora da URL.
+ */
 function buildAuthorizeUrl({ state, codeChallenge }) {
   const config = getGovbrConfig();
   const authorizeUrl = new URL(config.authorizeUrl);
@@ -57,6 +60,9 @@ function buildAuthorizeUrl({ state, codeChallenge }) {
   return authorizeUrl.toString();
 }
 
+/**
+ * Troca o codigo pelo token usando o verificador salvo na sessao do ATestaPonto.
+ */
 async function trocarCodePorToken({ code, codeVerifier }) {
   const config = getGovbrConfig();
   const credentials = Buffer.from(
@@ -84,6 +90,9 @@ async function trocarCodePorToken({ code, codeVerifier }) {
   return parseJsonResponse(response, "trocar o codigo por token");
 }
 
+/**
+ * Busca a identidade autenticada; a permissao admin e validada em outro servico.
+ */
 async function buscarUserInfo(accessToken) {
   const config = getGovbrConfig();
   const token = getRequiredParameter(accessToken, "accessToken");

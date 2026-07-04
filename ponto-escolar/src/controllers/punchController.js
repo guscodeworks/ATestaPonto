@@ -20,6 +20,7 @@ async function loginFuncionario(req, res, next) {
 
 async function registerPunch(req, res, next) {
   try {
+    // O controlador envia identidade e contexto; o servico decide a regra do ponto.
     const result = await punchService.registerPunch(
       {
         funcionarioId: req.auth.id,

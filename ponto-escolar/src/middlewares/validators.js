@@ -9,6 +9,9 @@ function withValidation(rules) {
   return [...rules, validateRequest];
 }
 
+/**
+ * Normaliza CPF antes de validar para bloquear formatos diferentes do mesmo documento.
+ */
 function cpfRule(field = "cpf", required = true) {
   const chain = body(field).customSanitizer((value) => normalizeCpf(value));
   if (required) {
@@ -42,6 +45,7 @@ function qrCodeRule() {
     .custom((value) => {
       const normalized = String(value || "").trim();
 
+      // O QR atual aceita link de acesso; tokens antigos continuam validos na entrada.
       if (
         QR_TOKEN_REGEX.test(normalized) ||
         QR_ACCESS_PATH_REGEX.test(normalized)

@@ -4,6 +4,7 @@ const employeeService = require("../services/employeeService");
 const { getClientIp } = require("../utils/request");
 
 function getAuditContext(req) {
+  // Centraliza os dados de auditoria para manter as funcoes focadas no HTTP.
   return {
     adminId: req.auth.id,
     ipOrigem: getClientIp(req),

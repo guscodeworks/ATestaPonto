@@ -22,6 +22,9 @@ const {
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
+/**
+ * Usa o fuso da escola para separar dias de ponto, independente do fuso do servidor.
+ */
 function getSaoPauloDateTime(referenceDate = new Date()) {
   const formatter = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "America/Sao_Paulo",
@@ -47,6 +50,9 @@ function getSaoPauloDateTime(referenceDate = new Date()) {
   };
 }
 
+/**
+ * Valida se o funcionario esta dentro do raio permitido antes de abrir a transacao.
+ */
 function validateLocation(latitude, longitude) {
   const distanceCheck = isWithinRadius(
     { latitude: env.SCHOOL_LATITUDE, longitude: env.SCHOOL_LONGITUDE },
@@ -103,6 +109,9 @@ async function findFuncionarioForLogin({ cpf, email }) {
   return employeeModel.findForPunchLoginByCpf(cpf);
 }
 
+/**
+ * Autentica funcionario pelo fluxo proprio, separado do login administrativo Gov.br.
+ */
 async function loginFuncionario(body, { ipOrigem } = {}) {
   const login = resolveLogin(body);
   const funcionario = await findFuncionarioForLogin(login);
@@ -148,6 +157,9 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   };
 }
 
+/**
+ * O service escolhe a proxima batida para manter a sequencia fora do controller.
+ */
 async function registerPunch(
   { funcionarioId, latitude, longitude },
   { ipOrigem, userAgent } = {}
@@ -164,6 +176,7 @@ async function registerPunch(
 
   try {
     const punch = await pointModel.withTransaction(async (tx) => {
+      // Bloqueios no funcionario e no dia evitam duas batidas concorrentes na mesma sequencia.
       const funcionario = await employeeModel.findForPunchRegisterByIdForUpdate(
         tx,
         funcionarioId

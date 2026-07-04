@@ -18,6 +18,7 @@ async function getTodayPoints(req, res, next) {
 
 async function getDailyReport(req, res, next) {
   try {
+    // Relatorios completos carregam contexto de auditoria porque expoem dados individuais.
     const result = await pointReportService.getDailyReport({
       data: req.query.data,
       adminId: req.auth.id,

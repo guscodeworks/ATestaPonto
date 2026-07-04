@@ -13,6 +13,7 @@ const {
 const { BadRequestError } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
+// A ordem do relatorio segue a mesma sequencia usada para registrar as batidas.
 const PUNCH_STEPS = [
   { key: "entrada", tipo: PUNCH_TYPES[0], sequencia: 1 },
   { key: "saidaAlmoco", tipo: PUNCH_TYPES[1], sequencia: 2 },
@@ -48,6 +49,7 @@ function toDateTime(date, time) {
 }
 
 function buildPunchList(rowId, date, times) {
+  // IDs derivados mantem cada batida enderecavel sem criar novas linhas no banco.
   return PUNCH_STEPS.filter((step) => hasPunchTime(times[step.key])).map(
     (step) => ({
       id: Number(rowId) * 10 + step.sequencia,
@@ -132,6 +134,9 @@ function buildSummary(summaries) {
   };
 }
 
+/**
+ * A visao diaria nasce em memoria para nao alterar registros durante consultas.
+ */
 async function buildDailySnapshot(date) {
   const employees = await employeeModel.listForPointReport();
   const punchRows = await pointModel.listRowsByDate(date);

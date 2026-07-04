@@ -36,6 +36,7 @@ async function resolveCargoId(tx, requestedCargoId) {
     return Number(cargo.id);
   }
 
+  // O cargo padrao nasce na mesma transacao para nao deixar funcionario sem cargo.
   const defaultCargo = await cargoModel.findDefaultForUpdate(tx);
   if (!defaultCargo) {
     const result = await cargoModel.createDefault(tx);
@@ -44,6 +45,9 @@ async function resolveCargoId(tx, requestedCargoId) {
   return Number(defaultCargo.id);
 }
 
+/**
+ * Cria funcionario e login juntos para evitar credencial sem cadastro ativo.
+ */
 async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const nome = String(body.nome || "").trim();
   const cpf = String(body.cpf || "").trim();
@@ -55,6 +59,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const requestedCargoId = body.cargo_id ? Number(body.cargo_id) : {};
   const senhaHash = await bcrypt.hash(senha, 12);
 
+  // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
   const employeeId = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists) {
@@ -132,6 +137,9 @@ async function listEmployees(query = {}) {
   };
 }
 
+/**
+ * Atualiza dados do funcionario e credenciais sem separar o login do cadastro.
+ */
 async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
   const nome = body.nome;
   const cpf = body.cpf;
@@ -181,6 +189,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
           throw new ConflictError("CPF ja cadastrado");
         }
 
+        // CPF tambem identifica o login do funcionario, entao as duas tabelas mudam juntas.
         await loginModel.updateCpf(tx, existing.login_id, normalizedCpf);
         fields.cpf = normalizedCpf;
       }
@@ -220,6 +229,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     if (senha !== undefined) {
       const senhaHash = await bcrypt.hash(String(senha), 12);
       fields.senhaHash = senhaHash;
+      // A senha duplicada no login e no cadastro precisa continuar sincronizada.
       await loginModel.updateSenha(tx, existing.login_id, senhaHash);
     }
 

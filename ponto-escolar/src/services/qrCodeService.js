@@ -39,6 +39,9 @@ function isFixedAccessQr(value) {
   return normalizeAccessPath(value).toLowerCase() === FIXED_QR_ACCESS_PATH;
 }
 
+/**
+ * Gera o payload estavel do QR sem criar permissao de acesso.
+ */
 function buildFixedQrPayload({
   unidadeCodigo = env.SCHOOL_UNIT_CODE,
   baseUrl = "",
