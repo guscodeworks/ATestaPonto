@@ -783,6 +783,201 @@ form {
   }
 }
 
+/* Tablets e iPads: preserva o card completo com uma composicao intermediaria. */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .login-page {
+    display: grid;
+    min-height: 100dvh;
+    place-items: center;
+    padding: clamp(28px, 5vh, 52px) clamp(28px, 6vw, 56px);
+    background:
+      radial-gradient(circle at 50% 48%, rgba(20, 20, 20, 0.035), transparent 34%),
+      #fff;
+  }
+
+  .login-page::before {
+    top: -20%;
+    left: -38%;
+    width: min(78vw, 690px);
+    height: 140%;
+    background: linear-gradient(145deg, #2d6cff 0%, var(--login-blue) 56%, #063bbb 100%);
+    border-radius: 0 58% 48% 0 / 0 44% 58% 0;
+    box-shadow: 20px 18px 58px rgba(20, 80, 240, 0.12);
+    transform: rotate(-7deg);
+  }
+
+  .login-page::after {
+    top: -18%;
+    right: -38%;
+    left: auto;
+    width: min(76vw, 670px);
+    height: 136%;
+    background: linear-gradient(215deg, #ff3a36 0%, var(--login-red) 58%, #c90912 100%);
+    border-radius: 55% 0 0 46% / 48% 0 0 60%;
+    box-shadow: -20px 18px 58px rgba(240, 20, 20, 0.1);
+    transform: rotate(8deg);
+  }
+
+  .login-art::before,
+  .login-art::after {
+    position: absolute;
+    content: "";
+    border-radius: 50%;
+  }
+
+  .login-art::before {
+    bottom: -28%;
+    left: -14%;
+    width: 48vw;
+    height: 46vh;
+    background: #fff;
+    transform: rotate(14deg);
+  }
+
+  .login-art::after {
+    top: -24%;
+    right: 0;
+    width: 32vw;
+    height: 38vh;
+    background: #fff;
+    transform: rotate(-12deg);
+  }
+
+  .login-panel {
+    width: min(100%, 440px);
+    min-height: 0;
+    padding: clamp(30px, 4.5vw, 40px);
+    border: 2px solid var(--login-black);
+    border-radius: 20px;
+    box-shadow:
+      7px 9px 0 rgba(20, 20, 20, 0.92),
+      0 22px 56px rgba(20, 20, 20, 0.15);
+  }
+
+  .login-form-panel {
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .login-brand-symbol {
+    width: clamp(68px, 9vw, 82px);
+    margin-bottom: 8px;
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 20px;
+  }
+
+  .login-brand {
+    font-size: 28px;
+  }
+
+  .login-heading {
+    margin-top: 16px;
+    font-size: 24px;
+  }
+
+  form {
+    gap: 15px;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1024px) and (orientation: portrait) {
+  .login-page {
+    place-items: start center;
+    padding: clamp(128px, 18vh, 176px) clamp(28px, 7vw, 64px) 36px;
+    background: #fff;
+  }
+
+  .login-page::before {
+    top: -76px;
+    left: -10%;
+    width: 120%;
+    height: clamp(220px, 26vh, 280px);
+    border-radius: 0 0 48% 54% / 0 0 26% 34%;
+    box-shadow: 0 18px 48px rgba(20, 80, 240, 0.1);
+    transform: rotate(-2deg);
+  }
+
+  .login-page::after {
+    top: clamp(86px, 12vh, 122px);
+    right: -18%;
+    width: 68%;
+    height: clamp(58px, 8vh, 82px);
+    border-radius: 58% 0 0 70% / 68% 0 0 48%;
+    box-shadow: none;
+    transform: rotate(-7deg);
+  }
+
+  .login-art::before,
+  .login-art::after {
+    display: none;
+  }
+
+  .art-dot--blue-one {
+    top: 38px;
+    left: 15%;
+  }
+
+  .art-dot--blue-two {
+    top: 108px;
+    right: 16%;
+    bottom: auto;
+    background: #fff;
+  }
+
+  .art-dot--red-one {
+    top: 52px;
+    right: 30%;
+  }
+
+  .art-dot--red-two {
+    top: 126px;
+    bottom: auto;
+    left: 27%;
+  }
+
+  .art-dot--black-one {
+    top: 88px;
+    left: 40%;
+  }
+
+  .art-dot--black-two {
+    top: 34px;
+    right: 9%;
+    bottom: auto;
+  }
+
+  .login-panel {
+    width: min(100%, 440px);
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1024px) and (orientation: landscape) {
+  .login-page {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px) minmax(0, 1fr);
+    padding: clamp(24px, 5vh, 44px) clamp(28px, 6vw, 64px);
+  }
+
+  .login-panel {
+    grid-column: 2;
+    width: 100%;
+    padding: clamp(26px, 4vh, 36px) clamp(30px, 4vw, 38px);
+  }
+
+  .login-brand-symbol {
+    width: clamp(62px, 8vh, 76px);
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 18px;
+  }
+
+  .login-heading {
+    margin-top: 14px;
+  }
+}
+
 @media (min-width: 700px) and (max-height: 720px) {
   .login-page {
     align-items: start;
