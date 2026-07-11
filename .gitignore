@@ -1,1 +1,4 @@
 .planning/
+*.json
+.agents/
+.codex/

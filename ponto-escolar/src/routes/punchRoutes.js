@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const { loginFuncionario, registerPunch } = require('../controllers/punchController');
 const { authenticateFuncionario } = require('../middlewares/authMiddleware');
-const { pointLimiter } = require('../middlewares/rateLimiters');
+const { loginLimiter, pointLimiter } = require('../middlewares/rateLimiters');
 const { baterPontoValidator, funcionarioLoginValidator } = require('../middlewares/validators');
 const { MethodNotAllowedError } = require('../utils/errors');
 
@@ -10,7 +10,7 @@ const router = Router();
 // Confirma o que foi levantado no router pai: authenticateFuncionario protege
 // as rotas de registro de ponto neste nível, garantindo req.auth.id disponível
 // nos controllers.
-router.post('/login', pointLimiter, funcionarioLoginValidator, loginFuncionario);
+router.post('/login', loginLimiter, funcionarioLoginValidator, loginFuncionario);
 router.post('/registrar', pointLimiter, authenticateFuncionario, baterPontoValidator, registerPunch);
 router.post('/bater', pointLimiter, authenticateFuncionario, baterPontoValidator, registerPunch);
 
