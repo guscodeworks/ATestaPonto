@@ -1,6 +1,7 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
+const env = require("../config/env");
 const { maskCpf } = require("../utils/cpf");
 const {
   BadRequestError,
@@ -62,7 +63,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const senha = String(body.senha || "");
   const ativo = body.ativo === undefined ? true : Boolean(body.ativo);
   const requestedCargoId = body.cargo_id ? Number(body.cargo_id) : {};
-  const senhaHash = await bcrypt.hash(senha, 12);
+  const senhaHash = await bcrypt.hash(senha, env.BCRYPT_SALT_ROUNDS);
 
   // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
   const employeeId = await employeeModel.withTransaction(async (tx) => {
@@ -247,7 +248,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
       // Senha do funcionário vive na tabela de login (credenciais), então
       // a alteração precisa ser replicada lá além de registrada em `fields`
       // para o UPDATE da tabela funcionarios.
-      const senhaHash = await bcrypt.hash(String(senha), 12);
+      const senhaHash = await bcrypt.hash(String(senha), env.BCRYPT_SALT_ROUNDS);
       fields.senhaHash = senhaHash;
       // A senha duplicada no login e no cadastro precisa continuar sincronizada.
       await loginModel.updateSenha(tx, existing.login_id, senhaHash);

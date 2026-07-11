@@ -1,22 +1,30 @@
 (function () {
+  'use strict';
+
+  const form = document.getElementById('login-form');
   const cpfInput = document.getElementById('cpf');
   const senhaInput = document.getElementById('senha');
+  const cpfError = document.getElementById('cpf-error');
+  const senhaError = document.getElementById('senha-error');
   const togglePw = document.getElementById('toggle-pw');
   const btnLogin = document.getElementById('btn-login');
   const remember = document.getElementById('remember');
   const toastStack = document.getElementById('toast-stack');
 
-  // Aborta a inicialização inteira se qualquer elemento essencial da tela
-  // de login não existir, evitando erros parciais de referência nula.
-  if (!cpfInput || !senhaInput || !togglePw || !btnLogin || !remember || !toastStack) {
+  if (
+    !form || !cpfInput || !senhaInput || !cpfError || !senhaError ||
+    !togglePw || !btnLogin || !remember || !toastStack
+  ) {
     return;
   }
 
-  function toast(msg, tipo = 'info') {
-    const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+  let isSubmitting = false;
+
+  function toast(message, type = 'info') {
     const el = document.createElement('div');
-    el.className = `toast toast-${tipo}`;
-    el.innerHTML = `<span class="toast-icon">${icons[tipo] || icons.info}</span><span class="toast-msg">${msg}</span>`;
+    el.className = `toast toast-${type}`;
+    el.innerHTML = '<span class="toast-icon" aria-hidden="true"></span><span class="toast-msg"></span>';
+    el.querySelector('.toast-msg').textContent = message;
     toastStack.appendChild(el);
     setTimeout(() => el.remove(), 3500);
   }
@@ -31,75 +39,136 @@
       body: options.body ? JSON.stringify(options.body) : undefined
     });
     const payload = await response.json().catch(() => ({}));
-    // Trata tanto falha HTTP quanto sucesso HTTP com corpo indicando erro
-    // de negócio (`success: false`), já que a API pode usar qualquer um
-    // dos dois formatos para sinalizar falha.
+
     if (!response.ok || payload.success === false) {
-      throw new Error(payload?.error?.message || 'Falha ao comunicar com o servidor.');
+      const error = new Error('Não foi possível concluir o login. Tente novamente.');
+      error.status = response.status;
+      throw error;
     }
+
     return payload.data;
   }
 
-  function validarCPF(cpf) {
-    return cpf.replace(/\D/g, '').length === 11;
+  function onlyDigits(value) {
+    return String(value || '').replace(/\D/g, '').slice(0, 11);
+  }
+
+  function formatCpf(value) {
+    const digits = onlyDigits(value);
+
+    return digits
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+  }
+
+  function isValidCpf(value) {
+    const cpf = onlyDigits(value);
+
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) {
+      return false;
+    }
+
+    const calculateDigit = (length) => {
+      let sum = 0;
+      for (let index = 0; index < length; index += 1) {
+        sum += Number(cpf[index]) * (length + 1 - index);
+      }
+      const remainder = (sum * 10) % 11;
+      return remainder === 10 ? 0 : remainder;
+    };
+
+    return calculateDigit(9) === Number(cpf[9]) &&
+      calculateDigit(10) === Number(cpf[10]);
+  }
+
+  function setFieldError(input, errorElement, message) {
+    errorElement.textContent = message;
+    errorElement.classList.add('visible');
+    input.classList.add('has-error');
+    input.setAttribute('aria-invalid', 'true');
+  }
+
+  function clearFieldError(input, errorElement) {
+    errorElement.classList.remove('visible');
+    input.classList.remove('has-error');
+    input.removeAttribute('aria-invalid');
+  }
+
+  function setLoading(loading) {
+    isSubmitting = loading;
+    btnLogin.classList.toggle('loading', loading);
+    btnLogin.disabled = loading;
+    cpfInput.disabled = loading;
+    senhaInput.disabled = loading;
+    remember.disabled = loading;
+    togglePw.disabled = loading;
+    form.setAttribute('aria-busy', String(loading));
+    if (loading) {
+      btnLogin.setAttribute('aria-label', 'Entrando');
+    } else {
+      btnLogin.removeAttribute('aria-label');
+    }
   }
 
   cpfInput.addEventListener('input', function () {
-    // Máscara aplicada progressivamente: cada replace assume que o
-    // anterior já formatou o trecho correspondente do CPF.
-    let v = this.value.replace(/\D/g, '');
-    if (v.length > 11) v = v.slice(0, 11);
-    v = v.replace(/(\d{3})(\d)/, '$1.$2');
-    v = v.replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
-    v = v.replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
-    this.value = v;
+    this.value = formatCpf(this.value);
+    clearFieldError(cpfInput, cpfError);
+  });
+
+  senhaInput.addEventListener('input', function () {
+    clearFieldError(senhaInput, senhaError);
   });
 
   togglePw.addEventListener('click', function () {
-    const isHidden = senhaInput.type === 'password';
-    senhaInput.type = isHidden ? 'text' : 'password';
-    this.textContent = isHidden ? '🙈' : '👁';
-    this.setAttribute('aria-label', isHidden ? 'Ocultar senha' : 'Mostrar senha');
+    const shouldShow = senhaInput.type === 'password';
+    senhaInput.type = shouldShow ? 'text' : 'password';
+    this.textContent = shouldShow ? 'Ocultar' : 'Mostrar';
+    this.setAttribute('aria-label', shouldShow ? 'Ocultar senha' : 'Mostrar senha');
   });
 
-  btnLogin.addEventListener('click', async function () {
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+
+    if (isSubmitting) {
+      return;
+    }
+
     const cpf = cpfInput.value;
     const senha = senhaInput.value;
-    let ok = true;
+    let firstInvalidField = null;
 
-    document.getElementById('cpf-error').classList.remove('visible');
-    document.getElementById('senha-error').classList.remove('visible');
-    cpfInput.classList.remove('has-error');
-    senhaInput.classList.remove('has-error');
+    clearFieldError(cpfInput, cpfError);
+    clearFieldError(senhaInput, senhaError);
 
-    // Checagem de conectividade antes de tentar a requisição, para dar
-    // um feedback mais claro do que um erro genérico de rede.
+    if (!isValidCpf(cpf)) {
+      setFieldError(cpfInput, cpfError, 'CPF inválido. Verifique e tente novamente.');
+      firstInvalidField = cpfInput;
+    }
+
+    if (senha.length < 8) {
+      setFieldError(senhaInput, senhaError, 'A senha deve ter pelo menos 8 caracteres.');
+      firstInvalidField ||= senhaInput;
+    }
+
+    if (firstInvalidField) {
+      firstInvalidField.focus();
+      return;
+    }
+
     if (!navigator.onLine) {
       toast('Sem internet. Verifique sua conexão e tente novamente.', 'error');
       return;
     }
 
-    if (!validarCPF(cpf)) {
-      document.getElementById('cpf-error').classList.add('visible');
-      cpfInput.classList.add('has-error');
-      ok = false;
-    }
-    if (senha.length < 8) {
-      document.getElementById('senha-error').classList.add('visible');
-      senhaInput.classList.add('has-error');
-      ok = false;
-    }
-
-    if (!ok) return;
-
-    btnLogin.classList.add('loading');
-    btnLogin.disabled = true;
+    setLoading(true);
+    let loginSucceeded = false;
 
     try {
       const data = await apiRequest('/pontos/login', {
         method: 'POST',
         body: {
-          cpf: cpf.replace(/\D/g, ''),
+          cpf: onlyDigits(cpf),
           senha
         }
       });
@@ -109,34 +178,36 @@
       sessionStorage.setItem('func_nome', data.funcionario?.nome || '');
       sessionStorage.setItem('func_cpf', cpf);
 
-      // "Lembrar CPF": salva apenas o CPF (nunca a senha) em localStorage
-      // para pré-preencher o campo em acessos futuros.
-      if (remember.checked && validarCPF(cpfInput.value)) {
-        localStorage.setItem('func_saved_cpf', cpfInput.value);
+      if (remember.checked) {
+        localStorage.setItem('func_saved_cpf', formatCpf(cpf));
+      } else {
+        localStorage.removeItem('func_saved_cpf');
       }
 
+      loginSucceeded = true;
       window.location.href = '/funcionario';
     } catch (error) {
-      toast(error.message || 'Falha no login.', 'error');
+      const message = error instanceof TypeError
+        ? 'Não foi possível conectar ao servidor. Tente novamente.'
+        : 'CPF ou senha inválidos.';
+      toast(message, 'error');
     } finally {
-      btnLogin.classList.remove('loading');
-      btnLogin.disabled = false;
+      if (!loginSucceeded) {
+        setLoading(false);
+        senhaInput.focus();
+      }
     }
   });
 
-  // Permite submeter o login pressionando Enter em qualquer lugar da
-  // página, não apenas com foco nos campos do formulário.
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') btnLogin.click();
-  });
-
-  const saved = localStorage.getItem('func_saved_cpf');
-  if (saved) {
-    cpfInput.value = saved;
+  const savedCpf = localStorage.getItem('func_saved_cpf');
+  if (savedCpf) {
+    cpfInput.value = formatCpf(savedCpf);
     remember.checked = true;
   }
 
   remember.addEventListener('change', function () {
-    if (!this.checked) localStorage.removeItem('func_saved_cpf');
+    if (!this.checked) {
+      localStorage.removeItem('func_saved_cpf');
+    }
   });
 })();
