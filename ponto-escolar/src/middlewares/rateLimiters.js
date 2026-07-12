@@ -50,14 +50,6 @@ function isPunchRegistrationRequest(req) {
   );
 }
 
-// O fluxo de ponto tem limite proprio para nao disputar cota com navegacao geral.
-const globalLimiter = createLimiter({
-  name: "global",
-  windowMs: 15 * 60 * 1000,
-  limit: 300,
-  skip: isPunchRegistrationRequest,
-});
-
 /* skipSuccessfulRequests garante que apenas tentativas de login mal sucedidas contem
  para o limite, evitando bloquear um funcionário que faz login legitimamente várias vezes.
  */
@@ -85,7 +77,6 @@ const pointLimiter = createLimiter({
 
 module.exports = {
   createLimiter,
-  globalLimiter,
   loginLimiter,
   sensitiveLimiter,
   pointLimiter,

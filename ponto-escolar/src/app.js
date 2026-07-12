@@ -10,7 +10,6 @@ const govbrAuthRoutes = require("./routes/govbrAuth.routes");
 const apiRoutes = require("./routes");
 const { createPagesRouter } = require("./routes/pages.routes");
 const punchRoutes = require("./routes/punchRoutes");
-const { globalLimiter } = require("./middlewares/rateLimiters");
 const { notFoundMiddleware } = require("./middlewares/notFoundMiddleware");
 const { errorMiddleware } = require("./middlewares/errorMiddleware");
 
@@ -142,7 +141,6 @@ app.use(
     },
   })
 );
-app.use(globalLimiter);
 
 app.get("/health", (req, res) => {
   res.status(200).json({ success: true, data: { status: "ok" } });

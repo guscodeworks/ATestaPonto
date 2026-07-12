@@ -194,7 +194,6 @@
     } finally {
       if (!loginSucceeded) {
         setLoading(false);
-        senhaInput.focus();
       }
     }
   });

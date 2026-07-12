@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  const checkIcon = '<img src="/icons/check.svg" alt="" aria-hidden="true" width="18" height="18">';
-  const xIcon = '<img src="/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">';
+  const checkIcon = '<img src="/assets/icons/check.svg" alt="" aria-hidden="true" width="18" height="18">';
+  const xIcon = '<img src="/assets/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">';
   // Matriz estática de permissões (Admin x Funcionário) exibida na tela de
   // configurações. Não vem de API: é definida diretamente aqui no front-end.
   const permissoes = [
