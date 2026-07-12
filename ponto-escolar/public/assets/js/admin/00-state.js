@@ -1,7 +1,7 @@
 ﻿/**
  * ============================================================
  * SISTEMA DE PONTO — SALA DO FUTURO
- * admin-main.js — Lógica da área administrativa
+ * Lógica compartilhada da área administrativa
  * ============================================================
  */
 
@@ -19,7 +19,8 @@ if (togglePwButton) {
     }
     const isHidden = inp.type === 'password';
     inp.type = isHidden ? 'text' : 'password';
-    this.textContent = isHidden ? '🙈' : '👁';
+    this.innerHTML = `<img src="/assets/icons/eye.svg" alt="" aria-hidden="true">`;
+    this.setAttribute('aria-label', isHidden ? 'Ocultar senha' : 'Mostrar senha');
   });
 }
 const ADMIN = {

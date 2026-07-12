@@ -1640,14 +1640,6 @@
   min-width: 0;
 }
 
-.settings-page .settings-permissions-table img[src$="/check.svg"] {
-  content: url("/assets/icons/check.svg");
-}
-
-.settings-page .settings-permissions-table img[src$="/x.svg"] {
-  content: url("/assets/icons/x.svg");
-}
-
 @media (max-width: 1199px) {
   .settings-page .settings-layout {
     grid-template-columns: minmax(0, 1fr);

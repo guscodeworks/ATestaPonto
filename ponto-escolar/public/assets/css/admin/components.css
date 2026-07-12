@@ -235,6 +235,18 @@
   margin-top: 1px;
   font-size: 15px;
 }
+.alert-icon img {
+  display: block;
+  width: 17px;
+  height: 17px;
+  filter: brightness(0) saturate(100%);
+}
+.alert-item.red .alert-icon img {
+  filter: brightness(0) saturate(100%) invert(19%) sepia(97%) saturate(4483%) hue-rotate(352deg) brightness(96%) contrast(97%);
+}
+.alert-item.blue .alert-icon img {
+  filter: brightness(0) saturate(100%) invert(25%) sepia(95%) saturate(3218%) hue-rotate(219deg) brightness(97%) contrast(98%);
+}
 .alert-item.amber .alert-icon {
   color: var(--color-text);
   background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface));
@@ -339,7 +351,8 @@
 .toast.toast-warning { border-left-color: var(--color-primary); }
 .toast.toast-error   { border-left-color: var(--color-accent); }
 
-.toast-icon { font-size: 17px; flex-shrink: 0; }
+.toast-icon { flex-shrink: 0; }
+.toast-icon img { display: block; width: 18px; height: 18px; }
 .toast-msg  { flex: 1; font-weight: 500; }
 
 /* Empty state */
@@ -355,6 +368,7 @@
   color: var(--color-text);
 }
 .empty-icon  { font-size: 32px; opacity: 0.34; line-height: 1; }
+.empty-icon img { display: block; width: 32px; height: 32px; }
 .empty-title { font-size: 15px; font-weight: 700; color: var(--color-text); }
 .empty-desc  { font-size: 13px; color: color-mix(in srgb, var(--color-text) 62%, var(--color-bg)); max-width: 280px; line-height: 1.45; }
 
@@ -376,5 +390,7 @@
   animation: spin 0.7s linear infinite;
   display: none;
 }
-.btn.loading .btn-label { display: none; }
-.btn.loading .spinner   { display: block; }
+.btn.loading .btn-label,
+.ui-btn.loading .btn-label { display: none; }
+.btn.loading .spinner,
+.ui-btn.loading .spinner { display: block; }

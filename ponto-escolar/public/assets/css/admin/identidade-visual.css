@@ -545,6 +545,16 @@ textarea {
   outline-offset: 2px;
 }
 
+.ui-btn:disabled,
+.btn:disabled,
+.ui-btn[aria-disabled="true"],
+.btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.58;
+  pointer-events: none;
+  transform: none;
+}
+
 .ui-btn-ghost {
   background: transparent;
   border-color: transparent;
