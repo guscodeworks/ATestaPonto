@@ -5,14 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 	  <title>Configurações</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/admin.css"/>
-  <style>
-    .admin-profile-summary {
-      display:flex;align-items:center;gap:20px;margin-bottom:28px;padding-bottom:24px;border-bottom:1px solid color-mix(in srgb, var(--color-text-muted) 24%, transparent);
-    }
-  </style>
 </head>
 <body>
 
@@ -22,7 +16,7 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -81,7 +75,7 @@
       </div>
     </header>
 
-    <main class="page-content">
+    <main class="page-content settings-page">
 
       <div class="page-header fade-in">
         <h1 class="page-title">Configurações</h1>
@@ -110,23 +104,23 @@
         </div>
 
         <!-- Painéis -->
-        <div>
+        <div class="settings-content">
 
           <!-- Perfil do admin -->
           <div class="settings-panel" id="panel-perfil">
-            <div class="card">
+            <div class="card settings-card">
               <div class="card-header">
                 <div class="card-title"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"> Dados do Administrador</div>
               </div>
-              <div style="padding:24px;">
+              <div class="settings-panel-body">
 
                 <!-- Avatar -->
                 <div class="admin-profile-summary">
-                  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--color-accent),var(--color-primary));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:var(--color-surface);box-shadow:0 0 0 4px color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));" id="config-avatar">CE</div>
-                  <div>
-                    <div style="font-size:18px;font-weight:700;color:var(--color-text);" id="config-nome">Carlos Eduardo</div>
-                    <div style="font-size:13px;color:var(--color-text-muted);margin-top:2px;">Administrador do sistema</div>
-                    <div style="margin-top:8px;display:flex;gap:8px;">
+                  <div class="config-profile-avatar" id="config-avatar">CE</div>
+                  <div class="config-profile-info">
+                    <div class="config-profile-name" id="config-nome">Carlos Eduardo</div>
+                    <div class="config-profile-role">Administrador do sistema</div>
+                    <div class="config-profile-badges">
                       <span class="badge badge-admin">ADMIN</span>
                       <span class="badge badge-active">Ativo</span>
                     </div>
@@ -164,7 +158,7 @@
                   </div>
                 </div>
 
-                <div class="form-actions" style="margin-top:20px;padding-top:16px;border-top:1px solid color-mix(in srgb, var(--color-text-muted) 24%, transparent);">
+                <div class="form-actions settings-form-actions">
                   <button class="ui-btn ui-btn-primary" onclick="toast('Perfil salvo com sucesso!','success')"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar alterações</button>
                 </div>
               </div>
@@ -173,12 +167,12 @@
 
           <!-- Senha -->
           <div class="settings-panel" id="panel-senha" style="display:none;">
-            <div class="card">
+            <div class="card settings-card">
               <div class="card-header">
                 <div class="card-title"><img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="18" height="18"> Alterar Senha</div>
               </div>
-              <div style="padding:24px;max-width:440px;">
-                <div style="display:flex;flex-direction:column;gap:16px;">
+              <div class="settings-panel-body settings-password-body">
+                <div class="settings-form-stack">
                   <div class="form-field">
                     <label>Senha atual</label>
                     <div class="input-wrap">
@@ -210,11 +204,11 @@
 
           <!-- Horários -->
           <div class="settings-panel" id="panel-horarios" style="display:none;">
-            <div class="card">
+            <div class="card settings-card">
               <div class="card-header">
                 <div class="card-title"><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"> Horários Padrão do Sistema</div>
               </div>
-              <div style="padding:24px;">
+              <div class="settings-panel-body">
                 <div class="form-grid-2">
                   <div class="form-field">
                     <label>Horário de entrada</label>
@@ -259,7 +253,7 @@
                     </div>
                   </div>
                 </div>
-                <div class="form-actions" style="margin-top:20px;padding-top:16px;border-top:1px solid color-mix(in srgb, var(--color-text-muted) 24%, transparent);">
+                <div class="form-actions settings-form-actions">
                   <button class="ui-btn ui-btn-primary" onclick="toast('Horários salvos!','success')"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar horários</button>
                 </div>
               </div>
@@ -268,52 +262,52 @@
 
           <!-- Sistema -->
           <div class="settings-panel" id="panel-sistema" style="display:none;">
-            <div class="card">
+            <div class="card settings-card">
               <div class="card-header">
                 <div class="card-title"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"> Configurações do Sistema</div>
               </div>
-              <div style="padding:24px;display:flex;flex-direction:column;gap:18px;">
+              <div class="settings-panel-body settings-options-list">
 
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid color-mix(in srgb, var(--color-text-muted) 24%, transparent);">
-                  <div>
-                    <div style="font-size:14px;font-weight:600;color:var(--color-text);">Notificações de ausência</div>
-                    <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Alertar quando funcionário não bater ponto até às 09:00</div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Notificações de ausência</div>
+                    <div class="settings-option-description">Alertar quando funcionário não bater ponto até às 09:00</div>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox" checked/>
+                    <input type="checkbox" aria-label="Ativar notificações de ausência" checked/>
                     <span class="toggle-track"></span>
                   </label>
                 </div>
 
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid color-mix(in srgb, var(--color-text-muted) 24%, transparent);">
-                  <div>
-                    <div style="font-size:14px;font-weight:600;color:var(--color-text);">Relatório diário automático</div>
-                    <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Gerar e enviar relatório por e-mail ao fim do expediente</div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Relatório diário automático</div>
+                    <div class="settings-option-description">Gerar e enviar relatório por e-mail ao fim do expediente</div>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox"/>
+                    <input type="checkbox" aria-label="Ativar relatório diário automático"/>
                     <span class="toggle-track"></span>
                   </label>
                 </div>
 
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid color-mix(in srgb, var(--color-text-muted) 24%, transparent);">
-                  <div>
-                    <div style="font-size:14px;font-weight:600;color:var(--color-text);">Validação por geolocalização</div>
-                    <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Exigir que o ponto seja batido dentro do raio permitido</div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Validação por geolocalização</div>
+                    <div class="settings-option-description">Exigir que o ponto seja batido dentro do raio permitido</div>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox"/>
+                    <input type="checkbox" aria-label="Ativar validação por geolocalização"/>
                     <span class="toggle-track"></span>
                   </label>
                 </div>
 
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;">
-                  <div>
-                    <div style="font-size:14px;font-weight:600;color:var(--color-text);">Modo manutenção</div>
-                    <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;">Desabilita o acesso de funcionários temporariamente</div>
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Modo manutenção</div>
+                    <div class="settings-option-description">Desabilita o acesso de funcionários temporariamente</div>
                   </div>
                   <label class="toggle-switch">
-                    <input type="checkbox"/>
+                    <input type="checkbox" aria-label="Ativar modo manutenção"/>
                     <span class="toggle-track"></span>
                   </label>
                 </div>
@@ -324,12 +318,12 @@
 
           <!-- Permissões -->
           <div class="settings-panel" id="panel-permissoes" style="display:none;">
-            <div class="card">
+            <div class="card settings-card">
               <div class="card-header">
                 <div class="card-title"><img src="/assets/icons/shield.svg" alt="" aria-hidden="true" width="18" height="18"> Permissões e Acesso</div>
               </div>
-              <div style="padding:24px;">
-                <div class="alert-item blue" style="margin-bottom:20px;">
+              <div class="settings-panel-body">
+                <div class="alert-item blue settings-permissions-alert">
                   <div class="alert-icon"><img src="/assets/icons/info.svg" alt="" aria-hidden="true" width="18" height="18"></div>
                   <div class="alert-content">
                     <div class="alert-title">Gerenciamento de permissões</div>
@@ -337,11 +331,11 @@
                   </div>
                 </div>
 
-                <div style="display:flex;flex-direction:column;gap:2px;">
-                  <div style="display:grid;grid-template-columns:1fr 100px 100px;gap:0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);padding:8px 16px;background:var(--color-bg);border-radius:var(--radius-btn) var(--radius-btn) 0 0;">
+                <div class="settings-permissions-table">
+                  <div class="settings-permissions-header">
                     <span>Recurso</span>
-                    <span style="text-align:center;">Admin</span>
-                    <span style="text-align:center;">Funcionário</span>
+                    <span>Admin</span>
+                    <span>Funcionário</span>
                   </div>
                 </div>
               </div>

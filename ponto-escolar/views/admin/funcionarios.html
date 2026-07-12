@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Funcionários</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/admin.css"/>
 </head>
@@ -17,7 +16,7 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -76,9 +75,9 @@
       </div>
     </header>
 
-    <main class="page-content">
+    <main class="page-content employees-page">
 
-      <div class="page-header-row fade-in" style="margin-bottom:20px;">
+      <div class="page-header-row employees-page-header fade-in">
         <div>
           <h1 class="page-title">Funcionários</h1>
           <p class="page-subtitle"><span id="total-func">—</span> funcionários no sistema</p>
@@ -89,7 +88,7 @@
       </div>
 
       <!-- Action bar -->
-      <div class="action-bar fade-in">
+      <div class="action-bar employees-action-bar fade-in">
         <div class="action-bar-left">
           <div class="search-box">
             <span class="search-icon"><img src="/assets/icons/search.svg" alt="" aria-hidden="true" width="18" height="18"></span>
@@ -117,7 +116,7 @@
       </div>
 
       <!-- Tabela desktop -->
-      <div class="ui-panel fade-in table-desktop">
+      <div class="ui-panel employees-table-panel fade-in table-desktop">
         <div class="table-wrap">
           <table class="data-table">
             <thead>
@@ -137,25 +136,45 @@
       </div>
 
       <!-- Cards mobile -->
-      <div id="cards-funcionarios" class="func-card-list fade-in cards-mobile" style="display:none;"></div>
+      <div id="cards-funcionarios" class="func-card-list fade-in cards-mobile"></div>
 
     </main>
   </div>
 </div>
 
 <!-- MODAL EDITAR -->
-<div class="ui-dialog-overlay" id="modal-editar">
+<div class="ui-dialog-overlay employees-edit-dialog" id="modal-editar">
   <div class="ui-dialog-box">
     <div class="ui-dialog-header">
       <div class="ui-dialog-title"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true" width="18" height="18"> Editar Funcionário</div>
-      <button class="ui-dialog-close" onclick="fecharModal('modal-editar')">✕</button>
+      <button class="ui-dialog-close" type="button" aria-label="Fechar edição" onclick="fecharModal('modal-editar')">✕</button>
     </div>
     <div class="ui-dialog-body">
       <input type="hidden" id="edit-id"/>
-      
+      <div class="form-grid-2">
+        <div class="form-field full">
+          <label for="edit-nome">Nome completo</label>
+          <div class="input-wrap">
+            <span class="field-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+            <input type="text" id="edit-nome" class="field-input" autocomplete="name"/>
+          </div>
         </div>
         <div class="form-field">
-          <label>Cargo</label>
+          <label for="edit-email">E-mail</label>
+          <div class="input-wrap">
+            <span class="field-icon"><img src="/assets/icons/mail.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+            <input type="email" id="edit-email" class="field-input" autocomplete="email"/>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="edit-cpf">CPF</label>
+          <div class="input-wrap">
+            <span class="field-icon"><img src="/assets/icons/badge.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+            <input type="text" id="edit-cpf" class="field-input" inputmode="numeric"/>
+          </div>
+        </div>
+        <div class="form-field">
+          <label for="edit-cargo">Cargo</label>
           <div class="select-wrap">
             <select id="edit-cargo" class="field-select">
               <option value="Professor">Professor</option>
@@ -169,14 +188,14 @@
           </div>
         </div>
         <div class="form-field">
-          <label>Telefone</label>
+          <label for="edit-tel">Telefone</label>
           <div class="input-wrap">
             <span class="field-icon"><img src="/assets/icons/smartphone.svg" alt="" aria-hidden="true" width="18" height="18"></span>
             <input type="text" id="edit-tel" class="field-input" placeholder="(11) 99999-0000"/>
           </div>
         </div>
         <div class="form-field">
-          <label>Status</label>
+          <label for="edit-status">Status</label>
           <div class="select-wrap">
             <select id="edit-status" class="field-select">
               <option value="ativo">Ativo</option>
@@ -207,4 +226,3 @@
   <script src="/assets/js/admin/checkMobile.js"></script>
 </body>
 </html>
-

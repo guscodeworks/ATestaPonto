@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard - Admin</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/admin.css"/>
 </head>
@@ -18,7 +17,7 @@
   <!-- SIDEBAR -->
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -171,13 +170,13 @@
       <div class="dash-grid">
 
         <!-- Últimos registros -->
-        <div class="ui-panel fade-in">
+        <div class="ui-panel dashboard-records-panel fade-in">
           <div class="ui-panel-header">
             <div>
               <div class="ui-panel-title">Últimos Registros de Ponto</div>
               <div class="ui-panel-subtitle">Atualizados em tempo real</div>
+              <a href="/admin/pontos-do-dia" class="ui-btn ui-btn-ghost ui-btn-sm">Ver todos →</a>
             </div>
-            <a href="/admin/pontos-do-dia" class="ui-btn ui-btn-ghost ui-btn-sm">Ver todos →</a>
           </div>
           <div class="table-wrap table-desktop">
             <table class="data-table">
@@ -200,7 +199,7 @@
         <div class="dashboard-side-column">
 
           <!-- Gráfico de presença do dia -->
-          <div class="ui-panel fade-in">
+          <div class="ui-panel dashboard-presence-panel fade-in">
             <div class="ui-panel-header">
               <div>
                 <div class="ui-panel-title">Presença de Hoje</div>
@@ -213,7 +212,7 @@
           </div>
 
           <!-- Alertas -->
-          <div class="ui-panel fade-in">
+          <div class="ui-panel dashboard-alerts-panel fade-in">
             <div class="ui-panel-header">
               <div class="ui-panel-title">Alertas</div>
             </div>
