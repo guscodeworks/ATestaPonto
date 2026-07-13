@@ -1,6 +1,6 @@
 # Sistema de Presença nas Escolas — Ponto-Escolar
 
-Sistema web para controle de presença de funcionários em ambiente escolar. Substitui o controle manual de ponto por um processo digital, seguro e rastreável, combinando login por CPF/senha com leitura obrigatória de QR Code.
+O Ponto-Escolar é um sistema web criado para modernizar o controle de presença de funcionários em ambiente escolar. Desenvolvido por alunos do curso Técnico em Desenvolvimento de Sistemas do Miguel Vicente Cury, o projeto substitui o antigo registro em caderno por um processo digital, seguro e rastreável, combinando login por CPF/senha com leitura de QR Code.
 
 **Tecnologias principais:** Node.js · Express.js · MySQL · JavaScript · HTML · CSS · QR Code
 
@@ -23,15 +23,27 @@ Sistema web para controle de presença de funcionários em ambiente escolar. Sub
 
 ## Sobre o Projeto
 
+### Como Surgiu o Projeto
+
+Antes da implantação do Ponto-Escolar, o controle de presença dos funcionários da escola era feito da forma mais tradicional possível: em um caderno físico, no qual cada funcionário assinava manualmente o horário de entrada e de saída. Era um método simples, mas que carregava uma série de limitações que se tornavam mais evidentes a cada mês de uso.
+
+O registro em papel dependia inteiramente da disciplina de quem assinava e da atenção de quem conferia as assinaturas depois. Isso abria espaço para atrasos no preenchimento, rasuras, esquecimentos e até situações em que um funcionário assinava pelo outro — tornando praticamente impossível confirmar se cada registro correspondia à realidade. Consultar uma data antiga significava folhear página por página em busca da informação certa, sem nenhuma forma de organizar ou cruzar esses dados automaticamente. Na prática, o processo era lento, pouco confiável e não deixava nenhum tipo de histórico digital.
+
+Foi observando essa rotina de perto que a equipe de alunos do curso Técnico em Desenvolvimento de Sistemas do Miguel Vicente Cury enxergou ali uma oportunidade concreta de aplicar o que vinha sendo estudado em sala de aula. Mais do que cumprir um requisito das disciplinas do curso, a proposta do grupo foi resolver um problema real da própria escola — e foi esse compromisso que guiou as decisões técnicas tomadas ao longo do desenvolvimento.
+
+A solução encontrada foi substituir o caderno por um sistema web que combina autenticação de funcionários, leitura de QR Code, banco de dados e registro automático de presença. Cada parte do sistema foi pensada para corrigir, especificamente, uma das falhas do modelo anterior: o login por CPF e senha garante que o registro pertence à pessoa certa; a leitura obrigatória do QR Code confirma que esse registro só pode acontecer presencialmente, dentro da escola; e o armazenamento em banco de dados cria, pela primeira vez, um histórico digital completo e consultável a qualquer momento.
+
+O resultado é um sistema que moderniza um processo antes manual e repetitivo, trazendo para o controle de presença algo que o caderno de papel nunca ofereceu: segurança na autenticação, rastreabilidade de cada registro e agilidade na consulta das informações. Mais do que uma ferramenta pontual, o Ponto-Escolar representa um passo concreto na transformação digital da gestão escolar, mostrando como uma solução desenvolvida pelos próprios alunos pode gerar impacto real dentro da instituição de ensino.
+
 ### O que é o Sistema
 
-O Sistema de Presença nas Escolas (**AtestaPonto**) é uma aplicação web desenvolvida para controlar a presença de funcionários em ambiente escolar. O sistema substitui o controle manual de presença por um processo digital, seguro e rastreável.
+O Ponto-Escolar é a aplicação que nasceu dessa iniciativa: um sistema web que controla a presença de funcionários em ambiente escolar, substituindo o registro manual por um processo digital, seguro e rastreável.
 
-Ao acessar o sistema, o funcionário precisa escanear um QR Code disponível na escola, fazer login com seu CPF e senha e registrar sua entrada ou saída. Todas as ações ficam registradas no banco de dados, permitindo que os administradores acompanhem a presença de forma prática.
+Ao acessar o sistema, o funcionário precisa escanear um QR Code disponível na escola, fazer login com seu CPF e senha e registrar sua entrada ou saída. Todas as ações ficam registradas no banco de dados, permitindo que os administradores acompanhem a presença de forma prática e consultem o histórico completo sempre que necessário.
 
 ### Objetivo do Projeto
 
-O objetivo principal do sistema é registrar a presença de funcionários — e somente funcionários — por meio de login combinado com leitura de QR Code. Isso garante que o registro só pode ser feito presencialmente, dentro da área física da escola, evitando fraudes e marcações remotas.
+O objetivo principal do sistema é registrar a presença de funcionários — por meio de login combinado com leitura de QR Code. Isso garante que o registro só pode ser feito presencialmente, dentro da área física da escola, evitando fraudes e marcações remotas.
 
 O sistema possui dois perfis de uso:
 
@@ -40,12 +52,12 @@ O sistema possui dois perfis de uso:
 
 ## Desenvolvedores
 
-- Dymas Kawam Batista
-- Gustavo Nascimento da Silva Braga
-- Isaque de Deus Quadros
-- Guilherme Daniel Souza
-- Eduardo Galvão Pereira
-- João Victor da Silvas Alves
+- Dymas Kawam Batista (backend)
+- Gustavo Nascimento da Silva Braga (Lider/backend)
+- Isaque de Deus Quadros (frontend)
+- Guilherme Daniel Souza (backend)
+- Eduardo Galvão Pereira (frontend)
+- João Victor da Silvas Alves (frontend)
 
 ## Tecnologias Utilizadas
 
