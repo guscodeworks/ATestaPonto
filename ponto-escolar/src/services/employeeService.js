@@ -62,10 +62,13 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     .toLowerCase();
   const senha = String(body.senha || "");
   const ativo = body.ativo === undefined ? true : Boolean(body.ativo);
-  const requestedCargoId = body.cargo_id ? Number(body.cargo_id) : {};
-  const senhaHash = await bcrypt.hash(senha, env.BCRYPT_SALT_ROUNDS);
+  const requestedCargoId = body.cargo_id ? Number(body.cargo_id) : null;
+  const senhaHash = await bcrypt.hash(senha, 12);
 
-  // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
+  // Toda a criação (checagens de duplicidade + inserts em login e funcionarios)
+  // roda em uma única transação: funcionario e login são duas tabelas
+  // relacionadas e precisam ser criadas atomicamente, sem risco de um
+  // funcionário ficar sem login (ou vice-versa) em caso de falha no meio do processo.
   const employeeId = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists) {
@@ -248,7 +251,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
       // Senha do funcionário vive na tabela de login (credenciais), então
       // a alteração precisa ser replicada lá além de registrada em `fields`
       // para o UPDATE da tabela funcionarios.
-      const senhaHash = await bcrypt.hash(String(senha), env.BCRYPT_SALT_ROUNDS);
+      const senhaHash = await bcrypt.hash(String(senha), 12);
       fields.senhaHash = senhaHash;
       // A senha duplicada no login e no cadastro precisa continuar sincronizada.
       await loginModel.updateSenha(tx, existing.login_id, senhaHash);

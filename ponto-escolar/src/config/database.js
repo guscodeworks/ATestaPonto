@@ -44,10 +44,13 @@ async function execute(sql, params = []) {
 
 async function executeOne(sql, params = []) {
   const rows = await execute(sql, params);
-  // Retorna sempre um objeto: o primeiro registro encontrado, ou um
-  // objeto vazio caso a consulta não retorne linhas — evita que quem
-  // chamar precise checar undefined separadamente.
-  return Array.isArray(rows) ? rows[0] || {} : rows;
+  // Retorna o primeiro registro encontrado, ou null caso a consulta não
+  // retorne linhas. IMPORTANTE: não usar `{}` como fallback aqui — um
+  // objeto vazio é "truthy" em JS, então qualquer `if (registro)` feito
+  // pelas camadas acima passaria a ser sempre verdadeiro mesmo quando
+  // nenhum registro foi encontrado (era exatamente isso que causava o
+  // falso positivo de "CPF ja cadastrado"/"Email ja cadastrado").
+  return Array.isArray(rows) ? rows[0] || null : rows;
 }
 
 async function withTransaction(callback) {
@@ -70,7 +73,9 @@ async function withTransaction(callback) {
       },
       executeOne: async (sql, params = []) => {
         const rows = await tx.execute(sql, params);
-        return Array.isArray(rows) ? rows[0] || {} : rows;
+        // Mesmo ajuste do executeOne fora de transação: null (não `{}`)
+        // quando não há registro, para não virar falso-positivo em `if (registro)`.
+        return Array.isArray(rows) ? rows[0] || null : rows;
       },
     };
 
