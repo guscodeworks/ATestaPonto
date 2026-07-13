@@ -5,10 +5,15 @@ const {
   verificarSeUsuarioGovbrEhAdmin,
 } = require("../services/adminAuthorization.service");
 
+/**
+ * Protege APIs administrativas com sessao Gov.br e autorizacao interna.
+ */
 function ensureAdminApiAuthenticated(req, _res, next) {
   const admin = req.session && req.session.admin;
   const sub = String((admin && admin.sub) || "").trim();
 
+  // Reavalia a autorização de admin a cada requisição (não confia apenas na sessão
+  // já existir), pois o usuário pode ter perdido o privilégio após o login.
   if (
     !admin ||
     admin.authProvider !== "govbr" ||
@@ -21,6 +26,7 @@ function ensureAdminApiAuthenticated(req, _res, next) {
   }
 
   req.user = admin;
+  // Controladores antigos leem req.user; APIs novas usam req.auth como contrato.
   req.auth = {
     id: sub,
     sub,

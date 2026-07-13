@@ -1,0 +1,247 @@
+/* CONFIGURAÇÕES GLOBAIS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #f4f7fc;
+    color: #1e2530;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    position: relative;
+}
+
+/* --- NOVO: PLACA CENTRAL GLASSMORPHISM (EFEITO VIDRO FOSCO) --- */
+.glass-plate {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 50%; /* Formato circular de fundo idêntico à imagem */
+    width: 680px;
+    height: 680px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.04), 
+                inset 0 0 0 2px rgba(255, 255, 255, 0.6);
+    position: relative;
+}
+
+.content-wrapper {
+    text-align: center;
+    padding: 40px;
+    width: 100%;
+    max-width: 500px;
+}
+
+/* EFEITO GLITCH DO 404 */
+.glitch-title {
+    font-size: 13rem;
+    font-weight: 900;
+    line-height: 0.9;
+    position: relative;
+    color: #161a23;
+    letter-spacing: -4px;
+    margin-bottom: 25px;
+    /* Sombra sutil projetada sob o número */
+    filter: drop-shadow(0 15px 20px rgba(0, 0, 0, 0.08));
+}
+
+.glitch-title::before,
+.glitch-title::after {
+    content: attr(data-text);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+}
+
+.glitch-title::before {
+    left: 5px;
+    text-shadow: -3px 0 #0046e5;
+    clip: rect(35px, 9999px, 65px, 0);
+    animation: glitch-anim-1 3s infinite linear alternate-reverse;
+}
+
+.glitch-title::after {
+    left: -5px;
+    text-shadow: -3px 0 #ff3344, 2px 2px #ff3344;
+    clip: rect(85px, 9999px, 125px, 0);
+    animation: glitch-anim-2 2.5s infinite linear alternate-reverse;
+}
+
+/* TEXTOS E BOTÃO */
+.main-title {
+    font-size: 2.1rem;
+    font-weight: 700;
+    color: #161a23;
+    margin-bottom: 14px;
+}
+
+.main-title .accent {
+    color: #ff3344;
+    font-weight: 800;
+}
+
+.description {
+    font-size: 1.05rem;
+    color: #64748b;
+    margin-bottom: 35px;
+    line-height: 1.6;
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 13px 42px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0046e5;
+    background-color: transparent;
+    border: 2px solid #0046e5;
+    border-radius: 50px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+}
+
+.back-button:hover {
+    background-color: #0046e5;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 70, 229, 0.15);
+}
+
+.arrow-svg { width: 18px; height: 18px; }
+
+/* --- NOVO: ELEMENTOS CENÁRIOS E ESFERAS 3D REALISTAS --- */
+.bg-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.wave {
+    position: absolute;
+    width: 42vw;
+    height: 42vw;
+    min-width: 380px;
+}
+.wave-blue-top { top: -12%; left: -6%; }
+.wave-blue-bottom { bottom: -15%; left: -10%; opacity: 0.85; }
+.wave-red-top { top: -15%; right: -6%; }
+.wave-red-bottom { bottom: -10%; right: -5%; }
+
+/* Órbitas circulares finas ao redor do centro */
+.orbit-circle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1.5px dashed rgba(0, 0, 0, 0.06);
+}
+.orbit-1 { width: 730px; height: 730px; }
+.orbit-2 { width: 800px; height: 800px; border-style: solid; border-color: rgba(255, 51, 68, 0.04); }
+
+/* Lógica de Sombreamento 3D nas Esferas (Radial Gradient Texturizado) */
+.sphere {
+    position: absolute;
+    border-radius: 50%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.sphere-blue-large {
+    width: 60px; height: 60px; top: 12%; right: 35%;
+    background: radial-gradient(circle at 35% 35%, #4d88ff 0%, #0046e5 70%, #002273 100%);
+}
+
+.sphere-blue-small {
+    width: 20px; height: 20px; bottom: 48%; right: 28%;
+    background: radial-gradient(circle at 35% 35%, #4d88ff 0%, #0046e5 70%, #002273 100%);
+}
+
+.sphere-red-medium {
+    width: 75px; height: 75px; top: 22%; left: 23%;
+    background: radial-gradient(circle at 35% 35%, #ff7380 0%, #ff2233 65%, #99000d 100%);
+}
+
+.sphere-red-large-bottom {
+    width: 85px; height: 85px; bottom: 10%; right: 33%;
+    background: radial-gradient(circle at 35% 35%, #ff7380 0%, #ff2233 65%, #99000d 100%);
+}
+
+.sphere-black-right {
+    width: 45px; height: 45px; top: 38%; right: 20%;
+    background: radial-gradient(circle at 35% 35%, #64748b 0%, #1e293b 70%, #0f172a 100%);
+}
+
+.sphere-black-bottom {
+    width: 48px; height: 48px; bottom: 15%; left: 21%;
+    background: radial-gradient(circle at 35% 35%, #64748b 0%, #1e293b 70%, #0f172a 100%);
+}
+
+/* Detalhes de "x" e Anéis */
+.decor-item { position: absolute; color: rgba(0, 0, 0, 0.2); font-weight: bold; }
+.cross-1 { top: 12%; left: 35%; font-size: 1.4rem; color: #ff2233; }
+.cross-2 { bottom: 30%; right: 26%; font-size: 1.3rem; }
+.cross-3 { bottom: 25%; left: 16%; font-size: 1.3rem; color: #0046e5; }
+.ring-1 { width: 16px; height: 16px; border: 2px solid rgba(0, 70, 229, 0.3); border-radius: 50%; top: 38%; left: 21%; }
+.ring-2 { width: 14px; height: 14px; border: 2px solid rgba(255, 51, 68, 0.3); border-radius: 50%; bottom: 48%; right: 23%; }
+
+/* Mini Grades de Pontos Sólidas */
+.mini-grid {
+    position: absolute;
+    width: 42px; height: 20px;
+    opacity: 0.25;
+    background: radial-gradient(circle, #000 1.5px, transparent 1.5px);
+    background-size: 10px 10px;
+}
+.grid-top-left { top: 14%; left: 13%; }
+.grid-bottom-left { bottom: 14%; left: 8%; }
+.grid-top-right { top: 14%; right: 8%; }
+.grid-center-bottom { bottom: 4%; left: 50%; transform: translateX(-50%); width: 32px; }
+
+/* KEYFRAMES DO GLITCH */
+@keyframes glitch-anim-1 {
+    0% { clip: rect(40px, 9999px, 50px, 0); }
+    20% { clip: rect(12px, 9999px, 30px, 0); }
+    40% { clip: rect(85px, 9999px, 100px, 0); }
+    100% { clip: rect(95px, 9999px, 120px, 0); }
+}
+@keyframes glitch-anim-2 {
+    0% { clip: rect(80px, 9999px, 110px, 0); }
+    30% { clip: rect(15px, 9999px, 45px, 0); }
+    70% { clip: rect(45px, 9999px, 75px, 0); }
+    100% { clip: rect(5px, 9999px, 30px, 0); }
+}
+
+/* RESPONSIVIDADE PARA TELAS MENORES */
+@media (max-width: 768px) {
+    .glass-plate {
+        width: 100%;
+        height: auto;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        backdrop-filter: none;
+    }
+    .glitch-title { font-size: 8.5rem; letter-spacing: -2px; }
+    .main-title { font-size: 1.8rem; }
+    .wave { width: 65vw; height: 65vw; }
+    .sphere, .orbit-circle, .decor-item, .mini-grid { display: none; } /* Oculta o 3D no mobile para salvar performance */
+}

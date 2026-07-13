@@ -4,6 +4,8 @@
   }
 
   if (!rows.length) {
+    // colspan varia porque a tabela de ausentes tem menos colunas
+    // (não exibe entrada/saída, já que o funcionário não bateu ponto).
     const colSpan = isAbsentTable ? 3 : 5;
     container.innerHTML = `<tr><td colspan="${colSpan}"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum registro encontrado</div></div></td></tr>`;
     return;
@@ -139,6 +141,7 @@ async function initReportPage() {
     mostrarToast(sanitizeMessage(error.message, 'Falha ao carregar relatório.'), 'error');
   }
 
+  // Funcionalidade pendente: apenas avisa o usuário, não gera PDF de fato.
   if (pdfButton) {
     pdfButton.addEventListener('click', () => {
       mostrarToast('Exportação em PDF será disponibilizada em breve.', 'info');
@@ -149,6 +152,8 @@ async function initReportPage() {
     printButton.addEventListener('click', () => window.print());
   }
 
+  // Funcionalidade pendente: exibe sucesso mas não persiste nenhuma
+  // observação — não há chamada de API associada a este botão.
   if (saveObservationButton) {
     saveObservationButton.addEventListener('click', () => {
       mostrarToast('Observação salva com sucesso.', 'success');
@@ -159,6 +164,8 @@ async function initReportPage() {
 async function initLoginPage() {
   const existingToken = getAuthToken();
   if (existingToken) {
+    // Se já existe um token salvo, tenta validá-lo antes de mostrar o
+    // formulário de login, pulando direto para o dashboard se for válido.
     try {
       const data = await apiRequest('/admin/auth/me');
       if (data?.admin) {
@@ -191,6 +198,8 @@ async function initLoginPage() {
       });
       saveAuthState(data.token, data.admin);
       mostrarToast('Login realizado com sucesso.', 'success');
+      // Pequeno atraso para o usuário ver o toast de sucesso antes do
+      // redirecionamento para o dashboard.
       setTimeout(() => redirectToDashboard(), 400);
     } catch (error) {
       mostrarToast(sanitizeMessage(error.message, 'Falha no login.'), 'error');
@@ -200,7 +209,8 @@ async function initLoginPage() {
   });
 }
 
+// Ponto de acesso público (sem login) para bater ponto: redireciona para
+// a rota dedicada em vez de renderizar algo nesta própria página.
 async function initPublicPunchPage() {
   window.location.href = '/ponto/acessar';
 }
-

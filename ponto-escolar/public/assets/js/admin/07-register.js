@@ -10,6 +10,8 @@ function iniciarFormRegistro() {
   const inputTel = document.getElementById('input-tel');
 
   if (inputCPF) {
+    // Máscara aplicada progressivamente: cada replace assume que o
+    // anterior já formatou o trecho correspondente do CPF.
     inputCPF.addEventListener('input', e => {
       let v = e.target.value.replace(/\D/g,'');
       if (v.length>11) v=v.slice(0,11);
@@ -21,6 +23,8 @@ function iniciarFormRegistro() {
   }
 
   if (inputTel) {
+    // Campo mantido apenas na interface: a API admin atual não tem
+    // suporte a telefone no cadastro, então o valor digitado não é enviado.
     inputTel.title = 'Telefone ainda nao e enviado porque nao existe no contrato atual da API admin.';
     inputTel.addEventListener('input', e => {
       let v = e.target.value.replace(/\D/g,'');
@@ -52,12 +56,16 @@ function iniciarFormRegistro() {
     if (pt) pt.textContent = tel || '—';
   }
 
+  // Preview em tempo real: qualquer digitação ou seleção nos campos
+  // atualiza o card de pré-visualização do funcionário.
   ['input-nome','input-email','input-cpf','input-cargo','input-tel'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.addEventListener('input', atualizarPreview); el.addEventListener('change', atualizarPreview); }
   });
 
   form.addEventListener('reset', () => {
+    // requestAnimationFrame garante que o preview só seja atualizado
+    // depois que o navegador já limpou os valores dos campos do form.
     window.requestAnimationFrame(atualizarPreview);
   });
 
@@ -89,6 +97,8 @@ function iniciarFormRegistro() {
           nome,
           email,
           cpf: cpfDigits,
+          // Senha inicial definida como o próprio CPF: o funcionário deve
+          // trocá-la no primeiro acesso.
           senha: cpfDigits,
           ativo: true,
         }),
@@ -96,10 +106,15 @@ function iniciarFormRegistro() {
 
       const funcionarioCriado = getApiData(response)?.funcionario;
       if (funcionarioCriado) {
+        // Insere no início da lista para que o novo funcionário apareça
+        // imediatamente no topo, sem esperar um recarregamento completo.
         FUNCIONARIOS.unshift(normalizarFuncionarioApi(funcionarioCriado));
       }
 
       toast(`Funcionario "${nome}" cadastrado com sucesso.`, 'success');
+      // Avisa o usuário que cargo e telefone foram preenchidos no
+      // formulário mas não foram persistidos, já que a API ainda não
+      // aceita esses campos no cadastro.
       if (cargo || tel) {
         toast('Cargo por nome e telefone nao foram enviados: a API atual ainda nao expoe esses campos.', 'info');
       }

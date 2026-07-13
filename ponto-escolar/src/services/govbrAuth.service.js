@@ -12,6 +12,9 @@ function getRequiredParameter(value, name) {
   return normalized;
 }
 
+// Tenta extrair a mensagem de erro do corpo JSON do Gov.br (formatos comuns de
+// erro OAuth) antes de recorrer a uma mensagem genérica, para facilitar o
+// diagnóstico de falhas de integração.
 async function parseJsonResponse(response, operation) {
   let data;
 
@@ -41,6 +44,9 @@ async function parseJsonResponse(response, operation) {
   return data;
 }
 
+/**
+ * Monta a autorizacao Gov.br com PKCE para manter o token fora da URL.
+ */
 function buildAuthorizeUrl({ state, codeChallenge }) {
   const config = getGovbrConfig();
   const authorizeUrl = new URL(config.authorizeUrl);
@@ -50,6 +56,8 @@ function buildAuthorizeUrl({ state, codeChallenge }) {
     redirect_uri: config.redirectUri,
     scope: "openid email profile",
     state: getRequiredParameter(state, "state"),
+    // PKCE: code_challenge_method fixo em S256, já que é o método recomendado
+    // (mais seguro que "plain") e o único suportado por este fluxo.
     code_challenge: getRequiredParameter(codeChallenge, "codeChallenge"),
     code_challenge_method: "S256",
   }).toString();
@@ -57,8 +65,13 @@ function buildAuthorizeUrl({ state, codeChallenge }) {
   return authorizeUrl.toString();
 }
 
+/**
+ * Troca o codigo pelo token usando o verificador salvo na sessao do ATestaPonto.
+ */
 async function trocarCodePorToken({ code, codeVerifier }) {
   const config = getGovbrConfig();
+  // Client authentication via HTTP Basic (client_id:client_secret em base64),
+  // exigido pelo Gov.br além do client_secret também enviado no corpo.
   const credentials = Buffer.from(
     `${config.clientId}:${config.clientSecret}`,
     "utf8"
@@ -84,6 +97,9 @@ async function trocarCodePorToken({ code, codeVerifier }) {
   return parseJsonResponse(response, "trocar o codigo por token");
 }
 
+/**
+ * Busca a identidade autenticada; a permissao admin e validada em outro servico.
+ */
 async function buscarUserInfo(accessToken) {
   const config = getGovbrConfig();
   const token = getRequiredParameter(accessToken, "accessToken");

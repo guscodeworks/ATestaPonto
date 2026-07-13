@@ -13,6 +13,7 @@ const {
 const { BadRequestError } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
+// A ordem do relatorio segue a mesma sequencia usada para registrar as batidas.
 const PUNCH_STEPS = [
   { key: "entrada", tipo: PUNCH_TYPES[0], sequencia: 1 },
   { key: "saidaAlmoco", tipo: PUNCH_TYPES[1], sequencia: 2 },
@@ -20,6 +21,9 @@ const PUNCH_STEPS = [
   { key: "saida", tipo: PUNCH_TYPES[3], sequencia: 4 },
 ];
 
+// Data "de hoje" calculada no fuso de Sao Paulo, independente do fuso do
+// servidor onde a aplicacao roda, para que o relatorio do dia bata com o
+// horario local dos funcionarios.
 function getTodayDateInSaoPaulo() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -47,7 +51,11 @@ function toDateTime(date, time) {
   return `${date} ${normalizeTimeValue(time)}`;
 }
 
+// Gera um id sintetico para cada batida (id da linha * 10 + sequencia da etapa),
+// já que a tabela guarda os 4 horarios em colunas de uma unica linha por dia,
+// e nao existe um id individual por batida no banco.
 function buildPunchList(rowId, date, times) {
+  // IDs derivados mantem cada batida enderecavel sem criar novas linhas no banco.
   return PUNCH_STEPS.filter((step) => hasPunchTime(times[step.key])).map(
     (step) => ({
       id: Number(rowId) * 10 + step.sequencia,
@@ -67,6 +75,8 @@ function getEmptyPunchTimes() {
   };
 }
 
+// Regra de negocio do status do dia: sem nenhuma batida = AUSENTE; com a saida
+// registrada = COMPLETO; com pelo menos uma batida mas sem a saida = EM_ANDAMENTO.
 function summarizeEmployeeDay(employee, punchRow, date) {
   const times = punchRow
     ? readPunchTimesFromRow(punchRow)
@@ -97,6 +107,10 @@ function summarizeEmployeeDay(employee, punchRow, date) {
   };
 }
 
+// A query de batidas do dia pode trazer mais de uma linha por funcionario
+// (ex: historico duplicado); mantem apenas a primeira ocorrencia encontrada
+// por funcionario_id, que corresponde a linha mais recente conforme a
+// ordenacao definida em pointModel.listRowsByDate (funcionario_id ASC, id DESC).
 function indexLatestPunchRowsByEmployee(punchRows) {
   const byEmployee = new Map();
 
@@ -111,6 +125,9 @@ function indexLatestPunchRowsByEmployee(punchRows) {
   return byEmployee;
 }
 
+// Taxa de presenca calculada apenas sobre funcionarios ativos, para nao
+// distorcer o indicador com funcionarios desligados/inativos que nunca
+// vao bater ponto.
 function buildSummary(summaries) {
   const activeSummaries = summaries.filter((item) => item.funcionario.ativo);
   const presentes = activeSummaries.filter((item) => item.total_batidas > 0);
@@ -132,6 +149,9 @@ function buildSummary(summaries) {
   };
 }
 
+/**
+ * A visao diaria nasce em memoria para nao alterar registros durante consultas.
+ */
 async function buildDailySnapshot(date) {
   const employees = await employeeModel.listForPointReport();
   const punchRows = await pointModel.listRowsByDate(date);

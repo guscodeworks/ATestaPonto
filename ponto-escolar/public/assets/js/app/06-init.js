@@ -1,4 +1,4 @@
-﻿async function initializeApp() {
+﻿async function initApp() {
   initClock();
   initSidebar();
   bindLogoutButtons();
@@ -17,12 +17,18 @@
     return;
   }
 
+  // Autenticação + carregamento do perfil ocorrem antes de qualquer
+  // roteamento específico de página, já que todas as rotas abaixo exigem
+  // um admin autenticado.
   const admin = await ensureAuthenticatedAdmin();
   if (!admin) {
     return;
   }
   renderAdminProfile(admin);
 
+  // Roteamento manual baseado no pathname: cada rota de admin dispara a
+  // inicialização da tela correspondente. Não há um router genérico,
+  // então uma nova página exige um novo bloco `if` aqui.
   const path = getCurrentPath();
   if (path === '/admin' || path === '/admin/dashboard') {
     await initDashboardPage();
@@ -46,8 +52,7 @@
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  initializeApp().catch((error) => {
+  initApp().catch((error) => {
     mostrarToast(sanitizeMessage(error.message, 'Erro ao inicializar a página.'), 'error');
   });
 });
-

@@ -71,12 +71,16 @@ async function initEmployeesPage() {
   let presentIds = new Set();
 
   async function loadData() {
+    // Busca funcionários e pontos de hoje em paralelo, já que uma
+    // requisição não depende do resultado da outra.
     const [employeeData, pointsData] = await Promise.all([
       apiRequest('/admin/funcionarios?page=1&limit=100'),
       apiRequest('/admin/pontos/hoje')
     ]);
 
     employees = employeeData?.items || [];
+    // presentIds guarda apenas os IDs (não os objetos completos) para
+    // permitir checagem O(1) de "bateu ponto hoje" via Set.has().
     presentIds = new Set((pointsData?.presentes || []).map((item) => item.funcionario.id));
     if (totalEmployees) {
       totalEmployees.textContent = String(employeeData?.pagination?.total ?? employees.length);
@@ -96,6 +100,8 @@ async function initEmployeesPage() {
         });
     renderEmployeesGrid(listContainer, filtered, presentIds);
     renderEmployeesTable(tableBody, filtered, presentIds);
+    // Reanexa os listeners dos botões de status a cada renderização,
+    // já que os elementos foram recriados via innerHTML.
     bindEmployeeStatusButtons();
   }
 
@@ -106,6 +112,8 @@ async function initEmployeesPage() {
       body: { ativo: nextActive }
     });
     mostrarToast(`Funcionário ${nextActive ? 'ativado' : 'desativado'} com sucesso.`, 'success');
+    // Recarrega e re-renderiza tudo para refletir o novo status e manter
+    // a lista consistente com o backend.
     await loadData();
     applyRender(searchInput?.value || '');
   }
@@ -196,4 +204,3 @@ async function initRegisterEmployeePage() {
     }
   });
 }
-

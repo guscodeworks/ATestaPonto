@@ -6,6 +6,8 @@ function atualizarFiltroCargo() {
   const filtroCargo = document.getElementById('filtro-cargo');
   if (!filtroCargo) return;
 
+  // Preserva a seleção atual do usuário ao reconstruir as opções,
+  // já que a lista de cargos é derivada dinamicamente dos funcionários.
   const valorAtual = filtroCargo.value;
   const cargos = [...new Set(FUNCIONARIOS.map(f => f.cargo).filter(Boolean))].sort();
   filtroCargo.innerHTML = [
@@ -21,6 +23,8 @@ function funcionarioPassaNoFiltro(funcionario, filtro) {
   const termo = String(filtro || '').toLowerCase();
   if (!termo) return true;
 
+  // Busca livre: o termo é comparado contra múltiplos campos do
+  // funcionário, bastando bater em um deles para passar no filtro.
   return [
     funcionario.nome,
     funcionario.cpf,
@@ -36,6 +40,8 @@ function renderizarFuncionarios(filtro = '') {
 
   atualizarFiltroCargo();
 
+  // Filtros combinados: busca livre (parâmetro) + status e cargo
+  // selecionados nos selects da tela, aplicados em sequência.
   let lista = FUNCIONARIOS.filter(f => funcionarioPassaNoFiltro(f, filtro));
   const filtroStatus = document.getElementById('filtro-status');
   const filtroCargo = document.getElementById('filtro-cargo');
@@ -47,9 +53,11 @@ function renderizarFuncionarios(filtro = '') {
 
   if (tbody) {
     if (ADMIN_DATA_ERROR && !FUNCIONARIOS.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Nao foi possivel carregar funcionarios</div><div style="font-size:12px;color:var(--text-300);">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
+      // Distingue "erro ao carregar" de "lista vazia por filtro", exibindo
+      // a mensagem de erro da API somente quando não há dados nenhum.
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nao foi possivel carregar funcionarios</div><div style="font-size:12px;color:var(--text-300);">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
     } else if (!lista.length) {
-      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum funcionario encontrado</div></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum funcionario encontrado</div></div></td></tr>`;
     } else {
       tbody.innerHTML = lista.map(f => `
         <tr>
@@ -69,7 +77,7 @@ function renderizarFuncionarios(filtro = '') {
           <td><span class="badge ${funcionarioBateuPonto(f.id)?'badge-ok':'badge-absent'}">${funcionarioBateuPonto(f.id)?'Presente':'Ausente'}</span></td>
           <td>
             <div style="display:flex;gap:6px;">
-              <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${Number(f.id)})">✏️ Editar</button>
+              <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${Number(f.id)})"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> Editar</button>
               <button class="btn ${f.status==='ativo'?'btn-danger':'btn-ghost'} btn-sm" onclick="confirmarExclusao(${Number(f.id)})">${f.status==='ativo'?'Desativar':'Ativar'}</button>
             </div>
           </td>
@@ -79,8 +87,9 @@ function renderizarFuncionarios(filtro = '') {
   }
 
   if (cardList) {
+    // Mesma lista renderizada em formato de cards para o layout mobile.
     if (!lista.length) {
-      cardList.innerHTML = `<div class="empty-state"><div class="empty-icon">👥</div><div class="empty-title">Nenhum funcionario encontrado</div></div>`;
+      cardList.innerHTML = `<div class="empty-state"><div class="empty-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum funcionario encontrado</div></div>`;
     } else {
       cardList.innerHTML = lista.map(f => `
         <div class="func-card-item fade-in">
@@ -90,7 +99,7 @@ function renderizarFuncionarios(filtro = '') {
             <div class="func-card-cargo">${escapeHtml(f.cargo)} · <span style="color:${funcionarioBateuPonto(f.id)?'var(--green-600)':'var(--red-600)'}">${funcionarioBateuPonto(f.id)?'Presente':'Ausente'}</span></div>
           </div>
           <div class="func-card-actions">
-            <button class="btn btn-ghost btn-sm" onclick="abrirEdicao(${Number(f.id)})">✏️</button>
+            <button class="btn btn-ghost btn-sm" aria-label="Editar ${escapeHtml(f.nome)}" onclick="abrirEdicao(${Number(f.id)})"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"></button>
             <button class="btn ${f.status==='ativo'?'btn-danger':'btn-ghost'} btn-sm" onclick="confirmarExclusao(${Number(f.id)})">${f.status==='ativo'?'Desativar':'Ativar'}</button>
           </div>
         </div>
@@ -103,6 +112,8 @@ async function confirmarExclusao(id) {
   const funcionario = getFuncionarioPorId(id);
   if (!funcionario) return;
 
+  // "Excluir" aqui é, na verdade, alternar ativo/inativo (soft delete),
+  // por isso o rótulo do botão e da confirmação muda conforme o status atual.
   const ativar = funcionario.status !== 'ativo';
   const acao = ativar ? 'ativar' : 'desativar';
   const confirmado = confirm(`Deseja ${acao} "${funcionario.nome}"?`);
@@ -137,6 +148,8 @@ function abrirEdicao(id) {
   if (cargoSelect) {
     const option = [...cargoSelect.options].find((item) => item.value === f.cargo || item.textContent === f.cargo);
     if (option) cargoSelect.value = option.value;
+    // Campo desabilitado por limitação da API: ela espera cargo_id, mas
+    // não existe endpoint para listar/editar cargos por nome nesta tela.
     cargoSelect.disabled = true;
     cargoSelect.title = 'A API admin atual aceita cargo_id, mas nao expoe endpoint de cargos para editar por nome.';
   }
@@ -144,6 +157,8 @@ function abrirEdicao(id) {
   const telInput = document.getElementById('edit-tel');
   if (telInput) {
     telInput.value = f.tel || 'Nao disponivel na API';
+    // Campo somente leitura: o telefone ainda não é editável porque não
+    // faz parte do contrato atual da API de funcionários.
     telInput.readOnly = true;
     telInput.title = 'Telefone ainda nao existe no contrato da API de funcionarios.';
   }
@@ -173,6 +188,8 @@ async function salvarEdicao() {
     });
     const funcionarioAtualizado = getApiData(response)?.funcionario;
     if (funcionarioAtualizado) {
+      // Atualiza a lista local imediatamente com o retorno da API,
+      // evitando esperar o recarregamento completo para refletir a mudança.
       const idx = FUNCIONARIOS.findIndex(f => Number(f.id) === id);
       const normalizado = normalizarFuncionarioApi(funcionarioAtualizado);
       if (idx >= 0) FUNCIONARIOS[idx] = normalizado;

@@ -9,6 +9,9 @@ async function findByEmail(email) {
   );
 }
 
+/**
+ * A consulta impede que um admin desativado reutilize credenciais antigas.
+ */
 async function findActiveCredentialsByEmail(email) {
   return database.executeOne(
     "SELECT id, email, senha_hash FROM admins WHERE email = ? AND ativo = 1 LIMIT 1",

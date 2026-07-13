@@ -1,10 +1,16 @@
 'use strict';
 
+// Repositório em memória (não persistente) para os dados voláteis do fluxo OAuth2 fake:
+// tudo é perdido ao reiniciar o processo, o que é aceitável pois trata-se de um
+// ambiente de demonstração, não de produção.
 const authCodes = new Map();
 const accessTokens = new Map();
 const pendingAuthorizeRequests = new Map();
 const fakeLoginSessions = new Map();
 
+// Suporta tanto registros com método `isExpired` (ex.: instâncias de AccessToken/AuthCode)
+// quanto objetos simples com `expiresAt`, permitindo reaproveitar a mesma limpeza
+// para os diferentes tipos de registro armazenados nos Maps deste módulo.
 function isRecordExpired(record, now = Date.now()) {
   if (!record) {
     return true;
@@ -25,6 +31,8 @@ function deleteExpiredFromMap(map, now) {
   }
 }
 
+// Remove registros expirados de todas as stores, evitando vazamento de memória
+// (accessTokens, authCodes, etc. nunca seriam limpos de outra forma).
 function cleanupExpiredRecords() {
   const now = Date.now();
 
@@ -34,6 +42,8 @@ function cleanupExpiredRecords() {
   deleteExpiredFromMap(fakeLoginSessions, now);
 }
 
+// Agenda a limpeza periódica em background. `unref()` evita que este timer, sozinho,
+// mantenha o processo Node.js vivo (ex.: durante testes ou scripts que devem encerrar).
 function startCleanup(intervalMs) {
   const timer = setInterval(cleanupExpiredRecords, intervalMs);
 
@@ -49,6 +59,10 @@ function saveAuthCode(code, authCode) {
   return authCode;
 }
 
+// Atenção: retorna "{}" (objeto vazio) quando a chave não existe, em vez de
+// `undefined`. Como "{}" é truthy, chamadores que fazem `if (!getAuthCode(...))`
+// não conseguem detectar a ausência do registro (mesmo padrão presente nos demais
+// getters deste arquivo). Ver Sugestões de melhoria.
 function getAuthCode(code) {
   return authCodes.get(code) || {};
 }

@@ -5,14 +5,17 @@
 function renderizarUltimosRegistros() {
   const tbody = document.getElementById('tbody-ultimos');
   const cardsMobile = document.getElementById('cards-ultimos-mobile');
+  // Mostra apenas os 5 registros mais recentes, do mais novo para o mais antigo.
   const lista = PONTOS_HOJE.slice(-5).reverse();
 
   if (tbody && !lista.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
   }
 
   if (tbody && lista.length) {
     tbody.innerHTML = lista.map(p => {
+      // Prioriza os dados atualizados de FUNCIONARIOS; usa o funcionário
+      // embutido no próprio registro de ponto apenas como fallback.
       const func = getFuncionarioPorId(p.funcionarioId) || p.funcionario;
       if (!func) return '';
       return `
@@ -30,7 +33,7 @@ function renderizarUltimosRegistros() {
           <td class="td-mono">${p.saida || '<span class="muted-dash">—</span>'}</td>
           <td><span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span></td>
           <td>
-            <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')">✏️ Ajustar</button>
+            <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> Ajustar</button>
           </td>
         </tr>
       `;
@@ -38,6 +41,7 @@ function renderizarUltimosRegistros() {
   }
 
   if (cardsMobile) {
+    // Versão compacta da mesma lista, exibida no layout mobile.
     cardsMobile.innerHTML = lista.length ? lista.map(p => {
       const func = getFuncionarioPorId(p.funcionarioId) || p.funcionario;
       if (!func) return '';
@@ -53,7 +57,7 @@ function renderizarUltimosRegistros() {
           </div>
         </div>
       `;
-    }).join('') : `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum registro hoje</div></div>`;
+    }).join('') : `<div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div>`;
   }
 }
 
@@ -65,8 +69,12 @@ function renderizarGrafico() {
   const container = document.getElementById('grafico-presenca');
   if (!container) return;
 
+  // "Pendente" = bateu ponto hoje mas ainda não concluiu o expediente
+  // (sem saída registrada ou status diferente de 'completo').
   const pendentes = PONTOS_HOJE.filter((ponto) => ponto.status !== 'completo' || !ponto.saida).length;
   const presentesResumo = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
+  // "Presentes" do gráfico exclui os pendentes, pois estes já estão
+  // contabilizados como presença mas são exibidos em categoria própria.
   const presentes = Math.max(presentesResumo - pendentes, 0);
   const ausentes = RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
   const total = presentes + pendentes + ausentes;
@@ -121,6 +129,8 @@ function renderizarGrafico() {
     </div>
   `;
 
+  // A largura da barra é aplicada em um segundo frame para garantir que a
+  // transição CSS de 0% até o valor final seja de fato animada pelo navegador.
   requestAnimationFrame(() => {
     container.querySelectorAll('.daily-presence-fill').forEach((bar) => {
       bar.style.width = bar.dataset.width || '0%';
@@ -137,15 +147,17 @@ function renderizarAlertas() {
   if (!container) return;
   const ausentes = getFuncionariosSemPonto();
   const inativos = FUNCIONARIOS.filter(f=>f.status==='inativo').length;
+  // Cada regra de alerta é avaliada isoladamente e resulta em null quando
+  // a condição não se aplica, para depois filtrar apenas os relevantes.
   const alertas = [
-    ausentes.length > 0 ? { tipo:'amber', icon:'⚠️', titulo:`${ausentes.length} funcionario(s) sem ponto hoje`, desc: ausentes.map(f=>f.nome).join(', ') } : null,
-    inativos > 0 ? { tipo:'red', icon:'🔴', titulo:'Funcionarios inativos no sistema', desc:`${inativos} conta(s) inativa(s). Verifique o cadastro.` } : null,
+    ausentes.length > 0 ? { tipo:'amber', icon:'triangle-alert.svg', titulo:`${ausentes.length} funcionario(s) sem ponto hoje`, desc: ausentes.map(f=>f.nome).join(', ') } : null,
+    inativos > 0 ? { tipo:'red', icon:'circle-x.svg', titulo:'Funcionarios inativos no sistema', desc:`${inativos} conta(s) inativa(s). Verifique o cadastro.` } : null,
   ].filter(Boolean);
 
   if (!alertas.length) {
     container.innerHTML = `
       <div class="alert-item blue">
-        <div class="alert-icon">ℹ️</div>
+        <div class="alert-icon"><img src="/assets/icons/info.svg" alt="" aria-hidden="true"></div>
         <div class="alert-content">
           <div class="alert-title">Nenhum alerta com dados atuais</div>
           <div class="alert-desc">Os alertas exibidos aqui dependem das APIs reais de funcionarios e pontos.</div>
@@ -157,7 +169,7 @@ function renderizarAlertas() {
 
   container.innerHTML = alertas.map(a => `
     <div class="alert-item ${a.tipo}">
-      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-icon"><img src="/assets/icons/${a.icon}" alt="" aria-hidden="true"></div>
       <div class="alert-content">
         <div class="alert-title">${escapeHtml(a.titulo)}</div>
         <div class="alert-desc">${escapeHtml(a.desc)}</div>

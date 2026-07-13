@@ -2,6 +2,8 @@
 
 const database = require("../config/database");
 
+// Permite que as queries participem de uma transação (client passado explicitamente)
+// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
 function getClient(client) {
   return client || database;
 }
@@ -20,6 +22,9 @@ async function findByEmployeeAndDate(funcionarioId, date) {
   );
 }
 
+/**
+ * Trava o registro do dia para decidir a proxima batida sem corrida entre requisicoes.
+ */
 async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   return getClient(client).executeOne(
     `SELECT *
@@ -31,6 +36,9 @@ async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   );
 }
 
+/**
+ * Ordena por funcionario e id recente para o relatorio usar a linha mais nova por pessoa.
+ */
 async function listRowsByDate(date) {
   return database.execute(
     `SELECT *
@@ -41,6 +49,9 @@ async function listRowsByDate(date) {
   );
 }
 
+// Cria a primeira batida do dia (entrada): os demais horários (saída almoço,
+// volta almoço, saída) ainda não ocorreram e são preenchidos com o mesmo valor
+// "vazio" (emptyTime) até serem registrados nas batidas seguintes.
 async function createFirstPunch(
   client,
   { funcionarioId, date, time, emptyTime }
@@ -51,6 +62,9 @@ async function createFirstPunch(
   );
 }
 
+/**
+ * Mantem o id da linha ao atualizar as quatro batidas do dia.
+ */
 async function replacePunchRow(client, { rowId, funcionarioId, date, times }) {
   await getClient(client).execute(
     "DELETE FROM registro_de_pontos WHERE id = ?",

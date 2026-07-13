@@ -9,11 +9,15 @@ const { registerAuditLog } = require("../services/auditLogService");
 const { getClientIp } = require("../utils/request");
 
 function getBaseUrl(req) {
+  // O QR precisa refletir o host acessado quando a aplicacao roda atras de proxy.
   const protocol = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const host = req.get("host");
   return host ? `${protocol}://${host}` : "";
 }
 
+/**
+ * Gera o atalho de ponto usado pelo administrador sem transformar o QR em credencial.
+ */
 async function generateQrShortcut(req, res, next) {
   try {
     const qrCode = await createQrCode({
@@ -22,6 +26,9 @@ async function generateQrShortcut(req, res, next) {
       baseUrl: getBaseUrl(req),
     });
 
+    // Toda geração de QR é auditada: identifica qual admin gerou o atalho,
+    // de onde e para qual QR Code específico, já que ele funciona como
+    // porta de entrada para a tela de bater ponto.
     await registerAuditLog({
       evento: "qr_code_gerado",
       adminId: req.auth.id,
@@ -95,6 +102,9 @@ async function deactivateQrShortcut(req, res, next) {
 
 async function validateQrShortcut(req, res, next) {
   try {
+    // Aceita múltiplos nomes de campo (qrCode, qr_code, qrToken) para o
+    // mesmo valor, cobrindo diferentes convenções usadas por clientes
+    // atuais e legados que consomem este endpoint.
     const qrCodeValue = String(
       req.body.qrCode || req.body.qr_code || req.body.qrToken || ""
     ).trim();
@@ -102,6 +112,8 @@ async function validateQrShortcut(req, res, next) {
       unidadeCodigo: req.body.unidade_codigo,
     });
 
+    // Tentativas inválidas são auditadas com nível WARN, útil para
+    // detectar uso indevido ou tentativas de acesso com QR forjado/expirado.
     if (!validation.valid) {
       await registerAuditLog({
         evento: "tentativa_link_ponto_invalido",
