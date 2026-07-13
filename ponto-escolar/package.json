@@ -14,7 +14,8 @@
     "db:init": "node src/scripts/initDatabase.js",
     "db:run": "node src/scripts/runSqlFile.js",
     "admin:create": "node src/scripts/createAdmin.js",
-    "mvc:check": "node src/scripts/checkMvcBoundaries.js"
+    "mvc:check": "node src/scripts/checkMvcBoundaries.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

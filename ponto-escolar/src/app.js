@@ -138,6 +138,7 @@ app.use(
       // Cookie so exige HTTPS em producao, pois em dev/LAN o acesso pode ser
       // via HTTP puro (ver observacao do CSP acima).
       secure: env.IS_PRODUCTION,
+      maxAge: env.ADMIN_SESSION_TTL_MS,
     },
   })
 );
