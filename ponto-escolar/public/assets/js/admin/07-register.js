@@ -2,12 +2,66 @@
    FORMULARIO - REGISTRAR
    ============================================================ */
 
+function definirPlaceholderCargo(select, texto) {
+  const option = document.createElement('option');
+  option.value = '';
+  option.textContent = texto;
+  option.disabled = true;
+  option.selected = true;
+  select.replaceChildren(option);
+}
+
+async function carregarCargosRegistro(select) {
+  select.disabled = true;
+  select.dataset.loaded = 'false';
+  definirPlaceholderCargo(select, 'Carregando cargos...');
+
+  try {
+    const payload = await adminApiFetch(ADMIN_ENDPOINTS.cargos);
+    const cargos = Array.isArray(payload)
+      ? payload.filter((cargo) => {
+        const id = Number(cargo?.id);
+        return Number.isInteger(id) && id > 0 && String(cargo?.nome || '').trim();
+      })
+      : [];
+
+    if (!cargos.length) {
+      throw new Error('Nenhum cargo esta cadastrado no sistema.');
+    }
+
+    definirPlaceholderCargo(select, 'Selecione o cargo...');
+    cargos.forEach((cargo) => {
+      const option = document.createElement('option');
+      option.value = String(Number(cargo.id));
+      option.textContent = String(cargo.nome).trim();
+      select.appendChild(option);
+    });
+
+    select.dataset.loaded = 'true';
+    select.disabled = false;
+    return true;
+  } catch (error) {
+    definirPlaceholderCargo(select, 'Nao foi possivel carregar os cargos');
+    const detail = error.message || 'Recarregue a pagina e tente novamente.';
+    toast(
+      `Nao foi possivel carregar os cargos. ${detail}`,
+      'error'
+    );
+    return false;
+  }
+}
+
 function iniciarFormRegistro() {
   const form = document.getElementById('form-registro');
   if (!form) return;
 
   const inputCPF = document.getElementById('input-cpf');
   const inputTel = document.getElementById('input-tel');
+  const inputCargo = document.getElementById('input-cargo');
+
+  if (inputCargo) {
+    carregarCargosRegistro(inputCargo);
+  }
 
   if (inputCPF) {
     // Máscara aplicada progressivamente: cada replace assume que o
@@ -39,7 +93,10 @@ function iniciarFormRegistro() {
     const nome = (document.getElementById('input-nome')?.value||'').trim();
     const email = (document.getElementById('input-email')?.value||'').trim();
     const cpf = (document.getElementById('input-cpf')?.value||'').trim();
-    const cargo = document.getElementById('input-cargo')?.value||'';
+    const cargoSelect = document.getElementById('input-cargo');
+    const cargo = cargoSelect?.value
+      ? (cargoSelect.selectedOptions[0]?.textContent || '').trim()
+      : '';
     const tel = (document.getElementById('input-tel')?.value||'').trim();
 
     const av = document.getElementById('preview-avatar');
@@ -75,10 +132,15 @@ function iniciarFormRegistro() {
     const email = document.getElementById('input-email')?.value.trim();
     const cpf = document.getElementById('input-cpf')?.value.trim();
     const cpfDigits = somenteDigitos(cpf);
-    const cargo = document.getElementById('input-cargo')?.value;
+    const cargoSelect = document.getElementById('input-cargo');
+    const cargoId = Number(cargoSelect?.value);
     const tel = document.getElementById('input-tel')?.value.trim();
 
-    if (!nome || !email || !cpf || !cargo) {
+    if (cargoSelect?.dataset.loaded !== 'true') {
+      toast('Os cargos ainda nao foram carregados. Recarregue a pagina e tente novamente.', 'error');
+      return;
+    }
+    if (!nome || !email || !cpf || !Number.isInteger(cargoId) || cargoId < 1) {
       toast('Preencha todos os campos obrigatorios.', 'error');
       return;
     }
@@ -100,6 +162,7 @@ function iniciarFormRegistro() {
           // Senha inicial definida como o próprio CPF: o funcionário deve
           // trocá-la no primeiro acesso.
           senha: cpfDigits,
+          cargo_id: cargoId,
           ativo: true,
         }),
       });
@@ -112,11 +175,10 @@ function iniciarFormRegistro() {
       }
 
       toast(`Funcionario "${nome}" cadastrado com sucesso.`, 'success');
-      // Avisa o usuário que cargo e telefone foram preenchidos no
-      // formulário mas não foram persistidos, já que a API ainda não
-      // aceita esses campos no cadastro.
-      if (cargo || tel) {
-        toast('Cargo por nome e telefone nao foram enviados: a API atual ainda nao expoe esses campos.', 'info');
+      // Telefone continua apenas na interface porque ainda não faz parte
+      // do contrato atual da API administrativa.
+      if (tel) {
+        toast('Telefone nao foi enviado: a API atual ainda nao expoe esse campo.', 'info');
       }
       form.reset();
       atualizarPreview();

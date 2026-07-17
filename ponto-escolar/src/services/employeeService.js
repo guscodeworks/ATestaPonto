@@ -24,31 +24,21 @@ function mapEmployee(employee) {
     ativo: Boolean(employee.ativo),
     criado_em: employee.criado_em,
     primeiro_acesso: Boolean(employee.primeiro_acesso),
-    cargo_id: employee.cargo_id,
-    cargo_nome: employee.cargo_nome || {},
+    cargo_id: employee.cargo_id ? Number(employee.cargo_id) : null,
+    cargo_nome: employee.cargo_nome ? String(employee.cargo_nome) : null,
     login_id: employee.login_id,
   };
 }
 
-// Se nenhum cargo for informado, usa o cargo de menor ID como padrão; caso a
-// tabela de cargos esteja vazia, cria um cargo padrão sob demanda para garantir
-// que todo funcionário sempre tenha um cargo_id válido.
-async function resolveCargoId(tx, requestedCargoId) {
-  if (requestedCargoId) {
-    const cargo = await cargoModel.findByIdForUpdate(tx, requestedCargoId);
-    if (!cargo) {
-      throw new BadRequestError("cargo_id informado nao existe");
-    }
-    return Number(cargo.id);
+async function resolveCargo(tx, requestedCargoId) {
+  const cargo = await cargoModel.findByIdForUpdate(tx, requestedCargoId);
+  if (!cargo?.id) {
+    throw new BadRequestError("cargo_id informado nao existe");
   }
-
-  // O cargo padrao nasce na mesma transacao para nao deixar funcionario sem cargo.
-  const defaultCargo = await cargoModel.findDefaultForUpdate(tx);
-  if (!defaultCargo) {
-    const result = await cargoModel.createDefault(tx);
-    return Number(result.insertId);
-  }
-  return Number(defaultCargo.id);
+  return {
+    id: Number(cargo.id),
+    nome: String(cargo.nome),
+  };
 }
 
 /**
@@ -62,29 +52,32 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     .toLowerCase();
   const senha = String(body.senha || "");
   const ativo = body.ativo === undefined ? true : Boolean(body.ativo);
-  const requestedCargoId = body.cargo_id ? Number(body.cargo_id) : {};
+  const requestedCargoId = Number(body.cargo_id);
+  if (!Number.isInteger(requestedCargoId) || requestedCargoId < 1) {
+    throw new BadRequestError("cargo_id e obrigatorio");
+  }
   const senhaHash = await bcrypt.hash(senha, env.BCRYPT_SALT_ROUNDS);
 
   // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
   const employeeId = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
-    if (cpfExists) {
+    if (cpfExists?.id) {
       throw new ConflictError("CPF ja cadastrado");
     }
 
     const emailExists = await employeeModel.findByEmailForUpdate(tx, email);
-    if (emailExists) {
+    if (emailExists?.id) {
       throw new ConflictError("Email ja cadastrado");
     }
 
     // CPF também precisa ser único na tabela de login (credenciais), que é
     // separada da tabela de funcionarios.
     const loginCpfExists = await loginModel.findByCpfForUpdate(tx, cpf);
-    if (loginCpfExists) {
+    if (loginCpfExists?.id) {
       throw new ConflictError("CPF ja cadastrado");
     }
 
-    const cargoId = await resolveCargoId(tx, requestedCargoId);
+    const cargo = await resolveCargo(tx, requestedCargoId);
     const loginInsert = await loginModel.createLogin(tx, { cpf, senhaHash });
     const loginId = Number(loginInsert.insertId);
 
@@ -94,7 +87,8 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       email,
       senhaHash,
       ativo,
-      cargoId,
+      cargoId: cargo.id,
+      cargoNome: cargo.nome,
       loginId,
     });
     return result.insertId;
@@ -238,10 +232,11 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
 
     if (cargoId !== undefined) {
       const cargo = await cargoModel.findByIdForUpdate(tx, Number(cargoId));
-      if (!cargo) {
+      if (!cargo?.id) {
         throw new BadRequestError("cargo_id informado nao existe");
       }
       fields.cargoId = Number(cargoId);
+      fields.cargoNome = String(cargo.nome);
     }
 
     if (senha !== undefined) {

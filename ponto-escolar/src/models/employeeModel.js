@@ -76,7 +76,7 @@ async function findForPunchRegisterByIdForUpdate(client, employeeId) {
 
 async function findForPunchLoginByCpf(cpf) {
   return database.executeOne(
-    `SELECT id, cpf, nome, email, senha, ativo
+    `SELECT id, cpf, nome, email, senha_hash AS senha, ativo
      FROM funcionarios
      WHERE cpf = ?
      LIMIT 1`,
@@ -86,7 +86,7 @@ async function findForPunchLoginByCpf(cpf) {
 
 async function findForPunchLoginByEmail(email) {
   return database.executeOne(
-    `SELECT id, cpf, nome, email, senha, ativo
+    `SELECT id, cpf, nome, email, senha_hash AS senha, ativo
      FROM funcionarios
      WHERE email = ?
      LIMIT 1`,
@@ -156,7 +156,7 @@ async function listEmployees({ ativo, q, limit, offset } = {}) {
      ${whereClause}
      ORDER BY f.id DESC
      LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+    [...params, String(limit), String(offset)]
   );
 }
 
@@ -170,14 +170,25 @@ async function listForPointReport() {
 
 async function createEmployee(
   client,
-  { cpf, nome, email, senhaHash, ativo, cargoId, loginId }
+  { cpf, nome, email, senhaHash, ativo, cargoId, cargoNome, loginId }
 ) {
   // primeiro_acesso fixo em 1: todo funcionário recém-criado é obrigado a passar
   // pelo fluxo de primeiro acesso (ex: troca de senha) antes do uso normal.
   return getClient(client).execute(
-    `INSERT INTO funcionarios (cpf, nome, email, senha, ativo, primeiro_acesso, cargo_id, login_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [cpf, nome, email, senhaHash, ativo ? 1 : 0, 1, cargoId, loginId]
+    `INSERT INTO funcionarios
+     (cpf, nome, email, senha_hash, ativo, primeiro_acesso, cargo_id, login_id, cargo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      cpf,
+      nome,
+      email,
+      senhaHash,
+      ativo ? 1 : 0,
+      1,
+      cargoId,
+      loginId,
+      cargoNome,
+    ]
   );
 }
 
@@ -213,8 +224,13 @@ async function updateEmployee(client, employeeId, fields) {
     values.push(fields.cargoId);
   }
 
+  if (Object.prototype.hasOwnProperty.call(fields, "cargoNome")) {
+    columns.push("cargo = ?");
+    values.push(fields.cargoNome);
+  }
+
   if (Object.prototype.hasOwnProperty.call(fields, "senhaHash")) {
-    columns.push("senha = ?");
+    columns.push("senha_hash = ?");
     values.push(fields.senhaHash);
   }
 

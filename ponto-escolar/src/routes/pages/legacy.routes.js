@@ -64,7 +64,7 @@ function resolveLegacyTarget(pathname) {
     }
   }
 
-  return {};
+  return null;
 }
 
 // Catch-all: intercepta qualquer caminho não tratado pelos routers anteriores,

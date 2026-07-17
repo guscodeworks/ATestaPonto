@@ -48,6 +48,7 @@ let DATA_REFERENCIA_RELATORIO = null;
 let ADMIN_DATA_ERROR = null;
 
 const ADMIN_ENDPOINTS = {
+  cargos: '/api/admin/cargos',
   funcionarios: '/api/admin/funcionarios',
   pontosHoje: '/api/admin/pontos/hoje',
   pontosRelatorio: '/api/admin/pontos/relatorio',
@@ -71,11 +72,19 @@ async function adminApiFetch(path, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(path, {
-    credentials: 'same-origin',
-    ...options,
-    headers,
-  });
+  let response;
+  try {
+    response = await fetch(path, {
+      ...options,
+      credentials: 'same-origin',
+      headers,
+    });
+  } catch (_networkError) {
+    const error = new Error('Nao foi possivel conectar ao servidor. Verifique sua conexao e tente novamente.');
+    error.status = 0;
+    error.code = 'NETWORK_ERROR';
+    throw error;
+  }
 
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json')
@@ -83,16 +92,27 @@ async function adminApiFetch(path, options = {}) {
     : null;
 
   if (!response.ok) {
-    // Ordem de fallback: cobre os diferentes formatos de erro que a API
-    // pode retornar (mensagem simples, erro estruturado ou lista de
-    // erros de validação), garantindo uma mensagem legível em qualquer caso.
-    const message =
-      payload?.message ||
-      payload?.error?.message ||
-      payload?.errors?.[0]?.msg ||
-      `Falha na API (${response.status})`;
+    const validationMessage =
+      payload?.error?.details?.[0]?.message ||
+      payload?.errors?.[0]?.msg;
+    const apiMessage = payload?.error?.message || payload?.message;
+    let message;
+
+    if (response.status === 401) {
+      message = 'Sessao administrativa expirada ou invalida. Entre novamente.';
+    } else if (response.status === 403) {
+      message = 'Usuario sem permissao para realizar esta operacao.';
+    } else if (response.status === 400 || response.status === 422) {
+      message = validationMessage || apiMessage || 'Dados enviados sao invalidos.';
+    } else if (response.status >= 500) {
+      message = 'Erro interno do servidor. Tente novamente mais tarde.';
+    } else {
+      message = apiMessage || `Falha na API (${response.status})`;
+    }
+
     const error = new Error(message);
     error.status = response.status;
+    error.code = payload?.error?.code || `HTTP_${response.status}`;
     error.payload = payload;
     throw error;
   }

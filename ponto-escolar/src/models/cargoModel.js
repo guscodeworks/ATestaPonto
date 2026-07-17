@@ -8,37 +8,29 @@ function getClient(client) {
   return client || database;
 }
 
+async function listCargos() {
+  return database.execute(
+    `SELECT id,
+            nome,
+            TIME_FORMAT(hora_entrada, '%H:%i:%s') AS hora_entrada_padrao,
+            TIME_FORMAT(hora_saida, '%H:%i:%s') AS hora_saida_padrao
+     FROM cargo
+     ORDER BY nome ASC, id ASC`,
+    []
+  );
+}
+
 /**
  * Usa o cliente da transacao para travar o cargo enquanto o funcionario e salvo.
  */
 async function findByIdForUpdate(client, cargoId) {
   return getClient(client).executeOne(
-    "SELECT id FROM cargo WHERE id = ? LIMIT 1 FOR UPDATE",
+    "SELECT id, nome FROM cargo WHERE id = ? LIMIT 1 FOR UPDATE",
     [cargoId]
   );
 }
 
-/**
- * Busca o cargo base dentro da transacao para impedir criacoes duplicadas.
- */
-async function findDefaultForUpdate(client) {
-  return getClient(client).executeOne(
-    "SELECT id FROM cargo ORDER BY id ASC LIMIT 1 FOR UPDATE"
-  );
-}
-
-// Cria o cargo padrão usado quando a tabela ainda não possui nenhum registro,
-// com horário comercial padrão (08h às 17h) como valor inicial.
-async function createDefault(client) {
-  return getClient(client).execute(
-    `INSERT INTO cargo (nome, hora_entrada, hora_saida)
-     VALUES (?, ?, ?)`,
-    ["Cargo Padrao", "2000-01-01 08:00:00", "2000-01-01 17:00:00"]
-  );
-}
-
 module.exports = {
+  listCargos,
   findByIdForUpdate,
-  findDefaultForUpdate,
-  createDefault,
 };

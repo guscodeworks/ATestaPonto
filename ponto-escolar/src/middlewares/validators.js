@@ -118,7 +118,9 @@ const createFuncionarioValidator = withValidation([
     .isLength({ min: 8, max: 72 })
     .withMessage("Senha deve ter entre 8 e 72 caracteres"),
   body("cargo_id")
-    .optional()
+    .notEmpty()
+    .withMessage("cargo_id e obrigatorio")
+    .bail()
     .isInt({ min: 1 })
     .withMessage("cargo_id invalido")
     .toInt(),
