@@ -1,6 +1,6 @@
-# Sistema de Presença nas Escolas — Ponto-Escolar
+# Sistema de Presença nas Escolas — ATestaPonto
 
-O Ponto-Escolar é um sistema web criado para modernizar o controle de presença de funcionários em ambiente escolar. Desenvolvido por alunos do curso Técnico em Desenvolvimento de Sistemas do Miguel Vicente Cury, o projeto substitui o antigo registro em caderno por um processo digital, seguro e rastreável, combinando login por CPF/senha com leitura de QR Code.
+O ATestaPonto é um sistema web criado para modernizar o controle de presença de funcionários em ambiente escolar. Desenvolvido por alunos do curso Técnico em Desenvolvimento de Sistemas do Miguel Vicente Cury, o projeto substitui o antigo registro em caderno por um processo digital, seguro e rastreável, combinando login por CPF/senha com leitura de QR Code.
 
 **Tecnologias principais:** Node.js · Express.js · MySQL · JavaScript · HTML · CSS · QR Code
 
@@ -25,7 +25,7 @@ O Ponto-Escolar é um sistema web criado para modernizar o controle de presença
 
 ### Como Surgiu o Projeto
 
-Antes da implantação do Ponto-Escolar, o controle de presença dos funcionários da escola era feito da forma mais tradicional possível: em um caderno físico, no qual cada funcionário assinava manualmente o horário de entrada e de saída. Era um método simples, mas que carregava uma série de limitações que se tornavam mais evidentes a cada mês de uso.
+Antes da implantação do ATestaPonto, o controle de presença dos funcionários da escola era feito da forma mais tradicional possível: em um caderno físico, no qual cada funcionário assinava manualmente o horário de entrada e de saída. Era um método simples, mas que carregava uma série de limitações que se tornavam mais evidentes a cada mês de uso.
 
 O registro em papel dependia inteiramente da disciplina de quem assinava e da atenção de quem conferia as assinaturas depois. Isso abria espaço para atrasos no preenchimento, rasuras, esquecimentos e até situações em que um funcionário assinava pelo outro — tornando praticamente impossível confirmar se cada registro correspondia à realidade. Consultar uma data antiga significava folhear página por página em busca da informação certa, sem nenhuma forma de organizar ou cruzar esses dados automaticamente. Na prática, o processo era lento, pouco confiável e não deixava nenhum tipo de histórico digital.
 
@@ -33,11 +33,11 @@ Foi observando essa rotina de perto que a equipe de alunos do curso Técnico em 
 
 A solução encontrada foi substituir o caderno por um sistema web que combina autenticação de funcionários, leitura de QR Code, banco de dados e registro automático de presença. Cada parte do sistema foi pensada para corrigir, especificamente, uma das falhas do modelo anterior: o login por CPF e senha garante que o registro pertence à pessoa certa; a leitura obrigatória do QR Code confirma que esse registro só pode acontecer presencialmente, dentro da escola; e o armazenamento em banco de dados cria, pela primeira vez, um histórico digital completo e consultável a qualquer momento.
 
-O resultado é um sistema que moderniza um processo antes manual e repetitivo, trazendo para o controle de presença algo que o caderno de papel nunca ofereceu: segurança na autenticação, rastreabilidade de cada registro e agilidade na consulta das informações. Mais do que uma ferramenta pontual, o Ponto-Escolar representa um passo concreto na transformação digital da gestão escolar, mostrando como uma solução desenvolvida pelos próprios alunos pode gerar impacto real dentro da instituição de ensino.
+O resultado é um sistema que moderniza um processo antes manual e repetitivo, trazendo para o controle de presença algo que o caderno de papel nunca ofereceu: segurança na autenticação, rastreabilidade de cada registro e agilidade na consulta das informações. Mais do que uma ferramenta pontual, o ATestaPonto representa um passo concreto na transformação digital da gestão escolar, mostrando como uma solução desenvolvida pelos próprios alunos pode gerar impacto real dentro da instituição de ensino.
 
 ### O que é o Sistema
 
-O Ponto-Escolar é a aplicação que nasceu dessa iniciativa: um sistema web que controla a presença de funcionários em ambiente escolar, substituindo o registro manual por um processo digital, seguro e rastreável.
+O ATestaPonto é a aplicação que nasceu dessa iniciativa: um sistema web que controla a presença de funcionários em ambiente escolar, substituindo o registro manual por um processo digital, seguro e rastreável.
 
 Ao acessar o sistema, o funcionário precisa escanear um QR Code disponível na escola, fazer login com seu CPF e senha e registrar sua entrada ou saída. Todas as ações ficam registradas no banco de dados, permitindo que os administradores acompanhem a presença de forma prática e consultem o histórico completo sempre que necessário.
 
@@ -496,7 +496,7 @@ Abaixo estão descritos os recursos de segurança encontrados no código-fonte d
 
 ## Conclusão
 
-O Sistema de Presença nas Escolas (Ponto-Escolar) representa uma solução completa e moderna para o controle de presença de funcionários em ambiente escolar. O projeto combina tecnologias amplamente utilizadas no mercado — Node.js, Express.js, MySQL, JWT e QR Code — para criar um sistema funcional, seguro e de fácil utilização.
+O Sistema de Presença nas Escolas (ATestaPonto) representa uma solução completa e moderna para o controle de presença de funcionários em ambiente escolar. O projeto combina tecnologias amplamente utilizadas no mercado — Node.js, Express.js, MySQL, JWT e QR Code — para criar um sistema funcional, seguro e de fácil utilização.
 
 O uso do QR Code como mecanismo de verificação presencial é o diferencial do sistema: garante que o funcionário está fisicamente no local no momento do registro, algo que controles baseados apenas em senha não conseguem assegurar. A integração com geolocalização reforça ainda mais essa característica.
 
