@@ -377,9 +377,7 @@ npm start
 | Endereço | O que abre |
 |---|---|
 | `http://localhost:3000` | Página inicial do sistema. |
-| `http://localhost:3000/funcionario/login` | Tela de login do funcionário. |
-| `http://localhost:3000/admin` | Painel administrativo (requer login de admin). |
-| `http://localhost:4000` | Interface do simulador Gov.br (apenas desenvolvimento). |
+| `http://localhost:3000/admin` | dashboard admin (requer login de admin). |
 
 > [!IMPORTANT]
 > Sempre verifique se o MySQL está rodando antes de iniciar o sistema. Sem o banco de dados ativo, o servidor não inicia.
@@ -436,14 +434,6 @@ O sistema reconhece automaticamente se o registro é de entrada ou saída com ba
 ### Painel Administrativo
 
 O administrador acessa o sistema através do Gov.br (simulado em desenvolvimento). Após o login, tem acesso a todas as funcionalidades de gestão.
-
-#### Como Fazer Login como Administrador
-
-1. Acesse `http://localhost:3000/admin` no navegador.
-2. Clique no botão de login com Gov.br.
-3. O sistema redireciona para a tela de login do simulador Gov.br (`http://localhost:4000`).
-4. Use as credenciais de demonstração: e-mail `admin@ponto-escolar.local` e senha `demo123`.
-5. Após autenticar, o sistema redireciona de volta para o painel administrativo.
 
 #### Funcionalidades do Painel
 
@@ -503,52 +493,6 @@ Abaixo estão descritos os recursos de segurança encontrados no código-fonte d
 | Validação de entrada com Zod | Todos os dados recebidos pelo servidor são validados usando schemas Zod antes de serem processados, evitando dados malformados. |
 | Proteção contra SQL Injection | As consultas ao banco de dados usam parâmetros preparados (`?`) em vez de concatenação direta de strings, protegendo contra injeção SQL. |
 | Geolocalização com raio de segurança | O ponto só é registrado se o funcionário estiver dentro do raio configurado (padrão 200 metros) ao redor da escola. |
-
-### Pontos de Atenção Identificados no Projeto
-
-O próprio projeto possui um relatório interno de auditoria de segurança (`RELATORIO_AUDITORIA_SEGURANCA.md`) que identificou alguns pontos a corrigir antes do uso em produção:
-
-> [!WARNING]
-> O simulador Gov.br (`gov.br-fake`) **não** deve ser usado em ambiente de produção. Em produção, utilize as URLs reais do Gov.br.
-
-> [!WARNING]
-> As coordenadas de localização (latitude/longitude) são enviadas pelo próprio navegador do funcionário, o que permite burla por usuários tecnicamente avançados.
-
-> [!WARNING]
-> O JWT do funcionário é armazenado no `sessionStorage` do navegador, tornando-o vulnerável a ataques XSS. Em produção, recomenda-se usar cookies `HttpOnly`.
-
-> [!WARNING]
-> O QR Code é determinístico (gerado a partir de uma fórmula fixa), o que significa que pode ser previsto ou reutilizado dentro da janela de 10 minutos se a URL for compartilhada.
-
-> [!NOTE]
-> Esses pontos são comuns em projetos acadêmicos e de desenvolvimento. Para uso em ambiente escolar real, recomenda-se revisar e corrigir esses itens antes do lançamento.
-
-## Possíveis Erros e Soluções
-
-| Erro / Sintoma | Possível Causa e Solução |
-|---|---|
-| Servidor não inicia — erro de conexão com banco de dados | O MySQL não está rodando. Inicie o serviço do MySQL (ex.: `sudo systemctl start mysql` no Linux, ou pelo painel de serviços no Windows). |
-| `npm install` — erro de permissão | Falta de permissão na pasta. No Linux/Mac, execute com `sudo`. No Windows, abra o terminal como administrador. |
-| `npm run db:init` — nenhum arquivo de schema SQL encontrado | O arquivo SQL de schema não está no local esperado. Verifique se existe um arquivo chamado `ponto.sql` dentro da pasta `ponto-escolar` ou em `database/schema/`. |
-| `npm run admin:create` — tabela `admins` não encontrada | O banco de dados ainda não foi inicializado. Execute `npm run db:init` antes de criar o administrador. |
-| `npm run admin:create` — já existe um admin com este e-mail | O e-mail informado já está cadastrado no banco. Use um e-mail diferente ou delete o registro existente, se necessário. |
-| Login do funcionário — "CPF/email ou senha inválidos" | O CPF, e-mail ou a senha estão incorretos. Verifique os dados cadastrados pelo administrador. O CPF deve ser informado apenas com números, sem pontos ou traços. |
-| Login do funcionário — "QR Code inválido ou expirado" | O QR Code já expirou (validade de 10 minutos) ou não foi lido corretamente. Solicite ao administrador que atualize o QR Code e tente novamente. |
-| Registro de ponto — "Você só pode bater ponto dentro da área permitida" | O funcionário está fora do raio de distância configurado da escola. Verifique se `SCHOOL_LATITUDE` e `SCHOOL_LONGITUDE` no arquivo `.env` estão corretas. |
-| Registro de ponto — "Funcionário já realizou 4 batidas hoje" | O limite de 4 registros diários foi atingido. Não é possível registrar mais pontos naquele dia. |
-| Painel admin — redireciona para login Gov.br mas não consegue autenticar | O simulador Gov.br (`gov.br-fake`) pode não estar rodando. Verifique se o segundo servidor está ativo na porta 4000 (`npm start` dentro de `gov.br-fake/`). |
-| "Muitas requisições. Tente novamente em instantes" | O sistema bloqueou o IP temporariamente por excesso de tentativas. Aguarde alguns minutos e tente novamente. |
-| Porta já em uso — `Error: listen EADDRINUSE` | A porta 3000 (ou 4000) já está sendo usada por outro processo. Feche o outro processo ou altere a variável `PORT` no arquivo `.env`. |
-
-## Observações
-
-Durante a análise do projeto, foram identificados os seguintes pontos que não invalidam o funcionamento do sistema, mas merecem ser registrados:
-
-1. O arquivo de schema SQL (`ponto.sql`) não estava incluído no ZIP enviado. O script `db:init` tenta localizá-lo em `database/schema/ponto.sql`, `ponto (2).sql` ou `ponto.sql`. Certifique-se de que este arquivo existe antes de executar o comando de inicialização do banco.
-2. O sistema de auditoria registra eventos apenas em log de console (não em tabela do banco de dados), conforme identificado no próprio relatório de auditoria do projeto. Isso significa que os logs não são persistentes entre reinicializações.
-3. O simulador Gov.br (`gov.br-fake`) é exclusivo para uso em desenvolvimento local. Não deve ser exposto à internet ou usado em produção.
-4. As variáveis `SESSION_SECRET` e `JWT_SECRET` no arquivo `.env` padrão contêm valores de exemplo. Antes de qualquer uso real, essas chaves devem ser substituídas por strings longas e aleatórias geradas com segurança.
-5. O projeto possui um relatório de auditoria de segurança completo no arquivo `RELATORIO_AUDITORIA_SEGURANCA.md`, com 12 achados categorizados por severidade e sugestões de correção.
 
 ## Conclusão
 
