@@ -2,7 +2,7 @@ const dotenv = require("dotenv");
 
 dotenv.config({ quiet: true });
 
-const DEFAULT_GOVBR_FAKE_BASE_URL = "http://127.0.0.1:4000";
+const DEFAULT_GOVBR_FAKE_BASE_URL = process.env.GOVBR_FAKE_BASE_URL;
 const GOVBR_CALLBACK_PATH = "/auth/govbr/callback";
 // Path antigo do callback gov.br, mantido apenas para migrar
 // automaticamente redirect URIs configuradas com o valor legado.

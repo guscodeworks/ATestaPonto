@@ -118,12 +118,37 @@ const createFuncionarioValidator = withValidation([
     .isLength({ min: 8, max: 72 })
     .withMessage("Senha deve ter entre 8 e 72 caracteres"),
   body("cargo_id")
-    .notEmpty()
-    .withMessage("cargo_id e obrigatorio")
-    .bail()
-    .isInt({ min: 1 })
-    .withMessage("cargo_id invalido")
-    .toInt(),
+    .custom((value, { req }) => {
+      const hasValidCargoId = Number.isInteger(Number(value)) && Number(value) > 0;
+      const scheduleFields = [
+        "cargo",
+        "entrada",
+        "saida_almoco",
+        "retorno_almoco",
+        "saida",
+      ];
+      const hasCompleteSchedule = scheduleFields.every(
+        (field) => String(req.body[field] || "").trim().length > 0
+      );
+
+      if (!hasValidCargoId && !hasCompleteSchedule) {
+        throw new Error("cargo_id ou horarios completos do cargo sao obrigatorios");
+      }
+      return true;
+    })
+    .customSanitizer((value) =>
+      value === undefined || value === "" ? undefined : Number(value)
+    ),
+  body("cargo")
+    .optional()
+    .trim()
+    .toUpperCase()
+    .isIn(["FUNCIONARIO", "INSPETOR", "PROFESSOR"])
+    .withMessage("cargo invalido"),
+  body(["entrada", "saida_almoco", "retorno_almoco", "saida"])
+    .optional()
+    .matches(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/)
+    .withMessage("horario de cargo invalido"),
   
   /* Aceita diferentes representações de booleano pois o valor pode chegar como
    string (form-data/querystring) ou como boolean/number (JSON).

@@ -13,6 +13,9 @@ const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const cargoModel = require("../models/cargoModel");
 
+const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
+const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
+
 // CPF sempre mascarado ao sair da API, evitando expor o dado completo em
 // respostas/listagens (o valor completo só é usado internamente para lógica).
 function mapEmployee(employee) {
@@ -26,7 +29,6 @@ function mapEmployee(employee) {
     primeiro_acesso: Boolean(employee.primeiro_acesso),
     cargo_id: employee.cargo_id ? Number(employee.cargo_id) : null,
     cargo_nome: employee.cargo_nome ? String(employee.cargo_nome) : null,
-    login_id: employee.login_id,
   };
 }
 
@@ -37,7 +39,58 @@ async function resolveCargo(tx, requestedCargoId) {
   }
   return {
     id: Number(cargo.id),
-    nome: String(cargo.nome),
+    cargo: String(cargo.cargo),
+    entrada: String(cargo.entrada),
+    saidaAlmoco: String(cargo.saida_almoco),
+    retornoAlmoco: String(cargo.retorno_almoco),
+    saida: String(cargo.saida),
+  };
+}
+
+function readCargoSchedule(body = {}) {
+  const fieldNames = [
+    "cargo",
+    "entrada",
+    "saida_almoco",
+    "retorno_almoco",
+    "saida",
+  ];
+  const hasAnyScheduleField = fieldNames.some(
+    (field) => body[field] !== undefined
+  );
+
+  if (!hasAnyScheduleField) {
+    return null;
+  }
+
+  const cargo = String(body.cargo || "").trim().toUpperCase();
+  const times = {
+    entrada: String(body.entrada || "").trim(),
+    saidaAlmoco: String(body.saida_almoco || "").trim(),
+    retornoAlmoco: String(body.retorno_almoco || "").trim(),
+    saida: String(body.saida || "").trim(),
+  };
+
+  if (!CARGO_TYPES.has(cargo)) {
+    throw new BadRequestError("cargo invalido");
+  }
+
+  if (Object.values(times).some((time) => !TIME_PATTERN.test(time))) {
+    throw new BadRequestError("Horarios do cargo invalidos");
+  }
+
+  return {
+    cargo,
+    entrada: times.entrada.length === 5 ? `${times.entrada}:00` : times.entrada,
+    saidaAlmoco:
+      times.saidaAlmoco.length === 5
+        ? `${times.saidaAlmoco}:00`
+        : times.saidaAlmoco,
+    retornoAlmoco:
+      times.retornoAlmoco.length === 5
+        ? `${times.retornoAlmoco}:00`
+        : times.retornoAlmoco,
+    saida: times.saida.length === 5 ? `${times.saida}:00` : times.saida,
   };
 }
 
@@ -52,9 +105,13 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     .toLowerCase();
   const senha = String(body.senha || "");
   const ativo = body.ativo === undefined ? true : Boolean(body.ativo);
+  const cargoSchedule = readCargoSchedule(body);
   const requestedCargoId = Number(body.cargo_id);
-  if (!Number.isInteger(requestedCargoId) || requestedCargoId < 1) {
-    throw new BadRequestError("cargo_id e obrigatorio");
+  if (
+    !cargoSchedule &&
+    (!Number.isInteger(requestedCargoId) || requestedCargoId < 1)
+  ) {
+    throw new BadRequestError("cargo_id ou horarios do cargo sao obrigatorios");
   }
   const senhaHash = await bcrypt.hash(senha, env.BCRYPT_SALT_ROUNDS);
 
@@ -70,28 +127,22 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    // CPF também precisa ser único na tabela de login (credenciais), que é
-    // separada da tabela de funcionarios.
-    const loginCpfExists = await loginModel.findByCpfForUpdate(tx, cpf);
-    if (loginCpfExists?.id) {
-      throw new ConflictError("CPF ja cadastrado");
-    }
-
-    const cargo = await resolveCargo(tx, requestedCargoId);
-    const loginInsert = await loginModel.createLogin(tx, { cpf, senhaHash });
-    const loginId = Number(loginInsert.insertId);
+    const cargoTemplate =
+      cargoSchedule || (await resolveCargo(tx, requestedCargoId));
+    const cargoInsert = await cargoModel.createCargo(tx, cargoTemplate);
+    const cargoId = Number(cargoInsert.insertId);
 
     const result = await employeeModel.createEmployee(tx, {
       cpf,
       nome,
       email,
-      senhaHash,
       ativo,
-      cargoId: cargo.id,
-      cargoNome: cargo.nome,
-      loginId,
+      cargoId,
     });
-    return result.insertId;
+    const funcionarioId = Number(result.insertId);
+
+    await loginModel.createLogin(tx, { funcionarioId, senhaHash });
+    return funcionarioId;
   });
 
   const created = await employeeModel.findById(employeeId);
@@ -190,19 +241,6 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
           throw new ConflictError("CPF ja cadastrado");
         }
 
-        // O CPF também vive na tabela de login, então o conflito precisa ser
-        // checado lá também antes de propagar a alteração.
-        const loginCpfExists = await loginModel.findCpfConflictForUpdate(
-          tx,
-          normalizedCpf,
-          existing.login_id
-        );
-        if (loginCpfExists) {
-          throw new ConflictError("CPF ja cadastrado");
-        }
-
-        // CPF tambem identifica o login do funcionario, entao as duas tabelas mudam juntas.
-        await loginModel.updateCpf(tx, existing.login_id, normalizedCpf);
         fields.cpf = normalizedCpf;
       }
     }
@@ -231,22 +269,13 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     }
 
     if (cargoId !== undefined) {
-      const cargo = await cargoModel.findByIdForUpdate(tx, Number(cargoId));
-      if (!cargo?.id) {
-        throw new BadRequestError("cargo_id informado nao existe");
-      }
-      fields.cargoId = Number(cargoId);
-      fields.cargoNome = String(cargo.nome);
+      const cargoTemplate = await resolveCargo(tx, Number(cargoId));
+      await cargoModel.updateCargo(tx, existing.cargo_id, cargoTemplate);
     }
 
     if (senha !== undefined) {
-      // Senha do funcionário vive na tabela de login (credenciais), então
-      // a alteração precisa ser replicada lá além de registrada em `fields`
-      // para o UPDATE da tabela funcionarios.
       const senhaHash = await bcrypt.hash(String(senha), env.BCRYPT_SALT_ROUNDS);
-      fields.senhaHash = senhaHash;
-      // A senha duplicada no login e no cadastro precisa continuar sincronizada.
-      await loginModel.updateSenha(tx, existing.login_id, senhaHash);
+      await loginModel.updateSenha(tx, employeeId, senhaHash);
     }
 
     await employeeModel.updateEmployee(tx, employeeId, fields);

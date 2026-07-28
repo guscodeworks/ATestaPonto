@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const employeeModel = require("../models/employeeModel");
+const loginModel = require("../models/loginModel");
 const pointModel = require("../models/pointModel");
 const { isWithinRadius } = require("../utils/location");
 const { maskCpf, normalizeCpf } = require("../utils/cpf");
@@ -143,6 +144,8 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   if (!funcionario.ativo) {
     throw new ForbiddenError("Funcionario inativo");
   }
+
+  await loginModel.updateLastLogin(funcionario.id);
 
   const tokenPayload = {
     sub: String(funcionario.id),
