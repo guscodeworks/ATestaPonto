@@ -45,20 +45,6 @@ O sistema possui dois perfis de uso:
 
 ## Tecnologias Utilizadas
 
-### Banco de Dados
-
-| Tecnologia | Para que serve |
-|---|---|
-| MySQL | Sistema gerenciador de banco de dados relacional onde são armazenados funcionários, registros de ponto, administradores e logs de auditoria. |
-
-### Autenticação e Segurança
-
-| Tecnologia | Para que serve |
-|---|---|
-| Gov.br (simulado) | Autenticação dos administradores via protocolo OAuth2/OIDC simulado localmente para fins de desenvolvimento e demonstração. |
-| PKCE (Proof Key for Code Exchange) | Técnica de segurança extra usada no fluxo de autenticação OAuth2 para evitar interceptação do código de autorização. |
-| HMAC SHA-256 | Algoritmo criptográfico usado para gerar o token do QR Code de forma segura. |
-
 ## Requisitos para Instalação
 
 Para que o sistema funcione corretamente, os seguintes programas devem estar instalados no computador:
