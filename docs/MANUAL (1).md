@@ -23,23 +23,7 @@ O ATestaPonto é um sistema web criado para modernizar o controle de presença d
 
 ## Sobre o Projeto
 
-### Como Surgiu o Projeto
-
-Antes da implantação do ATestaPonto, o controle de presença dos funcionários da escola era feito da forma mais tradicional possível: em um caderno físico, no qual cada funcionário assinava manualmente o horário de entrada e de saída. Era um método simples, mas que carregava uma série de limitações que se tornavam mais evidentes a cada mês de uso.
-
-O registro em papel dependia inteiramente da disciplina de quem assinava e da atenção de quem conferia as assinaturas depois. Isso abria espaço para atrasos no preenchimento, rasuras, esquecimentos e até situações em que um funcionário assinava pelo outro — tornando praticamente impossível confirmar se cada registro correspondia à realidade. Consultar uma data antiga significava folhear página por página em busca da informação certa, sem nenhuma forma de organizar ou cruzar esses dados automaticamente. Na prática, o processo era lento, pouco confiável e não deixava nenhum tipo de histórico digital.
-
-Foi observando essa rotina de perto que a equipe de alunos do curso Técnico em Desenvolvimento de Sistemas do Miguel Vicente Cury enxergou ali uma oportunidade concreta de aplicar o que vinha sendo estudado em sala de aula. Mais do que cumprir um requisito das disciplinas do curso, a proposta do grupo foi resolver um problema real da própria escola — e foi esse compromisso que guiou as decisões técnicas tomadas ao longo do desenvolvimento.
-
-A solução encontrada foi substituir o caderno por um sistema web que combina autenticação de funcionários, leitura de QR Code, banco de dados e registro automático de presença. Cada parte do sistema foi pensada para corrigir, especificamente, uma das falhas do modelo anterior: o login por CPF e senha garante que o registro pertence à pessoa certa; a leitura obrigatória do QR Code confirma que esse registro só pode acontecer presencialmente, dentro da escola; e o armazenamento em banco de dados cria, pela primeira vez, um histórico digital completo e consultável a qualquer momento.
-
-O resultado é um sistema que moderniza um processo antes manual e repetitivo, trazendo para o controle de presença algo que o caderno de papel nunca ofereceu: segurança na autenticação, rastreabilidade de cada registro e agilidade na consulta das informações. Mais do que uma ferramenta pontual, o ATestaPonto representa um passo concreto na transformação digital da gestão escolar, mostrando como uma solução desenvolvida pelos próprios alunos pode gerar impacto real dentro da instituição de ensino.
-
 ### O que é o Sistema
-
-O ATestaPonto é a aplicação que nasceu dessa iniciativa: um sistema web que controla a presença de funcionários em ambiente escolar, substituindo o registro manual por um processo digital, seguro e rastreável.
-
-Ao acessar o sistema, o funcionário precisa escanear um QR Code disponível na escola, fazer login com seu CPF e senha e registrar sua entrada ou saída. Todas as ações ficam registradas no banco de dados, permitindo que os administradores acompanhem a presença de forma prática e consultem o histórico completo sempre que necessário.
 
 ### Objetivo do Projeto
 
@@ -60,33 +44,6 @@ O sistema possui dois perfis de uso:
 - João Victor da Silvas Alves (frontend)
 
 ## Tecnologias Utilizadas
-
-### Backend (Servidor)
-
-| Tecnologia | Para que serve |
-|---|---|
-| Node.js | Ambiente de execução do JavaScript no servidor. É o motor que faz o sistema funcionar. |
-| Express.js v5 | Framework web que organiza as rotas, middlewares e respostas HTTP do servidor. |
-| MySQL2 | Biblioteca que conecta o Node.js ao banco de dados MySQL e executa consultas SQL. |
-| bcrypt | Criptografa senhas dos funcionários e administradores antes de salvar no banco de dados. |
-| jsonwebtoken (JWT) | Gera e valida tokens de autenticação usados para identificar o funcionário logado. |
-| express-session | Gerencia sessões de login para administradores no painel web. |
-| express-rate-limit | Limita a quantidade de requisições por IP para evitar ataques de força bruta. |
-| helmet | Adiciona cabeçalhos HTTP de segurança para proteger o sistema contra ataques web comuns. |
-| cors | Controla quais origens (domínios) podem fazer requisições ao servidor. |
-| qrcode | Biblioteca que gera as imagens de QR Code usadas para controle de acesso. |
-| dotenv | Carrega variáveis de configuração do arquivo `.env` para o sistema. |
-| zod | Valida os dados recebidos nas requisições para garantir que estão no formato correto. |
-| express-validator | Valida e sanitiza dados de formulários e requisições HTTP. |
-| concurrently | Ferramenta de desenvolvimento que permite iniciar os dois servidores ao mesmo tempo. |
-
-### Frontend (Interface do Usuário)
-
-| Tecnologia | Para que serve |
-|---|---|
-| HTML5 | Linguagem de marcação usada para criar as páginas do sistema. |
-| CSS3 | Linguagem de estilo que define o visual e o layout das páginas. |
-| JavaScript (Vanilla) | Linguagem de programação usada para tornar as páginas interativas no navegador. |
 
 ### Banco de Dados
 
@@ -115,87 +72,6 @@ Para que o sistema funcione corretamente, os seguintes programas devem estar ins
 
 > [!TIP]
 > Verifique se o Node.js está instalado rodando o comando `node --version` no terminal. O resultado deve mostrar `v18.0.0` ou superior.
-
-## Estrutura do Projeto
-
-O projeto é dividido em duas pastas principais dentro do diretório `Ponto-Escolar`:
-
-| Pasta | Descrição |
-|---|---|
-| `ponto-escolar/` | Aplicação principal do sistema — servidor, banco de dados, QR Code e toda a interface. |
-| `gov.br-fake/` | Servidor simulador do Gov.br para autenticação do administrador em ambiente local (desenvolvimento). |
-
-### Estrutura da Pasta `ponto-escolar/`
-
-```
-ponto-escolar/
-├── server.js
-├── .env
-├── package.json
-├── src/
-│   ├── app.js
-│   ├── config/
-│   ├── controllers/
-│   ├── middlewares/
-│   ├── models/
-│   ├── routes/
-│   ├── services/
-│   ├── schemas/
-│   ├── scripts/
-│   └── utils/
-├── views/
-│   ├── admin/
-│   └── funcionario/
-└── public/
-    └── assets/
-```
-
-
-
-| Arquivo / Pasta | Função |
-|---|---|
-| `server.js` | Ponto de entrada do sistema. Conecta ao banco de dados e inicia o servidor. |
-| `.env` | Arquivo de configuração com variáveis de ambiente (portas, banco de dados, chaves secretas). |
-| `package.json` | Lista todas as dependências e os comandos do projeto. |
-| `src/app.js` | Configura o Express.js com middlewares de segurança, sessão, CORS e rotas. |
-| `src/config/` | Configurações do banco de dados, variáveis de ambiente e Gov.br. |
-| `src/controllers/` | Lógica de cada ação: login do funcionário, registro de ponto, autenticação do admin, etc. |
-| `src/middlewares/` | Funções intermediárias: autenticação JWT, limite de requisições, validação de dados. |
-| `src/models/` | Representação das tabelas do banco de dados (funcionários, pontos, cargo, login). |
-| `src/routes/` | Define os endereços (URLs) disponíveis no sistema e quem pode acessá-los. |
-| `src/services/` | Regras de negócio: como gerar QR Code, registrar ponto, autenticar Gov.br, etc. |
-| `src/schemas/` | Schemas de validação de dados com Zod para login, ponto e funcionários. |
-| `src/scripts/` | Scripts de linha de comando: inicializar banco, criar administrador. |
-| `src/utils/` | Funções auxiliares: validar CPF, calcular distância, gerar token JWT, etc. |
-| `views/` | Páginas HTML do sistema (interface visual para admin e funcionários). |
-| `views/admin/` | Telas do painel administrativo: dashboard, funcionários, pontos, relatórios, configurações. |
-| `views/funcionario/` | Telas do funcionário: login, tela de ponto, perfil, relatório pessoal. |
-| `public/assets/` | Arquivos públicos: CSS (estilos), JavaScript do navegador e imagens. |
-
-### Estrutura da Pasta `gov.br-fake/`
-
-```
-gov.br-fake/
-├── server.js
-├── .env
-├── src/
-│   ├── app.js
-│   ├── config/
-│   │   └── fakeUsers.js
-│   ├── controllers/
-│   └── services/
-└── views/
-```
-
-| Arquivo / Pasta | Função |
-|---|---|
-| `server.js` | Inicia o servidor simulador do Gov.br na porta 4000. |
-| `.env` | Configurações do simulador (porta, usuários fake, client_id, etc.). |
-| `src/app.js` | Configura o servidor simulador com rotas de autenticação OAuth2. |
-| `src/config/fakeUsers.js` | Define os usuários fictícios disponíveis para login no simulador. |
-| `src/controllers/` | Lógica das rotas de autenticação fake (autorizar, gerar token, retornar userinfo). |
-| `src/services/` | Serviços de token, código de autorização e PKCE para simular o fluxo OAuth2. |
-| `views/` | Telas HTML do simulador Gov.br (tela de login fake). |
 
 ## Instalação
 
@@ -259,33 +135,7 @@ npm run admin:create -- --name="Nome do Admin" --email=admin@escola.com --passwo
 
 O projeto usa arquivos `.env` para armazenar todas as configurações importantes. Esses arquivos nunca devem ser compartilhados publicamente, pois contêm informações sensíveis.
 
-### Arquivo `.env` do `ponto-escolar/`
-
-```env
-# Servidor
-NODE_ENV=development
-PORT=3000
-SESSION_SECRET=
-
-# Banco de Dados
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=
-DB_NAME=ponto
-
-# Autenticação
-JWT_SECRET=
-JWT_EXPIRES_IN=8h
-FUNCIONARIO_JWT_EXPIRES_IN=20m
-
-# Localização da Escola
-SCHOOL_LATITUDE=
-SCHOOL_LONGITUDE=
-SCHOOL_UNIT_CODE=DEFAULT
-ALLOWED_RADIUS_METERS=200
-```
-
+### Arquivo `.env.example` do `ponto-escolar/`
 **Configurações do Servidor**
 
 | Variável | Descrição |
@@ -326,14 +176,7 @@ ALLOWED_RADIUS_METERS=200
 
 ### Arquivo `.env` do `gov.br-fake/`
 
-O simulador Gov.br tem seu próprio arquivo `.env`. Em ambiente de desenvolvimento, os valores padrão já funcionam.
-
-```env
-PORT=4000
-GOVBR_FAKE_CLIENT_ID=ponto-escolar
-GOVBR_FAKE_CLIENT_SECRET=dev-secret
-GOVBR_FAKE_ADMIN_EMAIL=admin@ponto-escolar.local
-```
+O simulador Gov.br tem seu próprio arquivo `.env.example`. Em ambiente de desenvolvimento, os valores padrão já funcionam.
 
 | Variável | Descrição |
 |---|---|
@@ -377,24 +220,12 @@ npm start
 | Endereço | O que abre |
 |---|---|
 | `http://localhost:3000` | Página inicial do sistema. |
-| `http://localhost:3000/admin` | dashboard admin (requer login de admin). |
+| `http://localhost:3000/admin/dashboard` | dashboard admin (requer login de admin). |
 
 > [!IMPORTANT]
 > Sempre verifique se o MySQL está rodando antes de iniciar o sistema. Sem o banco de dados ativo, o servidor não inicia.
 
 ## Como Usar o Sistema
-
-### Fluxo do Funcionário — Passo a Passo
-
-1. O administrador gera e exibe o QR Code do dia na escola (através do painel administrativo).
-2. O funcionário vai até o local onde o QR Code está exibido (totens, quadro, TV, etc.).
-3. O funcionário escaneia o QR Code com a câmera do celular ou acessa a URL impressa/exibida.
-4. O sistema abre a tela de login do funcionário automaticamente.
-5. O funcionário informa seu CPF (ou e-mail) e sua senha e clica em **Entrar**.
-6. O sistema valida o QR Code, o CPF/e-mail e a senha do funcionário.
-7. O sistema verifica se o funcionário está dentro da área permitida da escola (geolocalização).
-8. Se tudo estiver correto, o ponto é registrado automaticamente como Entrada ou Saída.
-9. O sistema exibe a confirmação com o horário registrado.
 
 ### Como Funciona o Login do Funcionário
 
@@ -427,81 +258,3 @@ O sistema reconhece automaticamente se o registro é de entrada ou saída com ba
 | 2ª batida do dia | Saída para almoço |
 | 3ª batida do dia | Retorno do almoço |
 | 4ª batida do dia | Saída |
-
-> [!NOTE]
-> O sistema aceita no máximo 4 registros por funcionário por dia. Após a 4ª batida, o sistema bloqueia novos registros para aquele dia.
-
-### Painel Administrativo
-
-O administrador acessa o sistema através do Gov.br (simulado em desenvolvimento). Após o login, tem acesso a todas as funcionalidades de gestão.
-
-#### Funcionalidades do Painel
-
-| Funcionalidade | O que faz |
-|---|---|
-| Dashboard | Tela inicial com resumo do dia: quantidade de funcionários presentes, pontos registrados e outras informações. |
-| Funcionários | Lista todos os funcionários cadastrados. Permite visualizar, ativar/desativar e editar dados. |
-| Registrar Funcionário | Formulário para cadastrar um novo funcionário no sistema com CPF, nome, e-mail, cargo e senha. |
-| Pontos do Dia | Mostra todos os registros de ponto do dia atual com horários de entrada e saída de cada funcionário. |
-| Relatórios | Permite consultar o histórico de pontos por funcionário e período. |
-| QR Code | Exibe o QR Code válido do dia para ser mostrado aos funcionários. |
-| Configurações | Configurações gerais do sistema. |
-
-## Funcionalidades Principais
-
-- **Login de Funcionário com QR Code** — o funcionário só consegue fazer login se o QR Code do dia for válido, garantindo que está presencialmente na escola.
-- **Registro de Ponto com Geolocalização** — o sistema verifica a localização GPS do funcionário e só permite o registro de ponto se ele estiver dentro do raio definido da escola.
-- **Geração Automática de QR Code** — o QR Code é gerado automaticamente com validade de 10 minutos, sem necessidade de intervenção manual constante.
-- **Controle de Entrada e Saída** — o sistema identifica automaticamente se o registro é de entrada ou saída com base na sequência de batidas do dia (até 4 por dia).
-- **Autenticação de Administrador via Gov.br** — o administrador acessa o sistema usando o protocolo OAuth2/OIDC do Gov.br, garantindo autenticação segura e delegada.
-- **Cadastro de Funcionários** — o administrador pode cadastrar, editar, ativar e desativar funcionários pelo painel web.
-- **Dashboard de Presença** — painel com resumo visual da presença do dia: funcionários presentes, ausências e registros recentes.
-- **Relatórios de Ponto** — consulta ao histórico de pontos por funcionário e por período, facilitando o controle de frequência.
-- **Registro de Auditoria** — todas as ações sensíveis (logins, batidas de ponto, tentativas inválidas) são registradas em log para rastreamento.
-- **Proteção contra Força Bruta** — o sistema limita automaticamente a quantidade de tentativas de login por IP para evitar ataques.
-- **Perfil do Funcionário** — o funcionário pode visualizar seus próprios registros de ponto e dados de perfil.
-
-## Segurança do Sistema
-
-Abaixo estão descritos os recursos de segurança encontrados no código-fonte do projeto.
-
-### Autenticação e Controle de Acesso
-
-| Recurso | Como funciona no código |
-|---|---|
-| Autenticação via JWT (funcionários) | Após o login, o funcionário recebe um token JWT com validade de 20 minutos assinado com chave secreta. Esse token é enviado em todas as requisições para identificar o funcionário. |
-| Sessão segura (administradores) | Administradores usam sessões gerenciadas pelo `express-session` com cookies `httpOnly` e `sameSite: lax`, sem armazenar o token do Gov.br no lado do servidor. |
-| Fluxo OAuth2 com PKCE (Gov.br) | A autenticação do admin usa o padrão PKCE (Proof Key for Code Exchange), que adiciona uma camada extra de segurança ao fluxo de login OAuth2. |
-| Criptografia de senhas com bcrypt | As senhas de funcionários e administradores são criptografadas com bcrypt antes de serem salvas no banco de dados. As senhas nunca são armazenadas em texto puro. |
-| Verificação de usuário ativo no banco | A cada requisição autenticada de funcionário, o sistema consulta o banco de dados para confirmar que o funcionário ainda existe e está ativo, mesmo com o JWT válido. |
-
-### Segurança do QR Code
-
-| Recurso | Como funciona no código |
-|---|---|
-| QR Code com validade de 10 minutos | O token do QR Code é gerado com HMAC SHA-256 usando data, hora e código da unidade escolar. O sistema verifica se o QR está dentro da janela de tempo válida. |
-| QR Code obrigatório no login | O backend exige que o QR Code seja validado antes de aceitar o login do funcionário. Não é possível fazer login sem o QR Code do dia. |
-| Comparação segura de tokens | A comparação do QR Code usa a função `crypto.timingSafeEqual` do Node.js, que evita ataques de timing (medir o tempo de resposta para descobrir informações). |
-
-### Proteção da Aplicação
-
-| Recurso | Como funciona no código |
-|---|---|
-| Helmet.js | Adiciona automaticamente cabeçalhos HTTP de segurança como `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options` e outros. |
-| CORS controlado | O sistema aceita requisições apenas das origens configuradas em `CORS_ORIGIN`. Origens não permitidas recebem erro 403. |
-| Rate Limiting | O sistema limita o número de requisições por IP: 300 requisições a cada 15 minutos no geral, 5 tentativas de login a cada 15 minutos para logins. |
-| Validação de entrada com Zod | Todos os dados recebidos pelo servidor são validados usando schemas Zod antes de serem processados, evitando dados malformados. |
-| Proteção contra SQL Injection | As consultas ao banco de dados usam parâmetros preparados (`?`) em vez de concatenação direta de strings, protegendo contra injeção SQL. |
-| Geolocalização com raio de segurança | O ponto só é registrado se o funcionário estiver dentro do raio configurado (padrão 200 metros) ao redor da escola. |
-
-## Conclusão
-
-O Sistema de Presença nas Escolas (ATestaPonto) representa uma solução completa e moderna para o controle de presença de funcionários em ambiente escolar. O projeto combina tecnologias amplamente utilizadas no mercado — Node.js, Express.js, MySQL, JWT e QR Code — para criar um sistema funcional, seguro e de fácil utilização.
-
-O uso do QR Code como mecanismo de verificação presencial é o diferencial do sistema: garante que o funcionário está fisicamente no local no momento do registro, algo que controles baseados apenas em senha não conseguem assegurar. A integração com geolocalização reforça ainda mais essa característica.
-
-Do ponto de vista técnico, o projeto demonstra boas práticas de desenvolvimento: uso de middlewares de segurança (Helmet, CORS, Rate Limit), validação de dados com Zod, criptografia de senhas com bcrypt, autenticação por JWT e organização em camadas (controllers, services, models, routes).
-
-Este manual foi elaborado para facilitar a instalação, configuração e uso do sistema por qualquer pessoa com conhecimentos básicos de programação web e linha de comando. Com as informações aqui apresentadas, é possível colocar o sistema em funcionamento, entender seu fluxo principal e solucionar os erros mais comuns.
-
-O projeto demonstra que é possível criar soluções tecnológicas relevantes e com aplicação real no contexto escolar, contribuindo para a digitalização e modernização da gestão de recursos humanos em instituições de ensino.
