@@ -23,9 +23,9 @@
       </div>
     </div>
     <div class="sidebar-user">
-      <div class="sidebar-user-avatar" id="sb-avatar">CE</div>
+      <div class="sidebar-user-avatar" id="sb-avatar">--</div>
       <div class="sidebar-user-info">
-        <div class="sidebar-user-name" id="sb-name">Carlos Eduardo</div>
+        <div class="sidebar-user-name" id="sb-name">Administrador</div>
         <div class="sidebar-user-role" id="sb-role">Administrador</div>
       </div>
       <div class="sidebar-admin-badge">ADMIN</div>
@@ -43,7 +43,7 @@
       <a href="/admin/configuracoes" class="nav-link active"><span class="nav-icon"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
     </nav>
     <div class="sidebar-footer">
-      <button class="btn-logout" onclick="fazerLogoutAdmin()">
+      <button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'">
         <span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
       </button>
     </div>
@@ -66,9 +66,9 @@
           <div class="topbar-date" id="topbar-date"></div>
         </div>
         <div class="topbar-user">
-          <div class="topbar-avatar" id="admin-avatar">CE</div>
+          <div class="topbar-avatar" id="admin-avatar">--</div>
           <div class="topbar-user-info">
-            <span class="topbar-user-name" id="admin-firstname">Carlos</span>
+            <span class="topbar-user-name" id="admin-firstname">Administrador</span>
             <span class="topbar-user-role" id="admin-role">Administrador</span>
           </div>
         </div>
@@ -89,9 +89,6 @@
           <div class="settings-nav-item active" data-panel="panel-perfil" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
             <span><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span> Meu perfil
           </div>
-          <div class="settings-nav-item" data-panel="panel-senha" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-            <span><img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="18" height="18"></span> Alterar senha
-          </div>
           <div class="settings-nav-item" data-panel="panel-horarios" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
             <span><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"></span> Horários padrão
           </div>
@@ -110,19 +107,18 @@
           <div class="settings-panel" id="panel-perfil">
             <div class="card settings-card">
               <div class="card-header">
-                <div class="card-title"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"> Dados do Administrador</div>
+                <div class="card-title"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"> Identidade Gov.br</div>
               </div>
               <div class="settings-panel-body">
 
                 <!-- Avatar -->
                 <div class="admin-profile-summary">
-                  <div class="config-profile-avatar" id="config-avatar">CE</div>
+                  <div class="config-profile-avatar" id="config-avatar">--</div>
                   <div class="config-profile-info">
-                    <div class="config-profile-name" id="config-nome">Carlos Eduardo</div>
+                    <div class="config-profile-name" id="config-nome">Administrador</div>
                     <div class="config-profile-role">Administrador do sistema</div>
                     <div class="config-profile-badges">
                       <span class="badge badge-admin">ADMIN</span>
-                      <span class="badge badge-active">Ativo</span>
                     </div>
                   </div>
                 </div>
@@ -132,70 +128,15 @@
                     <label>Nome completo</label>
                     <div class="input-wrap">
                       <span class="field-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-                      <input type="text" class="field-input" value="Carlos Eduardo" id="cfg-nome"/>
+                      <input type="text" class="field-input" value="" id="cfg-nome" readonly/>
                     </div>
                   </div>
                   <div class="form-field">
                     <label>E-mail</label>
                     <div class="input-wrap">
                       <span class="field-icon"><img src="/assets/icons/mail.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-                      <input type="email" class="field-input" value="admin@escola.edu.br"/>
+                      <input type="email" class="field-input" value="" id="cfg-email" readonly/>
                     </div>
-                  </div>
-                  <div class="form-field">
-                    <label>Telefone</label>
-                    <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/smartphone.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-                      <input type="text" class="field-input" value="(11) 98000-0000"/>
-                    </div>
-                  </div>
-                  <div class="form-field">
-                    <label>Cargo / Função</label>
-                    <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/tag.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-                      <input type="text" class="field-input" value="Administrador"/>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="form-actions settings-form-actions">
-                  <button class="ui-btn ui-btn-primary" onclick="toast('Perfil salvo com sucesso!','success')"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar alterações</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Senha -->
-          <div class="settings-panel" id="panel-senha" style="display:none;">
-            <div class="card settings-card">
-              <div class="card-header">
-                <div class="card-title"><img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="18" height="18"> Alterar Senha</div>
-              </div>
-              <div class="settings-panel-body settings-password-body">
-                <div class="settings-form-stack">
-                  <div class="form-field">
-                    <label>Senha atual</label>
-                    <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-                      <input type="password" id="pw-atual" class="field-input" placeholder="••••••••"/>
-                    </div>
-                  </div>
-                  <div class="form-field">
-                    <label>Nova senha</label>
-                    <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/key-round.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-                      <input type="password" id="pw-nova" class="field-input" placeholder="Mínimo 8 caracteres"/>
-                    </div>
-                  </div>
-                  <div class="form-field">
-                    <label>Confirmar nova senha</label>
-                    <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/circle-check.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-                      <input type="password" id="pw-confirm" class="field-input" placeholder="Repita a nova senha"/>
-                    </div>
-                  </div>
-                  <div class="form-actions">
-                    <button class="ui-btn ui-btn-primary" onclick="salvarSenha()"><img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="18" height="18"> Atualizar senha</button>
                   </div>
                 </div>
               </div>
@@ -360,6 +301,5 @@
   <script src="/assets/js/admin/08-settings-login.js"></script>
   <script src="/assets/js/admin/09-init.js"></script>
   <script src="/assets/js/admin/configuracoes.js"></script>
-<script src="/assets/js/auth.js"></script>
 </body>
 </html>

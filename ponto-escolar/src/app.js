@@ -147,35 +147,6 @@ app.get("/health", (req, res) => {
   res.status(200).json({ success: true, data: { status: "ok" } });
 });
 
-// Preserva querystring (ex: ?code=...&state=...) ao redirecionar URLs antigas
-// de callback OAuth para a rota atual, essencial para nao perder os parametros
-// que o Gov.br envia de volta no callback.
-function redirectPreservingQuery(targetPath) {
-  return (req, res) => {
-    const queryStartIndex = req.originalUrl.indexOf("?");
-    const queryString =
-      queryStartIndex >= 0 ? req.originalUrl.slice(queryStartIndex) : "";
-    return res.redirect(`${targetPath}${queryString}`);
-  };
-}
-
-// Rotas legadas de autenticacao de admin (antes de migrar para /auth/govbr/*),
-// mantidas para nao quebrar links/integracoes antigas.
-app.get("/admin/auth", (_req, res) => res.redirect("/auth/govbr/login"));
-app.get("/admin/auth/start", (_req, res) => res.redirect("/auth/govbr/login"));
-app.get("/admin/auth/login", (_req, res) => res.redirect("/auth/govbr/login"));
-app.get(
-  "/admin/auth/callback",
-  redirectPreservingQuery("/auth/govbr/callback")
-);
-app.get("/admin/auth/logout", (_req, res) =>
-  res.redirect("/auth/govbr/logout")
-);
-// Redirect 307 preserva o metodo POST original (diferente do 302/301 padrao,
-// que forcaria GET), caso algum cliente antigo faca logout via POST.
-app.post("/admin/auth/logout", (_req, res) =>
-  res.redirect(307, "/auth/govbr/logout")
-);
 app.use("/auth/govbr", govbrAuthRoutes);
 
 function sendView(res, relativePath) {

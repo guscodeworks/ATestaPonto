@@ -252,10 +252,9 @@ O `ponto-escolar` abre a conexão MySQL antes de iniciar o servidor. Se o banco 
 
 O código consulta as seguintes tabelas:
 
-- `admins`;
+- `cargos`;
 - `funcionarios`;
-- `login`;
-- `cargo`;
+- `login_funcionario`;
 - `registro_de_pontos`.
 
 Execute estes comandos a partir de `ponto-escolar/`:
@@ -266,15 +265,9 @@ npm run db:init
 
 # Executa um arquivo SQL que esteja dentro de ponto-escolar/
 npm run db:run -- --file=caminho/arquivo.sql
-
-# Cria um registro na tabela admins
-npm run admin:create -- \
-  --name="Nome do administrador" \
-  --email="admin@exemplo.local" \
-  --password="<senha_com_12_ou_mais_caracteres>"
 ```
 
-O comando `admin:create` grava um administrador na tabela `admins`. O fluxo administrativo ativo usa Gov.br/OIDC e a allowlist `ADMIN_GOVBR_SUBS` ou `ADMIN_GOVBR_EMAILS`; criar esse registro não substitui a autorização do fluxo Gov.br.
+O acesso administrativo não possui conta no banco local. O Gov.br/OIDC autentica a identidade e o `ponto-escolar` autoriza o acesso pela allowlist `ADMIN_GOVBR_SUBS` ou `ADMIN_GOVBR_EMAILS`.
 
 Consulte [Status atual e pontos a evoluir](#status-atual-e-pontos-a-evoluir) antes de executar `db:init` em uma instalação nova.
 

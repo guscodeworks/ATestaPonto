@@ -10,19 +10,6 @@
 /* ============================================================
    ESTADO GLOBAL (carregado pelas APIs reais do back-end)
    ============================================================ */
-const togglePwButton = document.getElementById('toggle-pw');
-if (togglePwButton) {
-  togglePwButton.addEventListener('click', function() {
-    const inp = document.getElementById('login-senha');
-    if (!inp) {
-      return;
-    }
-    const isHidden = inp.type === 'password';
-    inp.type = isHidden ? 'text' : 'password';
-    this.innerHTML = `<img src="/assets/icons/eye.svg" alt="" aria-hidden="true">`;
-    this.setAttribute('aria-label', isHidden ? 'Ocultar senha' : 'Mostrar senha');
-  });
-}
 const ADMIN = {
   nome: 'Administrador',
   cargo: 'Administrador',

@@ -394,3 +394,31 @@
 .ui-btn.loading .btn-label { display: none; }
 .btn.loading .spinner,
 .ui-btn.loading .spinner { display: block; }
+/* Animações compartilhadas pelas páginas administrativas. */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(30px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.fade-in { animation: fadeInUp 0.4s ease both; }
+.fade-in:nth-child(1) { animation-delay: 0ms; }
+.fade-in:nth-child(2) { animation-delay: 60ms; }
+.fade-in:nth-child(3) { animation-delay: 120ms; }
+.fade-in:nth-child(4) { animation-delay: 180ms; }

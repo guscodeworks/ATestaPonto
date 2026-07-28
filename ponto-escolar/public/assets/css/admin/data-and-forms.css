@@ -1548,18 +1548,9 @@
   margin-top: 20px;
 }
 
-.settings-page .settings-password-body {
-  max-width: 500px;
-}
-
-.settings-page .settings-form-stack,
 .settings-page .settings-options-list {
   display: flex;
   flex-direction: column;
-}
-
-.settings-page .settings-form-stack {
-  gap: 16px;
 }
 
 .settings-page .settings-options-list {

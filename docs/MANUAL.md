@@ -56,7 +56,7 @@ O sistema possui dois perfis de uso:
 | Node.js | Ambiente de execução do JavaScript no servidor. É o motor que faz o sistema funcionar. |
 | Express.js v5 | Framework web que organiza as rotas, middlewares e respostas HTTP do servidor. |
 | MySQL2 | Biblioteca que conecta o Node.js ao banco de dados MySQL e executa consultas SQL. |
-| bcrypt | Criptografa senhas dos funcionários e administradores antes de salvar no banco de dados. |
+| bcrypt | Criptografa as senhas dos funcionários antes de salvar no banco de dados. |
 | jsonwebtoken (JWT) | Gera e valida tokens de autenticação usados para identificar o funcionário logado. |
 | express-session | Gerencia sessões de login para administradores no painel web. |
 | express-rate-limit | Limita a quantidade de requisições por IP para evitar ataques de força bruta. |
@@ -234,14 +234,12 @@ npm run db:init
 
 Este comando cria automaticamente todas as tabelas necessárias no banco de dados usando o arquivo SQL do projeto.
 
-### Passo 6 — Criar o primeiro administrador
+### Passo 6 — Autorizar o acesso administrativo
 
-```bash
-npm run admin:create -- --name="Nome do Admin" --email=admin@escola.com --password=SenhaBemForte123
-```
-
-> [!IMPORTANT]
-> A senha deve ter entre 12 e 72 caracteres. Use uma senha forte, com letras, números e símbolos.
+Configure ao menos um identificador Gov.br em `ADMIN_GOVBR_SUBS` ou
+`ADMIN_GOVBR_EMAILS`. O sistema não cria conta nem senha administrativa no
+banco local: o Gov.br autentica a identidade e o ATestaPonto decide a
+permissão de acesso.
 
 ## Configuração
 
@@ -297,7 +295,7 @@ ALLOWED_RADIUS_METERS=200
 | Variável | Descrição |
 |---|---|
 | `JWT_SECRET` | Chave secreta para assinar os tokens JWT dos funcionários. Use uma string longa e aleatória. |
-| `JWT_EXPIRES_IN` | Tempo de validade do token do administrador. Padrão: `8h`. |
+| `JWT_EXPIRES_IN` | Tempo de validade do token no fluxo legado de funcionário. Padrão: `8h`. |
 | `FUNCIONARIO_JWT_EXPIRES_IN` | Tempo de validade do token do funcionário. Padrão: `20m` (20 minutos). |
 
 **Configurações de Localização da Escola**
@@ -470,7 +468,7 @@ Abaixo estão descritos os recursos de segurança encontrados no código-fonte d
 | Autenticação via JWT (funcionários) | Após o login, o funcionário recebe um token JWT com validade de 20 minutos assinado com chave secreta. Esse token é enviado em todas as requisições para identificar o funcionário. |
 | Sessão segura (administradores) | Administradores usam sessões gerenciadas pelo `express-session` com cookies `httpOnly` e `sameSite: lax`, sem armazenar o token do Gov.br no lado do servidor. |
 | Fluxo OAuth2 com PKCE (Gov.br) | A autenticação do admin usa o padrão PKCE (Proof Key for Code Exchange), que adiciona uma camada extra de segurança ao fluxo de login OAuth2. |
-| Criptografia de senhas com bcrypt | As senhas de funcionários e administradores são criptografadas com bcrypt antes de serem salvas no banco de dados. As senhas nunca são armazenadas em texto puro. |
+| Criptografia de senhas com bcrypt | As senhas dos funcionários são criptografadas com bcrypt antes de serem salvas no banco de dados. As senhas nunca são armazenadas em texto puro. |
 | Verificação de usuário ativo no banco | A cada requisição autenticada de funcionário, o sistema consulta o banco de dados para confirmar que o funcionário ainda existe e está ativo, mesmo com o JWT válido. |
 
 ### Segurança do QR Code
@@ -518,8 +516,6 @@ O próprio projeto possui um relatório interno de auditoria de segurança (`REL
 | Servidor não inicia — erro de conexão com banco de dados | O MySQL não está rodando. Inicie o serviço do MySQL (ex.: `sudo systemctl start mysql` no Linux, ou pelo painel de serviços no Windows). |
 | `npm install` — erro de permissão | Falta de permissão na pasta. No Linux/Mac, execute com `sudo`. No Windows, abra o terminal como administrador. |
 | `npm run db:init` — nenhum arquivo de schema SQL encontrado | O arquivo SQL de schema não está no local esperado. Verifique se existe um arquivo chamado `ponto.sql` dentro da pasta `ponto-escolar` ou em `database/schema/`. |
-| `npm run admin:create` — tabela `admins` não encontrada | O banco de dados ainda não foi inicializado. Execute `npm run db:init` antes de criar o administrador. |
-| `npm run admin:create` — já existe um admin com este e-mail | O e-mail informado já está cadastrado no banco. Use um e-mail diferente ou delete o registro existente, se necessário. |
 | Login do funcionário — "CPF/email ou senha inválidos" | O CPF, e-mail ou a senha estão incorretos. Verifique os dados cadastrados pelo administrador. O CPF deve ser informado apenas com números, sem pontos ou traços. |
 | Login do funcionário — "QR Code inválido ou expirado" | O QR Code já expirou (validade de 10 minutos) ou não foi lido corretamente. Solicite ao administrador que atualize o QR Code e tente novamente. |
 | Registro de ponto — "Você só pode bater ponto dentro da área permitida" | O funcionário está fora do raio de distância configurado da escola. Verifique se `SCHOOL_LATITUDE` e `SCHOOL_LONGITUDE` no arquivo `.env` estão corretas. |

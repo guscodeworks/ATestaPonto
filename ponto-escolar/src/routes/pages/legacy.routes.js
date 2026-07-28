@@ -30,8 +30,6 @@ const LEGACY_REDIRECT_MAP = Object.freeze({
   "/login.html": "/login",
   "/admin/index": "/admin/dashboard",
   "/admin/index.html": "/admin/dashboard",
-  "/admin/login_adm": "/admin/login",
-  "/admin/login_adm.html": "/admin/login",
   "/admin/registrar-funcionario": "/admin/funcionarios/novo",
   "/admin/registrar-funcionario.html": "/admin/funcionarios/novo",
   "/funcionario/ponto.html": "/funcionario",

@@ -75,23 +75,6 @@ function qrCodeRule() {
     });
 }
 
-const adminLoginValidator = withValidation([
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email e obrigatorio")
-    .isLength({ max: 150 })
-    .withMessage("Email muito longo")
-    .isEmail()
-    .withMessage("Email invalido")
-    .normalizeEmail({ gmail_remove_dots: false }),
-  body("senha")
-    .isString()
-    .withMessage("Senha deve ser texto")
-    .isLength({ min: 8, max: 72 })
-    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
-]);
-
 const createFuncionarioValidator = withValidation([
   body("nome")
     .trim()
@@ -281,7 +264,6 @@ const baterPontoValidator = withValidation([
 ]);
 
 module.exports = {
-  adminLoginValidator,
   createFuncionarioValidator,
   updateFuncionarioValidator,
   funcionarioStatusValidator,

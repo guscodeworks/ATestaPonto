@@ -161,54 +161,6 @@ async function initReportPage() {
   }
 }
 
-async function initLoginPage() {
-  const existingToken = getAuthToken();
-  if (existingToken) {
-    // Se já existe um token salvo, tenta validá-lo antes de mostrar o
-    // formulário de login, pulando direto para o dashboard se for válido.
-    try {
-      const data = await apiRequest('/admin/auth/me');
-      if (data?.admin) {
-        saveAuthState(existingToken, data.admin);
-        redirectToDashboard();
-        return;
-      }
-    } catch (_error) {
-      clearAuthState();
-    }
-  }
-
-  const form = document.getElementById('form-login');
-  if (!form) {
-    return;
-  }
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const email = document.getElementById('login-email')?.value?.trim() || '';
-    const senha = document.getElementById('login-senha')?.value || '';
-    const submitButton = form.querySelector('button[type="submit"]');
-    const restore = setLoadingButton(submitButton, 'Entrando...');
-
-    try {
-      const data = await apiRequest('/admin/auth/login', {
-        method: 'POST',
-        body: { email, senha },
-        auth: false
-      });
-      saveAuthState(data.token, data.admin);
-      mostrarToast('Login realizado com sucesso.', 'success');
-      // Pequeno atraso para o usuário ver o toast de sucesso antes do
-      // redirecionamento para o dashboard.
-      setTimeout(() => redirectToDashboard(), 400);
-    } catch (error) {
-      mostrarToast(sanitizeMessage(error.message, 'Falha no login.'), 'error');
-    } finally {
-      restore();
-    }
-  });
-}
-
 // Ponto de acesso público (sem login) para bater ponto: redireciona para
 // a rota dedicada em vez de renderizar algo nesta própria página.
 async function initPublicPunchPage() {

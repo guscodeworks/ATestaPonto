@@ -49,26 +49,5 @@
     tabela.dataset.permissoesRenderizadas = '1';
   }
 
-  function salvarSenha() {
-    const atual = document.getElementById('pw-atual').value;
-    const nova = document.getElementById('pw-nova').value;
-    const conf = document.getElementById('pw-confirm').value;
-    if (!atual || !nova) { toast('Preencha todos os campos', 'warning'); return; }
-    if (nova.length < 8) { toast('Senha deve ter ao menos 8 caracteres', 'warning'); return; }
-    if (nova !== conf) { toast('As senhas não coincidem', 'error'); return; }
-    toast('Senha alterada com sucesso!', 'success');
-    ['pw-atual', 'pw-nova', 'pw-confirm'].forEach(id => document.getElementById(id).value = '');
-  }
-
-  function fazerLogoutAdmin() {
-    // Limpa toda a sessionStorage (não só chaves específicas) e apenas as
-    // chaves conhecidas da localStorage, antes de redirecionar ao logout gov.br.
-    sessionStorage.clear();
-    ['admin_logged_in', 'admin_nome', 'admin_cargo'].forEach(k => localStorage.removeItem(k));
-    window.location.replace('/auth/govbr/logout');
-  }
-
-  window.salvarSenha = salvarSenha;
-  window.fazerLogoutAdmin = fazerLogoutAdmin;
   renderizarTabelaPermissoes();
 })();
