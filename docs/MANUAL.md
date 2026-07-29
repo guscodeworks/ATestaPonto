@@ -199,7 +199,7 @@ npm start
 
 O funcionário pode fazer login usando CPF ou e-mail cadastrado:
 
-![tela_de_login](img/tela_de_login.PNG)
+![tela_de_login](img/tela_de_login.png)
 
 | Campo | Descrição |
 |---|---|
