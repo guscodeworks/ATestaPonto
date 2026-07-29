@@ -26,8 +26,6 @@ O sistema possui dois perfis de uso:
 - Eduardo Galvão Pereira (frontend)
 - João Victor da Silvas Alves (frontend)
 
-## Tecnologias Utilizadas
-
 ## Requisitos para Instalação
 
 Para que o sistema funcione corretamente, os seguintes programas devem estar instalados no computador:
@@ -50,6 +48,7 @@ Siga os passos abaixo, na ordem indicada, para instalar e configurar o projeto d
 
 Se você recebeu o projeto como arquivo ZIP, extraia-o para uma pasta de sua escolha. Se tiver o Git instalado, pode clonar o repositório:
 
+![extraindo_do_zip](img/passo%201/Capturar.PNG)
 ```bash
 git clone <URL_DO_REPOSITORIO>
 cd Ponto-Escolar
