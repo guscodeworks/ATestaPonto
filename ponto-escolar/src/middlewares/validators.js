@@ -6,6 +6,19 @@ const { validateRequest } = require("./validateRequest");
 const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
 // Caminho aceito para links de acesso via QR Code (com ou sem barra inicial/final).
 const QR_ACCESS_PATH_REGEX = /^\/?ponto\/acessar\/?$/i;
+const CARGO_TYPES = ["FUNCIONARIO", "INSPETOR", "PROFESSOR"];
+const CARGO_TIME_FIELDS = [
+  "entrada",
+  "saida_almoco",
+  "retorno_almoco",
+  "saida",
+];
+const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
+
+function timeToSeconds(value) {
+  const [hours, minutes, seconds = "0"] = String(value).split(":");
+  return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+}
 
 // Encadeia o middleware de validação (validateRequest) após as regras do express-validator,
 // centralizando o tratamento de erros de validação em um único lugar.
@@ -76,6 +89,8 @@ function qrCodeRule() {
 }
 
 const createFuncionarioValidator = withValidation([
+  // A senha inicial nao faz parte deste contrato: ela e gerada e protegida
+  // exclusivamente pelo service depois que os dados cadastrais sao validados.
   body("nome")
     .trim()
     .notEmpty()
@@ -95,49 +110,59 @@ const createFuncionarioValidator = withValidation([
     .isEmail()
     .withMessage("Email invalido")
     .normalizeEmail({ gmail_remove_dots: false }),
-  body("senha")
-    .isString()
-    .withMessage("Senha deve ser texto")
-    .isLength({ min: 8, max: 72 })
-    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
   body("cargo_id")
-    .custom((value, { req }) => {
-      const hasValidCargoId = Number.isInteger(Number(value)) && Number(value) > 0;
-      const scheduleFields = [
-        "cargo",
-        "entrada",
-        "saida_almoco",
-        "retorno_almoco",
-        "saida",
-      ];
-      const hasCompleteSchedule = scheduleFields.every(
-        (field) => String(req.body[field] || "").trim().length > 0
-      );
-
-      if (!hasValidCargoId && !hasCompleteSchedule) {
-        throw new Error("cargo_id ou horarios completos do cargo sao obrigatorios");
+    .custom((_value, { req }) => {
+      if (Object.prototype.hasOwnProperty.call(req.body, "cargo_id")) {
+        throw new Error("cargo_id nao e aceito no cadastro de funcionario");
       }
       return true;
-    })
-    .customSanitizer((value) =>
-      value === undefined || value === "" ? undefined : Number(value)
-    ),
+    }),
   body("cargo")
-    .optional()
     .trim()
+    .notEmpty()
+    .withMessage("cargo e obrigatorio")
     .toUpperCase()
-    .isIn(["FUNCIONARIO", "INSPETOR", "PROFESSOR"])
+    .isIn(CARGO_TYPES)
     .withMessage("cargo invalido"),
-  body(["entrada", "saida_almoco", "retorno_almoco", "saida"])
-    .optional()
-    .matches(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/)
+  body(CARGO_TIME_FIELDS)
+    .trim()
+    .notEmpty()
+    .withMessage("horario de cargo e obrigatorio")
+    .matches(TIME_REGEX)
     .withMessage("horario de cargo invalido"),
+  body("saida").custom((_value, { req }) => {
+    const times = CARGO_TIME_FIELDS.map((field) => req.body[field]);
+    if (times.some((time) => !TIME_REGEX.test(String(time || "")))) {
+      return true;
+    }
+
+    const seconds = times.map(timeToSeconds);
+    const ordered = seconds.every(
+      (value, index) => index === 0 || seconds[index - 1] < value
+    );
+    if (!ordered) {
+      throw new Error(
+        "horarios devem seguir entrada < saida_almoco < retorno_almoco < saida"
+      );
+    }
+    return true;
+  }),
+  body("telefone")
+    .customSanitizer((value) => {
+      const digits = String(value || "").replace(/\D/g, "");
+      return digits || null;
+    })
+    .custom((value) => {
+      if (value === null || /^\d{10,11}$/.test(value)) return true;
+      throw new Error("telefone deve ter 10 ou 11 digitos");
+    }),
   
   /* Aceita diferentes representações de booleano pois o valor pode chegar como
    string (form-data/querystring) ou como boolean/number (JSON).
   */
   body("ativo")
-    .optional()
+    .exists()
+    .withMessage("ativo e obrigatorio")
     .isIn(["true", "false", true, false, 1, 0, "1", "0"])
     .withMessage("ativo deve ser booleano")
     .toBoolean(),

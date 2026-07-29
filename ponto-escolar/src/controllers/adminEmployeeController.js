@@ -21,6 +21,10 @@ async function createEmployee(req, res, next) {
       getAuditContext(req)
     );
 
+    // A resposta contem a senha temporaria em texto puro uma unica vez.
+    // Impede que navegadores e proxies armazenem essa credencial em cache.
+    res.set("Cache-Control", "no-store");
+    res.set("Pragma", "no-cache");
     return res.status(201).json({
       success: true,
       data: result,

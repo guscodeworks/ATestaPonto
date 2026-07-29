@@ -1,7 +1,9 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
+const { randomBytes } = require("node:crypto");
 const env = require("../config/env");
+const { logger } = require("../utils/logger");
 const { maskCpf } = require("../utils/cpf");
 const {
   BadRequestError,
@@ -24,6 +26,7 @@ function mapEmployee(employee) {
     cpf: maskCpf(employee.cpf),
     nome: employee.nome,
     email: employee.email,
+    telefone: employee.telefone || null,
     ativo: Boolean(employee.ativo),
     criado_em: employee.criado_em,
     primeiro_acesso: Boolean(employee.primeiro_acesso),
@@ -60,7 +63,7 @@ function readCargoSchedule(body = {}) {
   );
 
   if (!hasAnyScheduleField) {
-    return null;
+    throw new BadRequestError("cargo e horarios sao obrigatorios");
   }
 
   const cargo = String(body.cargo || "").trim().toUpperCase();
@@ -79,6 +82,26 @@ function readCargoSchedule(body = {}) {
     throw new BadRequestError("Horarios do cargo invalidos");
   }
 
+  const timeToSeconds = (time) => {
+    const [hours, minutes, seconds = "0"] = time.split(":");
+    return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+  };
+  const orderedTimes = [
+    times.entrada,
+    times.saidaAlmoco,
+    times.retornoAlmoco,
+    times.saida,
+  ].map(timeToSeconds);
+  if (
+    !orderedTimes.every(
+      (time, index) => index === 0 || orderedTimes[index - 1] < time
+    )
+  ) {
+    throw new BadRequestError(
+      "Horarios devem seguir entrada < saida_almoco < retorno_almoco < saida"
+    );
+  }
+
   return {
     cargo,
     entrada: times.entrada.length === 5 ? `${times.entrada}:00` : times.entrada,
@@ -94,6 +117,10 @@ function readCargoSchedule(body = {}) {
   };
 }
 
+function generateTemporaryPassword() {
+  return randomBytes(18).toString("base64url");
+}
+
 /**
  * Cria funcionario e login juntos para evitar credencial sem cadastro ativo.
  */
@@ -103,23 +130,20 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const email = String(body.email || "")
     .trim()
     .toLowerCase();
-  const senha = String(body.senha || "");
+  const telefone = String(body.telefone || "").replace(/\D/g, "") || null;
   const ativo = body.ativo === undefined ? true : Boolean(body.ativo);
   const cargoSchedule = readCargoSchedule(body);
-  const requestedCargoId = Number(body.cargo_id);
-  if (
-    !cargoSchedule &&
-    (!Number.isInteger(requestedCargoId) || requestedCargoId < 1)
-  ) {
-    throw new BadRequestError("cargo_id ou horarios do cargo sao obrigatorios");
+  if (Object.prototype.hasOwnProperty.call(body, "cargo_id")) {
+    throw new BadRequestError("cargo_id nao e aceito no cadastro de funcionario");
   }
-  const senhaHash = await bcrypt.hash(senha, env.BCRYPT_SALT_ROUNDS);
+  const senhaTemporaria = generateTemporaryPassword();
+  const senhaHash = await bcrypt.hash(
+    senhaTemporaria,
+    env.BCRYPT_SALT_ROUNDS
+  );
 
-  // Toda a criação (checagens de duplicidade + inserts em login e funcionarios)
-  // roda em uma única transação: funcionario e login são duas tabelas
-  // relacionadas e precisam ser criadas atomicamente, sem risco de um
-  // funcionário ficar sem login (ou vice-versa) em caso de falha no meio do processo.
-  const employeeId = await employeeModel.withTransaction(async (tx) => {
+  // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
+  const createdIds = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists?.id) {
       throw new ConflictError("CPF ja cadastrado");
@@ -130,30 +154,58 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    const cargoTemplate =
-      cargoSchedule || (await resolveCargo(tx, requestedCargoId));
-    const cargoInsert = await cargoModel.createCargo(tx, cargoTemplate);
+    const cargoInsert = await cargoModel.createCargo(tx, cargoSchedule);
     const cargoId = Number(cargoInsert.insertId);
+    if (!Number.isInteger(cargoId) || cargoId < 1) {
+      throw new Error("Falha ao obter o ID do cargo criado");
+    }
 
     const result = await employeeModel.createEmployee(tx, {
       cpf,
       nome,
       email,
+      telefone,
       ativo,
       cargoId,
     });
     const funcionarioId = Number(result.insertId);
+    if (!Number.isInteger(funcionarioId) || funcionarioId < 1) {
+      throw new Error("Falha ao obter o ID do funcionario criado");
+    }
 
     await loginModel.createLogin(tx, { funcionarioId, senhaHash });
-    return funcionarioId;
+    return { funcionarioId, cargoId };
   });
 
-  const created = await employeeModel.findById(employeeId);
+  let created;
+  try {
+    created = await employeeModel.findById(createdIds.funcionarioId);
+  } catch (error) {
+    logger.warn("Cadastro concluido, mas a leitura complementar falhou", {
+      error,
+      funcionarioId: createdIds.funcionarioId,
+    });
+  }
+
+  if (!created) {
+    created = {
+      id: createdIds.funcionarioId,
+      cpf,
+      nome,
+      email,
+      telefone,
+      ativo,
+      criado_em: null,
+      primeiro_acesso: true,
+      cargo_id: createdIds.cargoId,
+      cargo_nome: cargoSchedule.cargo,
+    };
+  }
 
   await registerAuditLog({
     evento: "funcionario_cadastrado",
     adminId,
-    funcionarioId: employeeId,
+    funcionarioId: createdIds.funcionarioId,
     mensagem: "Cadastro de funcionario realizado",
     ipOrigem,
     metadados: {
@@ -165,6 +217,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
 
   return {
     funcionario: mapEmployee(created),
+    senha_temporaria: senhaTemporaria,
   };
 }
 

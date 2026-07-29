@@ -36,6 +36,49 @@ function somenteDigitos(value) {
   return String(value || '').replace(/\D/g, '');
 }
 
+function formatarCpfCadastroAdmin(value) {
+  const cpf = somenteDigitos(value).slice(0, 11);
+  return cpf
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+}
+
+function calcularDigitoCpfCadastroAdmin(cpfParcial, fatorInicial) {
+  let soma = 0;
+  for (let indice = 0; indice < cpfParcial.length; indice += 1) {
+    soma += Number(cpfParcial[indice]) * (fatorInicial - indice);
+  }
+
+  const resto = (soma * 10) % 11;
+  return resto === 10 ? 0 : resto;
+}
+
+function validarCpfCadastroAdmin(value) {
+  const cpf = somenteDigitos(value);
+  if (cpf.length !== 11) {
+    return { valido: false, motivo: 'tamanho', cpf };
+  }
+
+  if (/^(\d)\1{10}$/.test(cpf)) {
+    return { valido: false, motivo: 'digitos', cpf };
+  }
+
+  const base = cpf.slice(0, 9);
+  const primeiroDigito = calcularDigitoCpfCadastroAdmin(base, 10);
+  const segundoDigito = calcularDigitoCpfCadastroAdmin(
+    `${base}${primeiroDigito}`,
+    11
+  );
+  const valido = cpf === `${base}${primeiroDigito}${segundoDigito}`;
+
+  return {
+    valido,
+    motivo: valido ? null : 'digitos',
+    cpf,
+  };
+}
+
 // Aceita diferentes representações de "verdadeiro" vindas da API
 // (boolean, número 1, ou strings como 'ativo'/'active'), já que nem
 // todos os endpoints retornam booleanos nativos para esse tipo de campo.
@@ -188,4 +231,15 @@ function getFuncionariosSemPonto() {
     );
   }
   return FUNCIONARIOS.filter(f => !funcionarioBateuPonto(f.id) && f.status === 'ativo');
+}
+
+// Exporta somente os utilitarios puros de CPF quando o arquivo e carregado
+// pelo runner Node. No navegador, as funcoes continuam disponiveis no escopo
+// global dos scripts administrativos.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    somenteDigitos,
+    formatarCpfCadastroAdmin,
+    validarCpfCadastroAdmin,
+  };
 }
