@@ -23,6 +23,7 @@ function renderizarRelatorio() {
   const elPres = document.getElementById('relatorio-presentes');
   const elAus = document.getElementById('relatorio-ausentes');
   const elGerado = document.getElementById('relatorio-gerado-por');
+  const error = RELATORIO_DATA_ERROR || FUNCIONARIOS_DATA_ERROR || RESUMO_DATA_ERROR;
   // Se o relatório vindo da API estiver vazio, monta uma versão local a
   // partir de FUNCIONARIOS + PONTOS_HOJE, marcando como 'ausente' quem
   // não tiver batido ponto — garante que a tabela nunca fique vazia por
@@ -41,19 +42,24 @@ function renderizarRelatorio() {
     };
   });
 
-  if (elData) elData.textContent = formatarDataReferencia(DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS);
-  if (elPres) elPres.textContent = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
-  if (elAus) elAus.textContent = RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
+  if (elData) elData.textContent = error
+    ? '—'
+    : formatarDataReferencia(DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS);
+  if (elPres) elPres.textContent = error ? '—' : RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
+  if (elAus) elAus.textContent = error ? '—' : RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
   if (elGerado) elGerado.textContent = ADMIN.nome;
 
   renderizarGraficoSemanalRelatorio();
 
   if (!tbody) return;
 
-  if (ADMIN_DATA_ERROR && !itens.length) {
-    // Só exibe a mensagem de erro da API quando não há nenhum item para
-    // mostrar; caso contrário, prefere exibir os dados disponíveis.
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nao foi possivel carregar relatorio</div><div style="font-size:12px;color:var(--text-300);">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
+  if (error) {
+    const state = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar o relatório',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    tbody.innerHTML = `<tr><td colspan="6">${state}</td></tr>`;
     return;
   }
 

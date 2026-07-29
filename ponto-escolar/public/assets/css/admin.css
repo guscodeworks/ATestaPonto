@@ -1,5 +1,6 @@
 /* Admin CSS Manifest */
 @import url("./admin/base.css");
+@import url("./loading.css?v=20260729-loading-review");
 @import url("./admin/dashboard.css");
 @import url("./admin/data-and-forms.css");
 @import url("./admin/components.css");

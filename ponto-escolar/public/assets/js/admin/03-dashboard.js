@@ -5,6 +5,17 @@
 function renderizarUltimosRegistros() {
   const tbody = document.getElementById('tbody-ultimos');
   const cardsMobile = document.getElementById('cards-ultimos-mobile');
+  const error = PONTOS_HOJE_DATA_ERROR || FUNCIONARIOS_DATA_ERROR;
+  if (error) {
+    const state = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar os registros',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5">${state}</td></tr>`;
+    if (cardsMobile) cardsMobile.innerHTML = state;
+    return;
+  }
   // Mostra apenas os 5 registros mais recentes, do mais novo para o mais antigo.
   const lista = PONTOS_HOJE.slice(-5).reverse();
 
@@ -68,6 +79,15 @@ function renderizarUltimosRegistros() {
 function renderizarGrafico() {
   const container = document.getElementById('grafico-presenca');
   if (!container) return;
+  const error = PONTOS_HOJE_DATA_ERROR || FUNCIONARIOS_DATA_ERROR || RESUMO_DATA_ERROR;
+  if (error) {
+    container.innerHTML = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar a presença',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    return;
+  }
 
   // "Pendente" = bateu ponto hoje mas ainda não concluiu o expediente
   // (sem saída registrada ou status diferente de 'completo').
@@ -145,6 +165,15 @@ function renderizarGrafico() {
 function renderizarAlertas() {
   const container = document.getElementById('lista-alertas');
   if (!container) return;
+  const error = PONTOS_HOJE_DATA_ERROR || FUNCIONARIOS_DATA_ERROR;
+  if (error) {
+    container.innerHTML = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar os alertas',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    return;
+  }
   const ausentes = getFuncionariosSemPonto();
   const inativos = FUNCIONARIOS.filter(f=>f.status==='inativo').length;
   // Cada regra de alerta é avaliada isoladamente e resulta em null quando

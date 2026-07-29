@@ -205,7 +205,14 @@ function atualizarFeedbackFuncionarios() {
   }
   if (PONTOS_HOJE_DATA_ERROR) {
     feedback.className = 'employees-feedback is-warning';
-    feedback.textContent = 'Funcionários carregados. O ponto de hoje está temporariamente indisponível.';
+    const message = document.createElement('span');
+    message.textContent = 'Funcionários carregados. O ponto de hoje está temporariamente indisponível.';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'ui-btn ui-btn-ghost ui-btn-sm';
+    retry.dataset.adminDataRetry = '';
+    retry.textContent = 'Tentar novamente';
+    feedback.replaceChildren(message, retry);
     return;
   }
   if (existemFiltrosFuncionarios()) {
@@ -250,7 +257,7 @@ function renderizarFuncionarios() {
       icon: 'triangle-alert',
       title: state.title,
       description: state.description,
-      retry: Number(FUNCIONARIOS_DATA_ERROR.status || 0) !== 401,
+      retry: ![401, 403].includes(Number(FUNCIONARIOS_DATA_ERROR.status || 0)),
     });
     if (tbody) tbody.innerHTML = `<tr><td colspan="7">${markup}</td></tr>`;
     if (cardList) cardList.innerHTML = markup;
@@ -276,21 +283,39 @@ function renderizarFuncionarios() {
 }
 
 async function recarregarListaFuncionarios() {
+  FUNCIONARIOS_ABORT_CONTROLLER?.abort();
+  const controller = new AbortController();
+  FUNCIONARIOS_ABORT_CONTROLLER = controller;
   FUNCIONARIOS_LOADING = true;
   FUNCIONARIOS_DATA_ERROR = null;
-  renderizarFuncionarios();
+  const carregamentos = [
+    document.querySelector('.employees-table-panel'),
+    document.getElementById('cards-funcionarios'),
+  ]
+    .filter(Boolean)
+    .map((elemento) => iniciarCarregamento(elemento, {
+      tamanho: 'md',
+      mensagem: 'Carregando funcionários',
+    }));
 
-  const request = carregarFuncionariosAdmin(obterFiltrosFuncionarios());
+  const request = carregarFuncionariosAdmin(obterFiltrosFuncionarios(), {
+    signal: controller.signal,
+  });
   const requestId = FUNCIONARIOS_REQUEST_ID;
   try {
     await request;
   } catch (error) {
+    if (error?.name === 'AbortError') return;
     if (error.status === 401) {
-      window.location.replace('/auth/govbr/login');
+      redirecionarAdminParaGovbr();
     }
   } finally {
     if (requestId === FUNCIONARIOS_REQUEST_ID) {
+      await Promise.all(carregamentos.map(finalizarCarregamento));
       FUNCIONARIOS_LOADING = false;
+      if (FUNCIONARIOS_ABORT_CONTROLLER === controller) {
+        FUNCIONARIOS_ABORT_CONTROLLER = null;
+      }
       renderizarFuncionarios();
     }
   }
@@ -525,12 +550,14 @@ async function confirmarAlteracaoStatusFuncionario(event) {
   const confirmation = isReactivation ? 'REATIVAR' : 'DESATIVAR';
   estadoStatusFuncionario.enviando = true;
   elements.form.setAttribute('aria-busy', 'true');
-  elements.submit.disabled = true;
-  elements.submit.classList.add('loading');
+  const carregamento = iniciarCarregamento(elements.submit, {
+    tamanho: 'sm',
+    mensagem: isReactivation ? 'Reativando...' : 'Desativando...',
+    mostrarMensagem: true,
+  });
   elements.close.disabled = true;
   elements.cancel.disabled = true;
   elements.confirmation.disabled = true;
-  if (isReactivation) elements.submitLabel.textContent = 'Reativando...';
 
   try {
     const response = await adminApiFetch(
@@ -549,21 +576,20 @@ async function confirmarAlteracaoStatusFuncionario(event) {
     );
   } catch (error) {
     if (error.status === 401) {
-      window.location.replace('/auth/govbr/login');
+      redirecionarAdminParaGovbr();
       return;
     }
     toast(
-      escapeHtml(error.message || 'Não foi possível alterar o acesso do funcionário.'),
+      error.message || 'Não foi possível alterar o acesso do funcionário.',
       'error'
     );
   } finally {
+    await finalizarCarregamento(carregamento);
     estadoStatusFuncionario.enviando = false;
     elements.form.removeAttribute('aria-busy');
-    elements.submit.classList.remove('loading');
     elements.close.disabled = false;
     elements.cancel.disabled = false;
     elements.confirmation.disabled = false;
-    if (isReactivation) elements.submitLabel.textContent = 'Reativar acesso';
     atualizarBotaoStatusFuncionario();
   }
 }
@@ -926,7 +952,7 @@ async function carregarFuncionarioEdicao() {
   } catch (error) {
     if (requestId !== estadoEdicaoFuncionario.requestId) return;
     if (error.status === 401) {
-      window.location.replace('/auth/govbr/login');
+      redirecionarAdminParaGovbr();
       return;
     }
     mostrarErroEdicao(error);
@@ -1020,8 +1046,11 @@ async function salvarEdicaoFuncionario(event) {
 
   estadoEdicaoFuncionario.salvando = true;
   elements.form.setAttribute('aria-busy', 'true');
-  elements.save.disabled = true;
-  elements.save.classList.add('loading');
+  const carregamento = iniciarCarregamento(elements.save, {
+    tamanho: 'sm',
+    mensagem: 'Salvando...',
+    mostrarMensagem: true,
+  });
   definirFeedbackEdicao('Salvando alterações…', 'info');
 
   try {
@@ -1042,7 +1071,7 @@ async function salvarEdicaoFuncionario(event) {
     definirFeedbackEdicao('Alterações salvas com sucesso.', 'success');
   } catch (error) {
     if (error.status === 401) {
-      window.location.replace('/auth/govbr/login');
+      redirecionarAdminParaGovbr();
       return;
     }
     definirFeedbackEdicao(
@@ -1050,9 +1079,9 @@ async function salvarEdicaoFuncionario(event) {
       'error'
     );
   } finally {
+    await finalizarCarregamento(carregamento);
     estadoEdicaoFuncionario.salvando = false;
     elements.form.removeAttribute('aria-busy');
-    elements.save.classList.remove('loading');
     atualizarBotaoSalvarEdicao();
   }
 }

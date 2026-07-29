@@ -1,0 +1,344 @@
+(function carregarSistemaDeLoading(global) {
+  'use strict';
+
+  const estados = new WeakMap();
+  const ATRASO_PADRAO_MS = 200;
+  const TEMPO_MINIMO_PADRAO_MS = 300;
+  let estadoGlobal = null;
+
+  function agora() {
+    return global.performance?.now?.() ?? Date.now();
+  }
+
+  function esperar(ms) {
+    return new Promise((resolve) => global.setTimeout(resolve, ms));
+  }
+
+  function normalizarElemento(elemento) {
+    if (typeof elemento === 'string') return document.querySelector(elemento);
+    return elemento instanceof Element ? elemento : null;
+  }
+
+  function prepararConteudoOriginal(botao) {
+    let original = Array.from(botao.children).find(
+      (child) => child.classList.contains('at-loading-original')
+    );
+    if (original) return original;
+
+    original = document.createElement('span');
+    original.className = 'at-loading-original';
+    while (botao.firstChild) original.appendChild(botao.firstChild);
+    botao.appendChild(original);
+    return original;
+  }
+
+  function criarIndicador({ variante, tamanho, mensagem, mostrarMensagem }) {
+    const indicador = document.createElement('span');
+    indicador.className = `at-loading-indicator at-loading-indicator--${variante}`;
+    indicador.setAttribute('role', 'status');
+    indicador.setAttribute('aria-live', 'polite');
+
+    const spinner = document.createElement('span');
+    spinner.className = `at-spinner at-spinner--${tamanho}`;
+    spinner.setAttribute('aria-hidden', 'true');
+
+    const texto = document.createElement('span');
+    texto.className = mostrarMensagem ? 'at-loading-message' : 'at-loading-sr-only';
+    texto.textContent = mensagem;
+
+    indicador.append(spinner, texto);
+    return indicador;
+  }
+
+  function iniciarCarregamento(elemento, opcoes = {}) {
+    const alvo = normalizarElemento(elemento);
+    if (!alvo) return null;
+
+    const existente = estados.get(alvo);
+    if (existente) return existente.handle;
+
+    const ehBotao = alvo.matches('button');
+    const variante = opcoes.variante || (ehBotao ? 'button' : 'local');
+    const tamanho = opcoes.tamanho || (variante === 'button' ? 'sm' : 'md');
+    const mensagem = String(opcoes.mensagem || 'Carregando');
+    const atrasoMs = Number.isFinite(opcoes.atrasoMs)
+      ? Math.max(0, opcoes.atrasoMs)
+      : ATRASO_PADRAO_MS;
+    const tempoMinimoMs = Number.isFinite(opcoes.tempoMinimoMs)
+      ? Math.max(0, opcoes.tempoMinimoMs)
+      : TEMPO_MINIMO_PADRAO_MS;
+
+    const estado = {
+      alvo,
+      variante,
+      tamanho,
+      mensagem,
+      mostrarMensagem: opcoes.mostrarMensagem ?? variante === 'local',
+      atrasoMs,
+      tempoMinimoMs,
+      indicador: null,
+      exibidoEm: null,
+      finalizando: null,
+      ariaBusyOriginal: alvo.getAttribute('aria-busy'),
+      desabilitadoOriginal: ehBotao ? alvo.disabled : null,
+      timer: null,
+      handle: null,
+    };
+
+    if (ehBotao) {
+      prepararConteudoOriginal(alvo);
+      alvo.disabled = true;
+      alvo.classList.add('at-loading-button');
+    } else {
+      alvo.classList.add('at-loading-host');
+    }
+    alvo.setAttribute('aria-busy', 'true');
+
+    estado.timer = global.setTimeout(() => {
+      if (!estados.has(alvo)) return;
+      estado.indicador = criarIndicador(estado);
+      alvo.appendChild(estado.indicador);
+      alvo.classList.add(ehBotao ? 'at-is-loading-button' : 'at-is-loading-local');
+      estado.exibidoEm = agora();
+    }, atrasoMs);
+
+    estado.handle = Object.freeze({
+      elemento: alvo,
+      finalizar: () => finalizarCarregamento(alvo),
+    });
+    estados.set(alvo, estado);
+    return estado.handle;
+  }
+
+  function finalizarCarregamento(referencia) {
+    const alvo = normalizarElemento(referencia?.elemento || referencia);
+    const estado = alvo ? estados.get(alvo) : null;
+    if (!estado) return Promise.resolve();
+    if (estado.finalizando) return estado.finalizando;
+
+    global.clearTimeout(estado.timer);
+    const restante = estado.exibidoEm === null
+      ? 0
+      : Math.max(estado.tempoMinimoMs - (agora() - estado.exibidoEm), 0);
+
+    estado.finalizando = esperar(restante).then(() => {
+      estado.indicador?.remove();
+      alvo.classList.remove(
+        'at-is-loading-button',
+        'at-is-loading-local',
+        'at-loading-button',
+        'at-loading-host'
+      );
+      if (estado.ariaBusyOriginal === null) alvo.removeAttribute('aria-busy');
+      else alvo.setAttribute('aria-busy', estado.ariaBusyOriginal);
+      if (estado.desabilitadoOriginal !== null) alvo.disabled = estado.desabilitadoOriginal;
+      estados.delete(alvo);
+    });
+
+    return estado.finalizando;
+  }
+
+  async function comCarregamento(elemento, operacao, opcoes = {}) {
+    if (typeof operacao !== 'function') {
+      throw new TypeError('A operação de carregamento deve ser uma função.');
+    }
+    const handle = iniciarCarregamento(elemento, opcoes);
+    try {
+      return await operacao();
+    } finally {
+      await finalizarCarregamento(handle);
+    }
+  }
+
+  function criarBotaoGlobal(texto, classe) {
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = classe;
+    botao.textContent = texto;
+    return botao;
+  }
+
+  function criarOverlayGlobal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'at-global-loading';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    const painel = document.createElement('div');
+    painel.className = 'at-global-loading-panel';
+    painel.tabIndex = -1;
+
+    const indicador = criarIndicador({
+      variante: 'global',
+      tamanho: 'md',
+      mensagem: 'Carregando',
+      mostrarMensagem: false,
+    });
+    indicador.classList.add('at-global-loading-spinner');
+
+    const titulo = document.createElement('h1');
+    titulo.className = 'at-global-loading-title';
+    titulo.id = 'at-global-loading-title';
+
+    const mensagem = document.createElement('p');
+    mensagem.className = 'at-global-loading-message';
+    mensagem.id = 'at-global-loading-message';
+    mensagem.setAttribute('aria-live', 'polite');
+
+    const acoes = document.createElement('div');
+    acoes.className = 'at-global-loading-actions';
+    acoes.hidden = true;
+
+    painel.append(indicador, titulo, mensagem, acoes);
+    overlay.appendChild(painel);
+    overlay.setAttribute('aria-labelledby', titulo.id);
+    overlay.setAttribute('aria-describedby', mensagem.id);
+
+    return { overlay, painel, indicador, titulo, mensagem, acoes };
+  }
+
+  function focarCarregamentoGlobal(estado) {
+    const primeiroControle = estado.elementos.acoes.querySelector('button');
+    global.requestAnimationFrame(() => {
+      (primeiroControle || estado.elementos.painel).focus();
+    });
+  }
+
+  function exibirCarregamentoGlobal(estado) {
+    if (!estado || estado !== estadoGlobal || estado.visivel) return;
+    global.clearTimeout(estado.timer);
+    estado.elementos.overlay.classList.add('is-visible');
+    estado.visivel = true;
+    estado.exibidoEm = agora();
+    focarCarregamentoGlobal(estado);
+  }
+
+  function atualizarCarregamentoGlobal(referencia, opcoes = {}) {
+    const estado = referencia?.estado || estadoGlobal;
+    if (!estado || estado !== estadoGlobal) return null;
+
+    const ehErro = opcoes.estado === 'erro';
+    estado.elementos.overlay.classList.toggle('is-error', ehErro);
+    estado.elementos.indicador.hidden = ehErro;
+    estado.elementos.titulo.textContent = String(
+      opcoes.titulo || (ehErro ? 'Não foi possível continuar' : 'Aguarde')
+    );
+    estado.elementos.mensagem.textContent = String(
+      opcoes.mensagem || (ehErro ? 'Tente novamente.' : 'Carregando...')
+    );
+    estado.elementos.acoes.replaceChildren();
+    estado.elementos.acoes.hidden = !ehErro;
+
+    if (ehErro) {
+      estado.elementos.mensagem.setAttribute('aria-live', 'assertive');
+      if (typeof opcoes.aoTentarNovamente === 'function') {
+        const retry = criarBotaoGlobal(
+          opcoes.textoTentarNovamente || 'Tentar novamente',
+          'at-global-loading-action is-primary'
+        );
+        retry.addEventListener('click', opcoes.aoTentarNovamente, { once: true });
+        estado.elementos.acoes.appendChild(retry);
+      }
+      if (typeof opcoes.aoSair === 'function') {
+        const exit = criarBotaoGlobal(
+          opcoes.textoSair || 'Sair',
+          'at-global-loading-action is-secondary'
+        );
+        exit.addEventListener('click', opcoes.aoSair, { once: true });
+        estado.elementos.acoes.appendChild(exit);
+      }
+    } else {
+      estado.elementos.mensagem.setAttribute('aria-live', 'polite');
+    }
+
+    if (ehErro || opcoes.exibirImediatamente) exibirCarregamentoGlobal(estado);
+    else if (estado.visivel) focarCarregamentoGlobal(estado);
+
+    return estado.handle;
+  }
+
+  function iniciarCarregamentoGlobal(opcoes = {}) {
+    if (estadoGlobal) {
+      return atualizarCarregamentoGlobal(estadoGlobal.handle, {
+        estado: 'carregando',
+        ...opcoes,
+      });
+    }
+
+    const elementos = criarOverlayGlobal();
+    const app = document.querySelector('.app-wrap');
+    const atrasoMs = Number.isFinite(opcoes.atrasoMs)
+      ? Math.max(0, opcoes.atrasoMs)
+      : ATRASO_PADRAO_MS;
+    const tempoMinimoMs = Number.isFinite(opcoes.tempoMinimoMs)
+      ? Math.max(0, opcoes.tempoMinimoMs)
+      : TEMPO_MINIMO_PADRAO_MS;
+    const estado = {
+      elementos,
+      app,
+      appInertOriginal: app?.hasAttribute('inert') || false,
+      focoOriginal: document.activeElement instanceof Element
+        ? document.activeElement
+        : null,
+      atrasoMs,
+      tempoMinimoMs,
+      timer: null,
+      visivel: false,
+      exibidoEm: null,
+      finalizando: null,
+      handle: null,
+    };
+    estado.handle = Object.freeze({ estado });
+    estadoGlobal = estado;
+
+    if (app) app.setAttribute('inert', '');
+    document.documentElement.setAttribute('data-global-loading', 'true');
+    document.body.appendChild(elementos.overlay);
+    atualizarCarregamentoGlobal(estado.handle, {
+      estado: 'carregando',
+      titulo: opcoes.titulo,
+      mensagem: opcoes.mensagem,
+      exibirImediatamente: atrasoMs === 0,
+    });
+    if (atrasoMs > 0) {
+      estado.timer = global.setTimeout(() => exibirCarregamentoGlobal(estado), atrasoMs);
+    }
+    return estado.handle;
+  }
+
+  async function finalizarCarregamentoGlobal(referencia) {
+    const estado = referencia?.estado || estadoGlobal;
+    if (!estado || estado !== estadoGlobal) return;
+    if (estado.finalizando) return estado.finalizando;
+
+    global.clearTimeout(estado.timer);
+    const restante = estado.exibidoEm === null
+      ? 0
+      : Math.max(estado.tempoMinimoMs - (agora() - estado.exibidoEm), 0);
+    estado.finalizando = esperar(restante).then(() => {
+      estado.elementos.overlay.remove();
+      if (estado.app && !estado.appInertOriginal) estado.app.removeAttribute('inert');
+      document.documentElement.removeAttribute('data-global-loading');
+      estadoGlobal = null;
+      if (estado.focoOriginal?.isConnected) estado.focoOriginal.focus();
+    });
+    return estado.finalizando;
+  }
+
+  const api = Object.freeze({
+    iniciar: iniciarCarregamento,
+    finalizar: finalizarCarregamento,
+    executar: comCarregamento,
+    iniciarGlobal: iniciarCarregamentoGlobal,
+    atualizarGlobal: atualizarCarregamentoGlobal,
+    finalizarGlobal: finalizarCarregamentoGlobal,
+  });
+
+  global.ATestaPontoLoading = api;
+  global.iniciarCarregamento = iniciarCarregamento;
+  global.finalizarCarregamento = finalizarCarregamento;
+  global.comCarregamento = comCarregamento;
+  global.iniciarCarregamentoGlobal = iniciarCarregamentoGlobal;
+  global.atualizarCarregamentoGlobal = atualizarCarregamentoGlobal;
+  global.finalizarCarregamentoGlobal = finalizarCarregamentoGlobal;
+})(window);
