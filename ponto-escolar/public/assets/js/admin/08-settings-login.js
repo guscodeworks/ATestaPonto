@@ -125,10 +125,19 @@ function iniciarFiltrosFuncionarios() {
   const inputBusca = document.getElementById('busca-funcionario');
   const filtroStatus = document.getElementById('filtro-status');
   const filtroCargo = document.getElementById('filtro-cargo');
+  let searchTimer = null;
 
-  const atualizar = () => renderizarFuncionarios(inputBusca?.value || '');
+  const reload = () => {
+    if (searchTimer) window.clearTimeout(searchTimer);
+    recarregarListaFuncionarios();
+  };
 
-  if (inputBusca) inputBusca.addEventListener('input', atualizar);
-  if (filtroStatus) filtroStatus.addEventListener('change', atualizar);
-  if (filtroCargo) filtroCargo.addEventListener('change', atualizar);
+  if (inputBusca) {
+    inputBusca.addEventListener('input', () => {
+      if (searchTimer) window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(reload, 300);
+    });
+  }
+  if (filtroStatus) filtroStatus.addEventListener('change', reload);
+  if (filtroCargo) filtroCargo.addEventListener('change', reload);
 }

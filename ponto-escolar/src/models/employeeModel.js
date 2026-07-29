@@ -12,36 +12,13 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-const EMPLOYEE_FILTER = Object.freeze({
-  ALL: "all",
-  ACTIVE: "active",
-  SEARCH: "search",
-  ACTIVE_SEARCH: "active_search",
-});
+// Consultas fixas: filtros opcionais continuam parametrizados e nenhum valor
+// recebido da requisicao e usado para montar SQL dinamicamente.
+const COUNT_EMPLOYEES_QUERY =
+  "SELECT COUNT(*) AS total FROM funcionarios f INNER JOIN cargos c ON f.cargo_id = c.id WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
-// Cada variante e uma query completa escolhida por uma allowlist fixa.
-// Nenhum fragmento recebido da requisicao e interpolado no SQL.
-const COUNT_EMPLOYEE_QUERIES = Object.freeze({
-  [EMPLOYEE_FILTER.ALL]:
-    "SELECT COUNT(*) AS total FROM funcionarios f",
-  [EMPLOYEE_FILTER.ACTIVE]:
-    "SELECT COUNT(*) AS total FROM funcionarios f WHERE f.ativo = ?",
-  [EMPLOYEE_FILTER.SEARCH]:
-    "SELECT COUNT(*) AS total FROM funcionarios f WHERE (f.nome LIKE CONCAT('%', ?, '%') OR f.email LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%'))",
-  [EMPLOYEE_FILTER.ACTIVE_SEARCH]:
-    "SELECT COUNT(*) AS total FROM funcionarios f WHERE f.ativo = ? AND (f.nome LIKE CONCAT('%', ?, '%') OR f.email LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%'))",
-});
-
-const LIST_EMPLOYEE_QUERIES = Object.freeze({
-  [EMPLOYEE_FILTER.ALL]:
-    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, f.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id ORDER BY f.id DESC LIMIT ? OFFSET ?",
-  [EMPLOYEE_FILTER.ACTIVE]:
-    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, f.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.ativo = ? ORDER BY f.id DESC LIMIT ? OFFSET ?",
-  [EMPLOYEE_FILTER.SEARCH]:
-    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, f.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE (f.nome LIKE CONCAT('%', ?, '%') OR f.email LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')) ORDER BY f.id DESC LIMIT ? OFFSET ?",
-  [EMPLOYEE_FILTER.ACTIVE_SEARCH]:
-    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, f.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.ativo = ? AND (f.nome LIKE CONCAT('%', ?, '%') OR f.email LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')) ORDER BY f.id DESC LIMIT ? OFFSET ?",
-});
+const LIST_EMPLOYEES_QUERY =
+  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON f.cargo_id = c.id WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%'))) ORDER BY f.id DESC LIMIT ? OFFSET ?";
 
 const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
   cpf: "UPDATE funcionarios SET cpf = ? WHERE id = ?",
@@ -55,37 +32,39 @@ const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
 
 // Monta filtros dinâmicos de forma parametrizada (evitando SQL injection) para
 // serem reaproveitados tanto na contagem quanto na listagem paginada de funcionários.
-function resolveEmployeeFilter({ ativo, q } = {}) {
-  const params = [];
-  const hasActiveFilter = typeof ativo === "boolean";
-  const hasSearchFilter = Boolean(q);
+function resolveEmployeeFilter({ ativo, cargo, q } = {}) {
+  const activeValue = typeof ativo === "boolean" ? (ativo ? 1 : 0) : null;
+  const cargoValue = String(cargo || "").trim().toUpperCase();
+  const searchValue = String(q || "").trim();
 
-  if (hasActiveFilter) {
-    params.push(ativo ? 1 : 0);
-  }
-
-  if (hasSearchFilter) {
-    params.push(q, q, q);
-  }
-
-  let key = EMPLOYEE_FILTER.ALL;
-  if (hasActiveFilter && hasSearchFilter) {
-    key = EMPLOYEE_FILTER.ACTIVE_SEARCH;
-  } else if (hasActiveFilter) {
-    key = EMPLOYEE_FILTER.ACTIVE;
-  } else if (hasSearchFilter) {
-    key = EMPLOYEE_FILTER.SEARCH;
-  }
-
-  return {
-    key,
-    params,
-  };
+  return [
+    activeValue,
+    activeValue,
+    cargoValue,
+    cargoValue,
+    searchValue,
+    searchValue,
+    searchValue,
+  ];
 }
 
 async function findById(employeeId, client) {
   return getClient(client).executeOne(
     "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, f.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
+    [employeeId]
+  );
+}
+
+async function findAdminEmployeeById(employeeId, client) {
+  return getClient(client).executeOne(
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1",
+    [employeeId]
+  );
+}
+
+async function findAdminEmployeeByIdForUpdate(client, employeeId) {
+  return getClient(client).executeOne(
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
@@ -168,17 +147,18 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
  * Reaproveita os filtros de listagem e contagem para manter paginacao coerente.
  */
 async function countEmployees(filters = {}) {
-  const { key, params } = resolveEmployeeFilter(filters);
-
-  return database.executeOne(COUNT_EMPLOYEE_QUERIES[key], params);
+  return database.executeOne(
+    COUNT_EMPLOYEES_QUERY,
+    resolveEmployeeFilter(filters)
+  );
 }
 
-async function listEmployees({ ativo, q, limit, offset } = {}) {
-  const { key, params } = resolveEmployeeFilter({ ativo, q });
+async function listEmployees({ ativo, cargo, q, limit, offset } = {}) {
+  const params = resolveEmployeeFilter({ ativo, cargo, q });
 
   return database.execute(
-    LIST_EMPLOYEE_QUERIES[key],
-    [...params, Number(limit), Number(offset)]
+    LIST_EMPLOYEES_QUERY,
+    [...params, String(Number(limit)), String(Number(offset))]
   );
 }
 
@@ -196,6 +176,17 @@ async function createEmployee(
   return getClient(client).execute(
     "INSERT INTO funcionarios (cargo_id, cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?, ?)",
     [cargoId, cpf, email, nome, telefone, ativo ? 1 : 0]
+  );
+}
+
+async function updateAdminEmployee(
+  client,
+  employeeId,
+  { nome, email, telefone }
+) {
+  return getClient(client).execute(
+    "UPDATE funcionarios SET nome = ?, email = ?, telefone = ? WHERE id = ?",
+    [nome, email, telefone, employeeId]
   );
 }
 
@@ -236,17 +227,26 @@ async function updateEmployee(client, employeeId, fields) {
   };
 }
 
-async function updateEmployeeStatus(employeeId, ativo) {
+async function updateEmployeeActivation(client, employeeId, ativo) {
   const activeValue = ativo ? 1 : 0;
-  return database.execute(
+  return getClient(client).execute(
     "UPDATE funcionarios SET ativo = ?, desativado_em = IF(? = 1, NULL, CURRENT_TIMESTAMP) WHERE id = ?",
     [activeValue, activeValue, employeeId]
+  );
+}
+
+async function findEmployeeActivationById(client, employeeId) {
+  return getClient(client).executeOne(
+    "SELECT id, ativo, desativado_em FROM funcionarios WHERE id = ? LIMIT 1",
+    [employeeId]
   );
 }
 
 module.exports = {
   withTransaction,
   findById,
+  findAdminEmployeeById,
+  findAdminEmployeeByIdForUpdate,
   findByIdForUpdate,
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
@@ -260,6 +260,8 @@ module.exports = {
   listEmployees,
   listForPointReport,
   createEmployee,
+  updateAdminEmployee,
   updateEmployee,
-  updateEmployeeStatus,
+  updateEmployeeActivation,
+  findEmployeeActivationById,
 };

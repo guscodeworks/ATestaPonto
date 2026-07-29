@@ -33,6 +33,12 @@ let RESUMO_PONTOS = {
 let DATA_REFERENCIA_PONTOS = null;
 let DATA_REFERENCIA_RELATORIO = null;
 let ADMIN_DATA_ERROR = null;
+let FUNCIONARIOS_DATA_ERROR = null;
+let PONTOS_HOJE_DATA_ERROR = null;
+let FUNCIONARIOS_LOADING = false;
+let FUNCIONARIOS_TOTAL_SISTEMA = null;
+let FUNCIONARIOS_TOTAL_FILTRADO = 0;
+let FUNCIONARIOS_REQUEST_ID = 0;
 
 const ADMIN_ENDPOINTS = {
   cargos: '/api/admin/cargos',
@@ -107,30 +113,93 @@ async function adminApiFetch(path, options = {}) {
   return payload;
 }
 
-async function carregarFuncionariosAdmin() {
-  // limit=100: paginação simplificada, assume que a base de funcionários
-  // não ultrapassa esse volume nesta tela administrativa.
-  const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.funcionarios}?limit=100`);
-  const data = getApiData(payload);
-  FUNCIONARIOS = Array.isArray(data?.items)
-    ? data.items.map(normalizarFuncionarioApi)
-    : [];
+async function carregarFuncionariosAdmin(filters = {}) {
+  const requestId = ++FUNCIONARIOS_REQUEST_ID;
+  const params = new URLSearchParams({ page: '1', limit: '100' });
+  const search = String(filters.q || '').trim();
+  const cpfSearch = /^[\d.\-\s]+$/.test(search)
+    ? search.replace(/\D/g, '')
+    : '';
+  const status = String(filters.status || '').trim();
+  const cargo = String(filters.cargo || '').trim().toUpperCase();
+
+  if (search) params.set('q', cpfSearch || search);
+  if (status === 'ativo' || status === 'true') params.set('ativo', 'true');
+  if (status === 'inativo' || status === 'false') params.set('ativo', 'false');
+  if (cargo) params.set('cargo', cargo);
+
+  const loadPage = async (page) => {
+    const pageParams = new URLSearchParams(params);
+    pageParams.set('page', String(page));
+    const payload = await adminApiFetch(
+      `${ADMIN_ENDPOINTS.funcionarios}?${pageParams.toString()}`
+    );
+    return getApiData(payload);
+  };
+
+  try {
+    const firstPage = await loadPage(1);
+    const parsedTotal = Number(firstPage?.pagination?.total || 0);
+    const total = Number.isFinite(parsedTotal) ? Math.max(parsedTotal, 0) : 0;
+    const pageLimit = Math.max(
+      Number(firstPage?.pagination?.limit || 100) || 100,
+      1
+    );
+    const totalPages = Math.max(Math.ceil(total / pageLimit), 1);
+    const remainingPages = totalPages > 1
+      ? await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_item, index) =>
+            loadPage(index + 2)
+          )
+        )
+      : [];
+
+    if (requestId !== FUNCIONARIOS_REQUEST_ID) return false;
+
+    const items = [firstPage, ...remainingPages].flatMap((page) =>
+      Array.isArray(page?.items) ? page.items : []
+    );
+    FUNCIONARIOS = items.map(normalizarFuncionarioApi);
+    FUNCIONARIOS_TOTAL_FILTRADO = total;
+    FUNCIONARIOS_DATA_ERROR = null;
+
+    if (!search && !status && !cargo) {
+      FUNCIONARIOS_TOTAL_SISTEMA = total;
+    }
+
+    return true;
+  } catch (error) {
+    if (requestId === FUNCIONARIOS_REQUEST_ID) {
+      FUNCIONARIOS = [];
+      FUNCIONARIOS_TOTAL_FILTRADO = 0;
+      FUNCIONARIOS_DATA_ERROR = error;
+    }
+    throw error;
+  }
 }
 
 async function carregarPontosHojeAdmin() {
-  const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosHoje);
-  const data = getApiData(payload);
+  try {
+    const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosHoje);
+    const data = getApiData(payload);
 
-  DATA_REFERENCIA_PONTOS = data?.data_referencia || null;
-  RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
-  PONTOS_HOJE = Array.isArray(data?.presentes)
-    ? data.presentes.map(normalizarResumoPontoApi)
-    : [];
-  // Reaproveita o normalizador de pontos e extrai apenas o funcionário,
-  // já que a API devolve os ausentes no mesmo formato de registro de ponto.
-  AUSENTES_HOJE = Array.isArray(data?.ausentes)
-    ? data.ausentes.map((item) => normalizarResumoPontoApi(item).funcionario)
-    : [];
+    DATA_REFERENCIA_PONTOS = data?.data_referencia || null;
+    RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+    PONTOS_HOJE = Array.isArray(data?.presentes)
+      ? data.presentes.map(normalizarResumoPontoApi)
+      : [];
+    // Reaproveita o normalizador de pontos e extrai apenas o funcionário,
+    // já que a API devolve os ausentes no mesmo formato de registro de ponto.
+    AUSENTES_HOJE = Array.isArray(data?.ausentes)
+      ? data.ausentes.map((item) => normalizarResumoPontoApi(item).funcionario)
+      : [];
+    PONTOS_HOJE_DATA_ERROR = null;
+  } catch (error) {
+    PONTOS_HOJE = [];
+    AUSENTES_HOJE = [];
+    PONTOS_HOJE_DATA_ERROR = error;
+    throw error;
+  }
 }
 
 async function carregarResumoAdmin() {

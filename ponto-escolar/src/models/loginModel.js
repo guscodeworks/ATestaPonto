@@ -37,8 +37,8 @@ async function findCredentialsByCpf(cpf) {
 
 async function createLogin(client, { funcionarioId, senhaHash }) {
   return getClient(client).execute(
-    "INSERT INTO login_funcionario (funcionario_id, senha_hash) VALUES (?, ?)",
-    [funcionarioId, senhaHash]
+    "INSERT INTO login_funcionario (funcionario_id, senha_hash, primeiro_acesso) VALUES (?, ?, ?)",
+    [funcionarioId, senhaHash, true]
   );
 }
 

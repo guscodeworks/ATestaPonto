@@ -21,6 +21,10 @@ async function createEmployee(req, res, next) {
       getAuditContext(req)
     );
 
+    // A resposta contem a senha temporaria em texto puro uma unica vez.
+    // Impede que navegadores e proxies armazenem essa credencial em cache.
+    res.set("Cache-Control", "no-store");
+    res.set("Pragma", "no-cache");
     return res.status(201).json({
       success: true,
       data: result,
@@ -33,6 +37,19 @@ async function createEmployee(req, res, next) {
 async function listEmployees(req, res, next) {
   try {
     const result = await employeeService.listEmployees(req.query);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getEmployee(req, res, next) {
+  try {
+    const result = await employeeService.getEmployee(Number(req.params.id));
 
     return res.status(200).json({
       success: true,
@@ -61,13 +78,30 @@ async function updateEmployee(req, res, next) {
   }
 }
 
-async function setEmployeeStatus(req, res, next) {
+async function deactivateEmployee(req, res, next) {
   try {
     const employeeId = Number(req.params.id);
-    const ativo = Boolean(req.body.ativo);
-    const result = await employeeService.setEmployeeStatus(
+    const result = await employeeService.deactivateEmployee(
       employeeId,
-      ativo,
+      req.body.confirmacao,
+      getAuditContext(req)
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function reactivateEmployee(req, res, next) {
+  try {
+    const employeeId = Number(req.params.id);
+    const result = await employeeService.reactivateEmployee(
+      employeeId,
+      req.body.confirmacao,
       getAuditContext(req)
     );
 
@@ -83,6 +117,8 @@ async function setEmployeeStatus(req, res, next) {
 module.exports = {
   createEmployee,
   listEmployees,
+  getEmployee,
   updateEmployee,
-  setEmployeeStatus,
+  deactivateEmployee,
+  reactivateEmployee,
 };
