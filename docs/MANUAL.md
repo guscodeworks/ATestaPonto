@@ -58,6 +58,8 @@ Se tiver o Git instalado, pode clonar o repositório:
 git clone <URL_DO_REPOSITORIO>
 cd Ponto-Escolar
 ```
+![clonando_reposítorio](img/passo%201/cloanando.PNG)
+
 
 ### Passo 2 — Instalar as dependências do servidor principal
 
