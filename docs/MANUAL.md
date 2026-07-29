@@ -199,6 +199,8 @@ npm start
 
 O funcionário pode fazer login usando CPF ou e-mail cadastrado:
 
+![tela_de_login]()
+
 | Campo | Descrição |
 |---|---|
 | CPF ou E-mail | CPF sem pontos e traços (apenas números) ou e-mail cadastrado pelo administrador. |
