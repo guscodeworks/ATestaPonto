@@ -91,24 +91,15 @@ async function findForPunchRegisterByIdForUpdate(client, employeeId) {
 
 async function findForPunchLoginByCpf(cpf) {
   return database.executeOne(
-    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash AS senha, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
+    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
     [cpf]
   );
 }
 
 async function findForPunchLoginByEmail(email) {
   return database.executeOne(
-    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash AS senha, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.email = ? AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
+    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.email = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
     [email]
-  );
-}
-
-// Usada no fluxo de login legado: retorna apenas funcionários ativos e inclui
-// "primeiro_acesso" pois esse fluxo trata diferente o caso de troca de senha obrigatória.
-async function findActiveForLegacyLoginByCpf(cpf) {
-  return database.executeOne(
-    "SELECT f.id, f.cpf, f.nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 LIMIT 1",
-    [cpf]
   );
 }
 
@@ -251,7 +242,6 @@ module.exports = {
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
   findForPunchLoginByEmail,
-  findActiveForLegacyLoginByCpf,
   findByCpfForUpdate,
   findByEmailForUpdate,
   findCpfConflictForUpdate,

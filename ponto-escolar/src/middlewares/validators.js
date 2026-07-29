@@ -25,6 +25,7 @@ const CARGO_TIME_FIELDS = [
   "saida",
 ];
 const TIME_REGEX = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function timeToSeconds(value) {
   const [hours, minutes, seconds = "0"] = String(value).split(":");
@@ -314,16 +315,30 @@ const qrShortcutIdParamValidator = withValidation([
 
 const validateQrShortcutValidator = withValidation([qrCodeRule()]);
 
-// Login e CPF são ambos opcionais aqui pois o funcionário pode autenticar-se por
-// qualquer um dos dois; a obrigatoriedade de ao menos um deles é resolvida na
-// camada de serviço, não na validação de formato.
 const funcionarioLoginValidator = withValidation([
-  body("login")
-    .optional()
-    .trim()
-    .isLength({ min: 3, max: 150 })
-    .withMessage("Login invalido"),
-  cpfRule("cpf", false),
+  body("identificador")
+    // Compatibilidade de entrada com clientes anteriores. Independentemente
+    // do nome recebido, apenas identificador normalizado segue para o service.
+    .customSanitizer((value, { req }) => {
+      const candidate = value ?? req.body.login ?? req.body.email ?? req.body.cpf;
+      const normalized = String(candidate || "").trim();
+      return normalized.includes("@")
+        ? normalized.toLowerCase()
+        : normalizeCpf(normalized);
+    })
+    .notEmpty()
+    .withMessage("CPF ou email e obrigatorio")
+    .bail()
+    .isLength({ max: 150 })
+    .withMessage("CPF ou email invalido")
+    .bail()
+    .custom((value) => {
+      const valid = value.includes("@")
+        ? EMAIL_REGEX.test(value)
+        : isValidCpf(value);
+      if (!valid) throw new Error("CPF ou email invalido");
+      return true;
+    }),
   body("senha")
     .isString()
     .withMessage("Senha deve ser texto")

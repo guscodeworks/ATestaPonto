@@ -15,14 +15,26 @@ function renderizarPontosHoje() {
     p,
     func: getFuncionarioPorId(p.funcionarioId) || p.funcionario,
   })).filter(x => x.func);
+  const error = PONTOS_HOJE_DATA_ERROR || FUNCIONARIOS_DATA_ERROR;
+  if (error) {
+    const state = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar os pontos',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    if (tbodyP) tbodyP.innerHTML = `<tr><td colspan="8">${state}</td></tr>`;
+    if (tbodyA) tbodyA.innerHTML = `<tr><td colspan="5">${state}</td></tr>`;
+    if (cardP) cardP.innerHTML = state;
+    if (cardA) cardA.innerHTML = state;
+    const countPresentes = document.getElementById('count-presentes');
+    const countAusentes = document.getElementById('count-ausentes');
+    if (countPresentes) countPresentes.textContent = '—';
+    if (countAusentes) countAusentes.textContent = '—';
+    return;
+  }
 
   if (tbodyP) {
-    if (ADMIN_DATA_ERROR && !lista.length) {
-      // Diferencia "erro ao carregar" de "sem presentes hoje": só mostra a
-      // mensagem de erro da API quando não há nenhum dado disponível.
-      tbodyP.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${icon('triangle-alert')}</div><div class="empty-title">Nao foi possivel carregar pontos</div><div class="pontos-empty-desc">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
-    } else {
-      tbodyP.innerHTML = lista.length ? lista.map(({ p, func }) => `
+    tbodyP.innerHTML = lista.length ? lista.map(({ p, func }) => `
         <tr>
           <td>
             <div class="td-user">
@@ -44,7 +56,6 @@ function renderizarPontosHoje() {
           </td>
         </tr>
       `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${icon('clipboard-list')}</div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
-    }
   }
 
   if (cardP) {

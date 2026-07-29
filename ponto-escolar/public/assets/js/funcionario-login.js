@@ -2,9 +2,9 @@
   'use strict';
 
   const form = document.getElementById('login-form');
-  const cpfInput = document.getElementById('cpf');
+  const identificadorInput = document.getElementById('identificador');
   const senhaInput = document.getElementById('senha');
-  const cpfError = document.getElementById('cpf-error');
+  const identificadorError = document.getElementById('identificador-error');
   const senhaError = document.getElementById('senha-error');
   const togglePw = document.getElementById('toggle-pw');
   const btnLogin = document.getElementById('btn-login');
@@ -12,13 +12,14 @@
   const toastStack = document.getElementById('toast-stack');
 
   if (
-    !form || !cpfInput || !senhaInput || !cpfError || !senhaError ||
+    !form || !identificadorInput || !senhaInput || !identificadorError || !senhaError ||
     !togglePw || !btnLogin || !remember || !toastStack
   ) {
     return;
   }
 
   let isSubmitting = false;
+  let loginLoading = null;
 
   function toast(message, type = 'info') {
     const el = document.createElement('div');
@@ -82,6 +83,24 @@
       calculateDigit(10) === Number(cpf[10]);
   }
 
+  function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  }
+
+  function normalizeIdentifier(value) {
+    const identifier = String(value || '').trim();
+    return identifier.includes('@')
+      ? identifier.toLowerCase()
+      : onlyDigits(identifier);
+  }
+
+  function formatIdentifierInput(value) {
+    const identifier = String(value || '');
+    return /^[\d.\-\s]*$/.test(identifier)
+      ? formatCpf(identifier)
+      : identifier.slice(0, 150);
+  }
+
   function setFieldError(input, errorElement, message) {
     errorElement.textContent = message;
     errorElement.classList.add('visible');
@@ -95,25 +114,39 @@
     input.removeAttribute('aria-invalid');
   }
 
-  function setLoading(loading) {
+  async function setLoading(loading) {
     isSubmitting = loading;
-    btnLogin.classList.toggle('loading', loading);
-    btnLogin.disabled = loading;
-    cpfInput.disabled = loading;
-    senhaInput.disabled = loading;
-    remember.disabled = loading;
-    togglePw.disabled = loading;
-    form.setAttribute('aria-busy', String(loading));
     if (loading) {
-      btnLogin.setAttribute('aria-label', 'Entrando');
+      loginLoading = iniciarCarregamento(btnLogin, {
+        tamanho: 'sm',
+        mensagem: 'Entrando...',
+        mostrarMensagem: true,
+      });
+      identificadorInput.disabled = true;
+      senhaInput.disabled = true;
+      remember.disabled = true;
+      togglePw.disabled = true;
+      form.setAttribute('aria-busy', 'true');
     } else {
-      btnLogin.removeAttribute('aria-label');
+      await finalizarCarregamento(loginLoading);
+      loginLoading = null;
+      identificadorInput.disabled = false;
+      senhaInput.disabled = false;
+      remember.disabled = false;
+      togglePw.disabled = false;
+      form.removeAttribute('aria-busy');
     }
   }
 
-  cpfInput.addEventListener('input', function () {
-    this.value = formatCpf(this.value);
-    clearFieldError(cpfInput, cpfError);
+  identificadorInput.addEventListener('input', function () {
+    this.value = this.value.slice(0, 150);
+    clearFieldError(identificadorInput, identificadorError);
+  });
+
+  identificadorInput.addEventListener('blur', function () {
+    if (!this.value.includes('@') && /^[\d.\-\s]*$/.test(this.value)) {
+      this.value = formatCpf(this.value);
+    }
   });
 
   senhaInput.addEventListener('input', function () {
@@ -134,16 +167,23 @@
       return;
     }
 
-    const cpf = cpfInput.value;
+    const identificador = identificadorInput.value.trim();
     const senha = senhaInput.value;
     let firstInvalidField = null;
 
-    clearFieldError(cpfInput, cpfError);
+    clearFieldError(identificadorInput, identificadorError);
     clearFieldError(senhaInput, senhaError);
 
-    if (!isValidCpf(cpf)) {
-      setFieldError(cpfInput, cpfError, 'CPF inválido. Verifique e tente novamente.');
-      firstInvalidField = cpfInput;
+    const identificadorValido = identificador.includes('@')
+      ? isValidEmail(identificador)
+      : isValidCpf(identificador);
+    if (!identificadorValido) {
+      setFieldError(
+        identificadorInput,
+        identificadorError,
+        'Informe um CPF ou e-mail válido.'
+      );
+      firstInvalidField = identificadorInput;
     }
 
     if (senha.length < 8) {
@@ -162,13 +202,12 @@
     }
 
     setLoading(true);
-    let loginSucceeded = false;
 
     try {
       const data = await apiRequest('/pontos/login', {
         method: 'POST',
         body: {
-          cpf: onlyDigits(cpf),
+          identificador: normalizeIdentifier(identificador),
           senha
         }
       });
@@ -176,36 +215,40 @@
       sessionStorage.setItem('funcionario_token', data.token);
       sessionStorage.setItem('funcionario_data', JSON.stringify(data.funcionario));
       sessionStorage.setItem('func_nome', data.funcionario?.nome || '');
-      sessionStorage.setItem('func_cpf', cpf);
+      sessionStorage.setItem('func_cpf', data.funcionario?.cpf || '');
 
       if (remember.checked) {
-        localStorage.setItem('func_saved_cpf', formatCpf(cpf));
+        const rememberedIdentifier = identificador.includes('@')
+          ? normalizeIdentifier(identificador)
+          : formatCpf(identificador);
+        localStorage.setItem('func_saved_identificador', rememberedIdentifier);
+        localStorage.removeItem('func_saved_cpf');
       } else {
+        localStorage.removeItem('func_saved_identificador');
         localStorage.removeItem('func_saved_cpf');
       }
 
-      loginSucceeded = true;
       window.location.href = '/funcionario';
     } catch (error) {
       const message = error instanceof TypeError
         ? 'Não foi possível conectar ao servidor. Tente novamente.'
-        : 'CPF ou senha inválidos.';
+        : 'CPF/e-mail ou senha inválidos.';
       toast(message, 'error');
     } finally {
-      if (!loginSucceeded) {
-        setLoading(false);
-      }
+      await setLoading(false);
     }
   });
 
-  const savedCpf = localStorage.getItem('func_saved_cpf');
-  if (savedCpf) {
-    cpfInput.value = formatCpf(savedCpf);
+  const savedIdentifier = localStorage.getItem('func_saved_identificador') ||
+    localStorage.getItem('func_saved_cpf');
+  if (savedIdentifier) {
+    identificadorInput.value = formatIdentifierInput(savedIdentifier);
     remember.checked = true;
   }
 
   remember.addEventListener('change', function () {
     if (!this.checked) {
+      localStorage.removeItem('func_saved_identificador');
       localStorage.removeItem('func_saved_cpf');
     }
   });

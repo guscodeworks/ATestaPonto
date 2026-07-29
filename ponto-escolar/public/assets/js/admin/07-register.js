@@ -245,11 +245,13 @@ function iniciarFormRegistro() {
     }
 
     const btn = document.getElementById('btn-registrar');
-    const botaoEstavaDesabilitado = Boolean(btn?.disabled);
     form.dataset.cadastroEmAndamento = 'true';
     form.setAttribute('aria-busy', 'true');
-    if (btn) btn.disabled = true;
-    if (btn) btn.classList.add('loading');
+    const carregamento = iniciarCarregamento(btn, {
+      tamanho: 'sm',
+      mensagem: 'Registrando...',
+      mostrarMensagem: true,
+    });
 
     try {
       const response = await adminApiFetch(ADMIN_ENDPOINTS.funcionarios, {
@@ -277,20 +279,20 @@ function iniciarFormRegistro() {
         FUNCIONARIOS.unshift(normalizarFuncionarioApi(funcionarioCriado));
       }
 
-      toast(`Funcionario "${nome}" cadastrado com sucesso.`, 'success');
       form.reset();
       atualizarPreview();
-      if (!senhaTemporaria || !mostrarSenhaTemporaria(nome, senhaTemporaria)) {
+      if (senhaTemporaria && mostrarSenhaTemporaria(nome, senhaTemporaria)) {
+        toast(`Funcionario "${nome}" cadastrado com sucesso.`, 'success');
+      } else {
         toast('Funcionario cadastrado, mas nao foi possivel exibir a senha temporaria.', 'error');
       }
     } catch (error) {
       toast(error.message || 'Nao foi possivel cadastrar o funcionario.', 'error');
       if (error.status === 401) {
-        window.location.replace('/auth/govbr/login');
+        redirecionarAdminParaGovbr();
       }
     } finally {
-      if (btn) btn.classList.remove('loading');
-      if (btn) btn.disabled = botaoEstavaDesabilitado;
+      await finalizarCarregamento(carregamento);
       delete form.dataset.cadastroEmAndamento;
       form.removeAttribute('aria-busy');
     }

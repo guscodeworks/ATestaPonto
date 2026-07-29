@@ -32,6 +32,17 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function criarEstadoErroDadosAdmin(titulo, mensagem, permitirRetry = true) {
+  return `
+    <div class="empty-state admin-data-error" role="alert">
+      <div class="empty-icon"><img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true"></div>
+      <div class="empty-title">${escapeHtml(titulo)}</div>
+      <div class="admin-data-error-description">${escapeHtml(mensagem || 'Tente novamente em alguns instantes.')}</div>
+      ${permitirRetry ? '<button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-admin-data-retry>Tentar novamente</button>' : ''}
+    </div>
+  `;
+}
+
 function somenteDigitos(value) {
   return String(value || '').replace(/\D/g, '');
 }
