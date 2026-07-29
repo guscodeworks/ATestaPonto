@@ -4,26 +4,9 @@ O ATestaPonto é um sistema web criado para modernizar o controle de presença d
 
 **Tecnologias principais:** Node.js · Express.js · MySQL · JavaScript · HTML · CSS · QR Code
 
-## Índice
-
-- [Sobre o Projeto](#sobre-o-projeto)
-- [Desenvolvedores](#desenvolvedores)
-- [Tecnologias Utilizadas](#tecnologias-utilizadas)
-- [Requisitos para Instalação](#requisitos-para-instalação)
-- [Estrutura do Projeto](#estrutura-do-projeto)
-- [Instalação](#instalação)
-- [Configuração](#configuração)
-- [Como Executar](#como-executar)
-- [Como Usar o Sistema](#como-usar-o-sistema)
-- [Funcionalidades Principais](#funcionalidades-principais)
-- [Segurança do Sistema](#segurança-do-sistema)
-- [Possíveis Erros e Soluções](#possíveis-erros-e-soluções)
-- [Observações](#observações)
-- [Conclusão](#conclusão)
 
 ## Sobre o Projeto
 
-### O que é o Sistema
 
 ### Objetivo do Projeto
 
