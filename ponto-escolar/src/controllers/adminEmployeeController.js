@@ -47,6 +47,19 @@ async function listEmployees(req, res, next) {
   }
 }
 
+async function getEmployee(req, res, next) {
+  try {
+    const result = await employeeService.getEmployee(Number(req.params.id));
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function updateEmployee(req, res, next) {
   try {
     const employeeId = Number(req.params.id);
@@ -65,13 +78,30 @@ async function updateEmployee(req, res, next) {
   }
 }
 
-async function setEmployeeStatus(req, res, next) {
+async function deactivateEmployee(req, res, next) {
   try {
     const employeeId = Number(req.params.id);
-    const ativo = Boolean(req.body.ativo);
-    const result = await employeeService.setEmployeeStatus(
+    const result = await employeeService.deactivateEmployee(
       employeeId,
-      ativo,
+      req.body.confirmacao,
+      getAuditContext(req)
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function reactivateEmployee(req, res, next) {
+  try {
+    const employeeId = Number(req.params.id);
+    const result = await employeeService.reactivateEmployee(
+      employeeId,
+      req.body.confirmacao,
       getAuditContext(req)
     );
 
@@ -87,6 +117,8 @@ async function setEmployeeStatus(req, res, next) {
 module.exports = {
   createEmployee,
   listEmployees,
+  getEmployee,
   updateEmployee,
-  setEmployeeStatus,
+  deactivateEmployee,
+  reactivateEmployee,
 };

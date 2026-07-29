@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 const { randomBytes } = require("node:crypto");
 const env = require("../config/env");
 const { logger } = require("../utils/logger");
-const { maskCpf } = require("../utils/cpf");
+const { formatCpf, maskCpf } = require("../utils/cpf");
 const {
   BadRequestError,
   ConflictError,
@@ -16,6 +16,17 @@ const loginModel = require("../models/loginModel");
 const cargoModel = require("../models/cargoModel");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
+const EDITABLE_CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR"]);
+const EDITABLE_EMPLOYEE_FIELDS = new Set([
+  "nome",
+  "email",
+  "telefone",
+  "cargo",
+  "entrada",
+  "saida_almoco",
+  "retorno_almoco",
+  "saida",
+]);
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
 // CPF sempre mascarado ao sair da API, evitando expor o dado completo em
@@ -35,19 +46,46 @@ function mapEmployee(employee) {
   };
 }
 
-async function resolveCargo(tx, requestedCargoId) {
-  const cargo = await cargoModel.findByIdForUpdate(tx, requestedCargoId);
-  if (!cargo?.id) {
-    throw new BadRequestError("cargo_id informado nao existe");
-  }
+function mapListedEmployee(employee) {
   return {
-    id: Number(cargo.id),
-    cargo: String(cargo.cargo),
-    entrada: String(cargo.entrada),
-    saidaAlmoco: String(cargo.saida_almoco),
-    retornoAlmoco: String(cargo.retorno_almoco),
-    saida: String(cargo.saida),
+    id: Number(employee.id),
+    nome: employee.nome,
+    cpf: maskCpf(employee.cpf),
+    email: employee.email,
+    telefone: employee.telefone || null,
+    ativo: Boolean(employee.ativo),
+    desativado_em: employee.desativado_em || null,
+    criado_em: employee.criado_em,
+    cargo_id: Number(employee.cargo_id),
+    cargo: String(employee.cargo),
+    entrada: String(employee.entrada),
+    saida_almoco: String(employee.saida_almoco),
+    retorno_almoco: String(employee.retorno_almoco),
+    saida: String(employee.saida),
   };
+}
+
+function mapEditableEmployee(employee) {
+  return {
+    id: Number(employee.id),
+    nome: employee.nome,
+    cpf: formatCpf(employee.cpf),
+    email: employee.email,
+    telefone: employee.telefone || null,
+    cargo: String(employee.cargo),
+    entrada: String(employee.entrada),
+    saida_almoco: String(employee.saida_almoco),
+    retorno_almoco: String(employee.retorno_almoco),
+    saida: String(employee.saida),
+  };
+}
+
+function normalizeActiveFilter(value) {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  return value === true || value === 1 || value === "true" || value === "1";
 }
 
 function readCargoSchedule(body = {}) {
@@ -225,19 +263,23 @@ async function listEmployees(query = {}) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
   const offset = (page - 1) * limit;
-  const ativo = query.ativo;
+  // Express 5 expoe req.query por getter; sanitizadores podem validar sem
+  // substituir o valor original. Normaliza novamente na regra de negocio.
+  const ativo = normalizeActiveFilter(query.ativo);
+  const cargo = String(query.cargo || "").trim().toUpperCase();
   const q = String(query.q || "").trim();
 
-  const totalRows = await employeeModel.countEmployees({ ativo, q });
+  const totalRows = await employeeModel.countEmployees({ ativo, cargo, q });
   const employees = await employeeModel.listEmployees({
     ativo,
+    cargo,
     q,
     limit,
     offset,
   });
 
   return {
-    items: employees.map(mapEmployee),
+    items: employees.map(mapListedEmployee),
     pagination: {
       page,
       limit,
@@ -246,98 +288,154 @@ async function listEmployees(query = {}) {
   };
 }
 
-/**
- * Atualiza dados do funcionario e credenciais sem separar o login do cadastro.
- */
-async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
-  const nome = body.nome;
-  const cpf = body.cpf;
-  const email = body.email;
-  const senha = body.senha;
-  const ativo = body.ativo;
-  const cargoId = body.cargo_id;
-
-  // Atualização é parcial (PATCH): ao menos um campo precisa ter sido enviado,
-  // senão a requisição não teria efeito algum.
-  const hasAnyField =
-    nome !== undefined ||
-    cpf !== undefined ||
-    email !== undefined ||
-    senha !== undefined ||
-    ativo !== undefined ||
-    cargoId !== undefined;
-
-  if (!hasAnyField) {
-    throw new BadRequestError("Nenhum campo para atualizar foi enviado");
+async function getEmployee(employeeId) {
+  const employee = await employeeModel.findAdminEmployeeById(employeeId);
+  if (!employee) {
+    throw new NotFoundError("Funcionario nao encontrado");
   }
 
-  // Toda a validação de conflito + atualização roda em transação, com os
-  // registros bloqueados via FOR UPDATE (findByIdForUpdate, findCpfConflictForUpdate
-  // etc.), evitando que duas requisições concorrentes criem uma duplicidade de
-  // CPF/email que passaria despercebida se as checagens fossem feitas fora da transação.
-  await employeeModel.withTransaction(async (tx) => {
-    const existing = await employeeModel.findByIdForUpdate(tx, employeeId);
+  return {
+    funcionario: mapEditableEmployee(employee),
+  };
+}
+
+function resolveEditableEmployee(body, existing) {
+  const fields = Object.keys(body || {});
+  if (
+    fields.length === 0 ||
+    fields.some((field) => !EDITABLE_EMPLOYEE_FIELDS.has(field))
+  ) {
+    throw new BadRequestError("Campos de atualizacao invalidos");
+  }
+
+  const cargo = String(
+    body.cargo !== undefined ? body.cargo : existing.cargo
+  )
+    .trim()
+    .toUpperCase();
+  if (!EDITABLE_CARGO_TYPES.has(cargo)) {
+    throw new BadRequestError("cargo invalido");
+  }
+
+  const sourceTimes = {
+    entrada: body.entrada !== undefined ? body.entrada : existing.entrada,
+    saidaAlmoco:
+      body.saida_almoco !== undefined
+        ? body.saida_almoco
+        : existing.saida_almoco,
+    retornoAlmoco:
+      body.retorno_almoco !== undefined
+        ? body.retorno_almoco
+        : existing.retorno_almoco,
+    saida: body.saida !== undefined ? body.saida : existing.saida,
+  };
+  const times = Object.fromEntries(
+    Object.entries(sourceTimes).map(([field, value]) => [
+      field,
+      String(value || "").trim(),
+    ])
+  );
+
+  if (Object.values(times).some((time) => !TIME_PATTERN.test(time))) {
+    throw new BadRequestError("Horarios do cargo invalidos");
+  }
+
+  const orderedTimes = [
+    times.entrada,
+    times.saidaAlmoco,
+    times.retornoAlmoco,
+    times.saida,
+  ].map((time) => {
+    const [hours, minutes, seconds = "0"] = time.split(":");
+    return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+  });
+  if (
+    !orderedTimes.every(
+      (time, index) => index === 0 || orderedTimes[index - 1] < time
+    )
+  ) {
+    throw new BadRequestError(
+      "Horarios devem seguir entrada < saida_almoco < retorno_almoco < saida"
+    );
+  }
+
+  const toDatabaseTime = (time) => (time.length === 5 ? `${time}:00` : time);
+  return {
+    nome:
+      body.nome !== undefined
+        ? String(body.nome).trim()
+        : String(existing.nome),
+    email:
+      body.email !== undefined
+        ? String(body.email).trim().toLowerCase()
+        : String(existing.email).trim().toLowerCase(),
+    telefone:
+      body.telefone !== undefined
+        ? String(body.telefone || "").replace(/\D/g, "") || null
+        : existing.telefone || null,
+    cargoSchedule: {
+      cargo,
+      entrada: toDatabaseTime(times.entrada),
+      saidaAlmoco: toDatabaseTime(times.saidaAlmoco),
+      retornoAlmoco: toDatabaseTime(times.retornoAlmoco),
+      saida: toDatabaseTime(times.saida),
+    },
+  };
+}
+
+/**
+ * Atualiza o funcionario e seu cargo exclusivo como uma unica operacao atomica.
+ */
+async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
+  const updated = await employeeModel.withTransaction(async (tx) => {
+    const existing = await employeeModel.findAdminEmployeeByIdForUpdate(
+      tx,
+      employeeId
+    );
     if (!existing) {
       throw new NotFoundError("Funcionario nao encontrado");
     }
 
-    const fields = {};
-
-    if (cpf !== undefined) {
-      const normalizedCpf = String(cpf).trim();
-      // Só verifica conflito de CPF se o valor realmente mudou, evitando que o
-      // próprio funcionário conflite consigo mesmo ao reenviar o mesmo CPF.
-      if (normalizedCpf !== existing.cpf) {
-        const cpfExists = await employeeModel.findCpfConflictForUpdate(
-          tx,
-          normalizedCpf,
-          employeeId
-        );
-        if (cpfExists) {
-          throw new ConflictError("CPF ja cadastrado");
-        }
-
-        fields.cpf = normalizedCpf;
-      }
+    const values = resolveEditableEmployee(body, existing);
+    const emailExists = await employeeModel.findEmailConflictForUpdate(
+      tx,
+      values.email,
+      employeeId
+    );
+    if (emailExists) {
+      throw new ConflictError("Email ja cadastrado");
     }
 
-    if (email !== undefined) {
-      const normalizedEmail = String(email).trim().toLowerCase();
-      if (normalizedEmail !== String(existing.email || "").toLowerCase()) {
-        const emailExists = await employeeModel.findEmailConflictForUpdate(
-          tx,
-          normalizedEmail,
-          employeeId
-        );
-        if (emailExists) {
-          throw new ConflictError("Email ja cadastrado");
-        }
-      }
-      fields.email = normalizedEmail;
+    const employeeResult = await employeeModel.updateAdminEmployee(
+      tx,
+      employeeId,
+      values
+    );
+    if (!employeeResult.affectedRows) {
+      throw new NotFoundError("Funcionario nao encontrado");
     }
 
-    if (nome !== undefined) {
-      fields.nome = String(nome).trim();
+    const cargoResult = await cargoModel.updateCargo(
+      tx,
+      existing.cargo_id,
+      values.cargoSchedule
+    );
+    if (!cargoResult.affectedRows) {
+      throw new Error("Falha ao atualizar o cargo do funcionario");
     }
 
-    if (ativo !== undefined) {
-      fields.ativo = ativo ? 1 : 0;
-    }
-
-    if (cargoId !== undefined) {
-      const cargoTemplate = await resolveCargo(tx, Number(cargoId));
-      await cargoModel.updateCargo(tx, existing.cargo_id, cargoTemplate);
-    }
-
-    if (senha !== undefined) {
-      const senhaHash = await bcrypt.hash(String(senha), env.BCRYPT_SALT_ROUNDS);
-      await loginModel.updateSenha(tx, employeeId, senhaHash);
-    }
-
-    await employeeModel.updateEmployee(tx, employeeId, fields);
+    return {
+      ...existing,
+      nome: values.nome,
+      email: values.email,
+      telefone: values.telefone,
+      cargo: values.cargoSchedule.cargo,
+      entrada: values.cargoSchedule.entrada,
+      saida_almoco: values.cargoSchedule.saidaAlmoco,
+      retorno_almoco: values.cargoSchedule.retornoAlmoco,
+      saida: values.cargoSchedule.saida,
+    };
   });
-
-  const updated = await employeeModel.findById(employeeId);
 
   await registerAuditLog({
     evento: "funcionario_alterado",
@@ -346,27 +444,62 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     mensagem: "Dados de funcionario alterados",
     ipOrigem,
     metadados: {
-      cpf: updated.cpf,
       email: updated.email,
       cargo_id: updated.cargo_id,
     },
   });
 
   return {
-    funcionario: mapEmployee(updated),
+    funcionario: mapEditableEmployee(updated),
   };
 }
 
-async function setEmployeeStatus(
+async function changeEmployeeActivation(
   employeeId,
   ativo,
+  confirmation,
   { adminId, ipOrigem } = {}
 ) {
-  const result = await employeeModel.updateEmployeeStatus(employeeId, ativo);
-
-  if (!result.affectedRows) {
-    throw new NotFoundError("Funcionario nao encontrado");
+  const expectedConfirmation = ativo ? "REATIVAR" : "DESATIVAR";
+  if (confirmation !== expectedConfirmation) {
+    throw new BadRequestError(
+      `Confirmacao invalida. Informe ${expectedConfirmation}`
+    );
   }
+
+  const updated = await employeeModel.withTransaction(async (tx) => {
+    const existing = await employeeModel.findByIdForUpdate(tx, employeeId);
+    if (!existing) {
+      throw new NotFoundError("Funcionario nao encontrado");
+    }
+
+    if (Boolean(existing.ativo) === ativo) {
+      throw new ConflictError(
+        ativo
+          ? "Funcionario ja esta ativo"
+          : "Funcionario ja esta inativo"
+      );
+    }
+
+    const result = await employeeModel.updateEmployeeActivation(
+      tx,
+      employeeId,
+      ativo
+    );
+    if (!result.affectedRows) {
+      throw new Error("Falha ao atualizar o status do funcionario");
+    }
+
+    const status = await employeeModel.findEmployeeActivationById(
+      tx,
+      employeeId
+    );
+    if (!status) {
+      throw new Error("Falha ao consultar o status atualizado do funcionario");
+    }
+
+    return status;
+  });
 
   await registerAuditLog({
     evento: ativo ? "funcionario_ativado" : "funcionario_desativado",
@@ -377,14 +510,35 @@ async function setEmployeeStatus(
   });
 
   return {
-    id: employeeId,
-    ativo,
+    id: Number(updated.id),
+    ativo: Boolean(updated.ativo),
+    desativado_em: updated.desativado_em || null,
   };
+}
+
+async function deactivateEmployee(employeeId, confirmation, auditContext) {
+  return changeEmployeeActivation(
+    employeeId,
+    false,
+    confirmation,
+    auditContext
+  );
+}
+
+async function reactivateEmployee(employeeId, confirmation, auditContext) {
+  return changeEmployeeActivation(
+    employeeId,
+    true,
+    confirmation,
+    auditContext
+  );
 }
 
 module.exports = {
   createEmployee,
   listEmployees,
+  getEmployee,
   updateEmployee,
-  setEmployeeStatus,
+  deactivateEmployee,
+  reactivateEmployee,
 };

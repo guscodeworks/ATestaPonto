@@ -28,19 +28,34 @@
       '#stat-total,#hero-presentes,#relatorio-presentes,#grafico-presenca'
     ));
     const precisaRelatorio = Boolean(document.getElementById('tbody-relatorio'));
+    const paginaListaFuncionarios = Boolean(
+      document.getElementById('tbody-funcionarios')
+    );
 
     if (precisaFuncionarios || precisaPontosHoje || precisaResumo || precisaRelatorio) {
-      await carregarDadosAdmin({
-        includeEmployees: precisaFuncionarios,
-        includeToday: precisaPontosHoje,
-        includeSummary: precisaResumo,
-        includeReport: precisaRelatorio,
-      });
+      if (paginaListaFuncionarios) {
+        FUNCIONARIOS_LOADING = true;
+        renderizarFuncionarios();
+      }
+      try {
+        await carregarDadosAdmin({
+          includeEmployees: precisaFuncionarios,
+          includeToday: precisaPontosHoje,
+          includeSummary: precisaResumo,
+          includeReport: precisaRelatorio,
+        });
+      } finally {
+        if (paginaListaFuncionarios) FUNCIONARIOS_LOADING = false;
+      }
     }
 
     // Erros 401 já são tratados dentro de carregarDadosAdmin (redirecionamento
     // para o login); aqui só é necessário avisar o usuário sobre outras falhas.
-    if (ADMIN_DATA_ERROR && ADMIN_DATA_ERROR.status !== 401) {
+    if (
+      ADMIN_DATA_ERROR &&
+      ADMIN_DATA_ERROR.status !== 401 &&
+      !paginaListaFuncionarios
+    ) {
       toast(ADMIN_DATA_ERROR.message || 'Nao foi possivel carregar dados administrativos.', 'error');
     }
 

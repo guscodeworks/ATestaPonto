@@ -2,20 +2,25 @@ const { Router } = require("express");
 const {
   createEmployee,
   listEmployees,
+  getEmployee,
   updateEmployee,
-  setEmployeeStatus,
+  deactivateEmployee,
+  reactivateEmployee,
 } = require("../controllers/adminEmployeeController");
 const { sensitiveLimiter } = require("../middlewares/rateLimiters");
 const {
   createFuncionarioValidator,
+  employeeIdValidator,
   updateFuncionarioValidator,
-  funcionarioStatusValidator,
+  deactivateEmployeeValidator,
+  reactivateEmployeeValidator,
   paginationValidator,
 } = require("../middlewares/validators");
 
 const router = Router();
 
 router.get("/", paginationValidator, listEmployees);
+router.get("/:id", employeeIdValidator, getEmployee);
 router.post("/", sensitiveLimiter, createFuncionarioValidator, createEmployee);
 router.patch(
   "/:id",
@@ -24,10 +29,16 @@ router.patch(
   updateEmployee
 );
 router.patch(
-  "/:id/status",
+  "/:id/desativar",
   sensitiveLimiter,
-  funcionarioStatusValidator,
-  setEmployeeStatus
+  deactivateEmployeeValidator,
+  deactivateEmployee
+);
+router.patch(
+  "/:id/reativar",
+  sensitiveLimiter,
+  reactivateEmployeeValidator,
+  reactivateEmployee
 );
 
 module.exports = router;

@@ -145,7 +145,7 @@ function normalizarFuncionarioApi(funcionario = {}) {
     cargo_id: cargoId ? Number(cargoId) : null,
     email: String(funcionario.email || ''),
     cpf: String(funcionario.cpf || ''),
-    tel: funcionario.tel || funcionario.telefone || funcionario.celular || 'Nao disponivel na API',
+    tel: funcionario.tel || funcionario.telefone || funcionario.celular || null,
     status: ativo ? 'ativo' : 'inativo',
     ativo,
     admissao: formatarDataApi(funcionario.criado_em || funcionario.admissao) || 'Nao informado',

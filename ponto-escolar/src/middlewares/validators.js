@@ -7,6 +7,17 @@ const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
 // Caminho aceito para links de acesso via QR Code (com ou sem barra inicial/final).
 const QR_ACCESS_PATH_REGEX = /^\/?ponto\/acessar\/?$/i;
 const CARGO_TYPES = ["FUNCIONARIO", "INSPETOR", "PROFESSOR"];
+const EDITABLE_CARGO_TYPES = ["FUNCIONARIO", "INSPETOR"];
+const EDITABLE_EMPLOYEE_FIELDS = new Set([
+  "nome",
+  "email",
+  "telefone",
+  "cargo",
+  "entrada",
+  "saida_almoco",
+  "retorno_almoco",
+  "saida",
+]);
 const CARGO_TIME_FIELDS = [
   "entrada",
   "saida_almoco",
@@ -168,20 +179,42 @@ const createFuncionarioValidator = withValidation([
     .toBoolean(),
 ]);
 
+const employeeIdValidator = withValidation([
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID de funcionario invalido")
+    .toInt(),
+]);
+
 const updateFuncionarioValidator = withValidation([
   param("id")
     .isInt({ min: 1 })
     .withMessage("ID de funcionario invalido")
     .toInt(),
+  body().custom((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("Corpo da requisicao invalido");
+    }
+
+    const fields = Object.keys(value);
+    if (fields.length === 0) {
+      throw new Error("Informe ao menos um campo para atualizacao");
+    }
+
+    if (fields.some((field) => !EDITABLE_EMPLOYEE_FIELDS.has(field))) {
+      throw new Error("A requisicao contem campos nao permitidos");
+    }
+
+    return true;
+  }),
   body("nome")
     .optional()
     .trim()
-    .isLength({ min: 3, max: 55 })
-    .withMessage("Nome deve ter entre 3 e 55 caracteres")
+    .isLength({ min: 3, max: 150 })
+    .withMessage("Nome deve ter entre 3 e 150 caracteres")
     .matches(/^[^<>]*$/)
     .withMessage("Nome contem caracteres invalidos")
     .escape(),
-  cpfRule("cpf", false),
   body("email")
     .optional()
     .trim()
@@ -190,36 +223,57 @@ const updateFuncionarioValidator = withValidation([
     .isEmail()
     .withMessage("Email invalido")
     .normalizeEmail({ gmail_remove_dots: false }),
-  body("senha")
+  body("telefone")
+    .optional({ nullable: true })
+    .customSanitizer((value) => {
+      if (value === null || value === "") return null;
+      return String(value).replace(/\D/g, "");
+    })
+    .custom((value) => value === null || /^\d{10,11}$/.test(value))
+    .withMessage("Telefone deve ter 10 ou 11 digitos"),
+  body("cargo")
     .optional()
-    .isString()
-    .withMessage("Senha deve ser texto")
-    .isLength({ min: 8, max: 72 })
-    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
-  body("cargo_id")
-    .optional()
-    .isInt({ min: 1 })
-    .withMessage("cargo_id invalido")
-    .toInt(),
-  body("ativo")
-    .optional()
-    .isIn(["true", "false", true, false, 1, 0, "1", "0"])
-    .withMessage("ativo deve ser booleano")
-    .toBoolean(),
+    .trim()
+    .toUpperCase()
+    .isIn(EDITABLE_CARGO_TYPES)
+    .withMessage("cargo invalido"),
+  ...CARGO_TIME_FIELDS.map((field) =>
+    body(field)
+      .optional()
+      .trim()
+      .matches(TIME_REGEX)
+      .withMessage(`${field} deve estar no formato HH:mm`)
+  ),
 ]);
 
-const funcionarioStatusValidator = withValidation([
-  param("id")
-    .isInt({ min: 1 })
-    .withMessage("ID de funcionario invalido")
-    .toInt(),
-  body("ativo")
-    .notEmpty()
-    .withMessage("ativo e obrigatorio")
-    .isIn(["true", "false", true, false, 1, 0, "1", "0"])
-    .withMessage("ativo deve ser booleano")
-    .toBoolean(),
-]);
+function employeeActivationValidator(expectedConfirmation) {
+  return withValidation([
+    param("id")
+      .isInt({ min: 1 })
+      .withMessage("ID de funcionario invalido")
+      .toInt(),
+    body().custom((value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) {
+        throw new Error("Corpo da requisicao invalido");
+      }
+
+      const fields = Object.keys(value);
+      if (fields.length !== 1 || fields[0] !== "confirmacao") {
+        throw new Error("Envie somente o campo confirmacao");
+      }
+
+      return true;
+    }),
+    body("confirmacao")
+      .isString()
+      .withMessage("confirmacao deve ser texto")
+      .equals(expectedConfirmation)
+      .withMessage(`confirmacao deve ser ${expectedConfirmation}`),
+  ]);
+}
+
+const deactivateEmployeeValidator = employeeActivationValidator("DESATIVAR");
+const reactivateEmployeeValidator = employeeActivationValidator("REATIVAR");
 
 const paginationValidator = withValidation([
   query("page")
@@ -237,6 +291,12 @@ const paginationValidator = withValidation([
     .isIn(["true", "false", "1", "0"])
     .withMessage("ativo invalido")
     .toBoolean(),
+  query("cargo")
+    .optional()
+    .trim()
+    .toUpperCase()
+    .isIn(CARGO_TYPES)
+    .withMessage("cargo invalido"),
   query("q")
     .optional()
     .trim()
@@ -290,8 +350,10 @@ const baterPontoValidator = withValidation([
 
 module.exports = {
   createFuncionarioValidator,
+  employeeIdValidator,
   updateFuncionarioValidator,
-  funcionarioStatusValidator,
+  deactivateEmployeeValidator,
+  reactivateEmployeeValidator,
   paginationValidator,
   qrShortcutIdParamValidator,
   validateQrShortcutValidator,
