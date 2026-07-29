@@ -115,7 +115,10 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   }
   const senhaHash = await bcrypt.hash(senha, env.BCRYPT_SALT_ROUNDS);
 
-  // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
+  // Toda a criação (checagens de duplicidade + inserts em login e funcionarios)
+  // roda em uma única transação: funcionario e login são duas tabelas
+  // relacionadas e precisam ser criadas atomicamente, sem risco de um
+  // funcionário ficar sem login (ou vice-versa) em caso de falha no meio do processo.
   const employeeId = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists?.id) {
