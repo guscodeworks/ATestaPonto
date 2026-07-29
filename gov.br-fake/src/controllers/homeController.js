@@ -19,7 +19,7 @@ function sendView(res, relativePath) {
 
 function showHome(req, res) {
   // Usuário já autenticado não deve ver a home/landing novamente; vai direto para a
-  // área logada. Nota: ver observação sobre `getAuthenticatedUser` nas Sugestões de melhoria.
+  // área logada.
   if (getAuthenticatedUser(req)) {
     res.set({
       'Cache-Control': 'no-store, max-age=0',

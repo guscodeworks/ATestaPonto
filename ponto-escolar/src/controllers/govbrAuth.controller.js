@@ -15,7 +15,7 @@ const {
 const {
   verificarSeUsuarioGovbrEhAdmin,
 } = require("../services/adminAuthorization.service");
-const { buildClearAdminAuthCookie } = require("../utils/authCookie");
+const env = require("../config/env");
 
 // URL do logout do mock/fake do Gov.br usado em ambientes de desenvolvimento/teste.
 function getGovbrFakeLogoutUrl() {
@@ -173,8 +173,8 @@ async function concluirLoginGovbr(req, res, next) {
     const adminSession = {
       authProvider: "govbr",
       sub: String(userInfo.sub).trim(),
-      name: String(userInfo.name || "").trim() || {},
-      email: String(userInfo.email || "").trim() || {},
+      name: String(userInfo.name || "").trim(),
+      email: String(userInfo.email || "").trim(),
       loginAt: new Date().toISOString(),
     };
 
@@ -190,8 +190,12 @@ async function concluirLoginGovbr(req, res, next) {
 }
 
 async function sairGovbr(req, res, next) {
-  res.setHeader("Set-Cookie", buildClearAdminAuthCookie());
-  res.clearCookie("connect.sid", { path: "/" });
+  res.clearCookie("connect.sid", {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.IS_PRODUCTION,
+  });
 
   if (!req.session) {
     return res.redirect(getGovbrFakeLogoutUrl());

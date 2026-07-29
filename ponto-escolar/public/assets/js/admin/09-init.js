@@ -6,8 +6,6 @@
     const existe = (selector) => Boolean(document.querySelector(selector));
 
     if (existe('#topbar-time')) iniciarRelogio();
-    iniciarLogin();
-
     const sessaoValida = validarSessaoAdmin();
     if (!sessaoValida) return;
 

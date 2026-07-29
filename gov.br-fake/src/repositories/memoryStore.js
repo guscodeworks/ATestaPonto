@@ -20,7 +20,8 @@ function isRecordExpired(record, now = Date.now()) {
     return record.isExpired(now);
   }
 
-  return Number(record.expiresAt) <= now;
+  const expiresAt = Number(record.expiresAt);
+  return !Number.isFinite(expiresAt) || expiresAt <= now;
 }
 
 function deleteExpiredFromMap(map, now) {
@@ -59,12 +60,8 @@ function saveAuthCode(code, authCode) {
   return authCode;
 }
 
-// Atenção: retorna "{}" (objeto vazio) quando a chave não existe, em vez de
-// `undefined`. Como "{}" é truthy, chamadores que fazem `if (!getAuthCode(...))`
-// não conseguem detectar a ausência do registro (mesmo padrão presente nos demais
-// getters deste arquivo). Ver Sugestões de melhoria.
 function getAuthCode(code) {
-  return authCodes.get(code) || {};
+  return authCodes.get(code) || null;
 }
 
 function deleteAuthCode(code) {
@@ -77,7 +74,7 @@ function saveAccessToken(token, accessToken) {
 }
 
 function getAccessToken(token) {
-  return accessTokens.get(token) || {};
+  return accessTokens.get(token) || null;
 }
 
 function deleteAccessToken(token) {
@@ -90,7 +87,7 @@ function savePendingAuthorizeRequest(id, request) {
 }
 
 function getPendingAuthorizeRequest(id) {
-  return pendingAuthorizeRequests.get(id) || {};
+  return pendingAuthorizeRequests.get(id) || null;
 }
 
 function deletePendingAuthorizeRequest(id) {
@@ -103,7 +100,7 @@ function saveFakeLoginSession(id, session) {
 }
 
 function getFakeLoginSession(id) {
-  return fakeLoginSessions.get(id) || {};
+  return fakeLoginSessions.get(id) || null;
 }
 
 function deleteFakeLoginSession(id) {

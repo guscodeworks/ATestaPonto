@@ -1,12 +1,6 @@
 ﻿async function initApp() {
   initClock();
   initSidebar();
-  bindLogoutButtons();
-
-  if (isLoginPage()) {
-    await initLoginPage();
-    return;
-  }
 
   if (isPublicPunchPage()) {
     await initPublicPunchPage();

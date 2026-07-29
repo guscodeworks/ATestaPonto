@@ -75,23 +75,6 @@ function qrCodeRule() {
     });
 }
 
-const adminLoginValidator = withValidation([
-  body("email")
-    .trim()
-    .notEmpty()
-    .withMessage("Email e obrigatorio")
-    .isLength({ max: 150 })
-    .withMessage("Email muito longo")
-    .isEmail()
-    .withMessage("Email invalido")
-    .normalizeEmail({ gmail_remove_dots: false }),
-  body("senha")
-    .isString()
-    .withMessage("Senha deve ser texto")
-    .isLength({ min: 8, max: 72 })
-    .withMessage("Senha deve ter entre 8 e 72 caracteres"),
-]);
-
 const createFuncionarioValidator = withValidation([
   body("nome")
     .trim()
@@ -118,10 +101,37 @@ const createFuncionarioValidator = withValidation([
     .isLength({ min: 8, max: 72 })
     .withMessage("Senha deve ter entre 8 e 72 caracteres"),
   body("cargo_id")
+    .custom((value, { req }) => {
+      const hasValidCargoId = Number.isInteger(Number(value)) && Number(value) > 0;
+      const scheduleFields = [
+        "cargo",
+        "entrada",
+        "saida_almoco",
+        "retorno_almoco",
+        "saida",
+      ];
+      const hasCompleteSchedule = scheduleFields.every(
+        (field) => String(req.body[field] || "").trim().length > 0
+      );
+
+      if (!hasValidCargoId && !hasCompleteSchedule) {
+        throw new Error("cargo_id ou horarios completos do cargo sao obrigatorios");
+      }
+      return true;
+    })
+    .customSanitizer((value) =>
+      value === undefined || value === "" ? undefined : Number(value)
+    ),
+  body("cargo")
     .optional()
-    .isInt({ min: 1 })
-    .withMessage("cargo_id invalido")
-    .toInt(),
+    .trim()
+    .toUpperCase()
+    .isIn(["FUNCIONARIO", "INSPETOR", "PROFESSOR"])
+    .withMessage("cargo invalido"),
+  body(["entrada", "saida_almoco", "retorno_almoco", "saida"])
+    .optional()
+    .matches(/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/)
+    .withMessage("horario de cargo invalido"),
   
   /* Aceita diferentes representações de booleano pois o valor pode chegar como
    string (form-data/querystring) ou como boolean/number (JSON).
@@ -254,7 +264,6 @@ const baterPontoValidator = withValidation([
 ]);
 
 module.exports = {
-  adminLoginValidator,
   createFuncionarioValidator,
   updateFuncionarioValidator,
   funcionarioStatusValidator,

@@ -1,10 +1,9 @@
 /**
- * auth.js — Módulo de autenticação compartilhado
+ * auth.js — Módulo de autenticação do funcionário
  * Sala do Futuro — Sistema de Ponto
  *
  * Funções:
  *  - logout(redirectTo)        → limpa sessão e redireciona
- *  - requireAdminAuth()        → guarda de rota admin
  *  - requireFuncAuth()         → guarda de rota funcionário
  *  - preventBackAfterLogout()  → impede voltar pelo browser após logout
  */
@@ -15,9 +14,6 @@
    CHAVES DE SESSÃO
    ============================================================ */
 const AUTH_KEYS = {
-  adminLoggedIn:  'admin_logged_in',
-  adminNome:      'admin_nome',
-  adminCargo:     'admin_cargo',
   funcLoggedIn:   'func_logged_in',
   funcNome:       'func_nome',
   funcCargo:      'func_cargo',
@@ -37,9 +33,6 @@ function logout(redirectTo) {
 
   // 2. Limpar itens de auth do localStorage (preserva preferências do usuário)
   const authLocalKeys = [
-    AUTH_KEYS.adminLoggedIn,
-    AUTH_KEYS.adminNome,
-    AUTH_KEYS.adminCargo,
     AUTH_KEYS.funcLoggedIn,
   ];
   authLocalKeys.forEach(k => localStorage.removeItem(k));
@@ -51,23 +44,6 @@ function logout(redirectTo) {
   // Usar replace para que a página atual não fique no histórico
   window.history.replaceState(null, '', destino);
   window.location.replace(destino);
-}
-
-/* ============================================================
-   GUARDA DE ROTA — ADMIN
-   Chame no topo de cada página do painel admin.
-   Se não estiver autenticado, redireciona para o login do admin.
-   ============================================================ */
-function requireAdminAuth() {
-  const loggedIn = sessionStorage.getItem(AUTH_KEYS.adminLoggedIn);
-  if (!loggedIn) {
-    window.history.replaceState(null, '', '/admin/login');
-    window.location.replace('/admin/login');
-    return false;
-  }
-  // Impede o botão "Voltar" de acessar a página protegida após logout
-  preventBackAfterLogout();
-  return true;
 }
 
 /* ============================================================
@@ -95,23 +71,13 @@ function preventBackAfterLogout() {
   // Empurra estado atual para que um popstate seja detectável
   window.history.pushState({ protected: true }, '');
 
-  window.addEventListener('popstate', function(e) {
-    const adminLoggedIn = sessionStorage.getItem(AUTH_KEYS.adminLoggedIn);
+  window.addEventListener('popstate', function() {
     const funcLoggedIn  = sessionStorage.getItem(AUTH_KEYS.funcLoggedIn);
-    if (!adminLoggedIn && !funcLoggedIn) {
+    if (!funcLoggedIn) {
       // Usuário não autenticado tentou voltar — redireciona
       window.location.replace(window.location.href);
     }
   });
-}
-
-/* ============================================================
-   HELPERS DE SESSÃO
-   ============================================================ */
-function setAdminSession(nome, cargo) {
-  sessionStorage.setItem(AUTH_KEYS.adminLoggedIn, '1');
-  sessionStorage.setItem(AUTH_KEYS.adminNome, nome || 'Administrador');
-  sessionStorage.setItem(AUTH_KEYS.adminCargo, cargo || 'Administrador');
 }
 
 function setFuncSession(data) {
@@ -120,14 +86,6 @@ function setFuncSession(data) {
   if (data.cargo)     sessionStorage.setItem(AUTH_KEYS.funcCargo, data.cargo);
   if (data.cpf)       sessionStorage.setItem(AUTH_KEYS.funcCPF, data.cpf);
   if (data.matricula) sessionStorage.setItem(AUTH_KEYS.funcMatricula, data.matricula);
-}
-
-function getAdminSession() {
-  return {
-    loggedIn: !!sessionStorage.getItem(AUTH_KEYS.adminLoggedIn),
-    nome:     sessionStorage.getItem(AUTH_KEYS.adminNome) || 'Administrador',
-    cargo:    sessionStorage.getItem(AUTH_KEYS.adminCargo) || 'Administrador',
-  };
 }
 
 function getFuncSession() {

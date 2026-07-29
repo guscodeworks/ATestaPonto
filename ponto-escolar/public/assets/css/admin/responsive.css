@@ -15,12 +15,6 @@
 }
 
 @media (max-width: 768px) {
-  /* Login */
-  .login-page { grid-template-columns: 1fr; }
-  .login-panel--visual { display: none; }
-  .login-panel { padding: 40px 24px; }
-  .login-form-panel { max-width: 100%; }
-
   /* Sidebar */
   .app-sidebar { transform: translateX(-100%); }
   .app-sidebar.open { transform: translateX(0); }
