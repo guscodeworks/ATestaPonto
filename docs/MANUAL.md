@@ -207,8 +207,7 @@ O funcionário pode fazer login usando CPF ou e-mail cadastrado:
 | Senha | Senha definida pelo administrador no momento do cadastro do funcionário. |
 
 > [!IMPORTANT]
-> O login do funcionário exige que o QR Code válido do dia tenha sido lido antes. Sem o QR Code, não é possível registrar ponto.
->No primeiro login do funcionário a senha será o adm que mandara
+>No primeiro login do funcionário a senha sera enviada no email do funcionario para cadastrar uma nova
 ### Como Funciona o QR Code
 
 O QR Code é o mecanismo central de segurança do sistema. Ele garante que o funcionário está fisicamente presente na escola:
