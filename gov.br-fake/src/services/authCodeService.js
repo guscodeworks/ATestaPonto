@@ -71,11 +71,8 @@ function consumeAuthorizationCode(code) {
 
   memoryStore.deleteAuthCode(normalizedCode);
 
-  // Atenção: `memoryStore.getAuthCode` retorna "{}" (não `undefined`) quando o code
-  // não existe, então `!authCode` nunca é verdadeiro aqui. Nesse caso o fluxo cai em
-  // `authCode.isExpired()`, mas "{}" não possui esse método — ver Sugestões de melhoria.
   if (!authCode || authCode.isExpired()) {
-    return {};
+    return null;
   }
 
   return authCode;

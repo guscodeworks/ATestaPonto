@@ -15,12 +15,6 @@
 }
 
 @media (max-width: 768px) {
-  /* Login */
-  .login-page { grid-template-columns: 1fr; }
-  .login-panel--visual { display: none; }
-  .login-panel { padding: 40px 24px; }
-  .login-form-panel { max-width: 100%; }
-
   /* Sidebar */
   .app-sidebar { transform: translateX(-100%); }
   .app-sidebar.open { transform: translateX(0); }
@@ -63,4 +57,47 @@
   .action-bar-left, .action-bar-right { flex-direction: column; }
   .search-box input { width: 100%; }
   .search-box { flex: 1; }
+}
+
+/* Tablets em paisagem: navegação persistente sem comprimir o conteúdo. */
+@media (min-width: 900px) and (max-width: 1199px) and (orientation: landscape) {
+  :root { --sidebar-w: 240px; }
+
+  .app-sidebar {
+    width: var(--sidebar-w);
+    transform: none;
+  }
+
+  .app-main {
+    margin-left: var(--sidebar-w);
+    width: calc(100% - var(--sidebar-w));
+  }
+
+  .menu-toggle,
+  .sidebar-overlay,
+  .sidebar-overlay.active {
+    display: none;
+  }
+
+  .page-content { padding-inline: 24px; }
+}
+
+/* Tablets em retrato: a sidebar funciona como drawer sobre o conteúdo. */
+@media (min-width: 600px) and (max-width: 1024px) and (orientation: portrait) {
+  .app-sidebar {
+    width: min(300px, 86vw);
+    height: 100dvh;
+    transform: translateX(-100%);
+    box-shadow: 8px 0 28px rgba(20, 20, 20, 0.14);
+  }
+
+  .app-sidebar.open { transform: translateX(0); }
+
+  .app-main {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .menu-toggle { display: inline-flex; }
+  .sidebar-overlay.active { display: block; }
 }

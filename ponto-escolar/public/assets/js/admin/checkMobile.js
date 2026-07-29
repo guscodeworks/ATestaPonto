@@ -10,6 +10,7 @@
       isActive: () => document.getElementById('cards-funcionarios'),
       desktopSelectors: ['.table-desktop'],
       mobileSelectors: ['#cards-funcionarios'],
+      maxWidth: 1024,
     },
     {
       isActive: () => document.querySelector('.table-desktop-p, .table-desktop-a'),
@@ -27,12 +28,12 @@
   }
 
   function checkMobile() {
-    const isMobile = window.innerWidth <= MOBILE_MAX_WIDTH;
-
     PAGE_CONFIGS.forEach((config) => {
       if (!config.isActive()) {
         return;
       }
+
+      const isMobile = window.innerWidth <= (config.maxWidth || MOBILE_MAX_WIDTH);
 
       // 'block' para a tabela desktop e 'flex' para os cards mobile:
       // valores escolhidos conforme o layout CSS de cada elemento.

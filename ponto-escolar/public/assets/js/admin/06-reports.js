@@ -10,7 +10,7 @@ function renderizarGraficoSemanalRelatorio() {
   // então o agregado semanal ainda não pode ser calculado/exibido.
   container.innerHTML = `
     <div class="empty-state" style="padding:8px 0;">
-      <div class="empty-icon">📊</div>
+      <div class="empty-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true"></div>
       <div class="empty-title">Resumo semanal sem API real</div>
       <div style="font-size:12px;color:var(--text-300);margin-top:4px;">O backend atual fornece relatorio diario. Agregado semanal fica como pendencia.</div>
     </div>
@@ -53,12 +53,12 @@ function renderizarRelatorio() {
   if (ADMIN_DATA_ERROR && !itens.length) {
     // Só exibe a mensagem de erro da API quando não há nenhum item para
     // mostrar; caso contrário, prefere exibir os dados disponíveis.
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Nao foi possivel carregar relatorio</div><div style="font-size:12px;color:var(--text-300);">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nao foi possivel carregar relatorio</div><div style="font-size:12px;color:var(--text-300);">${escapeHtml(ADMIN_DATA_ERROR.message)}</div></div></td></tr>`;
     return;
   }
 
   if (!itens.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum funcionario encontrado</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum funcionario encontrado</div></div></td></tr>`;
     return;
   }
 

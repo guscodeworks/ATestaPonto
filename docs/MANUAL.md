@@ -127,7 +127,7 @@ O projeto usa arquivos `.env` para armazenar todas as configurações importante
 | Variável | Descrição |
 |---|---|
 | `JWT_SECRET` | Chave secreta para assinar os tokens JWT dos funcionários. Use uma string longa e aleatória. |
-| `JWT_EXPIRES_IN` | Tempo de validade do token do administrador. Padrão: `8h`. |
+| `JWT_EXPIRES_IN` | Tempo de validade do token no fluxo legado de funcionário. Padrão: `8h`. |
 | `FUNCIONARIO_JWT_EXPIRES_IN` | Tempo de validade do token do funcionário. Padrão: `20m` (20 minutos). |
 
 **Configurações de Localização da Escola**

@@ -101,51 +101,39 @@ function buildCookie(name, value, options = {}) {
   return parts.join('; ');
 }
 
-// Faz o parse manual do header Cookie em busca do cookie informado.
-// Atenção: quando o cookie não é encontrado, o retorno é "{}" (objeto vazio) em vez de
-// undefined/string vazia. Como "{}" é truthy em JS, isso afeta os `if` que consomem o
-// retorno desta função em outros pontos do arquivo (ver Sugestões de melhoria).
 function getCookie(req, name) {
-  return String(req.headers.cookie || '')
-    .split(';')
-    .map((part) => part.trim())
-    .filter(Boolean)
-    .reduce((found, part) => {
-      if (found) {
-        return found;
-      }
+  const cookieHeader = req && req.headers && typeof req.headers.cookie === 'string'
+    ? req.headers.cookie
+    : '';
 
-      const separatorIndex = part.indexOf('=');
-      const key = separatorIndex >= 0 ? part.slice(0, separatorIndex) : part;
-      const value = separatorIndex >= 0 ? part.slice(separatorIndex + 1) : '';
+  for (const part of cookieHeader.split(';')) {
+    const separatorIndex = part.indexOf('=');
+    if (separatorIndex < 0) {
+      continue;
+    }
 
-      return key === name ? decodeURIComponent(value) : {};
-    }, {});
-}
+    const key = part.slice(0, separatorIndex).trim();
+    const encodedValue = part.slice(separatorIndex + 1).trim();
+    if (key !== name || !encodedValue) {
+      continue;
+    }
 
-// Recupera as informações do usuário fake "admin", único perfil que de fato autentica
-// nesta simulação (ver observação em `login`). O papel "admin" é fixo porque este
-// provedor fake não implementa outros níveis de acesso.
-function getFakeAdminUserInfo() {
-  const user = fakeUserService.findBySub(env.fakeAdminSub);
-  const userInfo = fakeUserService.toUserInfo(user);
-
-  if (!userInfo) {
-    throw requestError('Usuario fake nao configurado.', 500, 'FAKE_USER_NOT_CONFIGURED');
+    try {
+      const value = decodeURIComponent(encodedValue).trim();
+      return value || null;
+    } catch (_error) {
+      return null;
+    }
   }
 
-  return {
-    ...userInfo,
-    role: 'admin'
-  };
+  return null;
 }
 
-// Cria uma sessão fake em memória (não persistida), sempre associada ao usuário admin
-// configurado via env — independente de qual "sub" foi enviado no login (ver `login`).
-function createFakeSession(res) {
+// Cria uma sessão fake em memória (não persistida) vinculada ao usuário informado.
+function createFakeSession(res, userSub) {
   const sessionId = generateSecureToken('fake_session');
   memoryStore.saveFakeLoginSession(sessionId, {
-    userSub: env.fakeAdminSub,
+    userSub,
     expiresAt: Date.now() + env.fakeSessionTtlMs
   });
 
@@ -173,19 +161,24 @@ function getAuthenticatedUser(req) {
 
   const sessionId = getCookie(req, FAKE_SESSION_COOKIE);
   if (!sessionId) {
-    // "Sem sessão": por conta do retorno de `getCookie`, este `{}` é truthy para quem
-    // chama esta função (ex.: `if (!getAuthenticatedUser(req))` não detecta esse caso).
-    return {};
+    return null;
   }
 
   const session = memoryStore.getFakeLoginSession(sessionId);
-  if (!session || session.expiresAt <= Date.now()) {
+  const expiresAt = Number(session && session.expiresAt);
+  if (!session || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
     memoryStore.deleteFakeLoginSession(sessionId);
-    // Mesma observação acima: este retorno "vazio" também é truthy para o chamador.
-    return {};
+    return null;
   }
 
-  return getFakeAdminUserInfo();
+  const userInfo = fakeUserService.toUserInfo(fakeUserService.findBySub(session.userSub));
+
+  if (!userInfo) {
+    memoryStore.deleteFakeLoginSession(sessionId);
+    return null;
+  }
+
+  return userInfo;
 }
 
 function showAuthorize(req, res, next) {
@@ -215,19 +208,17 @@ function showAuthorize(req, res, next) {
       throw requestError('code_challenge_method invalido.');
     }
 
-    // Deveria redirecionar para a tela de login quando não há sessão ativa — porém, ver
-    // observação em `getAuthenticatedUser`/`getCookie` sobre o retorno "{}" ser truthy.
-    if (!getAuthenticatedUser(req)) {
+    const authenticatedUser = getAuthenticatedUser(req);
+    if (!authenticatedUser) {
       return res.redirect('/govbr');
     }
 
-    // Authorization code vinculado ao usuário admin fake (ver `createFakeSession`).
     const { code } = registerAuthorizationCode({
       codeChallenge,
       codeChallengeMethod,
       redirectUri,
       clientId,
-      userSub: env.fakeAdminSub
+      userSub: authenticatedUser.sub
     });
 
     const callbackUrl = new URL(redirectUri);
@@ -245,15 +236,17 @@ function showAuthorize(req, res, next) {
 function login(req, res, next) {
   try {
     const body = req.body || {};
-    // O "sub" enviado é apenas validado (precisa existir entre os usuários fake),
-    // mas a sessão criada logo abaixo sempre representa o usuário admin — `createFakeSession`
-    // ignora o sub recebido. Ou seja, hoje só é possível autenticar como admin.
-    const sub = String(body.sub || env.fakeAdminSub).trim();
-    if (sub && !fakeUserService.findBySub(sub)) {
+    const sub = fakeUserService.normalizeSub(body.cpf || body.sub);
+    if (!sub) {
+      throw requestError('CPF ou sub e obrigatorio.', 400, 'INVALID_FAKE_USER_ID');
+    }
+
+    const user = fakeUserService.findBySub(sub);
+    if (!user) {
       throw requestError('Usuario fake nao encontrado.', 401, 'INVALID_FAKE_USER');
     }
 
-    createFakeSession(res);
+    createFakeSession(res, user.sub);
     return res.redirect(303, POST_LOGIN_REDIRECT_PATH);
   } catch (error) {
     return next(error);
@@ -347,18 +340,17 @@ function exchangeToken(req, res) {
   }
 }
 
-// Extrai o token do header "Authorization: Bearer <token>".
-// Mesmo padrão de `getCookie`: quando ausente/mal formado, retorna "{}" (objeto vazio)
-// em vez de string vazia/undefined — ver Sugestões de melhoria.
 function extractBearerToken(req) {
-  const authorization = String(req.headers.authorization || '').trim();
-  const [scheme, token] = authorization.split(' ');
+  const authorization = req && req.headers && typeof req.headers.authorization === 'string'
+    ? req.headers.authorization.trim()
+    : '';
+  const match = authorization.match(/^Bearer[ \t]+([^\s]+)$/i);
 
-  if (!/^Bearer$/i.test(scheme) || !token) {
-    return {};
+  if (!match) {
+    return null;
   }
 
-  return token.trim();
+  return match[1];
 }
 
 function showUserInfo(req, res) {
@@ -375,12 +367,9 @@ function showUserInfo(req, res) {
       throw requestError('Token invalido ou expirado.', 401, 'UNAUTHORIZED');
     }
 
-    // Endpoint estilo OIDC UserInfo. O papel "admin" é fixo pois este provedor fake
-    // não modela outros perfis de acesso (mesma regra de `getFakeAdminUserInfo`).
-    return res.status(200).json({
-      ...userInfo,
-      role: 'admin'
-    });
+    // Endpoint estilo OIDC UserInfo: retorna somente a identidade vinculada ao token.
+    // A autorização administrativa pertence ao Ponto Escolar.
+    return res.status(200).json(userInfo);
   } catch (error) {
     return res.status(error.statusCode || 401).json({
       success: false,
@@ -395,7 +384,9 @@ function showUserInfo(req, res) {
 module.exports = {
   showAuthorize,
   login,
+  getCookie,
   getAuthenticatedUser,
+  extractBearerToken,
   logout,
   showSession,
   exchangeToken,

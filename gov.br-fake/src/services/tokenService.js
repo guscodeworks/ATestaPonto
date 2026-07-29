@@ -63,16 +63,19 @@ function findUserInfoByAccessToken(accessToken) {
   const token = getRequiredString(accessToken, 'accessToken');
   const tokenRecord = memoryStore.getAccessToken(token);
 
-  // Atenção: `memoryStore.getAccessToken` retorna "{}" (não `undefined`) quando o
-  // token não existe, então `!tokenRecord` nunca é verdadeiro aqui. O fluxo cai em
-  // `tokenRecord.isExpired()`, mas "{}" não possui esse método — mesmo bug já
-  // identificado em `authCodeService.consumeAuthorizationCode`. Ver Sugestões de melhoria.
   if (!tokenRecord || tokenRecord.isExpired()) {
     memoryStore.deleteAccessToken(token);
-    return {};
+    return null;
   }
 
-  return fakeUserService.toUserInfo(fakeUserService.findBySub(tokenRecord.userSub));
+  const userInfo = fakeUserService.toUserInfo(fakeUserService.findBySub(tokenRecord.userSub));
+
+  if (!userInfo) {
+    memoryStore.deleteAccessToken(token);
+    return null;
+  }
+
+  return userInfo;
 }
 
 module.exports = {

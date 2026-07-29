@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Funcionários</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/admin.css"/>
 </head>
@@ -17,16 +16,16 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
       </div>
     </div>
     <div class="sidebar-user">
-      <div class="sidebar-user-avatar" id="sb-avatar">CE</div>
+      <div class="sidebar-user-avatar" id="sb-avatar">--</div>
       <div class="sidebar-user-info">
-        <div class="sidebar-user-name" id="sb-name">Carlos Eduardo</div>
+        <div class="sidebar-user-name" id="sb-name">Administrador</div>
         <div class="sidebar-user-role" id="sb-role">Administrador</div>
       </div>
       <div class="sidebar-admin-badge">ADMIN</div>
@@ -54,7 +53,7 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
           <span>ATesta<span class="brand-accent">Ponto</span></span>
           <span class="breadcrumb-sep">›</span>
@@ -67,18 +66,18 @@
           <div class="topbar-date" id="topbar-date"></div>
         </div>
         <div class="topbar-user">
-          <div class="topbar-avatar" id="admin-avatar">CE</div>
+          <div class="topbar-avatar" id="admin-avatar">--</div>
           <div class="topbar-user-info">
-            <span class="topbar-user-name" id="admin-firstname">Carlos</span>
+            <span class="topbar-user-name" id="admin-firstname">Administrador</span>
             <span class="topbar-user-role" id="admin-role">Administrador</span>
           </div>
         </div>
       </div>
     </header>
 
-    <main class="page-content">
+    <main class="page-content employees-page">
 
-      <div class="page-header-row fade-in" style="margin-bottom:20px;">
+      <div class="page-header-row employees-page-header fade-in">
         <div>
           <h1 class="page-title">Funcionários</h1>
           <p class="page-subtitle"><span id="total-func">—</span> funcionários no sistema</p>
@@ -89,26 +88,22 @@
       </div>
 
       <!-- Action bar -->
-      <div class="action-bar fade-in">
+      <div class="action-bar employees-action-bar fade-in">
         <div class="action-bar-left">
           <div class="search-box">
             <span class="search-icon"><img src="/assets/icons/search.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-            <input type="text" id="busca-funcionario" placeholder="Buscar por nome, CPF, cargo..."/>
+            <input type="search" id="busca-funcionario" placeholder="Buscar por nome ou CPF" aria-label="Buscar funcionários por nome ou CPF" autocomplete="off"/>
           </div>
-          <select class="filter-select" id="filtro-status">
+          <select class="filter-select" id="filtro-status" aria-label="Filtrar funcionários por status">
             <option value="">Todos os status</option>
             <option value="ativo">Ativo</option>
             <option value="inativo">Inativo</option>
           </select>
-          <select class="filter-select" id="filtro-cargo">
+          <select class="filter-select" id="filtro-cargo" aria-label="Filtrar funcionários por cargo">
             <option value="">Todos os cargos</option>
-            <option value="Professor">Professor</option>
-            <option value="Professora">Professora</option>
-            <option value="Coordenador">Coordenador</option>
-            <option value="Diretora">Diretora</option>
-            <option value="Secretária">Secretária</option>
-            <option value="Inspetor">Inspetor</option>
-            <option value="Auxiliar">Auxiliar</option>
+            <option value="FUNCIONARIO">Funcionário(a)</option>
+            <option value="INSPETOR">Inspetor(a)</option>
+            <option value="PROFESSOR">Professor(a)</option>
           </select>
         </div>
         <div class="action-bar-right">
@@ -116,8 +111,10 @@
         </div>
       </div>
 
+      <div id="funcionarios-feedback" class="employees-feedback" aria-live="polite"></div>
+
       <!-- Tabela desktop -->
-      <div class="ui-panel fade-in table-desktop">
+      <div class="ui-panel employees-table-panel fade-in table-desktop">
         <div class="table-wrap">
           <table class="data-table">
             <thead>
@@ -137,60 +134,209 @@
       </div>
 
       <!-- Cards mobile -->
-      <div id="cards-funcionarios" class="func-card-list fade-in cards-mobile" style="display:none;"></div>
+      <div id="cards-funcionarios" class="func-card-list fade-in cards-mobile" aria-live="polite"></div>
 
     </main>
   </div>
 </div>
 
-<!-- MODAL EDITAR -->
-<div class="ui-dialog-overlay" id="modal-editar">
-  <div class="ui-dialog-box">
-    <div class="ui-dialog-header">
-      <div class="ui-dialog-title"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true" width="18" height="18"> Editar Funcionário</div>
-      <button class="ui-dialog-close" onclick="fecharModal('modal-editar')">✕</button>
+<div class="employee-edit-overlay" id="employee-edit-overlay" hidden>
+  <aside
+    class="employee-edit-panel"
+    id="employee-edit-panel"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="employee-edit-title"
+    aria-describedby="employee-edit-description"
+    tabindex="-1"
+  >
+    <header class="employee-edit-header">
+      <div>
+        <div class="employee-edit-eyebrow">Cadastro administrativo</div>
+        <h2 id="employee-edit-title">Editar funcionário</h2>
+        <p id="employee-edit-description">Atualize os dados pessoais e a jornada vinculada ao funcionário.</p>
+      </div>
+      <button type="button" class="employee-edit-close" id="employee-edit-close" aria-label="Fechar edição">
+        <img src="/assets/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">
+      </button>
+    </header>
+
+    <div class="employee-edit-content">
+      <div class="employee-edit-state" id="employee-edit-loading" role="status">
+        <span class="employee-edit-loader" aria-hidden="true"></span>
+        <strong>Carregando funcionário</strong>
+        <span>Buscando os dados mais recentes.</span>
+      </div>
+
+      <div class="employee-edit-state employee-edit-error" id="employee-edit-error" role="alert" hidden>
+        <img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true" width="30" height="30">
+        <strong>Não foi possível abrir a edição</strong>
+        <span id="employee-edit-error-message">Tente novamente.</span>
+        <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" id="employee-edit-retry">Tentar novamente</button>
+      </div>
+
+      <form id="employee-edit-form" novalidate hidden>
+        <section class="employee-edit-section" aria-labelledby="employee-edit-personal-title">
+          <div class="employee-edit-section-heading">
+            <span class="employee-edit-section-icon" aria-hidden="true"><img src="/assets/icons/user.svg" alt="" width="17" height="17"></span>
+            <div>
+              <h3 id="employee-edit-personal-title">Dados pessoais</h3>
+              <p>O CPF identifica o cadastro e não pode ser alterado.</p>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field full">
+              <label for="employee-edit-name">Nome completo</label>
+              <input class="field-input no-icon" id="employee-edit-name" name="nome" type="text" minlength="3" maxlength="150" autocomplete="name" required>
+            </div>
+            <div class="form-field">
+              <label for="employee-edit-cpf">CPF</label>
+              <input class="field-input no-icon employee-edit-readonly" id="employee-edit-cpf" type="text" readonly aria-readonly="true">
+              <span class="field-help">Alteração não permitida neste fluxo.</span>
+            </div>
+            <div class="form-field">
+              <label for="employee-edit-cargo">Cargo</label>
+              <div class="select-wrap">
+                <select class="field-select no-icon" id="employee-edit-cargo" name="cargo" required>
+                  <option value="">Selecione o cargo</option>
+                  <option value="FUNCIONARIO">Funcionário(a)</option>
+                  <option value="INSPETOR">Inspetor(a)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="employee-edit-email">E-mail</label>
+              <input class="field-input no-icon" id="employee-edit-email" name="email" type="email" maxlength="150" autocomplete="email" required>
+            </div>
+            <div class="form-field">
+              <label for="employee-edit-phone">Telefone <span class="employee-edit-optional">opcional</span></label>
+              <input class="field-input no-icon" id="employee-edit-phone" name="telefone" type="tel" maxlength="15" inputmode="tel" autocomplete="tel" placeholder="(11) 99999-9999">
+            </div>
+          </div>
+        </section>
+
+        <section class="employee-edit-section employee-edit-schedule" aria-labelledby="employee-edit-schedule-title">
+          <div class="employee-edit-section-heading">
+            <span class="employee-edit-section-icon" aria-hidden="true"><img src="/assets/icons/clock.svg" alt="" width="17" height="17"></span>
+            <div>
+              <h3 id="employee-edit-schedule-title">Jornada diária</h3>
+              <p>Escolha os horários na ordem em que acontecem.</p>
+            </div>
+          </div>
+
+          <div class="employee-edit-schedule-grid">
+            <div class="form-field">
+              <label for="employee-edit-entry"><span>1</span> Entrada</label>
+              <div class="select-wrap">
+                <select class="field-select no-icon" id="employee-edit-entry" name="entrada" required></select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="employee-edit-lunch-out"><span>2</span> Saída para almoço</label>
+              <div class="select-wrap">
+                <select class="field-select no-icon" id="employee-edit-lunch-out" name="saida_almoco" required disabled></select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="employee-edit-lunch-return"><span>3</span> Retorno do almoço</label>
+              <div class="select-wrap">
+                <select class="field-select no-icon" id="employee-edit-lunch-return" name="retorno_almoco" required disabled></select>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="employee-edit-exit"><span>4</span> Saída</label>
+              <div class="select-wrap">
+                <select class="field-select no-icon" id="employee-edit-exit" name="saida" required disabled></select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="employee-edit-feedback" id="employee-edit-feedback" role="status" aria-live="polite"></div>
+      </form>
     </div>
-    <div class="ui-dialog-body">
-      <input type="hidden" id="edit-id"/>
-      
-        </div>
-        <div class="form-field">
-          <label>Cargo</label>
-          <div class="select-wrap">
-            <select id="edit-cargo" class="field-select">
-              <option value="Professor">Professor</option>
-              <option value="Professora">Professora</option>
-              <option value="Coordenador">Coordenador</option>
-              <option value="Diretora">Diretora</option>
-              <option value="Secretária">Secretária</option>
-              <option value="Inspetor">Inspetor</option>
-              <option value="Auxiliar">Auxiliar</option>
-            </select>
+
+    <footer class="employee-edit-footer">
+      <button type="button" class="ui-btn ui-btn-secondary" id="employee-edit-cancel">Cancelar</button>
+      <button type="submit" class="ui-btn ui-btn-primary" id="employee-edit-save" form="employee-edit-form" disabled>
+        <span class="btn-label"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar alterações</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+    </footer>
+  </aside>
+</div>
+
+<div class="employee-status-overlay" id="employee-status-overlay" hidden>
+  <section
+    class="employee-status-modal"
+    id="employee-status-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="employee-status-title"
+    aria-describedby="employee-status-description employee-status-consequence"
+    tabindex="-1"
+  >
+    <header class="employee-status-header">
+      <div class="employee-status-icon" aria-hidden="true">
+        <img id="employee-status-icon" src="/assets/icons/triangle-alert.svg" alt="" width="22" height="22">
+      </div>
+      <button type="button" class="employee-status-close" id="employee-status-close" aria-label="Fechar confirmação">
+        <img src="/assets/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">
+      </button>
+    </header>
+
+    <form id="employee-status-form" novalidate>
+      <div class="employee-status-body">
+        <div class="employee-status-eyebrow" id="employee-status-eyebrow">Ação sensível</div>
+        <h2 id="employee-status-title">Desativar funcionário</h2>
+        <p id="employee-status-description">Confirme os dados antes de alterar o acesso ao sistema.</p>
+
+        <div class="employee-status-person" aria-label="Funcionário selecionado">
+          <div class="employee-status-avatar" id="employee-status-avatar" aria-hidden="true">--</div>
+          <div class="employee-status-person-main">
+            <strong id="employee-status-name">Funcionário</strong>
+            <span id="employee-status-role">Cargo não informado</span>
+          </div>
+          <div class="employee-status-cpf">
+            <span>CPF</span>
+            <strong id="employee-status-cpf">***.***.***-**</strong>
           </div>
         </div>
-        <div class="form-field">
-          <label>Telefone</label>
-          <div class="input-wrap">
-            <span class="field-icon"><img src="/assets/icons/smartphone.svg" alt="" aria-hidden="true" width="18" height="18"></span>
-            <input type="text" id="edit-tel" class="field-input" placeholder="(11) 99999-0000"/>
-          </div>
+
+        <div class="employee-status-consequence" id="employee-status-consequence">
+          <img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="19" height="19">
+          <p id="employee-status-consequence-text">
+            O funcionário perderá o acesso ao sistema. Todos os registros de ponto serão preservados.
+          </p>
         </div>
-        <div class="form-field">
-          <label>Status</label>
-          <div class="select-wrap">
-            <select id="edit-status" class="field-select">
-              <option value="ativo">Ativo</option>
-              <option value="inativo">Inativo</option>
-            </select>
-          </div>
+
+        <div class="employee-status-gate" id="employee-status-gate">
+          <label for="employee-status-confirmation">
+            Para continuar, digite <strong>DESATIVAR</strong>
+          </label>
+          <input
+            class="field-input no-icon"
+            id="employee-status-confirmation"
+            type="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            aria-describedby="employee-status-confirmation-help"
+          >
+          <span class="field-help" id="employee-status-confirmation-help">A confirmação diferencia letras maiúsculas e minúsculas.</span>
         </div>
       </div>
-    </div>
-    <div class="ui-dialog-footer">
-      <button class="ui-btn ui-btn-ghost" onclick="fecharModal('modal-editar')">Cancelar</button>
-      <button class="ui-btn ui-btn-primary" onclick="salvarEdicao()"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar alterações</button>
-    </div>
-  </div>
+
+      <footer class="employee-status-footer">
+        <button type="button" class="ui-btn ui-btn-secondary" id="employee-status-cancel">Cancelar</button>
+        <button type="submit" class="ui-btn employee-status-confirm is-danger" id="employee-status-submit" disabled>
+          <span class="btn-label" id="employee-status-submit-label">Desativar acesso</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </footer>
+    </form>
+  </section>
 </div>
 
 <div class="toast-stack" id="toast-stack"></div>
@@ -207,4 +353,3 @@
   <script src="/assets/js/admin/checkMobile.js"></script>
 </body>
 </html>
-

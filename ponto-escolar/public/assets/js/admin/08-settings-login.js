@@ -45,17 +45,6 @@ function iniciarConfiguracoes() {
    A rota real ja e protegida pelo backend com req.session.admin.
    ============================================================ */
 
-function limparAuthAdmin() {
-  // Remove tanto as chaves atuais quanto nomes legados de versões
-  // anteriores da autenticação, para não deixar resíduo de sessão.
-  localStorage.removeItem('ponto_escolar_auth');
-  sessionStorage.removeItem('ponto_escolar_auth');
-  sessionStorage.removeItem('admin_logged_in');
-  localStorage.removeItem('admin_logged_in');
-  localStorage.removeItem('admin_nome');
-  localStorage.removeItem('admin_cargo');
-}
-
 function caminhoLogin() {
   return '/auth/govbr/login';
 }
@@ -73,6 +62,16 @@ function aplicarAdminGovbr(admin) {
   if (typeof renderizarPerfil === 'function') {
     renderizarPerfil();
   }
+
+  const configAvatar = document.getElementById('config-avatar');
+  const configNome = document.getElementById('config-nome');
+  const configNomeField = document.getElementById('cfg-nome');
+  const configEmailField = document.getElementById('cfg-email');
+
+  if (configAvatar) configAvatar.textContent = getIniciais(ADMIN.nome);
+  if (configNome) configNome.textContent = ADMIN.nome;
+  if (configNomeField) configNomeField.value = ADMIN.nome;
+  if (configEmailField) configEmailField.value = admin.email || '';
 }
 
 function sincronizarSessaoAdmin() {
@@ -105,10 +104,6 @@ function validarSessaoAdmin() {
   return true;
 }
 
-function iniciarLogin() {
-  // Login local removido. O fluxo comeca em /auth/govbr/login.
-}
-
 function iniciarLogoutAdmin() {
   document.querySelectorAll('.btn-logout').forEach((button) => {
     // Remove handlers antigos (inline onclick e listeners anteriores)
@@ -117,7 +112,6 @@ function iniciarLogoutAdmin() {
     button.removeAttribute('onclick');
     button.addEventListener('click', (event) => {
       event.preventDefault();
-      limparAuthAdmin();
       window.location.href = '/auth/govbr/logout';
     });
   });
@@ -131,10 +125,19 @@ function iniciarFiltrosFuncionarios() {
   const inputBusca = document.getElementById('busca-funcionario');
   const filtroStatus = document.getElementById('filtro-status');
   const filtroCargo = document.getElementById('filtro-cargo');
+  let searchTimer = null;
 
-  const atualizar = () => renderizarFuncionarios(inputBusca?.value || '');
+  const reload = () => {
+    if (searchTimer) window.clearTimeout(searchTimer);
+    recarregarListaFuncionarios();
+  };
 
-  if (inputBusca) inputBusca.addEventListener('input', atualizar);
-  if (filtroStatus) filtroStatus.addEventListener('change', atualizar);
-  if (filtroCargo) filtroCargo.addEventListener('change', atualizar);
+  if (inputBusca) {
+    inputBusca.addEventListener('input', () => {
+      if (searchTimer) window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(reload, 300);
+    });
+  }
+  if (filtroStatus) filtroStatus.addEventListener('change', reload);
+  if (filtroCargo) filtroCargo.addEventListener('change', reload);
 }

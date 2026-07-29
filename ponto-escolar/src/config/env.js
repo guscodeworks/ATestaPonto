@@ -2,7 +2,7 @@ const dotenv = require("dotenv");
 
 dotenv.config({ quiet: true });
 
-const DEFAULT_GOVBR_FAKE_BASE_URL = "http://127.0.0.1:4000";
+const DEFAULT_GOVBR_FAKE_BASE_URL = process.env.GOVBR_FAKE_BASE_URL;
 const GOVBR_CALLBACK_PATH = "/auth/govbr/callback";
 // Path antigo do callback gov.br, mantido apenas para migrar
 // automaticamente redirect URIs configuradas com o valor legado.
@@ -271,6 +271,12 @@ const sessionSecret = validateSecret(
   "SESSION_SECRET",
   getRequiredVar("SESSION_SECRET")
 );
+const adminSessionTtlMs = parseInteger(
+  getOptionalVar("ADMIN_SESSION_TTL_MS", String(2 * 60 * 60 * 1000)),
+  "ADMIN_SESSION_TTL_MS",
+  60 * 1000,
+  24 * 60 * 60 * 1000
+);
 
 // Os dois segredos protegem mecanismos de autenticação diferentes (JWT e
 // sessão); reutilizar o mesmo valor reduziria a segurança caso um dos
@@ -328,6 +334,7 @@ const env = {
     "FUNCIONARIO_JWT_EXPIRES_IN"
   ),
   SESSION_SECRET: sessionSecret,
+  ADMIN_SESSION_TTL_MS: adminSessionTtlMs,
   SCHOOL_LATITUDE: schoolLatitude,
   SCHOOL_LONGITUDE: schoolLongitude,
   SCHOOL_UNIT_CODE: getOptionalVar("SCHOOL_UNIT_CODE", "DEFAULT") || "DEFAULT",

@@ -8,39 +8,29 @@ const fakeUsersBySub = new Map();
 // permitindo buscas tolerantes a formatação (ex.: CPF com ou sem pontuação).
 fakeUsers.forEach((user) => {
   fakeUsersBySub.set(user.sub, user);
-  fakeUsersBySub.set(normalizeSub(user.sub), user);
+  const normalizedSub = normalizeSub(user.sub);
+  if (normalizedSub) {
+    fakeUsersBySub.set(normalizedSub, user);
+  }
 });
 
-// Remove caracteres não numéricos do "sub" (ex.: pontos/traços de CPF), a menos que
-// ele contenha letras — nesse caso é tratado como um identificador não-CPF e mantido
-// intacto, sem normalização.
+// O identificador recebido pela tela fake representa um CPF; pontuação e outros
+// caracteres não numéricos são descartados antes da busca.
 function normalizeSub(value) {
-  const normalized = String(value || '').trim();
-
-  if (/[A-Za-z]/.test(normalized)) {
-    return normalized;
-  }
-
-  return normalized.replace(/\D/g, '');
+  return String(value || '').replace(/\D/g, '');
 }
 
-// Atenção: retorna "{}" (objeto vazio truthy) quando o usuário não é encontrado,
-// em vez de `undefined`/`null` — mesmo padrão de outros pontos do projeto (ver
-// Sugestões de melhoria) que pode mascarar checagens `if (!user)` em quem consome.
 function findBySub(sub) {
-  return fakeUsersBySub.get(normalizeSub(sub)) || {};
+  const normalizedSub = normalizeSub(sub);
+  return normalizedSub ? fakeUsersBySub.get(normalizedSub) || null : null;
 }
 
 function authenticate({ sub, password }) {
   const user = findBySub(sub);
   const receivedPassword = String(password || '');
 
-  // `!user` nunca é verdadeiro aqui por causa do retorno "{}" de `findBySub`;
-  // na prática, a rejeição de usuário inexistente depende apenas da comparação
-  // de senha logo abaixo (`user.password !== receivedPassword`, com ambos undefined
-  // vs string, o que já falha corretamente neste caso específico).
   if (!user || user.password !== receivedPassword) {
-    return {};
+    return null;
   }
 
   return user;
@@ -49,7 +39,7 @@ function authenticate({ sub, password }) {
 function toUserInfo(user) {
   return user && typeof user.toUserInfo === 'function'
     ? user.toUserInfo()
-    : {};
+    : null;
 }
 
 module.exports = {
