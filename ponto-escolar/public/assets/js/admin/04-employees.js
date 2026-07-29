@@ -104,7 +104,7 @@ function criarEstadoListaFuncionarios({ icon, title, description, retry = false 
       <div class="empty-icon"><img src="/assets/icons/${icon}.svg" alt="" aria-hidden="true"></div>
       <div class="empty-title">${escapeHtml(title)}</div>
       ${description ? `<div class="employees-state-description">${escapeHtml(description)}</div>` : ''}
-      ${retry ? '<button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" onclick="recarregarListaFuncionarios()">Tentar novamente</button>' : ''}
+      ${retry ? '<button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-employee-reload>Tentar novamente</button>' : ''}
     </div>
   `;
 }
@@ -130,10 +130,10 @@ function criarMenuAcoesFuncionario(funcionario) {
     <details class="employee-actions-menu">
       <summary aria-label="Abrir ações de ${escapeHtml(funcionario.nome)}">Ações <span aria-hidden="true">⌄</span></summary>
       <div class="employee-actions-popover">
-        <button type="button" data-employee-edit="${Number(funcionario.id)}" onclick="abrirEdicao(${Number(funcionario.id)}, this)">
+        <button type="button" data-employee-edit="${Number(funcionario.id)}">
           <img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> Editar
         </button>
-        <button type="button" class="${isActive ? 'action-danger' : 'action-success'}" onclick="alterarAtivacaoFuncionario(${Number(funcionario.id)}, this)">
+        <button type="button" data-employee-status="${Number(funcionario.id)}" class="${isActive ? 'action-danger' : 'action-success'}">
           ${statusLabel}
         </button>
       </div>
@@ -296,46 +296,322 @@ async function recarregarListaFuncionarios() {
   }
 }
 
-async function alterarAtivacaoFuncionario(id, button) {
-  const funcionario = getFuncionarioPorId(id);
-  if (!funcionario || button?.disabled) return;
+const estadoStatusFuncionario = {
+  id: null,
+  acao: null,
+  enviando: false,
+  elementoOrigem: null,
+  fechamentoTimer: null,
+};
 
-  const reactivate = funcionario.status !== 'ativo';
-  const action = reactivate ? 'reativar' : 'desativar';
-  const confirmation = reactivate ? 'REATIVAR' : 'DESATIVAR';
-  if (!window.confirm(`Deseja ${action} “${funcionario.nome}”?`)) return;
+function elementosStatusFuncionario() {
+  return {
+    overlay: document.getElementById('employee-status-overlay'),
+    modal: document.getElementById('employee-status-modal'),
+    form: document.getElementById('employee-status-form'),
+    close: document.getElementById('employee-status-close'),
+    cancel: document.getElementById('employee-status-cancel'),
+    icon: document.getElementById('employee-status-icon'),
+    eyebrow: document.getElementById('employee-status-eyebrow'),
+    title: document.getElementById('employee-status-title'),
+    description: document.getElementById('employee-status-description'),
+    avatar: document.getElementById('employee-status-avatar'),
+    name: document.getElementById('employee-status-name'),
+    role: document.getElementById('employee-status-role'),
+    cpf: document.getElementById('employee-status-cpf'),
+    consequence: document.getElementById('employee-status-consequence-text'),
+    gate: document.getElementById('employee-status-gate'),
+    confirmation: document.getElementById('employee-status-confirmation'),
+    submit: document.getElementById('employee-status-submit'),
+    submitLabel: document.getElementById('employee-status-submit-label'),
+  };
+}
 
-  const originalLabel = button?.textContent;
-  if (button) {
-    button.disabled = true;
-    button.textContent = reactivate ? 'Reativando…' : 'Desativando…';
+function mascararCpfConfirmacao(cpf) {
+  const raw = String(cpf || '');
+  const finalCpf = raw.match(/(\d{2})\D*$/)?.[1];
+  return `***.***.***-${finalCpf || '**'}`;
+}
+
+function modalStatusFuncionarioEstaAberto() {
+  const overlay = elementosStatusFuncionario().overlay;
+  return Boolean(overlay && !overlay.hidden && overlay.classList.contains('is-open'));
+}
+
+function atualizarBotaoStatusFuncionario() {
+  const { confirmation, submit } = elementosStatusFuncionario();
+  if (!submit) return;
+  const isReactivation = estadoStatusFuncionario.acao === 'reativar';
+  const exactConfirmation = confirmation?.value === 'DESATIVAR';
+  submit.disabled = Boolean(
+    estadoStatusFuncionario.enviando || (!isReactivation && !exactConfirmation)
+  );
+  if (confirmation) {
+    const invalid = Boolean(confirmation.value && !exactConfirmation);
+    confirmation.setAttribute('aria-invalid', String(invalid));
+  }
+}
+
+function configurarModalStatusFuncionario(funcionario, isReactivation) {
+  const elements = elementosStatusFuncionario();
+  const action = isReactivation ? 'reativar' : 'desativar';
+  estadoStatusFuncionario.acao = action;
+  elements.modal.className = `employee-status-modal is-${action}`;
+  elements.eyebrow.textContent = isReactivation ? 'Restaurar acesso' : 'Ação sensível';
+  elements.title.textContent = isReactivation
+    ? 'Reativar funcionário'
+    : 'Desativar funcionário';
+  elements.description.textContent = isReactivation
+    ? 'Confirme quem voltará a acessar o sistema.'
+    : 'Confirme os dados antes de suspender o acesso ao sistema.';
+  elements.icon.src = isReactivation
+    ? '/assets/icons/circle-check.svg'
+    : '/assets/icons/triangle-alert.svg';
+  elements.avatar.textContent = getIniciais(funcionario.nome);
+  elements.name.textContent = funcionario.nome;
+  elements.role.textContent = formatarCargoFuncionario(funcionario.cargo);
+  elements.cpf.textContent = mascararCpfConfirmacao(funcionario.cpf);
+  elements.consequence.textContent = isReactivation
+    ? 'O funcionário recuperará o acesso ao sistema. Seu histórico de pontos permanecerá inalterado.'
+    : 'O funcionário perderá o acesso ao sistema. Todos os registros de ponto serão preservados.';
+  elements.gate.hidden = isReactivation;
+  elements.confirmation.required = !isReactivation;
+  elements.confirmation.value = '';
+  elements.confirmation.setAttribute('aria-invalid', 'false');
+  elements.submit.className = isReactivation
+    ? 'ui-btn employee-status-confirm is-reactivate'
+    : 'ui-btn employee-status-confirm is-danger';
+  elements.submitLabel.textContent = isReactivation
+    ? 'Reativar acesso'
+    : 'Desativar acesso';
+  atualizarBotaoStatusFuncionario();
+}
+
+function abrirModalStatusFuncionario(funcionario, trigger) {
+  const elements = elementosStatusFuncionario();
+  if (!elements.overlay || !elements.modal) return;
+  if (estadoStatusFuncionario.fechamentoTimer) {
+    window.clearTimeout(estadoStatusFuncionario.fechamentoTimer);
+    estadoStatusFuncionario.fechamentoTimer = null;
   }
 
+  const isReactivation = funcionario.status !== 'ativo';
+  estadoStatusFuncionario.id = Number(funcionario.id);
+  estadoStatusFuncionario.elementoOrigem = trigger || document.activeElement;
+  configurarModalStatusFuncionario(funcionario, isReactivation);
+  trigger?.closest('details')?.removeAttribute('open');
+  elements.overlay.hidden = false;
+  document.querySelector('.app-wrap')?.setAttribute('inert', '');
+  document.body.classList.add('employee-status-open');
+  // Garante que o estado inicial oculto seja calculado antes da transicao,
+  // inclusive em navegadores com renderizacao em segundo plano reduzida.
+  void elements.overlay.offsetWidth;
+  elements.overlay.classList.add('is-open');
+  if (isReactivation) elements.cancel?.focus();
+  else elements.confirmation?.focus();
+}
+
+function fecharModalStatusFuncionario() {
+  const elements = elementosStatusFuncionario();
+  if (!elements.overlay) return;
+  const elementoOrigem = estadoStatusFuncionario.elementoOrigem;
+  elements.overlay.classList.remove('is-open');
+  document.querySelector('.app-wrap')?.removeAttribute('inert');
+  document.body.classList.remove('employee-status-open');
+  estadoStatusFuncionario.id = null;
+  estadoStatusFuncionario.acao = null;
+  estadoStatusFuncionario.fechamentoTimer = window.setTimeout(() => {
+    if (!elements.overlay.classList.contains('is-open')) elements.overlay.hidden = true;
+    estadoStatusFuncionario.fechamentoTimer = null;
+  }, 200);
+  if (elementoOrigem?.isConnected) elementoOrigem.focus();
+}
+
+function solicitarFechamentoStatusFuncionario() {
+  if (!modalStatusFuncionarioEstaAberto() || estadoStatusFuncionario.enviando) return;
+  fecharModalStatusFuncionario();
+}
+
+function obterElementosFocaveisStatusFuncionario() {
+  const modal = elementosStatusFuncionario().modal;
+  if (!modal) return [];
+  return Array.from(modal.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+  )).filter((element) => !element.hidden && element.getClientRects().length > 0);
+}
+
+function manterFocoNoModalStatusFuncionario(event) {
+  if (!modalStatusFuncionarioEstaAberto()) return;
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    solicitarFechamentoStatusFuncionario();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+
+  const focusable = obterElementosFocaveisStatusFuncionario();
+  if (!focusable.length) {
+    event.preventDefault();
+    elementosStatusFuncionario().modal?.focus();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function atualizarStatusFuncionarioNaLista(id, ativo, data = {}) {
+  const index = FUNCIONARIOS.findIndex(
+    (funcionario) => Number(funcionario.id) === Number(id)
+  );
+  if (index < 0) return;
+
+  const funcionario = FUNCIONARIOS[index];
+  const atualizado = {
+    ...funcionario,
+    ativo,
+    status: ativo ? 'ativo' : 'inativo',
+    desativado_em: ativo ? null : data.desativado_em || new Date().toISOString(),
+    raw: {
+      ...funcionario.raw,
+      ativo,
+      desativado_em: ativo ? null : data.desativado_em || new Date().toISOString(),
+    },
+  };
+  const statusFilter = obterFiltrosFuncionarios().status;
+  const doesNotMatchFilter =
+    (statusFilter === 'ativo' && !ativo) ||
+    (statusFilter === 'inativo' && ativo);
+
+  if (doesNotMatchFilter) {
+    FUNCIONARIOS.splice(index, 1);
+    FUNCIONARIOS_TOTAL_FILTRADO = Math.max(FUNCIONARIOS_TOTAL_FILTRADO - 1, 0);
+  } else {
+    FUNCIONARIOS[index] = atualizado;
+  }
+  sincronizarFuncionariosNosPontos();
+  renderizarFuncionarios();
+
+  const newButtons = Array.from(
+    document.querySelectorAll(`[data-employee-status="${Number(id)}"]`)
+  );
+  estadoStatusFuncionario.elementoOrigem =
+    newButtons.find((button) => button.getClientRects().length > 0) ||
+    newButtons[0] ||
+    document.getElementById('busca-funcionario');
+}
+
+async function confirmarAlteracaoStatusFuncionario(event) {
+  event.preventDefault();
+  if (estadoStatusFuncionario.enviando) return;
+
+  const elements = elementosStatusFuncionario();
+  const employeeId = Number(estadoStatusFuncionario.id);
+  const isReactivation = estadoStatusFuncionario.acao === 'reativar';
+  if (!Number.isInteger(employeeId) || employeeId < 1) return;
+  if (!isReactivation && elements.confirmation?.value !== 'DESATIVAR') {
+    atualizarBotaoStatusFuncionario();
+    elements.confirmation?.focus();
+    return;
+  }
+
+  const action = isReactivation ? 'reativar' : 'desativar';
+  const confirmation = isReactivation ? 'REATIVAR' : 'DESATIVAR';
+  estadoStatusFuncionario.enviando = true;
+  elements.form.setAttribute('aria-busy', 'true');
+  elements.submit.disabled = true;
+  elements.submit.classList.add('loading');
+  elements.close.disabled = true;
+  elements.cancel.disabled = true;
+  elements.confirmation.disabled = true;
+
   try {
-    await adminApiFetch(
-      `${ADMIN_ENDPOINTS.funcionarios}/${Number(id)}/${action}`,
+    const response = await adminApiFetch(
+      `${ADMIN_ENDPOINTS.funcionarios}/${employeeId}/${action}`,
       {
         method: 'PATCH',
         body: JSON.stringify({ confirmacao: confirmation }),
       }
     );
-    toast(`Funcionário ${reactivate ? 'reativado' : 'desativado'} com sucesso.`, 'success');
-    await recarregarListaFuncionarios();
+    const updatedStatus = getApiData(response) || {};
+    atualizarStatusFuncionarioNaLista(employeeId, isReactivation, updatedStatus);
+    fecharModalStatusFuncionario();
+    toast(
+      `Funcionário ${isReactivation ? 'reativado' : 'desativado'} com sucesso.`,
+      'success'
+    );
   } catch (error) {
     if (error.status === 401) {
       window.location.replace('/auth/govbr/login');
       return;
     }
     toast(
-      escapeHtml(error.message || 'Não foi possível alterar o status.'),
+      escapeHtml(error.message || 'Não foi possível alterar o acesso do funcionário.'),
       'error'
     );
   } finally {
-    if (button?.isConnected) {
-      button.disabled = false;
-      button.textContent = originalLabel;
-    }
+    estadoStatusFuncionario.enviando = false;
+    elements.form.removeAttribute('aria-busy');
+    elements.submit.classList.remove('loading');
+    elements.close.disabled = false;
+    elements.cancel.disabled = false;
+    elements.confirmation.disabled = false;
+    atualizarBotaoStatusFuncionario();
   }
+}
+
+function iniciarModalStatusFuncionario() {
+  const elements = elementosStatusFuncionario();
+  if (!elements.overlay || elements.overlay.dataset.initialized === 'true') return;
+  elements.overlay.dataset.initialized = 'true';
+  elements.close?.addEventListener('click', solicitarFechamentoStatusFuncionario);
+  elements.cancel?.addEventListener('click', solicitarFechamentoStatusFuncionario);
+  elements.overlay.addEventListener('click', (event) => {
+    if (event.target === elements.overlay) solicitarFechamentoStatusFuncionario();
+  });
+  elements.confirmation?.addEventListener('input', atualizarBotaoStatusFuncionario);
+  elements.form?.addEventListener('submit', confirmarAlteracaoStatusFuncionario);
+  document.addEventListener('keydown', manterFocoNoModalStatusFuncionario);
+}
+
+function alterarAtivacaoFuncionario(id, button) {
+  const funcionario = getFuncionarioPorId(id);
+  if (!funcionario || button?.disabled || estadoStatusFuncionario.enviando) return;
+  iniciarModalStatusFuncionario();
+  abrirModalStatusFuncionario(funcionario, button);
+}
+
+function iniciarAcoesFuncionarios() {
+  if (document.documentElement.dataset.employeeActionsInitialized === 'true') return;
+  document.documentElement.dataset.employeeActionsInitialized = 'true';
+
+  document.addEventListener('click', (event) => {
+    const reloadButton = event.target.closest('[data-employee-reload]');
+    if (reloadButton) {
+      recarregarListaFuncionarios();
+      return;
+    }
+
+    const editButton = event.target.closest('[data-employee-edit]');
+    if (editButton) {
+      abrirEdicao(Number(editButton.dataset.employeeEdit), editButton);
+      return;
+    }
+
+    const statusButton = event.target.closest('[data-employee-status]');
+    if (statusButton) {
+      alterarAtivacaoFuncionario(
+        Number(statusButton.dataset.employeeStatus),
+        statusButton
+      );
+    }
+  });
 }
 
 const CAMPOS_EDITAVEIS_FUNCIONARIO = Object.freeze([

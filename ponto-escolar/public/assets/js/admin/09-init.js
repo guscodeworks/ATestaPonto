@@ -64,7 +64,10 @@
     if (existe('#grafico-presenca')) renderizarGrafico();
     if (existe('#lista-alertas')) renderizarAlertas();
     if (existe('#tbody-funcionarios,#cards-funcionarios')) renderizarFuncionarios();
-    if (existe('#busca-funcionario,#filtro-status,#filtro-cargo')) iniciarFiltrosFuncionarios();
+    if (existe('#busca-funcionario,#filtro-status,#filtro-cargo')) {
+      iniciarFiltrosFuncionarios();
+      iniciarAcoesFuncionarios();
+    }
     if (existe('#tbody-presentes,#tbody-ausentes,#cards-presentes,#cards-ausentes')) renderizarPontosHoje();
     if (existe('#tbody-relatorio')) renderizarRelatorio();
     if (existe('#form-registro')) iniciarFormRegistro();

@@ -1224,6 +1224,329 @@ body.employee-edit-open {
   min-height: 42px;
 }
 
+/* Confirmação de ativação/desativação de funcionário */
+.employee-status-overlay[hidden] {
+  display: none;
+}
+
+.employee-status-overlay {
+  position: fixed;
+  z-index: 520;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: color-mix(in srgb, var(--color-text) 52%, transparent);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.employee-status-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.employee-status-modal {
+  width: min(490px, 100%);
+  max-height: calc(100dvh - 44px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--admin-border, var(--border-light));
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: 0 28px 75px rgba(20, 20, 20, 0.26);
+  transform: translateY(12px) scale(0.985);
+  transition: transform 200ms ease;
+  outline: none;
+}
+
+.employee-status-overlay.is-open .employee-status-modal {
+  transform: translateY(0) scale(1);
+}
+
+body.employee-status-open {
+  overflow: hidden;
+}
+
+.employee-status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 22px 0;
+}
+
+.employee-status-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
+}
+
+.employee-status-modal.is-desativar .employee-status-icon img {
+  filter: brightness(0) saturate(100%) invert(24%) sepia(84%) saturate(2658%) hue-rotate(345deg) brightness(91%) contrast(96%);
+}
+
+.employee-status-modal.is-reativar .employee-status-icon {
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+}
+
+.employee-status-modal.is-reativar .employee-status-icon img {
+  filter: brightness(0) saturate(100%) invert(25%) sepia(95%) saturate(3218%) hue-rotate(219deg) brightness(97%) contrast(98%);
+}
+
+.employee-status-close {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--color-text) 11%, var(--color-bg));
+  border-radius: var(--radius-btn);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.employee-status-close img {
+  opacity: 0.68;
+}
+
+.employee-status-close:hover,
+.employee-status-close:focus-visible {
+  border-color: var(--color-primary);
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 14%, transparent);
+}
+
+#employee-status-form {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.employee-status-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 17px 24px 24px;
+  overscroll-behavior: contain;
+}
+
+.employee-status-eyebrow {
+  margin-bottom: 6px;
+  color: var(--color-accent);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.employee-status-modal.is-reativar .employee-status-eyebrow {
+  color: var(--color-primary);
+}
+
+.employee-status-body h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 22px;
+  line-height: 1.25;
+}
+
+.employee-status-body > p {
+  margin: 7px 0 19px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.employee-status-person {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-text) 9%, var(--color-bg));
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--color-bg) 54%, var(--color-surface));
+}
+
+.employee-status-avatar {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-bg);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.employee-status-person-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.employee-status-person-main strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.employee-status-person-main span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.employee-status-cpf {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  text-align: right;
+}
+
+.employee-status-cpf span {
+  color: var(--color-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.employee-status-cpf strong {
+  color: var(--color-text);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.employee-status-consequence {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-btn);
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+}
+
+.employee-status-consequence img {
+  flex-shrink: 0;
+  margin-top: 1px;
+  filter: brightness(0) saturate(100%) invert(24%) sepia(84%) saturate(2658%) hue-rotate(345deg) brightness(91%) contrast(96%);
+}
+
+.employee-status-consequence p {
+  margin: 0;
+  color: color-mix(in srgb, var(--color-text) 80%, var(--color-bg));
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.employee-status-modal.is-reativar .employee-status-consequence {
+  border-left-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+}
+
+.employee-status-modal.is-reativar .employee-status-consequence img {
+  filter: brightness(0) saturate(100%) invert(25%) sepia(95%) saturate(3218%) hue-rotate(219deg) brightness(97%) contrast(98%);
+}
+
+.employee-status-gate {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--color-text) 9%, var(--color-bg));
+}
+
+.employee-status-gate[hidden] {
+  display: none;
+}
+
+.employee-status-gate label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.employee-status-gate label strong {
+  color: var(--color-accent);
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.05em;
+}
+
+.employee-status-gate .field-input {
+  height: 44px;
+  border-radius: var(--radius-btn);
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.04em;
+}
+
+.employee-status-gate .field-input[aria-invalid="true"] {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.employee-status-gate .field-help {
+  display: block;
+  margin-top: 7px;
+}
+
+.employee-status-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--admin-border, var(--border-light));
+  background: color-mix(in srgb, var(--color-bg) 66%, var(--color-surface));
+}
+
+.employee-status-footer .ui-btn {
+  min-height: 42px;
+}
+
+.employee-status-confirm {
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-btn);
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.employee-status-confirm.is-danger {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.employee-status-confirm.is-reactivate {
+  color: var(--color-bg);
+}
+
+.employee-status-confirm:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 90%, var(--color-text));
+  background: color-mix(in srgb, var(--color-primary) 90%, var(--color-text));
+  color: var(--color-bg);
+}
+
+.employee-status-confirm.is-danger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-accent) 90%, var(--color-text));
+  background: color-mix(in srgb, var(--color-accent) 90%, var(--color-text));
+}
+
 /* ============================================================
    REGISTRAR FUNCIONÁRIO
    ============================================================ */
@@ -1379,6 +1702,19 @@ body.employee-edit-open {
   }
 }
 
+@media (max-width: 1024px) {
+  .employees-page .employees-table-panel.table-desktop {
+    display: none;
+  }
+
+  .employees-page .func-card-list.cards-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .employee-edit-overlay {
     align-items: flex-end;
@@ -1422,6 +1758,51 @@ body.employee-edit-open {
 }
 
 @media (max-width: 600px) {
+  .employee-status-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .employee-status-modal {
+    width: 100%;
+    max-height: 94dvh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    transform: translateY(100%);
+  }
+
+  .employee-status-overlay.is-open .employee-status-modal {
+    transform: translateY(0);
+  }
+
+  .employee-status-header {
+    padding: 18px 18px 0;
+  }
+
+  .employee-status-body {
+    padding: 15px 18px 21px;
+  }
+
+  .employee-status-person {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .employee-status-cpf {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .employee-status-footer {
+    padding: 14px 18px;
+  }
+
+  .employee-status-footer .ui-btn {
+    flex: 1;
+  }
+
   .employees-page .employees-page-header .ui-btn-primary,
   .employees-page .employees-action-bar .filter-select,
   .employees-page .employees-action-bar .action-bar-right,
@@ -1499,7 +1880,9 @@ body.employee-edit-open {
   }
 
   .employee-edit-overlay,
-  .employee-edit-panel {
+  .employee-edit-panel,
+  .employee-status-overlay,
+  .employee-status-modal {
     transition: none;
   }
 }

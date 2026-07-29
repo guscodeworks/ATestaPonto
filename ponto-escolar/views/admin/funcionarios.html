@@ -267,6 +267,78 @@
   </aside>
 </div>
 
+<div class="employee-status-overlay" id="employee-status-overlay" hidden>
+  <section
+    class="employee-status-modal"
+    id="employee-status-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="employee-status-title"
+    aria-describedby="employee-status-description employee-status-consequence"
+    tabindex="-1"
+  >
+    <header class="employee-status-header">
+      <div class="employee-status-icon" aria-hidden="true">
+        <img id="employee-status-icon" src="/assets/icons/triangle-alert.svg" alt="" width="22" height="22">
+      </div>
+      <button type="button" class="employee-status-close" id="employee-status-close" aria-label="Fechar confirmação">
+        <img src="/assets/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">
+      </button>
+    </header>
+
+    <form id="employee-status-form" novalidate>
+      <div class="employee-status-body">
+        <div class="employee-status-eyebrow" id="employee-status-eyebrow">Ação sensível</div>
+        <h2 id="employee-status-title">Desativar funcionário</h2>
+        <p id="employee-status-description">Confirme os dados antes de alterar o acesso ao sistema.</p>
+
+        <div class="employee-status-person" aria-label="Funcionário selecionado">
+          <div class="employee-status-avatar" id="employee-status-avatar" aria-hidden="true">--</div>
+          <div class="employee-status-person-main">
+            <strong id="employee-status-name">Funcionário</strong>
+            <span id="employee-status-role">Cargo não informado</span>
+          </div>
+          <div class="employee-status-cpf">
+            <span>CPF</span>
+            <strong id="employee-status-cpf">***.***.***-**</strong>
+          </div>
+        </div>
+
+        <div class="employee-status-consequence" id="employee-status-consequence">
+          <img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="19" height="19">
+          <p id="employee-status-consequence-text">
+            O funcionário perderá o acesso ao sistema. Todos os registros de ponto serão preservados.
+          </p>
+        </div>
+
+        <div class="employee-status-gate" id="employee-status-gate">
+          <label for="employee-status-confirmation">
+            Para continuar, digite <strong>DESATIVAR</strong>
+          </label>
+          <input
+            class="field-input no-icon"
+            id="employee-status-confirmation"
+            type="text"
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            aria-describedby="employee-status-confirmation-help"
+          >
+          <span class="field-help" id="employee-status-confirmation-help">A confirmação diferencia letras maiúsculas e minúsculas.</span>
+        </div>
+      </div>
+
+      <footer class="employee-status-footer">
+        <button type="button" class="ui-btn ui-btn-secondary" id="employee-status-cancel">Cancelar</button>
+        <button type="submit" class="ui-btn employee-status-confirm is-danger" id="employee-status-submit" disabled>
+          <span class="btn-label" id="employee-status-submit-label">Desativar acesso</span>
+          <span class="spinner" aria-hidden="true"></span>
+        </button>
+      </footer>
+    </form>
+  </section>
+</div>
+
 <div class="toast-stack" id="toast-stack"></div>
   <script src="/assets/js/admin/00-state.js"></script>
   <script src="/assets/js/admin/01-helpers.js"></script>
