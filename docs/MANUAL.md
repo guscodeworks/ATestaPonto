@@ -46,9 +46,14 @@ Siga os passos abaixo, na ordem indicada, para instalar e configurar o projeto d
 
 ### Passo 1 — Baixar o projeto
 
-Se você recebeu o projeto como arquivo ZIP, extraia-o para uma pasta de sua escolha. Se tiver o Git instalado, pode clonar o repositório:
+Se você recebeu o projeto como arquivo ZIP, extraia-o para uma pasta de sua escolha.
 
 ![extraindo_do_zip](img/passo%201/Capturar.PNG)
+
+Se tiver o Git instalado, pode clonar o repositório:
+
+![clonando](img/passo%201/github.clone.PNG)
+![clonando](img/passo%201/copiando.clone.PNG)
 ```bash
 git clone <URL_DO_REPOSITORIO>
 cd Ponto-Escolar
@@ -60,6 +65,7 @@ cd Ponto-Escolar
 cd ponto-escolar
 npm install
 ```
+![instalando_dependencias_ponto](img/passo%202/instalando_dependencias.PNG)
 
 Este comando lê o arquivo `package.json` e baixa automaticamente todas as bibliotecas listadas (Express, bcrypt, JWT, QR Code, etc.).
 
@@ -69,6 +75,7 @@ Este comando lê o arquivo `package.json` e baixa automaticamente todas as bibli
 cd ../gov.br-fake
 npm install
 ```
+![instalando_dependencias_do_gov](img/passo%203/instalando_depedencias_gov.PNG)
 
 ### Passo 4 — Configurar o banco de dados MySQL
 
@@ -89,15 +96,6 @@ npm run db:init
 ```
 
 Este comando cria automaticamente todas as tabelas necessárias no banco de dados usando o arquivo SQL do projeto.
-
-### Passo 6 — Criar o primeiro administrador
-
-```bash
-npm run admin:create -- --name="Nome do Admin" --email=admin@escola.com --password=SenhaBemForte123
-```
-
-> [!IMPORTANT]
-> A senha deve ter entre 12 e 72 caracteres. Use uma senha forte, com letras, números e símbolos.
 
 ## Configuração
 
@@ -206,7 +204,7 @@ O funcionário pode fazer login usando CPF ou e-mail cadastrado:
 
 > [!IMPORTANT]
 > O login do funcionário exige que o QR Code válido do dia tenha sido lido antes. Sem o QR Code, não é possível registrar ponto.
-
+>No primeiro login do funcionário a senha será o adm que mandara
 ### Como Funciona o QR Code
 
 O QR Code é o mecanismo central de segurança do sistema. Ele garante que o funcionário está fisicamente presente na escola:
