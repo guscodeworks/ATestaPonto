@@ -208,14 +208,6 @@ O funcionário pode fazer login usando CPF ou e-mail cadastrado:
 
 > [!IMPORTANT]
 >No primeiro login do funcionário a senha sera enviada no email do funcionario para cadastrar uma nova
-### Como Funciona o QR Code
-
-O QR Code é o mecanismo central de segurança do sistema. Ele garante que o funcionário está fisicamente presente na escola:
-
-- O QR Code é gerado automaticamente pelo sistema com validade de 10 minutos.
-- Cada QR Code é único para o dia e para a unidade escolar.
-- O QR Code é renovado automaticamente a cada 10 minutos, tornando impossível reutilizá-lo mais tarde.
-- O administrador pode acessar o QR Code pelo painel administrativo e exibi-lo em um monitor, projetor ou impresso.
 
 ### Como Registrar Entrada e Saída
 
