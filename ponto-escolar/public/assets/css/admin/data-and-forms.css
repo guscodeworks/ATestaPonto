@@ -1532,8 +1532,40 @@ body.employee-status-open {
   color: var(--color-bg);
 }
 
-.employee-status-confirm.is-reactivate {
+.employee-status-modal .employee-status-confirm.is-reactivate {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
   color: var(--color-bg);
+}
+
+.employee-status-modal .employee-status-confirm.is-reactivate:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--color-primary) 88%, var(--color-text));
+  background: color-mix(in srgb, var(--color-primary) 88%, var(--color-text));
+  color: var(--color-bg);
+}
+
+.employee-status-modal .employee-status-confirm.is-reactivate:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.employee-status-modal .employee-status-confirm.is-reactivate:disabled {
+  border-color: color-mix(in srgb, var(--color-text) 12%, var(--color-surface));
+  background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface));
+  color: color-mix(in srgb, var(--color-text) 48%, var(--color-surface));
+  opacity: 1;
+  cursor: not-allowed;
+  pointer-events: auto;
+  box-shadow: none;
+}
+
+.employee-status-modal .employee-status-confirm.is-reactivate.loading .btn-label {
+  display: inline-flex;
+}
+
+.employee-status-modal .employee-status-confirm.is-reactivate.loading .spinner {
+  border-color: color-mix(in srgb, var(--color-text) 16%, transparent);
+  border-top-color: color-mix(in srgb, var(--color-text) 58%, var(--color-surface));
 }
 
 .employee-status-confirm:hover:not(:disabled) {

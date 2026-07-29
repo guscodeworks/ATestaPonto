@@ -530,6 +530,7 @@ async function confirmarAlteracaoStatusFuncionario(event) {
   elements.close.disabled = true;
   elements.cancel.disabled = true;
   elements.confirmation.disabled = true;
+  if (isReactivation) elements.submitLabel.textContent = 'Reativando...';
 
   try {
     const response = await adminApiFetch(
@@ -562,6 +563,7 @@ async function confirmarAlteracaoStatusFuncionario(event) {
     elements.close.disabled = false;
     elements.cancel.disabled = false;
     elements.confirmation.disabled = false;
+    if (isReactivation) elements.submitLabel.textContent = 'Reativar acesso';
     atualizarBotaoStatusFuncionario();
   }
 }
