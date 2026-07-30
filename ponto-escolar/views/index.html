@@ -1,117 +1,106 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Acesso Funcionário — Sala do Futuro</title>
-  <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link rel="stylesheet" href="/assets/css/funcionario.css">
-  <script src="/assets/js/funcionario-login.js?v=20260520-login-clean" defer></script>
+  <title>Acesso do Funcionário | ATestaPonto</title>
+  <link rel="icon" type="image/png" sizes="96x96" href="/assets/img/atestaponto-favicon-96.png" />
+  <link rel="apple-touch-icon" href="/assets/img/atestaponto-symbol.png" />
+  <link rel="stylesheet" href="/assets/css/tokens.css" />
+  <link rel="stylesheet" href="/assets/css/funcionario-login.css?v=20260729-loading-states" />
+  <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
+  <script src="/assets/js/funcionario-login.js?v=20260729-identifier-login" defer></script>
 </head>
-
 <body>
-
-  <div class="login-page">
-
-    <!-- Painel visual esquerdo -->
-    <div class="login-panel login-panel--visual">
-      <div class="login-geo"></div>
-      <div class="login-grid-lines"></div>
-      <div class="login-visual-inner">
-        <div class="login-visual-icon">
-          <img src="/assets/img/brand-mark.svg" alt="" class="login-brand-image" />
-        </div>
-        <div class="login-visual-title">Sala do Futuro</div>
-        <p class="login-visual-desc">Sistema de Controle de Ponto.<br />Registre sua presença de forma rápida e segura.
-        </p>
-
-        <div style="margin-top:40px; display:flex; flex-direction:column; gap:14px; text-align:left;">
-          <div
-            style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 16px;">
-            <span style="font-size:22px;">⚡</span>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:white;">Rápido e simples</div>
-              <div style="font-size:12px;color:rgba(255,255,255,0.5);">Bata ponto em menos de 15 segundos</div>
-            </div>
-          </div>
-          <div
-            style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 16px;">
-            <span style="font-size:22px;">📱</span>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:white;">Mobile first</div>
-              <div style="font-size:12px;color:rgba(255,255,255,0.5);">Funciona em qualquer dispositivo</div>
-            </div>
-          </div>
-          <div
-            style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:14px 16px;">
-            <span style="font-size:22px;">🔐</span>
-            <div>
-              <div style="font-size:13px;font-weight:600;color:white;">Seguro</div>
-              <div style="font-size:12px;color:rgba(255,255,255,0.5);">Seus dados sempre protegidos</div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <main class="login-page">
+    <div class="login-art" aria-hidden="true">
+      <span class="art-dot art-dot--blue-one"></span>
+      <span class="art-dot art-dot--blue-two"></span>
+      <span class="art-dot art-dot--red-one"></span>
+      <span class="art-dot art-dot--red-two"></span>
+      <span class="art-dot art-dot--black-one"></span>
+      <span class="art-dot art-dot--black-two"></span>
     </div>
-
-    <!-- Painel do formulário -->
-    <div class="login-panel">
+    <section class="login-panel" aria-labelledby="login-heading">
       <div class="login-form-panel">
+        <header>
+          <img
+            class="login-brand-symbol"
+            src="/assets/img/atestaponto-symbol.png"
+            width="82"
+            height="82"
+            alt=""
+          />
+          <p class="login-brand"><span>ATesta</span> <strong>Ponto</strong></p>
+          <h1 class="login-heading" id="login-heading">Acesso do funcionário</h1>
+          <p class="login-sub">Entre com seu CPF ou e-mail e sua senha.</p>
+        </header>
 
-        <div class="login-logo">
-          <div class="login-logo-mark">
-            <img src="/assets/img/brand-mark.svg" alt="" class="login-brand-image login-brand-image--small" />
+        <form id="login-form" novalidate>
+          <div class="form-field">
+            <label for="identificador">CPF ou e-mail</label>
+            <div class="input-wrap">
+              <input
+                type="text"
+                id="identificador"
+                class="field-input no-icon"
+                name="identificador"
+                placeholder="000.000.000-00 ou nome@escola.edu.br"
+                maxlength="150"
+                autocomplete="username"
+                inputmode="text"
+                aria-describedby="identificador-error"
+              />
+            </div>
+            <span class="field-error" id="identificador-error" aria-live="polite">
+              Informe um CPF ou e-mail válido.
+            </span>
           </div>
-          <span class="login-logo-name">Sala do Futuro</span>
-        </div>
 
-        <h1 class="login-heading">Acesso do Funcionário</h1>
-        <p class="login-sub">Digite seu CPF e senha para entrar</p>
-
-        <div class="form-field">
-          <label for="cpf">CPF</label>
-          <div class="input-wrap">
-            <span class="field-icon">👤</span>
-            <input type="text" id="cpf" class="field-input" placeholder="000.000.000-00" maxlength="14"
-              autocomplete="username" inputmode="numeric" />
+          <div class="form-field">
+            <label for="senha">Senha</label>
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="senha"
+                class="field-input no-icon"
+                name="senha"
+                placeholder="Digite sua senha"
+                autocomplete="current-password"
+                aria-describedby="senha-error"
+              />
+              <button type="button" class="toggle-pw" id="toggle-pw" aria-label="Mostrar senha">
+                Mostrar
+              </button>
+            </div>
+            <span class="field-error" id="senha-error" aria-live="polite">
+              A senha deve ter pelo menos 8 caracteres.
+            </span>
           </div>
-          <span class="field-error" id="cpf-error">CPF inválido. Verifique e tente novamente.</span>
-        </div>
 
-        <div class="form-field">
-          <label for="senha">Senha</label>
-          <div class="input-wrap">
-            <span class="field-icon">🔒</span>
-            <input type="password" id="senha" class="field-input" placeholder="••••••••"
-              autocomplete="current-password" />
-            <button type="button" class="toggle-pw" id="toggle-pw" aria-label="Mostrar senha">👁</button>
+          <div class="form-meta">
+            <label class="form-remember" for="remember">
+              <input type="checkbox" id="remember" />
+              Lembrar CPF ou e-mail
+            </label>
+            <a href="#" class="form-link">Esqueci minha senha</a>
           </div>
-          <span class="field-error" id="senha-error">Senha incorreta. Tente novamente.</span>
-        </div>
 
-        <div class="form-meta">
-          <label class="form-remember">
-            <input type="checkbox" id="remember" /> Lembrar CPF
-          </label>
-          <a href="#" class="form-link">Esqueci minha senha</a>
-        </div>
-
-        <button class="btn-login" id="btn-login">
-          <span class="btn-label">Entrar no sistema</span>
-          <div class="spinner"></div>
-        </button>
-
-        <div class="login-divider"><span>ou</span></div>
-
-        <p class="login-admin-link">
-          É administrador? <a href="/admin/login">Acesse o painel admin</a>
-        </p>
-
+          <button type="submit" class="btn-login" id="btn-login">
+            <span class="btn-label">Entrar</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </form>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 
-  <div class="toast-stack" id="toast-stack"></div>
-  
+  <section
+    class="toast-stack"
+    id="toast-stack"
+    aria-live="polite"
+    aria-atomic="true"
+    aria-label="Notificações"
+  ></section>
+</body>
 </html>

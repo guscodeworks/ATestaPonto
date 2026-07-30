@@ -2,7 +2,6 @@
   const {
     method = 'GET',
     body = undefined,
-    auth = true,
     timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS
   } = options;
 
@@ -20,16 +19,9 @@
       headers['Content-Type'] = 'application/json';
     }
 
-    if (auth) {
-      const token = getAuthToken();
-      if (!token) {
-        throw new Error('Sessão expirada. Faça login novamente.');
-      }
-      headers.Authorization = `Bearer ${token}`;
-    }
-
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method,
+      credentials: 'same-origin',
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: controller.signal
@@ -44,11 +36,6 @@
 
     if (!response.ok) {
       const message = payload?.error?.message || `Erro na requisição (${response.status})`;
-      // 401 em uma requisição autenticada indica token inválido/expirado:
-      // limpa o estado local para forçar novo login na próxima checagem.
-      if (response.status === 401 && auth) {
-        clearAuthState();
-      }
       throw new Error(message);
     }
 
@@ -89,25 +76,15 @@ function renderAdminProfile(admin) {
 }
 
 async function ensureAuthenticatedAdmin() {
-  const token = getAuthToken();
-  if (!token) {
-    redirectToLogin();
-    return null;
-  }
-
   try {
     const data = await apiRequest('/admin/auth/me');
     const admin = data?.admin || null;
     if (!admin) {
       throw new Error('Sessão inválida');
     }
-    // Reescreve o estado salvo com os dados atualizados do admin,
-    // mantendo o mesmo token já validado.
-    saveAuthState(token, admin);
     renderAdminProfile(admin);
     return admin;
   } catch (error) {
-    clearAuthState();
     mostrarToast(sanitizeMessage(error.message, 'Sessão expirada.'), 'error');
     redirectToLogin();
     return null;

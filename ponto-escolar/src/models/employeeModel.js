@@ -12,40 +12,59 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-// Centraliza as colunas usadas nas telas administrativas para evitar consultas divergentes.
-const EMPLOYEE_WITH_CARGO_SELECT = `
-  SELECT f.id, f.cpf, f.nome, f.email, f.ativo, f.criado_em, f.primeiro_acesso, f.cargo_id, f.login_id, c.nome AS cargo_nome
-  FROM funcionarios f
-  LEFT JOIN cargo c ON c.id = f.cargo_id
-`;
+// Consultas fixas: filtros opcionais continuam parametrizados e nenhum valor
+// recebido da requisicao e usado para montar SQL dinamicamente.
+const COUNT_EMPLOYEES_QUERY =
+  "SELECT COUNT(*) AS total FROM funcionarios f INNER JOIN cargos c ON f.cargo_id = c.id WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
+
+const LIST_EMPLOYEES_QUERY =
+  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON f.cargo_id = c.id WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%'))) ORDER BY f.id DESC LIMIT ? OFFSET ?";
+
+const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
+  cpf: "UPDATE funcionarios SET cpf = ? WHERE id = ?",
+  email: "UPDATE funcionarios SET email = ? WHERE id = ?",
+  nome: "UPDATE funcionarios SET nome = ? WHERE id = ?",
+  telefone: "UPDATE funcionarios SET telefone = ? WHERE id = ?",
+  ativo:
+    "UPDATE funcionarios SET ativo = ?, desativado_em = IF(? = 1, NULL, CURRENT_TIMESTAMP) WHERE id = ?",
+  cargoId: "UPDATE funcionarios SET cargo_id = ? WHERE id = ?",
+});
 
 // Monta filtros dinâmicos de forma parametrizada (evitando SQL injection) para
 // serem reaproveitados tanto na contagem quanto na listagem paginada de funcionários.
-function buildEmployeeFilters({ ativo, q } = {}) {
-  const filters = [];
-  const params = [];
+function resolveEmployeeFilter({ ativo, cargo, q } = {}) {
+  const activeValue = typeof ativo === "boolean" ? (ativo ? 1 : 0) : null;
+  const cargoValue = String(cargo || "").trim().toUpperCase();
+  const searchValue = String(q || "").trim();
 
-  if (typeof ativo === "boolean") {
-    filters.push("f.ativo = ?");
-    params.push(ativo ? 1 : 0);
-  }
-
-  if (q) {
-    filters.push("(f.nome LIKE ? OR f.email LIKE ? OR f.cpf LIKE ?)");
-    params.push(`%${q}%`, `%${q}%`, `%${q}%`);
-  }
-
-  return {
-    whereClause: filters.length ? `WHERE ${filters.join(" AND ")}` : "",
-    params,
-  };
+  return [
+    activeValue,
+    activeValue,
+    cargoValue,
+    cargoValue,
+    searchValue,
+    searchValue,
+    searchValue,
+  ];
 }
 
 async function findById(employeeId, client) {
   return getClient(client).executeOne(
-    `${EMPLOYEE_WITH_CARGO_SELECT}
-     WHERE f.id = ?
-     LIMIT 1`,
+    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, f.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
+    [employeeId]
+  );
+}
+
+async function findAdminEmployeeById(employeeId, client) {
+  return getClient(client).executeOne(
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1",
+    [employeeId]
+  );
+}
+
+async function findAdminEmployeeByIdForUpdate(client, employeeId) {
+  return getClient(client).executeOne(
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
@@ -55,7 +74,7 @@ async function findById(employeeId, client) {
  */
 async function findByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
-    "SELECT id, cpf, email, ativo, cargo_id, login_id FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
+    "SELECT id, cpf, email, nome, telefone, ativo, desativado_em, cargo_id FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
@@ -65,41 +84,22 @@ async function findByIdForUpdate(client, employeeId) {
  */
 async function findForPunchRegisterByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
-    `SELECT id, cpf, nome, email, ativo
-     FROM funcionarios
-     WHERE id = ?
-     LIMIT 1
-     FOR UPDATE`,
+    "SELECT id, cpf, nome, email, ativo FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
 
 async function findForPunchLoginByCpf(cpf) {
   return database.executeOne(
-    `SELECT id, cpf, nome, email, senha, ativo
-     FROM funcionarios
-     WHERE cpf = ?
-     LIMIT 1`,
+    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
     [cpf]
   );
 }
 
 async function findForPunchLoginByEmail(email) {
   return database.executeOne(
-    `SELECT id, cpf, nome, email, senha, ativo
-     FROM funcionarios
-     WHERE email = ?
-     LIMIT 1`,
+    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.email = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
     [email]
-  );
-}
-
-// Usada no fluxo de login legado: retorna apenas funcionários ativos e inclui
-// "primeiro_acesso" pois esse fluxo trata diferente o caso de troca de senha obrigatória.
-async function findActiveForLegacyLoginByCpf(cpf) {
-  return database.executeOne(
-    "SELECT id, cpf, nome, primeiro_acesso FROM funcionarios WHERE cpf = ? AND ativo = 1 LIMIT 1",
-    [cpf]
   );
 }
 
@@ -138,46 +138,46 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
  * Reaproveita os filtros de listagem e contagem para manter paginacao coerente.
  */
 async function countEmployees(filters = {}) {
-  const { whereClause, params } = buildEmployeeFilters(filters);
-
   return database.executeOne(
-    `SELECT COUNT(*) AS total
-     FROM funcionarios f
-     ${whereClause}`,
-    params
+    COUNT_EMPLOYEES_QUERY,
+    resolveEmployeeFilter(filters)
   );
 }
 
-async function listEmployees({ ativo, q, limit, offset } = {}) {
-  const { whereClause, params } = buildEmployeeFilters({ ativo, q });
+async function listEmployees({ ativo, cargo, q, limit, offset } = {}) {
+  const params = resolveEmployeeFilter({ ativo, cargo, q });
 
   return database.execute(
-    `${EMPLOYEE_WITH_CARGO_SELECT}
-     ${whereClause}
-     ORDER BY f.id DESC
-     LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+    LIST_EMPLOYEES_QUERY,
+    [...params, String(Number(limit)), String(Number(offset))]
   );
 }
 
 async function listForPointReport() {
   return database.execute(
-    `SELECT id, nome, email, cpf, ativo, cargo_id
-     FROM funcionarios
-     ORDER BY nome ASC`
+    "SELECT id, nome, email, cpf, ativo, cargo_id FROM funcionarios ORDER BY nome ASC",
+    []
   );
 }
 
 async function createEmployee(
   client,
-  { cpf, nome, email, senhaHash, ativo, cargoId, loginId }
+  { cargoId, cpf, email, nome, telefone = null, ativo }
 ) {
-  // primeiro_acesso fixo em 1: todo funcionário recém-criado é obrigado a passar
-  // pelo fluxo de primeiro acesso (ex: troca de senha) antes do uso normal.
   return getClient(client).execute(
-    `INSERT INTO funcionarios (cpf, nome, email, senha, ativo, primeiro_acesso, cargo_id, login_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [cpf, nome, email, senhaHash, ativo ? 1 : 0, 1, cargoId, loginId]
+    "INSERT INTO funcionarios (cargo_id, cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?, ?)",
+    [cargoId, cpf, email, nome, telefone, ativo ? 1 : 0]
+  );
+}
+
+async function updateAdminEmployee(
+  client,
+  employeeId,
+  { nome, email, telefone }
+) {
+  return getClient(client).execute(
+    "UPDATE funcionarios SET nome = ?, email = ?, telefone = ? WHERE id = ?",
+    [nome, email, telefone, employeeId]
   );
 }
 
@@ -185,66 +185,63 @@ async function createEmployee(
  * Monta somente as colunas alteradas para preservar campos fora da requisicao.
  */
 async function updateEmployee(client, employeeId, fields) {
-  const columns = [];
-  const values = [];
+  let lastResult = { affectedRows: 0 };
+  let totalAffectedRows = 0;
 
-  if (Object.prototype.hasOwnProperty.call(fields, "cpf")) {
-    columns.push("cpf = ?");
-    values.push(fields.cpf);
+  for (const field of Object.keys(EMPLOYEE_UPDATE_ALLOWLIST)) {
+    if (!Object.prototype.hasOwnProperty.call(fields, field)) {
+      continue;
+    }
+
+    const query = EMPLOYEE_UPDATE_ALLOWLIST[field];
+    if (field === "ativo") {
+      const activeValue = fields.ativo ? 1 : 0;
+      lastResult = await getClient(client).execute(query, [
+        activeValue,
+        activeValue,
+        employeeId,
+      ]);
+      totalAffectedRows += Number(lastResult.affectedRows || 0);
+      continue;
+    }
+
+    lastResult = await getClient(client).execute(query, [
+      fields[field],
+      employeeId,
+    ]);
+    totalAffectedRows += Number(lastResult.affectedRows || 0);
   }
 
-  if (Object.prototype.hasOwnProperty.call(fields, "email")) {
-    columns.push("email = ?");
-    values.push(fields.email);
-  }
+  return {
+    ...lastResult,
+    affectedRows: totalAffectedRows,
+  };
+}
 
-  if (Object.prototype.hasOwnProperty.call(fields, "nome")) {
-    columns.push("nome = ?");
-    values.push(fields.nome);
-  }
-
-  if (Object.prototype.hasOwnProperty.call(fields, "ativo")) {
-    columns.push("ativo = ?");
-    values.push(fields.ativo ? 1 : 0);
-  }
-
-  if (Object.prototype.hasOwnProperty.call(fields, "cargoId")) {
-    columns.push("cargo_id = ?");
-    values.push(fields.cargoId);
-  }
-
-  if (Object.prototype.hasOwnProperty.call(fields, "senhaHash")) {
-    columns.push("senha = ?");
-    values.push(fields.senhaHash);
-  }
-
-  // Evita executar um UPDATE sem SET (SQL inválido) quando nenhum campo é alterado.
-  if (columns.length === 0) {
-    return { affectedRows: 0 };
-  }
-
-  values.push(employeeId);
+async function updateEmployeeActivation(client, employeeId, ativo) {
+  const activeValue = ativo ? 1 : 0;
   return getClient(client).execute(
-    `UPDATE funcionarios SET ${columns.join(", ")} WHERE id = ?`,
-    values
+    "UPDATE funcionarios SET ativo = ?, desativado_em = IF(? = 1, NULL, CURRENT_TIMESTAMP) WHERE id = ?",
+    [activeValue, activeValue, employeeId]
   );
 }
 
-async function updateEmployeeStatus(employeeId, ativo) {
-  return database.execute("UPDATE funcionarios SET ativo = ? WHERE id = ?", [
-    ativo ? 1 : 0,
-    employeeId,
-  ]);
+async function findEmployeeActivationById(client, employeeId) {
+  return getClient(client).executeOne(
+    "SELECT id, ativo, desativado_em FROM funcionarios WHERE id = ? LIMIT 1",
+    [employeeId]
+  );
 }
 
 module.exports = {
   withTransaction,
   findById,
+  findAdminEmployeeById,
+  findAdminEmployeeByIdForUpdate,
   findByIdForUpdate,
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
   findForPunchLoginByEmail,
-  findActiveForLegacyLoginByCpf,
   findByCpfForUpdate,
   findByEmailForUpdate,
   findCpfConflictForUpdate,
@@ -253,6 +250,8 @@ module.exports = {
   listEmployees,
   listForPointReport,
   createEmployee,
+  updateAdminEmployee,
   updateEmployee,
-  updateEmployeeStatus,
+  updateEmployeeActivation,
+  findEmployeeActivationById,
 };

@@ -170,6 +170,10 @@ async function baterPonto() {
 
   registrando = true;
   renderEstado();
+  const carregamento = iniciarCarregamento(document.getElementById('btn-ponto'), {
+    tamanho: 'md',
+    mensagem: 'Registrando ponto',
+  });
 
   try {
     const location = await getCurrentLocation();
@@ -197,6 +201,7 @@ async function baterPonto() {
       setTimeout(sair, 1600);
     }
   } finally {
+    await finalizarCarregamento(carregamento);
     registrando = false;
     renderEstado();
   }
@@ -223,7 +228,13 @@ function toast(msg, tipo='info') {
   const icons = { success:'✅', error:'❌', info:'ℹ️', warning:'⚠️' };
   const el = document.createElement('div');
   el.className = `toast toast-${tipo}`;
-  el.innerHTML = `<span class="toast-icon">${icons[tipo] || icons.info}</span><span class="toast-msg">${msg}</span>`;
+  const icon = document.createElement('span');
+  icon.className = 'toast-icon';
+  icon.textContent = icons[tipo] || icons.info;
+  const message = document.createElement('span');
+  message.className = 'toast-msg';
+  message.textContent = String(msg || '');
+  el.append(icon, message);
   document.getElementById('toast-stack').appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }

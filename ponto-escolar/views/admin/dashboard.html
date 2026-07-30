@@ -1,13 +1,12 @@
 ﻿<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-admin-session="pending">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard - Admin</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/tokens.css">
-  <link rel="stylesheet" href="/assets/css/admin.css"/>
+  <link rel="stylesheet" href="/assets/css/admin.css?v=20260729-loading-review"/>
 </head>
 <body>
 
@@ -18,7 +17,7 @@
   <!-- SIDEBAR -->
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -26,9 +25,9 @@
     </div>
 
     <div class="sidebar-user">
-      <div class="sidebar-user-avatar" id="sb-avatar">CE</div>
+      <div class="sidebar-user-avatar" id="sb-avatar">--</div>
       <div class="sidebar-user-info">
-        <div class="sidebar-user-name" id="sb-name">Carlos Eduardo</div>
+        <div class="sidebar-user-name" id="sb-name">Administrador</div>
         <div class="sidebar-user-role" id="sb-role">Administrador</div>
       </div>
       <div class="sidebar-admin-badge">ADMIN</div>
@@ -74,7 +73,7 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
           <span>ATesta<span class="brand-accent">Ponto</span></span>
           <span class="breadcrumb-sep">›</span>
@@ -87,9 +86,9 @@
           <div class="topbar-date" id="topbar-date"></div>
         </div>
         <div class="topbar-user" onclick="window.location.href='/admin/configuracoes'" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-          <div class="topbar-avatar" id="admin-avatar">CE</div>
+          <div class="topbar-avatar" id="admin-avatar">--</div>
           <div class="topbar-user-info">
-            <span class="topbar-user-name" id="admin-firstname">Carlos</span>
+            <span class="topbar-user-name" id="admin-firstname">Administrador</span>
             <span class="topbar-user-role" id="admin-role">Administrador</span>
           </div>
         </div>
@@ -171,13 +170,13 @@
       <div class="dash-grid">
 
         <!-- Últimos registros -->
-        <div class="ui-panel fade-in">
+        <div class="ui-panel dashboard-records-panel fade-in">
           <div class="ui-panel-header">
             <div>
               <div class="ui-panel-title">Últimos Registros de Ponto</div>
               <div class="ui-panel-subtitle">Atualizados em tempo real</div>
+              <a href="/admin/pontos-do-dia" class="ui-btn ui-btn-ghost ui-btn-sm">Ver todos →</a>
             </div>
-            <a href="/admin/pontos-do-dia" class="ui-btn ui-btn-ghost ui-btn-sm">Ver todos →</a>
           </div>
           <div class="table-wrap table-desktop">
             <table class="data-table">
@@ -200,7 +199,7 @@
         <div class="dashboard-side-column">
 
           <!-- Gráfico de presença do dia -->
-          <div class="ui-panel fade-in">
+          <div class="ui-panel dashboard-presence-panel fade-in">
             <div class="ui-panel-header">
               <div>
                 <div class="ui-panel-title">Presença de Hoje</div>
@@ -213,7 +212,7 @@
           </div>
 
           <!-- Alertas -->
-          <div class="ui-panel fade-in">
+          <div class="ui-panel dashboard-alerts-panel fade-in">
             <div class="ui-panel-header">
               <div class="ui-panel-title">Alertas</div>
             </div>
@@ -230,16 +229,17 @@
 </div>
 
 <div class="toast-stack" id="toast-stack"></div>
-  <script src="/assets/js/admin/00-state.js"></script>
-  <script src="/assets/js/admin/01-helpers.js"></script>
-  <script src="/assets/js/admin/02-ui-core.js"></script>
-  <script src="/assets/js/admin/03-dashboard.js"></script>
-  <script src="/assets/js/admin/04-employees.js"></script>
-  <script src="/assets/js/admin/05-points.js"></script>
-  <script src="/assets/js/admin/06-reports.js"></script>
-  <script src="/assets/js/admin/07-register.js"></script>
-  <script src="/assets/js/admin/08-settings-login.js"></script>
-  <script src="/assets/js/admin/09-init.js"></script>
+  <script src="/assets/js/loading.js?v=20260729-loading-review"></script>
+  <script src="/assets/js/admin/00-state.js?v=20260729-loading-review"></script>
+  <script src="/assets/js/admin/01-helpers.js?v=20260729-loading-states"></script>
+  <script src="/assets/js/admin/02-ui-core.js?v=20260729-loading-states"></script>
+  <script src="/assets/js/admin/03-dashboard.js?v=20260729-loading-states"></script>
+  <script src="/assets/js/admin/04-employees.js?v=20260729-global-overlay"></script>
+  <script src="/assets/js/admin/05-points.js?v=20260729-loading-states"></script>
+  <script src="/assets/js/admin/06-reports.js?v=20260729-loading-states"></script>
+  <script src="/assets/js/admin/07-register.js?v=20260729-global-overlay"></script>
+  <script src="/assets/js/admin/08-settings-login.js?v=20260729-global-overlay"></script>
+  <script src="/assets/js/admin/09-init.js?v=20260729-loading-review"></script>
   <script src="/assets/js/admin/checkMobile.js"></script>
 </body>
 </html>

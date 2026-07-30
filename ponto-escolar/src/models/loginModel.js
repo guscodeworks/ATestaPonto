@@ -13,7 +13,7 @@ function getClient(client) {
  */
 async function findByCpfForUpdate(client, cpf) {
   return getClient(client).executeOne(
-    "SELECT id FROM login WHERE cpf = ? LIMIT 1 FOR UPDATE",
+    "SELECT lf.funcionario_id FROM login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id WHERE f.cpf = ? LIMIT 1 FOR UPDATE",
     [cpf]
   );
 }
@@ -21,46 +21,46 @@ async function findByCpfForUpdate(client, cpf) {
 /**
  * Verifica conflito sem acusar o proprio login durante alteracao de CPF.
  */
-async function findCpfConflictForUpdate(client, cpf, excludedLoginId) {
+async function findCpfConflictForUpdate(client, cpf, excludedFuncionarioId) {
   return getClient(client).executeOne(
-    "SELECT id FROM login WHERE cpf = ? AND id <> ? LIMIT 1 FOR UPDATE",
-    [cpf, excludedLoginId]
+    "SELECT lf.funcionario_id FROM login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id WHERE f.cpf = ? AND f.id <> ? LIMIT 1 FOR UPDATE",
+    [cpf, excludedFuncionarioId]
   );
 }
 
-async function findCredentialsByCpf(cpf) {
-  return database.executeOne(
-    "SELECT id, cpf, senha FROM login WHERE cpf = ? LIMIT 1",
-    [cpf]
-  );
-}
-
-async function createLogin(client, { cpf, senhaHash }) {
+async function createLogin(client, { funcionarioId, senhaHash }) {
   return getClient(client).execute(
-    "INSERT INTO login (cpf, senha) VALUES (?, ?)",
-    [cpf, senhaHash]
+    "INSERT INTO login_funcionario (funcionario_id, senha_hash, primeiro_acesso) VALUES (?, ?, ?)",
+    [funcionarioId, senhaHash, true]
   );
 }
 
-async function updateCpf(client, loginId, cpf) {
-  return getClient(client).execute("UPDATE login SET cpf = ? WHERE id = ?", [
+async function updateCpf(client, funcionarioId, cpf) {
+  return getClient(client).execute("UPDATE funcionarios SET cpf = ? WHERE id = ?", [
     cpf,
-    loginId,
+    funcionarioId,
   ]);
 }
 
-async function updateSenha(client, loginId, senhaHash) {
-  return getClient(client).execute("UPDATE login SET senha = ? WHERE id = ?", [
-    senhaHash,
-    loginId,
-  ]);
+async function updateSenha(client, funcionarioId, senhaHash) {
+  return getClient(client).execute(
+    "UPDATE login_funcionario SET senha_hash = ?, senha_alterada_em = CURRENT_TIMESTAMP, senha_temporaria_expira_em = NULL, primeiro_acesso = FALSE WHERE funcionario_id = ?",
+    [senhaHash, funcionarioId]
+  );
+}
+
+async function updateLastLogin(funcionarioId) {
+  return database.execute(
+    "UPDATE login_funcionario SET ultimo_login_em = CURRENT_TIMESTAMP WHERE funcionario_id = ?",
+    [funcionarioId]
+  );
 }
 
 module.exports = {
   findByCpfForUpdate,
   findCpfConflictForUpdate,
-  findCredentialsByCpf,
   createLogin,
   updateCpf,
   updateSenha,
+  updateLastLogin,
 };

@@ -1,5 +1,6 @@
 /* Funcionário CSS Manifest — usa o mesmo design system do Admin */
 @import url("./admin/base.css");
+@import url("./loading.css");
 @import url("./admin/dashboard.css");
 @import url("./admin/data-and-forms.css");
 @import url("./admin/components.css");

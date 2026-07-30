@@ -3,6 +3,7 @@
 const { Router } = require('express');
 
 const adminAuthRoutes = require('./adminAuthRoutes');
+const adminCargoRoutes = require('./adminCargoRoutes');
 const adminEmployeeRoutes = require('./adminEmployeeRoutes');
 const adminQrRoutes = require('./adminQrRoutes');
 const adminPointRoutes = require('./adminPointRoutes');
@@ -12,6 +13,7 @@ const ensureAdminApiAuthenticated = require('../middlewares/ensureAdminApiAuthen
 const router = Router();
 
 router.use('/admin/auth', ensureAdminApiAuthenticated, adminAuthRoutes);
+router.use('/admin/cargos', ensureAdminApiAuthenticated, adminCargoRoutes);
 router.use('/admin/funcionarios', ensureAdminApiAuthenticated, adminEmployeeRoutes);
 router.use('/admin/qr-tokens', ensureAdminApiAuthenticated, adminQrRoutes);
 router.use('/admin/pontos', ensureAdminApiAuthenticated, adminPointRoutes);

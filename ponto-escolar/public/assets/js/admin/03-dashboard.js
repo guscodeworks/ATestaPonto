@@ -5,11 +5,22 @@
 function renderizarUltimosRegistros() {
   const tbody = document.getElementById('tbody-ultimos');
   const cardsMobile = document.getElementById('cards-ultimos-mobile');
+  const error = PONTOS_HOJE_DATA_ERROR || FUNCIONARIOS_DATA_ERROR;
+  if (error) {
+    const state = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar os registros',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5">${state}</td></tr>`;
+    if (cardsMobile) cardsMobile.innerHTML = state;
+    return;
+  }
   // Mostra apenas os 5 registros mais recentes, do mais novo para o mais antigo.
   const lista = PONTOS_HOJE.slice(-5).reverse();
 
   if (tbody && !lista.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
   }
 
   if (tbody && lista.length) {
@@ -33,7 +44,7 @@ function renderizarUltimosRegistros() {
           <td class="td-mono">${p.saida || '<span class="muted-dash">—</span>'}</td>
           <td><span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span></td>
           <td>
-            <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')">✏️ Ajustar</button>
+            <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> Ajustar</button>
           </td>
         </tr>
       `;
@@ -57,7 +68,7 @@ function renderizarUltimosRegistros() {
           </div>
         </div>
       `;
-    }).join('') : `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">Nenhum registro hoje</div></div>`;
+    }).join('') : `<div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div>`;
   }
 }
 
@@ -68,6 +79,15 @@ function renderizarUltimosRegistros() {
 function renderizarGrafico() {
   const container = document.getElementById('grafico-presenca');
   if (!container) return;
+  const error = PONTOS_HOJE_DATA_ERROR || FUNCIONARIOS_DATA_ERROR || RESUMO_DATA_ERROR;
+  if (error) {
+    container.innerHTML = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar a presença',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    return;
+  }
 
   // "Pendente" = bateu ponto hoje mas ainda não concluiu o expediente
   // (sem saída registrada ou status diferente de 'completo').
@@ -145,19 +165,28 @@ function renderizarGrafico() {
 function renderizarAlertas() {
   const container = document.getElementById('lista-alertas');
   if (!container) return;
+  const error = PONTOS_HOJE_DATA_ERROR || FUNCIONARIOS_DATA_ERROR;
+  if (error) {
+    container.innerHTML = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar os alertas',
+      error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    return;
+  }
   const ausentes = getFuncionariosSemPonto();
   const inativos = FUNCIONARIOS.filter(f=>f.status==='inativo').length;
   // Cada regra de alerta é avaliada isoladamente e resulta em null quando
   // a condição não se aplica, para depois filtrar apenas os relevantes.
   const alertas = [
-    ausentes.length > 0 ? { tipo:'amber', icon:'⚠️', titulo:`${ausentes.length} funcionario(s) sem ponto hoje`, desc: ausentes.map(f=>f.nome).join(', ') } : null,
-    inativos > 0 ? { tipo:'red', icon:'🔴', titulo:'Funcionarios inativos no sistema', desc:`${inativos} conta(s) inativa(s). Verifique o cadastro.` } : null,
+    ausentes.length > 0 ? { tipo:'amber', icon:'triangle-alert.svg', titulo:`${ausentes.length} funcionario(s) sem ponto hoje`, desc: ausentes.map(f=>f.nome).join(', ') } : null,
+    inativos > 0 ? { tipo:'red', icon:'circle-x.svg', titulo:'Funcionarios inativos no sistema', desc:`${inativos} conta(s) inativa(s). Verifique o cadastro.` } : null,
   ].filter(Boolean);
 
   if (!alertas.length) {
     container.innerHTML = `
       <div class="alert-item blue">
-        <div class="alert-icon">ℹ️</div>
+        <div class="alert-icon"><img src="/assets/icons/info.svg" alt="" aria-hidden="true"></div>
         <div class="alert-content">
           <div class="alert-title">Nenhum alerta com dados atuais</div>
           <div class="alert-desc">Os alertas exibidos aqui dependem das APIs reais de funcionarios e pontos.</div>
@@ -169,7 +198,7 @@ function renderizarAlertas() {
 
   container.innerHTML = alertas.map(a => `
     <div class="alert-item ${a.tipo}">
-      <div class="alert-icon">${a.icon}</div>
+      <div class="alert-icon"><img src="/assets/icons/${a.icon}" alt="" aria-hidden="true"></div>
       <div class="alert-content">
         <div class="alert-title">${escapeHtml(a.titulo)}</div>
         <div class="alert-desc">${escapeHtml(a.desc)}</div>

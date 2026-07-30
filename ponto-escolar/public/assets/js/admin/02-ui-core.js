@@ -48,13 +48,16 @@ function iniciarSidebar() {
   const overlay   = document.getElementById('sidebar-overlay');
   if (!toggleBtn || !sidebar) return;
 
-  toggleBtn.addEventListener('click', () => {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
-  });
+  const atualizarEstado = (aberta) => {
+    sidebar.classList.toggle('open', aberta);
+    overlay.classList.toggle('active', aberta);
+    toggleBtn.setAttribute('aria-expanded', String(aberta));
+    toggleBtn.setAttribute('aria-label', aberta ? 'Fechar menu de navegacao' : 'Abrir menu de navegacao');
+  };
+
+  toggleBtn.addEventListener('click', () => atualizarEstado(!sidebar.classList.contains('open')));
   overlay.addEventListener('click', () => {
-    sidebar.classList.remove('open');
-    overlay.classList.remove('active');
+    atualizarEstado(false);
   });
 }
 
@@ -84,14 +87,30 @@ function iniciarTabs() {
    ============================================================ */
 
 function toast(msg, tipo = 'success') {
-  const icons = { success:'✅', error:'❌', info:'ℹ️', warning:'⚠️' };
+  const icons = {
+    success: '/assets/icons/circle-check.svg',
+    error: '/assets/icons/circle-x.svg',
+    info: '/assets/icons/info.svg',
+    warning: '/assets/icons/triangle-alert.svg',
+  };
   // Aceita os dois IDs de container possíveis, por compatibilidade com
   // diferentes versões do HTML da página.
   const stack = document.getElementById('toast-stack') || document.getElementById('toast-container');
   if (!stack) return;
   const el = document.createElement('div');
   el.className = `toast toast-${tipo}`;
-  el.innerHTML = `<span class="toast-icon">${icons[tipo]||'ℹ️'}</span><span class="toast-msg">${msg}</span>`;
+  const icon = icons[tipo] || icons.info;
+  const iconWrap = document.createElement('span');
+  iconWrap.className = 'toast-icon';
+  const iconImage = document.createElement('img');
+  iconImage.src = icon;
+  iconImage.alt = '';
+  iconImage.setAttribute('aria-hidden', 'true');
+  iconWrap.appendChild(iconImage);
+  const message = document.createElement('span');
+  message.className = 'toast-msg';
+  message.textContent = String(msg || '');
+  el.append(iconWrap, message);
   stack.appendChild(el);
   // Some com fade + deslocamento antes de remover do DOM, para não cortar
   // a animação de saída do toast.
@@ -106,6 +125,13 @@ function mostrarToast(msg, tipo) { toast(msg, tipo); }
    ============================================================ */
 
 function renderizarStats() {
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  if (ADMIN_DATA_ERROR) {
+    ['stat-total','stat-ativos','stat-presentes','stat-ausentes','stat-taxa','stat-registros','hero-presentes','hero-ausentes','hero-total']
+      .forEach((id) => set(id, '—'));
+    return;
+  }
+
   // Prioriza os valores já calculados pela API (RESUMO_PONTOS) e só
   // recalcula localmente como fallback, caso o resumo não tenha vindo.
   const ativos = RESUMO_PONTOS.total_ativos || FUNCIONARIOS.filter(f => f.status === 'ativo').length;
@@ -113,8 +139,6 @@ function renderizarStats() {
   const presentes = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
   const ausentes = RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
   const taxa = RESUMO_PONTOS.taxa_presenca_percent || (ativos > 0 ? Math.round((presentes/ativos)*100) : 0);
-
-  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
 
   set('stat-total',     total);
   set('stat-ativos',    ativos);

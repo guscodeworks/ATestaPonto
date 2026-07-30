@@ -2,7 +2,7 @@
 
 /**
  * Extrai o IP real do cliente levando em conta proxies (X-Forwarded-For).
- * Reutilizado por adminAuthController, adminPointController e punchController.
+ * Reutilizado por adminPointController e punchController.
  */
 function getClientIp(req) {
   return (

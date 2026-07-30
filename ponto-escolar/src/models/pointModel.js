@@ -14,10 +14,7 @@ async function withTransaction(callback) {
 
 async function findByEmployeeAndDate(funcionarioId, date) {
   return database.executeOne(
-    `SELECT *
-     FROM registro_de_pontos
-     WHERE funcionario_id = ? AND data_referenciada = ?
-     LIMIT 1`,
+    "SELECT id, funcionario_id, data_referencia, entrada, saida_almoco, retorno_almoco, retorno_almoco AS volta_almoco, saida, criado_em, atualizado_em FROM registro_de_pontos WHERE funcionario_id = ? AND data_referencia = ? LIMIT 1",
     [funcionarioId, date]
   );
 }
@@ -27,11 +24,7 @@ async function findByEmployeeAndDate(funcionarioId, date) {
  */
 async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
   return getClient(client).executeOne(
-    `SELECT *
-     FROM registro_de_pontos
-     WHERE funcionario_id = ? AND data_referenciada = ?
-     LIMIT 1
-     FOR UPDATE`,
+    "SELECT id, funcionario_id, data_referencia, entrada, saida_almoco, retorno_almoco, retorno_almoco AS volta_almoco, saida, criado_em, atualizado_em FROM registro_de_pontos WHERE funcionario_id = ? AND data_referencia = ? LIMIT 1 FOR UPDATE",
     [funcionarioId, date]
   );
 }
@@ -41,24 +34,20 @@ async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
  */
 async function listRowsByDate(date) {
   return database.execute(
-    `SELECT *
-     FROM registro_de_pontos
-     WHERE data_referenciada = ?
-     ORDER BY funcionario_id ASC, id DESC`,
+    "SELECT id, funcionario_id, data_referencia, entrada, saida_almoco, retorno_almoco, retorno_almoco AS volta_almoco, saida, criado_em, atualizado_em FROM registro_de_pontos WHERE data_referencia = ? ORDER BY funcionario_id ASC, id DESC",
     [date]
   );
 }
 
-// Cria a primeira batida do dia (entrada): os demais horários (saída almoço,
-// volta almoço, saída) ainda não ocorreram e são preenchidos com o mesmo valor
-// "vazio" (emptyTime) até serem registrados nas batidas seguintes.
+// Cria a primeira batida do dia. Os demais horários permanecem NULL até
+// serem registrados nas batidas seguintes.
 async function createFirstPunch(
   client,
-  { funcionarioId, date, time, emptyTime }
+  { funcionarioId, date, time }
 ) {
   return getClient(client).execute(
-    "INSERT INTO registro_de_pontos VALUES (NULL, ?, ?, ?, ?, ?, ?)",
-    [funcionarioId, date, time, emptyTime, emptyTime, emptyTime]
+    "INSERT INTO registro_de_pontos (funcionario_id, data_referencia, entrada) VALUES (?, ?, ?)",
+    [funcionarioId, date, time]
   );
 }
 
@@ -66,21 +55,16 @@ async function createFirstPunch(
  * Mantem o id da linha ao atualizar as quatro batidas do dia.
  */
 async function replacePunchRow(client, { rowId, funcionarioId, date, times }) {
-  await getClient(client).execute(
-    "DELETE FROM registro_de_pontos WHERE id = ?",
-    [rowId]
-  );
-
   return getClient(client).execute(
-    "INSERT INTO registro_de_pontos VALUES (?, ?, ?, ?, ?, ?, ?)",
+    "UPDATE registro_de_pontos SET entrada = ?, saida_almoco = ?, retorno_almoco = ?, saida = ? WHERE id = ? AND funcionario_id = ? AND data_referencia = ?",
     [
+      times.entrada,
+      times.saidaAlmoco,
+      times.retornoAlmoco ?? times.voltaAlmoco,
+      times.saida,
       rowId,
       funcionarioId,
       date,
-      times.entrada,
-      times.saidaAlmoco,
-      times.voltaAlmoco,
-      times.saida,
     ]
   );
 }
