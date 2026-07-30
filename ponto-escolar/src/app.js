@@ -6,6 +6,9 @@ const helmet = require("helmet");
 const cors = require("cors");
 const session = require("express-session");
 const env = require("./config/env");
+const { checkConnection } = require("./config/database");
+const { getRedisClient } = require("./config/redis");
+const { RedisSessionStore } = require("./config/redisSessionStore");
 const govbrAuthRoutes = require("./routes/govbrAuth.routes");
 const apiRoutes = require("./routes");
 const { createPagesRouter } = require("./routes/pages.routes");
@@ -127,24 +130,78 @@ app.use("/assets", express.static(assetsRoot, staticOptions));
 
 app.use(express.json({ limit: "100kb" }));
 app.use(express.urlencoded({ extended: false, limit: "100kb" }));
-app.use(
-  session({
-    secret: env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      // Cookie so exige HTTPS em producao, pois em dev/LAN o acesso pode ser
-      // via HTTP puro (ver observacao do CSP acima).
-      secure: env.IS_PRODUCTION,
-      maxAge: env.ADMIN_SESSION_TTL_MS,
-    },
-  })
-);
+const sessionOptions = {
+  secret: env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "lax",
+    // Cookie so exige HTTPS em producao, pois em dev/LAN o acesso pode ser
+    // via HTTP puro (ver observacao do CSP acima).
+    secure: env.IS_PRODUCTION,
+    maxAge: env.ADMIN_SESSION_TTL_MS,
+  },
+};
 
-app.get("/health", (req, res) => {
-  res.status(200).json({ success: true, data: { status: "ok" } });
+if (env.REDIS_ENABLED) {
+  sessionOptions.store = new RedisSessionStore();
+}
+
+app.use(session(sessionOptions));
+
+async function checkRedisConnection() {
+  if (!env.REDIS_ENABLED) {
+    return "disabled";
+  }
+
+  const response = await getRedisClient().ping();
+  if (response !== "PONG") {
+    throw new Error("Unexpected Redis health check response.");
+  }
+
+  return "connected";
+}
+
+app.get("/health", async (_req, res) => {
+  const [databaseResult, redisResult] = await Promise.allSettled([
+    checkConnection(),
+    checkRedisConnection(),
+  ]);
+  const databaseStatus =
+    databaseResult.status === "fulfilled" ? "connected" : "unavailable";
+  const redisStatus =
+    redisResult.status === "fulfilled" ? redisResult.value : "unavailable";
+
+  if (databaseStatus === "unavailable" || redisStatus === "unavailable") {
+    const databaseUnavailable = databaseStatus === "unavailable";
+
+    return res.status(503).json({
+      success: false,
+      data: {
+        status: "unhealthy",
+        database: databaseStatus,
+        redis: redisStatus,
+      },
+      error: {
+        code: databaseUnavailable
+          ? "DATABASE_UNAVAILABLE"
+          : "REDIS_UNAVAILABLE",
+        message: databaseUnavailable
+          ? "Banco de dados indisponivel."
+          : "Redis indisponivel.",
+      },
+    });
+  }
+
+  return res.status(200).json({
+    success: true,
+    data: {
+      status: "ok",
+      database: databaseStatus,
+      redis: redisStatus,
+    },
+  });
 });
 
 app.use("/auth/govbr", govbrAuthRoutes);

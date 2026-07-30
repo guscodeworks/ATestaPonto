@@ -17,6 +17,7 @@
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.3.0",
     "cors": "^2.8.6",
