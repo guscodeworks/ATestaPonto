@@ -7,7 +7,7 @@ const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const pointModel = require("../models/pointModel");
 const { isWithinRadius } = require("../utils/location");
-const { maskCpf, normalizeCpf } = require("../utils/cpf");
+const { isValidCpf, maskCpf, normalizeCpf } = require("../utils/cpf");
 const {
   EMPTY_PUNCH_TIME,
   PUNCH_TYPES,
@@ -83,21 +83,27 @@ function mapFuncionario(funcionario) {
   };
 }
 
-// Login flexivel: aceita CPF ou email digitados no mesmo campo "login", ou
-// enviados separadamente (compatibilidade com diferentes formatos de payload).
-// A deteccao de email e feita pela presenca de "@" no valor informado.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INVALID_PASSWORD_HASH = bcrypt.hashSync(
+  "invalid-login-credential",
+  env.BCRYPT_SALT_ROUNDS
+);
+
 function resolveLogin(body = {}) {
-  const rawLogin = String(body.login || body.email || body.cpf || "").trim();
-  const cpf = normalizeCpf(rawLogin || body.cpf);
+  const rawLogin = String(body.identificador || "").trim();
   const email = rawLogin.includes("@") ? rawLogin.toLowerCase() : "";
+  const cpf = email ? "" : normalizeCpf(rawLogin);
   const senha = String(body.senha || "");
 
-  if (!rawLogin) {
-    throw new BadRequestError("Informe CPF ou email");
+  if (
+    !rawLogin ||
+    (email && !EMAIL_REGEX.test(email)) ||
+    (!email && !isValidCpf(cpf))
+  ) {
+    throw new BadRequestError("Informe um CPF ou email valido");
   }
 
   return {
-    rawLogin,
     cpf,
     email,
     senha,
@@ -121,9 +127,10 @@ async function findFuncionarioForLogin({ cpf, email }) {
 async function loginFuncionario(body, { ipOrigem } = {}) {
   const login = resolveLogin(body);
   const funcionario = await findFuncionarioForLogin(login);
-  const senhaCorreta = funcionario
-    ? await bcrypt.compare(login.senha, String(funcionario.senha || ""))
-    : false;
+  const senhaCorreta = await bcrypt.compare(
+    login.senha,
+    String(funcionario?.senha_hash || INVALID_PASSWORD_HASH)
+  );
 
   // Falha de credenciais (usuario inexistente ou senha errada) sempre retorna
   // a mesma mensagem generica, para nao revelar qual condicao falhou.
@@ -136,13 +143,6 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
       metadados: { login: login.auditLogin },
     });
     throw new UnauthorizedError("CPF/email ou senha invalidos");
-  }
-
-  // Checagem de "ativo" so ocorre apos validar a senha, evitando que um
-  // atacante descubra (por diferenca de erro) quais contas existem mas estao
-  // inativas.
-  if (!funcionario.ativo) {
-    throw new ForbiddenError("Funcionario inativo");
   }
 
   await loginModel.updateLastLogin(funcionario.id);
@@ -166,6 +166,7 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   return {
     token,
     expiresIn: env.FUNCIONARIO_JWT_EXPIRES_IN,
+    primeiro_acesso: Boolean(funcionario.primeiro_acesso),
     funcionario: mapFuncionario(funcionario),
   };
 }

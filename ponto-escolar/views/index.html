@@ -7,8 +7,9 @@
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/img/atestaponto-favicon-96.png" />
   <link rel="apple-touch-icon" href="/assets/img/atestaponto-symbol.png" />
   <link rel="stylesheet" href="/assets/css/tokens.css" />
-  <link rel="stylesheet" href="/assets/css/funcionario-login.css" />
-  <script src="/assets/js/funcionario-login.js?v=20260520-login-clean" defer></script>
+  <link rel="stylesheet" href="/assets/css/funcionario-login.css?v=20260729-loading-states" />
+  <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
+  <script src="/assets/js/funcionario-login.js?v=20260729-identifier-login" defer></script>
 </head>
 <body>
   <main class="login-page">
@@ -32,27 +33,27 @@
           />
           <p class="login-brand"><span>ATesta</span> <strong>Ponto</strong></p>
           <h1 class="login-heading" id="login-heading">Acesso do funcionário</h1>
-          <p class="login-sub">Entre com seu CPF e sua senha.</p>
+          <p class="login-sub">Entre com seu CPF ou e-mail e sua senha.</p>
         </header>
 
         <form id="login-form" novalidate>
           <div class="form-field">
-            <label for="cpf">CPF</label>
+            <label for="identificador">CPF ou e-mail</label>
             <div class="input-wrap">
               <input
                 type="text"
-                id="cpf"
+                id="identificador"
                 class="field-input no-icon"
-                name="cpf"
-                placeholder="000.000.000-00"
-                maxlength="14"
+                name="identificador"
+                placeholder="000.000.000-00 ou nome@escola.edu.br"
+                maxlength="150"
                 autocomplete="username"
-                inputmode="numeric"
-                aria-describedby="cpf-error"
+                inputmode="text"
+                aria-describedby="identificador-error"
               />
             </div>
-            <span class="field-error" id="cpf-error" aria-live="polite">
-              CPF inválido. Verifique e tente novamente.
+            <span class="field-error" id="identificador-error" aria-live="polite">
+              Informe um CPF ou e-mail válido.
             </span>
           </div>
 
@@ -80,7 +81,7 @@
           <div class="form-meta">
             <label class="form-remember" for="remember">
               <input type="checkbox" id="remember" />
-              Lembrar CPF
+              Lembrar CPF ou e-mail
             </label>
             <a href="#" class="form-link">Esqueci minha senha</a>
           </div>

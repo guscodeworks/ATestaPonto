@@ -100,7 +100,17 @@ function toast(msg, tipo = 'success') {
   const el = document.createElement('div');
   el.className = `toast toast-${tipo}`;
   const icon = icons[tipo] || icons.info;
-  el.innerHTML = `<span class="toast-icon"><img src="${icon}" alt="" aria-hidden="true"></span><span class="toast-msg">${msg}</span>`;
+  const iconWrap = document.createElement('span');
+  iconWrap.className = 'toast-icon';
+  const iconImage = document.createElement('img');
+  iconImage.src = icon;
+  iconImage.alt = '';
+  iconImage.setAttribute('aria-hidden', 'true');
+  iconWrap.appendChild(iconImage);
+  const message = document.createElement('span');
+  message.className = 'toast-msg';
+  message.textContent = String(msg || '');
+  el.append(iconWrap, message);
   stack.appendChild(el);
   // Some com fade + deslocamento antes de remover do DOM, para não cortar
   // a animação de saída do toast.
@@ -115,6 +125,13 @@ function mostrarToast(msg, tipo) { toast(msg, tipo); }
    ============================================================ */
 
 function renderizarStats() {
+  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+  if (ADMIN_DATA_ERROR) {
+    ['stat-total','stat-ativos','stat-presentes','stat-ausentes','stat-taxa','stat-registros','hero-presentes','hero-ausentes','hero-total']
+      .forEach((id) => set(id, '—'));
+    return;
+  }
+
   // Prioriza os valores já calculados pela API (RESUMO_PONTOS) e só
   // recalcula localmente como fallback, caso o resumo não tenha vindo.
   const ativos = RESUMO_PONTOS.total_ativos || FUNCIONARIOS.filter(f => f.status === 'ativo').length;
@@ -122,8 +139,6 @@ function renderizarStats() {
   const presentes = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
   const ausentes = RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
   const taxa = RESUMO_PONTOS.taxa_presenca_percent || (ativos > 0 ? Math.round((presentes/ativos)*100) : 0);
-
-  const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
 
   set('stat-total',     total);
   set('stat-ativos',    ativos);

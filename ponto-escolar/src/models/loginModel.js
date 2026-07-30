@@ -28,17 +28,10 @@ async function findCpfConflictForUpdate(client, cpf, excludedFuncionarioId) {
   );
 }
 
-async function findCredentialsByCpf(cpf) {
-  return database.executeOne(
-    "SELECT lf.id, lf.funcionario_id, f.cpf, lf.senha_hash AS senha, lf.primeiro_acesso, lf.senha_temporaria_expira_em FROM login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id WHERE f.cpf = ? AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
-    [cpf]
-  );
-}
-
 async function createLogin(client, { funcionarioId, senhaHash }) {
   return getClient(client).execute(
-    "INSERT INTO login_funcionario (funcionario_id, senha_hash) VALUES (?, ?)",
-    [funcionarioId, senhaHash]
+    "INSERT INTO login_funcionario (funcionario_id, senha_hash, primeiro_acesso) VALUES (?, ?, ?)",
+    [funcionarioId, senhaHash, true]
   );
 }
 
@@ -66,7 +59,6 @@ async function updateLastLogin(funcionarioId) {
 module.exports = {
   findByCpfForUpdate,
   findCpfConflictForUpdate,
-  findCredentialsByCpf,
   createLogin,
   updateCpf,
   updateSenha,

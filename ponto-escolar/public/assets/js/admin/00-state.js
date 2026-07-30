@@ -33,6 +33,18 @@ let RESUMO_PONTOS = {
 let DATA_REFERENCIA_PONTOS = null;
 let DATA_REFERENCIA_RELATORIO = null;
 let ADMIN_DATA_ERROR = null;
+let FUNCIONARIOS_DATA_ERROR = null;
+let PONTOS_HOJE_DATA_ERROR = null;
+let RESUMO_DATA_ERROR = null;
+let RELATORIO_DATA_ERROR = null;
+let FUNCIONARIOS_LOADING = false;
+let FUNCIONARIOS_TOTAL_SISTEMA = null;
+let FUNCIONARIOS_TOTAL_FILTRADO = 0;
+let FUNCIONARIOS_REQUEST_ID = 0;
+let FUNCIONARIOS_ABORT_CONTROLLER = null;
+let ADMIN_DATA_LOADING = false;
+let ADMIN_DATA_REQUEST_ID = 0;
+let ADMIN_DATA_ABORT_CONTROLLER = null;
 
 const ADMIN_ENDPOINTS = {
   cargos: '/api/admin/cargos',
@@ -41,6 +53,44 @@ const ADMIN_ENDPOINTS = {
   pontosRelatorio: '/api/admin/pontos/relatorio',
   pontosResumo: '/api/admin/pontos/resumo',
 };
+
+function redirecionarAdminParaGovbr(
+  destino = '/auth/govbr/login',
+  mensagem = 'Redirecionando para o Gov.br...'
+) {
+  const caminhoSeguro = destino === '/auth/govbr/logout'
+    ? '/auth/govbr/logout'
+    : '/auth/govbr/login';
+  document.documentElement.setAttribute('data-admin-session', 'pending');
+
+  if (typeof iniciarCarregamentoGlobal !== 'function') {
+    window.location.replace(caminhoSeguro);
+    return null;
+  }
+
+  const overlay = iniciarCarregamentoGlobal({
+    titulo: 'Aguarde',
+    mensagem,
+    atrasoMs: 0,
+  });
+  window.requestAnimationFrame(() => {
+    window.setTimeout(() => window.location.replace(caminhoSeguro), 0);
+  });
+
+  // Caso o navegador não conclua a navegação, o overlay deixa de ser um
+  // estado sem saída e oferece uma nova tentativa ou retorno à tela pública.
+  window.setTimeout(() => {
+    atualizarCarregamentoGlobal(overlay, {
+      estado: 'erro',
+      titulo: 'O redirecionamento está demorando',
+      mensagem: 'Tente novamente ou volte para a tela de acesso.',
+      aoTentarNovamente: () => redirecionarAdminParaGovbr(caminhoSeguro, mensagem),
+      aoSair: () => window.location.replace('/'),
+      textoSair: 'Voltar ao acesso',
+    });
+  }, 10000);
+  return overlay;
+}
 
 // Alguns endpoints retornam o payload envolto em { data: ... } e outros
 // retornam o objeto diretamente. Esta função normaliza os dois formatos
@@ -66,7 +116,8 @@ async function adminApiFetch(path, options = {}) {
       credentials: 'same-origin',
       headers,
     });
-  } catch (_networkError) {
+  } catch (networkError) {
+    if (networkError?.name === 'AbortError') throw networkError;
     const error = new Error('Nao foi possivel conectar ao servidor. Verifique sua conexao e tente novamente.');
     error.status = 0;
     error.code = 'NETWORK_ERROR';
@@ -107,55 +158,152 @@ async function adminApiFetch(path, options = {}) {
   return payload;
 }
 
-async function carregarFuncionariosAdmin() {
-  // limit=100: paginação simplificada, assume que a base de funcionários
-  // não ultrapassa esse volume nesta tela administrativa.
-  const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.funcionarios}?limit=100`);
-  const data = getApiData(payload);
-  FUNCIONARIOS = Array.isArray(data?.items)
-    ? data.items.map(normalizarFuncionarioApi)
-    : [];
+async function carregarFuncionariosAdmin(filters = {}, options = {}) {
+  const requestId = ++FUNCIONARIOS_REQUEST_ID;
+  const params = new URLSearchParams({ page: '1', limit: '100' });
+  const search = String(filters.q || '').trim();
+  const cpfSearch = /^[\d.\-\s]+$/.test(search)
+    ? search.replace(/\D/g, '')
+    : '';
+  const status = String(filters.status || '').trim();
+  const cargo = String(filters.cargo || '').trim().toUpperCase();
+
+  if (search) params.set('q', cpfSearch || search);
+  if (status === 'ativo' || status === 'true') params.set('ativo', 'true');
+  if (status === 'inativo' || status === 'false') params.set('ativo', 'false');
+  if (cargo) params.set('cargo', cargo);
+
+  const loadPage = async (page) => {
+    const pageParams = new URLSearchParams(params);
+    pageParams.set('page', String(page));
+    const payload = await adminApiFetch(
+      `${ADMIN_ENDPOINTS.funcionarios}?${pageParams.toString()}`,
+      { signal: options.signal }
+    );
+    return getApiData(payload);
+  };
+
+  try {
+    const firstPage = await loadPage(1);
+    const parsedTotal = Number(firstPage?.pagination?.total || 0);
+    const total = Number.isFinite(parsedTotal) ? Math.max(parsedTotal, 0) : 0;
+    const pageLimit = Math.max(
+      Number(firstPage?.pagination?.limit || 100) || 100,
+      1
+    );
+    const totalPages = Math.max(Math.ceil(total / pageLimit), 1);
+    const remainingPages = totalPages > 1
+      ? await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_item, index) =>
+            loadPage(index + 2)
+          )
+        )
+      : [];
+
+    if (requestId !== FUNCIONARIOS_REQUEST_ID) return false;
+
+    const items = [firstPage, ...remainingPages].flatMap((page) =>
+      Array.isArray(page?.items) ? page.items : []
+    );
+    FUNCIONARIOS = items.map(normalizarFuncionarioApi);
+    FUNCIONARIOS_TOTAL_FILTRADO = total;
+    FUNCIONARIOS_DATA_ERROR = null;
+
+    if (!search && !status && !cargo) {
+      FUNCIONARIOS_TOTAL_SISTEMA = total;
+    }
+
+    return true;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    if (requestId === FUNCIONARIOS_REQUEST_ID) {
+      FUNCIONARIOS = [];
+      FUNCIONARIOS_TOTAL_FILTRADO = 0;
+      FUNCIONARIOS_DATA_ERROR = error;
+    }
+    throw error;
+  }
 }
 
-async function carregarPontosHojeAdmin() {
-  const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosHoje);
-  const data = getApiData(payload);
+async function carregarPontosHojeAdmin(options = {}) {
+  try {
+    const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosHoje, {
+      signal: options.signal,
+    });
+    const data = getApiData(payload);
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
 
-  DATA_REFERENCIA_PONTOS = data?.data_referencia || null;
-  RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
-  PONTOS_HOJE = Array.isArray(data?.presentes)
-    ? data.presentes.map(normalizarResumoPontoApi)
-    : [];
-  // Reaproveita o normalizador de pontos e extrai apenas o funcionário,
-  // já que a API devolve os ausentes no mesmo formato de registro de ponto.
-  AUSENTES_HOJE = Array.isArray(data?.ausentes)
-    ? data.ausentes.map((item) => normalizarResumoPontoApi(item).funcionario)
-    : [];
+    DATA_REFERENCIA_PONTOS = data?.data_referencia || null;
+    RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+    PONTOS_HOJE = Array.isArray(data?.presentes)
+      ? data.presentes.map(normalizarResumoPontoApi)
+      : [];
+    // Reaproveita o normalizador de pontos e extrai apenas o funcionário,
+    // já que a API devolve os ausentes no mesmo formato de registro de ponto.
+    AUSENTES_HOJE = Array.isArray(data?.ausentes)
+      ? data.ausentes.map((item) => normalizarResumoPontoApi(item).funcionario)
+      : [];
+    PONTOS_HOJE_DATA_ERROR = null;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    PONTOS_HOJE = [];
+    AUSENTES_HOJE = [];
+    PONTOS_HOJE_DATA_ERROR = error;
+    throw error;
+  }
 }
 
-async function carregarResumoAdmin() {
-  const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosResumo);
-  const data = getApiData(payload);
+async function carregarResumoAdmin(options = {}) {
+  try {
+    const payload = await adminApiFetch(ADMIN_ENDPOINTS.pontosResumo, {
+      signal: options.signal,
+    });
+    const data = getApiData(payload);
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
 
-  // Mantém a data de referência anterior caso a API não retorne uma nova,
-  // evitando que a tela fique sem data de referência entre chamadas.
-  DATA_REFERENCIA_PONTOS = data?.data_referencia || DATA_REFERENCIA_PONTOS;
-  RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+    // Mantém a data de referência anterior caso a API não retorne uma nova,
+    // evitando que a tela fique sem data de referência entre chamadas.
+    DATA_REFERENCIA_PONTOS = data?.data_referencia || DATA_REFERENCIA_PONTOS;
+    RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+    RESUMO_DATA_ERROR = null;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    RESUMO_DATA_ERROR = error;
+    throw error;
+  }
 }
 
-async function carregarRelatorioAdmin(dataReferencia) {
-  const query = dataReferencia ? `?data=${encodeURIComponent(dataReferencia)}` : '';
-  const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.pontosRelatorio}${query}`);
-  const data = getApiData(payload);
+async function carregarRelatorioAdmin(dataReferencia, options = {}) {
+  try {
+    const query = dataReferencia ? `?data=${encodeURIComponent(dataReferencia)}` : '';
+    const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.pontosRelatorio}${query}`, {
+      signal: options.signal,
+    });
+    const data = getApiData(payload);
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
 
-  DATA_REFERENCIA_RELATORIO = data?.data_referencia || null;
-  RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
-  RELATORIO_PONTOS = Array.isArray(data?.items)
-    ? data.items.map(normalizarResumoPontoApi)
-    : [];
+    DATA_REFERENCIA_RELATORIO = data?.data_referencia || null;
+    RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+    RELATORIO_PONTOS = Array.isArray(data?.items)
+      ? data.items.map(normalizarResumoPontoApi)
+      : [];
+    RELATORIO_DATA_ERROR = null;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    RELATORIO_DATA_ERROR = error;
+    throw error;
+  }
 }
 
 async function carregarDadosAdmin(options = {}) {
+  const requestId = ++ADMIN_DATA_REQUEST_ID;
+  ADMIN_DATA_ABORT_CONTROLLER?.abort();
+  const controller = new AbortController();
+  ADMIN_DATA_ABORT_CONTROLLER = controller;
+  ADMIN_DATA_LOADING = true;
   ADMIN_DATA_ERROR = null;
 
   // Cada seção da tela é opcional e independente, permitindo que telas
@@ -166,32 +314,42 @@ async function carregarDadosAdmin(options = {}) {
   const includeReport = options.includeReport === true;
   const loaders = [];
 
-  if (includeEmployees) loaders.push(carregarFuncionariosAdmin());
-  if (includeToday) loaders.push(carregarPontosHojeAdmin());
-  if (includeSummary) loaders.push(carregarResumoAdmin());
-  if (includeReport) loaders.push(carregarRelatorioAdmin(options.dataReferencia));
+  const requestOptions = { signal: controller.signal, requestId };
+  if (includeEmployees) loaders.push(carregarFuncionariosAdmin({}, requestOptions));
+  if (includeToday) loaders.push(carregarPontosHojeAdmin(requestOptions));
+  if (includeSummary) loaders.push(carregarResumoAdmin(requestOptions));
+  if (includeReport) loaders.push(carregarRelatorioAdmin(options.dataReferencia, requestOptions));
 
-  if (!loaders.length) {
-    return true;
-  }
+  try {
+    if (!loaders.length) return true;
 
-  // Promise.allSettled é usado (em vez de Promise.all) para que todas as
-  // requisições sejam disparadas em paralelo e o motivo específico da
-  // falha possa ser inspecionado, mesmo que outras tenham dado certo.
-  const results = await Promise.allSettled(loaders);
-  const rejected = results.find((result) => result.status === 'rejected');
+    // Promise.allSettled é usado (em vez de Promise.all) para que todas as
+    // requisições sejam disparadas em paralelo e o motivo específico da
+    // falha possa ser inspecionado, mesmo que outras tenham dado certo.
+    const results = await Promise.allSettled(loaders);
+    if (requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    const rejected = results.find((result) => result.status === 'rejected');
 
-  if (rejected) {
-    ADMIN_DATA_ERROR = rejected.reason;
-    // Sessão expirada/inválida: redireciona para o fluxo de login do gov.br.
-    if (ADMIN_DATA_ERROR.status === 401) {
-      window.location.replace('/auth/govbr/login');
+    if (rejected) {
+      if (rejected.reason?.name === 'AbortError') return false;
+      ADMIN_DATA_ERROR = rejected.reason;
+      // Sessão expirada/inválida: redireciona para o fluxo de login do gov.br.
+      if (ADMIN_DATA_ERROR.status === 401) {
+        redirecionarAdminParaGovbr();
+      }
+      return false;
     }
-    return false;
-  }
 
-  sincronizarFuncionariosNosPontos();
-  return true;
+    sincronizarFuncionariosNosPontos();
+    return true;
+  } finally {
+    if (requestId === ADMIN_DATA_REQUEST_ID) {
+      ADMIN_DATA_LOADING = false;
+      if (ADMIN_DATA_ABORT_CONTROLLER === controller) {
+        ADMIN_DATA_ABORT_CONTROLLER = null;
+      }
+    }
+  }
 }
 
 function sincronizarFuncionariosNosPontos() {

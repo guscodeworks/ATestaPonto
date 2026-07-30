@@ -45,10 +45,6 @@ function iniciarConfiguracoes() {
    A rota real ja e protegida pelo backend com req.session.admin.
    ============================================================ */
 
-function caminhoLogin() {
-  return '/auth/govbr/login';
-}
-
 function aplicarAdminGovbr(admin) {
   if (!admin || typeof ADMIN === 'undefined') {
     return;
@@ -74,34 +70,35 @@ function aplicarAdminGovbr(admin) {
   if (configEmailField) configEmailField.value = admin.email || '';
 }
 
-function sincronizarSessaoAdmin() {
-  fetch('/api/admin/auth/me', {
-    credentials: 'same-origin',
-    headers: {
-      Accept: 'application/json'
+async function sincronizarSessaoAdmin() {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 15000);
+  try {
+    const payload = await adminApiFetch('/api/admin/auth/me', {
+      signal: controller.signal,
+    });
+    const admin = getApiData(payload)?.admin;
+    if (!admin) {
+      const error = new Error('Sessão administrativa inválida.');
+      error.status = 401;
+      throw error;
     }
-  })
-    .then((response) => {
-      // Sessão inválida/expirada: redireciona direto para o login do
-      // gov.br em vez de deixar a tela em estado inconsistente.
-      if (response.status === 401) {
-        window.location.replace(caminhoLogin());
-        return null;
-      }
-      return response.ok ? response.json() : null;
-    })
-    .then((payload) => {
-      const admin = payload && payload.data && payload.data.admin;
-      if (admin) {
-        aplicarAdminGovbr(admin);
-      }
-    })
-    .catch(() => {});
+    aplicarAdminGovbr(admin);
+    return admin;
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      const timeoutError = new Error('A validação da sessão demorou mais que o esperado.');
+      timeoutError.status = 0;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
-function validarSessaoAdmin() {
-  sincronizarSessaoAdmin();
-  return true;
+async function validarSessaoAdmin() {
+  return sincronizarSessaoAdmin();
 }
 
 function iniciarLogoutAdmin() {
@@ -112,7 +109,10 @@ function iniciarLogoutAdmin() {
     button.removeAttribute('onclick');
     button.addEventListener('click', (event) => {
       event.preventDefault();
-      window.location.href = '/auth/govbr/logout';
+      redirecionarAdminParaGovbr(
+        '/auth/govbr/logout',
+        'Encerrando a sessão administrativa...'
+      );
     });
   });
 }
@@ -125,10 +125,19 @@ function iniciarFiltrosFuncionarios() {
   const inputBusca = document.getElementById('busca-funcionario');
   const filtroStatus = document.getElementById('filtro-status');
   const filtroCargo = document.getElementById('filtro-cargo');
+  let searchTimer = null;
 
-  const atualizar = () => renderizarFuncionarios(inputBusca?.value || '');
+  const reload = () => {
+    if (searchTimer) window.clearTimeout(searchTimer);
+    recarregarListaFuncionarios();
+  };
 
-  if (inputBusca) inputBusca.addEventListener('input', atualizar);
-  if (filtroStatus) filtroStatus.addEventListener('change', atualizar);
-  if (filtroCargo) filtroCargo.addEventListener('change', atualizar);
+  if (inputBusca) {
+    inputBusca.addEventListener('input', () => {
+      if (searchTimer) window.clearTimeout(searchTimer);
+      searchTimer = window.setTimeout(reload, 300);
+    });
+  }
+  if (filtroStatus) filtroStatus.addEventListener('change', reload);
+  if (filtroCargo) filtroCargo.addEventListener('change', reload);
 }

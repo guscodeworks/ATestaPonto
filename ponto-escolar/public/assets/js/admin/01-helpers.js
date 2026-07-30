@@ -32,8 +32,62 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function criarEstadoErroDadosAdmin(titulo, mensagem, permitirRetry = true) {
+  return `
+    <div class="empty-state admin-data-error" role="alert">
+      <div class="empty-icon"><img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true"></div>
+      <div class="empty-title">${escapeHtml(titulo)}</div>
+      <div class="admin-data-error-description">${escapeHtml(mensagem || 'Tente novamente em alguns instantes.')}</div>
+      ${permitirRetry ? '<button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-admin-data-retry>Tentar novamente</button>' : ''}
+    </div>
+  `;
+}
+
 function somenteDigitos(value) {
   return String(value || '').replace(/\D/g, '');
+}
+
+function formatarCpfCadastroAdmin(value) {
+  const cpf = somenteDigitos(value).slice(0, 11);
+  return cpf
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+}
+
+function calcularDigitoCpfCadastroAdmin(cpfParcial, fatorInicial) {
+  let soma = 0;
+  for (let indice = 0; indice < cpfParcial.length; indice += 1) {
+    soma += Number(cpfParcial[indice]) * (fatorInicial - indice);
+  }
+
+  const resto = (soma * 10) % 11;
+  return resto === 10 ? 0 : resto;
+}
+
+function validarCpfCadastroAdmin(value) {
+  const cpf = somenteDigitos(value);
+  if (cpf.length !== 11) {
+    return { valido: false, motivo: 'tamanho', cpf };
+  }
+
+  if (/^(\d)\1{10}$/.test(cpf)) {
+    return { valido: false, motivo: 'digitos', cpf };
+  }
+
+  const base = cpf.slice(0, 9);
+  const primeiroDigito = calcularDigitoCpfCadastroAdmin(base, 10);
+  const segundoDigito = calcularDigitoCpfCadastroAdmin(
+    `${base}${primeiroDigito}`,
+    11
+  );
+  const valido = cpf === `${base}${primeiroDigito}${segundoDigito}`;
+
+  return {
+    valido,
+    motivo: valido ? null : 'digitos',
+    cpf,
+  };
 }
 
 // Aceita diferentes representações de "verdadeiro" vindas da API
@@ -102,7 +156,7 @@ function normalizarFuncionarioApi(funcionario = {}) {
     cargo_id: cargoId ? Number(cargoId) : null,
     email: String(funcionario.email || ''),
     cpf: String(funcionario.cpf || ''),
-    tel: funcionario.tel || funcionario.telefone || funcionario.celular || 'Nao disponivel na API',
+    tel: funcionario.tel || funcionario.telefone || funcionario.celular || null,
     status: ativo ? 'ativo' : 'inativo',
     ativo,
     admissao: formatarDataApi(funcionario.criado_em || funcionario.admissao) || 'Nao informado',
@@ -188,4 +242,15 @@ function getFuncionariosSemPonto() {
     );
   }
   return FUNCIONARIOS.filter(f => !funcionarioBateuPonto(f.id) && f.status === 'ativo');
+}
+
+// Exporta somente os utilitarios puros de CPF quando o arquivo e carregado
+// pelo runner Node. No navegador, as funcoes continuam disponiveis no escopo
+// global dos scripts administrativos.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    somenteDigitos,
+    formatarCpfCadastroAdmin,
+    validarCpfCadastroAdmin,
+  };
 }
