@@ -7,7 +7,25 @@ const { normalizeError } = require("../utils/errors");
 // campos DATETIME/TIMESTAMP.
 // decimalNumbers: retorna colunas DECIMAL/NEWDECIMAL como number em vez de
 // string, poupando conversões manuais no restante da aplicação.
-const pool = mysql.createPool({
+function getSslConfig() {
+  if (!env.DB_SSL_ENABLED) {
+    return undefined;
+  }
+
+  const ca = Buffer.from(env.DB_SSL_CA_BASE64, "base64").toString("utf8");
+  if (!ca.trim()) {
+    throw new Error(
+      "Invalid environment configuration: DB_SSL_CA_BASE64 must contain a valid Base64 certificate"
+    );
+  }
+
+  return {
+    ca,
+    rejectUnauthorized: true,
+  };
+}
+
+const poolOptions = {
   host: env.DB_HOST,
   port: env.DB_PORT,
   user: env.DB_USER,
@@ -18,7 +36,14 @@ const pool = mysql.createPool({
   queueLimit: 0,
   timezone: "Z",
   decimalNumbers: true,
-});
+};
+
+const ssl = getSslConfig();
+if (ssl) {
+  poolOptions.ssl = ssl;
+}
+
+const pool = mysql.createPool(poolOptions);
 
 function assertSqlAndParams(sql, params) {
   if (typeof sql !== "string" || sql.trim() === "") {

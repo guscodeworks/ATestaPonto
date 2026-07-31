@@ -8,12 +8,16 @@ const { registerAccessToken, findUserInfoByAccessToken } = require('../services/
 const { validateS256 } = require('../services/pkceService');
 const fakeUserService = require('../services/fakeUserService');
 const memoryStore = require('../repositories/memoryStore');
+const {
+  createFakeSessionStore
+} = require('../repositories/fakeSessionStoreFactory');
 
 // Controller que simula um provedor de identidade nos moldes do govbr (Authorization Code +
 // PKCE), usado apenas em ambientes de desenvolvimento/demonstração para testar o fluxo de
 // login sem depender do provedor real.
 const FAKE_SESSION_COOKIE = 'govbr_fake_session';
 const POST_LOGIN_REDIRECT_PATH = '/visual.html';
+const fakeSessionStore = createFakeSessionStore();
 
 function requestError(message, statusCode = 400, code = 'INVALID_REQUEST') {
   return new AppError(message, statusCode, code);
@@ -129,24 +133,21 @@ function getCookie(req, name) {
   return null;
 }
 
-// Cria uma sessão fake em memória (não persistida) vinculada ao usuário informado.
-function createFakeSession(res, userSub) {
+// Cria uma sessão fake no repositório configurado e só então envia o cookie.
+async function createFakeSession(res, userSub) {
   const sessionId = generateSecureToken('fake_session');
-  memoryStore.saveFakeLoginSession(sessionId, {
-    userSub,
-    expiresAt: Date.now() + env.fakeSessionTtlMs
-  });
+  await fakeSessionStore.saveSession(sessionId, { userSub });
 
   res.setHeader('Set-Cookie', buildCookie(FAKE_SESSION_COOKIE, sessionId, {
     maxAge: Math.floor(env.fakeSessionTtlMs / 1000)
   }));
 }
 
-function clearFakeSession(req, res) {
+async function clearFakeSession(req, res) {
   const sessionId = getCookie(req, FAKE_SESSION_COOKIE);
 
   if (sessionId) {
-    memoryStore.deleteFakeLoginSession(sessionId);
+    await fakeSessionStore.deleteSession(sessionId);
   }
 
   res.setHeader('Set-Cookie', buildCookie(FAKE_SESSION_COOKIE, '', {
@@ -155,8 +156,8 @@ function clearFakeSession(req, res) {
 }
 
 // Verifica se existe uma sessão fake válida associada ao cookie da requisição.
-// Aproveita a chamada para limpar registros expirados da store em memória (housekeeping).
-function getAuthenticatedUser(req) {
+// Mantém o housekeeping dos demais Maps em memória, ainda usados pelo OAuth fake.
+async function getAuthenticatedUser(req) {
   memoryStore.cleanupExpiredRecords();
 
   const sessionId = getCookie(req, FAKE_SESSION_COOKIE);
@@ -164,24 +165,24 @@ function getAuthenticatedUser(req) {
     return null;
   }
 
-  const session = memoryStore.getFakeLoginSession(sessionId);
+  const session = await fakeSessionStore.getSession(sessionId);
   const expiresAt = Number(session && session.expiresAt);
   if (!session || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
-    memoryStore.deleteFakeLoginSession(sessionId);
+    await fakeSessionStore.deleteSession(sessionId);
     return null;
   }
 
   const userInfo = fakeUserService.toUserInfo(fakeUserService.findBySub(session.userSub));
 
   if (!userInfo) {
-    memoryStore.deleteFakeLoginSession(sessionId);
+    await fakeSessionStore.deleteSession(sessionId);
     return null;
   }
 
   return userInfo;
 }
 
-function showAuthorize(req, res, next) {
+async function showAuthorize(req, res, next) {
   try {
     const responseType = getRequiredString(req.query.response_type, 'response_type');
     const clientId = getRequiredString(req.query.client_id, 'client_id');
@@ -208,12 +209,12 @@ function showAuthorize(req, res, next) {
       throw requestError('code_challenge_method invalido.');
     }
 
-    const authenticatedUser = getAuthenticatedUser(req);
+    const authenticatedUser = await getAuthenticatedUser(req);
     if (!authenticatedUser) {
       return res.redirect('/govbr');
     }
 
-    const { code } = registerAuthorizationCode({
+    const { code } = await registerAuthorizationCode({
       codeChallenge,
       codeChallengeMethod,
       redirectUri,
@@ -233,7 +234,7 @@ function showAuthorize(req, res, next) {
   }
 }
 
-function login(req, res, next) {
+async function login(req, res, next) {
   try {
     const body = req.body || {};
     const sub = fakeUserService.normalizeSub(body.cpf || body.sub);
@@ -246,35 +247,43 @@ function login(req, res, next) {
       throw requestError('Usuario fake nao encontrado.', 401, 'INVALID_FAKE_USER');
     }
 
-    createFakeSession(res, user.sub);
+    await createFakeSession(res, user.sub);
     return res.redirect(303, POST_LOGIN_REDIRECT_PATH);
   } catch (error) {
     return next(error);
   }
 }
 
-function showSession(req, res) {
-  const user = getAuthenticatedUser(req);
+async function showSession(req, res, next) {
+  try {
+    const user = await getAuthenticatedUser(req);
 
-  if (!user) {
+    if (!user) {
+      return res.status(200).json({
+        authenticated: false,
+        user: {}
+      });
+    }
+
     return res.status(200).json({
-      authenticated: false,
-      user: {}
+      authenticated: true,
+      user
     });
+  } catch (error) {
+    return next(error);
   }
-
-  return res.status(200).json({
-    authenticated: true,
-    user
-  });
 }
 
-function logout(req, res) {
-  clearFakeSession(req, res);
-  return res.redirect('/govbr');
+async function logout(req, res, next) {
+  try {
+    await clearFakeSession(req, res);
+    return res.redirect('/govbr');
+  } catch (error) {
+    return next(error);
+  }
 }
 
-function exchangeToken(req, res) {
+async function exchangeToken(req, res, next) {
   try {
     // Credenciais do client podem vir no body ou via HTTP Basic Auth (RFC 6749).
     const basicCredentials = getBasicCredentials(req);
@@ -301,7 +310,14 @@ function exchangeToken(req, res) {
 
     // O authorization code é de uso único: `consumeAuthorizationCode` deve invalidá-lo
     // ao ser lido, prevenindo reuso (replay).
-    const authCode = consumeAuthorizationCode(code);
+    let authCode;
+    try {
+      authCode = await consumeAuthorizationCode(code);
+    } catch (error) {
+      // Falhas do repositório são erros de infraestrutura e não significam
+      // authorization code inválido. O handler central responde sem vazar detalhes.
+      return next(error);
+    }
 
     if (
       !authCode ||
@@ -326,9 +342,14 @@ function exchangeToken(req, res) {
       );
     }
 
-    const token = registerAccessToken({
-      userSub: authCode.userSub
-    });
+    let token;
+    try {
+      token = await registerAccessToken({
+        userSub: authCode.userSub
+      });
+    } catch (error) {
+      return next(error);
+    }
 
     return res.status(200).json({
       access_token: token.accessToken,
@@ -353,7 +374,7 @@ function extractBearerToken(req) {
   return match[1];
 }
 
-function showUserInfo(req, res) {
+async function showUserInfo(req, res, next) {
   try {
     const token = extractBearerToken(req);
 
@@ -361,7 +382,12 @@ function showUserInfo(req, res) {
       throw requestError('Bearer token obrigatorio.', 401, 'UNAUTHORIZED');
     }
 
-    const userInfo = findUserInfoByAccessToken(token);
+    let userInfo;
+    try {
+      userInfo = await findUserInfoByAccessToken(token);
+    } catch (error) {
+      return next(error);
+    }
 
     if (!userInfo) {
       throw requestError('Token invalido ou expirado.', 401, 'UNAUTHORIZED');
