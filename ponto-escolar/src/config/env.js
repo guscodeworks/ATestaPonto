@@ -358,6 +358,14 @@ const env = {
     getOptionalVar("FUNCIONARIO_JWT_EXPIRES_IN", "20m"),
     "FUNCIONARIO_JWT_EXPIRES_IN"
   ),
+  // Atrasa respostas de login invalido no servidor. Em conjunto com o
+  // loginLimiter, reduz tentativas automatizadas de forca bruta.
+  LOGIN_FAILURE_DELAY_MS: parseInteger(
+    getOptionalVar("LOGIN_FAILURE_DELAY_MS", "2000"),
+    "LOGIN_FAILURE_DELAY_MS",
+    500,
+    10000
+  ),
   SESSION_SECRET: sessionSecret,
   ADMIN_SESSION_TTL_MS: adminSessionTtlMs,
   SCHOOL_LATITUDE: schoolLatitude,
