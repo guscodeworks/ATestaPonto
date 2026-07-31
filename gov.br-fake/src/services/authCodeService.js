@@ -5,6 +5,9 @@ const AuthCode = require('../models/AuthCode');
 const { generateSecureToken } = require('../utils/crypto');
 const fakeUserService = require('./fakeUserService');
 const memoryStore = require('../repositories/memoryStore');
+const { createAuthCodeStore } = require('../repositories/authCodeStoreFactory');
+
+const authCodeStore = createAuthCodeStore();
 
 function getRequiredString(value, name) {
   const normalized = String(value || '').trim();
@@ -26,7 +29,7 @@ function generateAuthorizationCode() {
 
 // Cria e persiste um authorization code vinculado a um usuário fake existente,
 // seguindo o fluxo Authorization Code (com suporte opcional a PKCE via codeChallenge).
-function registerAuthorizationCode({
+async function registerAuthorizationCode({
   codeChallenge,
   codeChallengeMethod,
   redirectUri,
@@ -52,7 +55,7 @@ function registerAuthorizationCode({
     expiresAt: buildExpiresAt(ttlMs)
   });
 
-  memoryStore.saveAuthCode(code, authCode);
+  await authCodeStore.saveAuthorizationCode(code, authCode);
 
   return {
     code,
@@ -63,13 +66,11 @@ function registerAuthorizationCode({
 // Consome (lê e invalida) um authorization code, garantindo que ele só possa ser
 // trocado por um token uma única vez — o delete ocorre sempre, mesmo se o code já
 // estiver expirado, para não deixar registros expirados "reaproveitáveis" na store.
-function consumeAuthorizationCode(code) {
+async function consumeAuthorizationCode(code) {
   memoryStore.cleanupExpiredRecords();
 
   const normalizedCode = getRequiredString(code, 'code');
-  const authCode = memoryStore.getAuthCode(normalizedCode);
-
-  memoryStore.deleteAuthCode(normalizedCode);
+  const authCode = await authCodeStore.consumeAuthorizationCode(normalizedCode);
 
   if (!authCode || authCode.isExpired()) {
     return null;

@@ -1,19 +1,44 @@
 'use strict';
 
 const { env } = require('../config/env');
+const { getRedisClient } = require('../config/redis');
 
-function showHealth(_req, res) {
-  return res.status(200).json({
-    success: true,
+function createHealthResponse(redisStatus) {
+  return {
+    success: redisStatus !== 'unavailable',
     service: 'gov.br-fake',
     environment: env.environmentLabel,
-    // Sempre "false": este serviço é, por definição, um simulador do govbr e nunca
-    // deve ser confundido com o ambiente de produção real, independente do env atual.
+    // Este servico e sempre um simulador, inclusive quando publicado para homologacao.
     production: false,
-    // Assume esquema "http" fixo; não reflete caso o serviço seja exposto via HTTPS
-    // (ex.: atrás de um proxy/load balancer com TLS).
-    baseUrl: `http://${env.host}:${env.port}`,
-    message: 'gov.br-fake rodando em ambiente local e demonstrativo.'
+    redis: {
+      enabled: env.redisEnabled,
+      status: redisStatus
+    },
+    message: redisStatus === 'unavailable'
+      ? 'Servico temporariamente indisponivel.'
+      : 'gov.br-fake rodando em ambiente demonstrativo.'
+  };
+}
+
+async function showHealth(_req, res) {
+  if (!env.redisEnabled) {
+    return res.status(200).json(createHealthResponse('disabled'));
+  }
+
+  try {
+    const pong = await getRedisClient().ping();
+
+    if (pong !== 'PONG') {
+      return res.status(503).json(createHealthResponse('unavailable'));
+    }
+  } catch (_error) {
+    // Nao retorna nem registra o erro bruto para evitar exposicao de endpoint,
+    // token ou detalhes internos do provedor Redis.
+    return res.status(503).json(createHealthResponse('unavailable'));
+  }
+
+  return res.status(200).json({
+    ...createHealthResponse('healthy')
   });
 }
 

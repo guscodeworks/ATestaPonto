@@ -89,6 +89,14 @@ const INVALID_PASSWORD_HASH = bcrypt.hashSync(
   env.BCRYPT_SALT_ROUNDS
 );
 
+// A espera e aplicada no servidor (e nao apenas na tela) para que scripts e
+// bots tambem sejam desacelerados apos uma credencial invalida.
+function waitForFailedLoginDelay() {
+  return new Promise((resolve) => {
+    setTimeout(resolve, env.LOGIN_FAILURE_DELAY_MS);
+  });
+}
+
 function resolveLogin(body = {}) {
   const rawLogin = String(body.identificador || "").trim();
   const email = rawLogin.includes("@") ? rawLogin.toLowerCase() : "";
@@ -142,6 +150,7 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
       ipOrigem,
       metadados: { login: login.auditLogin },
     });
+    await waitForFailedLoginDelay();
     throw new UnauthorizedError("CPF/email ou senha invalidos");
   }
 

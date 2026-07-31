@@ -4,7 +4,7 @@
   "description": "Backend seguro para ponto escolar institucional",
   "main": "server.js",
   "engines": {
-    "node": ">=18"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node server.js",
@@ -17,6 +17,7 @@
     "test": "node --test test/*.test.js"
   },
   "dependencies": {
+    "@upstash/redis": "^1.38.0",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.3.0",
     "cors": "^2.8.6",
@@ -29,6 +30,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.22.5",
+    "nodemailer": "^9.0.3",
     "path": "^0.12.7",
     "qrcode": "^1.5.4"
   },

@@ -75,6 +75,19 @@ function parseInteger(value, name, min, max) {
   return parsed;
 }
 
+function parseBoolean(value, name) {
+  const normalized = String(value).trim().toLowerCase();
+
+  if (normalized === "true") {
+    return true;
+  }
+  if (normalized === "false") {
+    return false;
+  }
+
+  throwEnvError(`"${name}" must be "true" or "false"`);
+}
+
 function parseFloatValue(value, name, min, max) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
@@ -154,8 +167,34 @@ function getOptionalUrl(name, fallbackValue = "") {
   return value ? validateUrl(name, value) : "";
 }
 
+function parseBoolean(value, name) {
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  throwEnvError(`"${name}" must be true or false`);
+}
+
 function normalizeBaseUrl(value) {
   return value ? value.replace(/\/+$/, "") : "";
+}
+
+function validateRedisNamespace(value) {
+  if (value.length > 128) {
+    throwEnvError('"REDIS_NAMESPACE" must have at most 128 characters');
+  }
+
+  const segments = value.split(":");
+  const isValid = segments.every((segment) =>
+    /^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(segment)
+  );
+
+  if (!isValid) {
+    throwEnvError(
+      '"REDIS_NAMESPACE" must contain only letters, numbers, "_", "-" and ":" between non-empty segments'
+    );
+  }
+
+  return value;
 }
 
 // Permite configurar cada endpoint do gov.br explicitamente (produção) ou
@@ -252,8 +291,51 @@ function requireAtLeastOneAdminIdentifier(adminSubs, adminEmails) {
 const NODE_ENV = getOptionalVar("NODE_ENV", "development").toLowerCase();
 const IS_PRODUCTION = NODE_ENV === "production";
 
+const redisEnabled = parseBoolean(
+  getOptionalVar("REDIS_ENABLED", "false"),
+  "REDIS_ENABLED"
+);
+const redisNamespace = validateRedisNamespace(
+  getOptionalVar(
+    "REDIS_NAMESPACE",
+    IS_PRODUCTION ? "atestaponto:production" : "atestaponto:local"
+  )
+);
+const upstashRedisRestUrlRaw = getOptionalVar("UPSTASH_REDIS_REST_URL");
+const upstashRedisRestToken = getOptionalVar("UPSTASH_REDIS_REST_TOKEN");
+
+if (IS_PRODUCTION && !redisEnabled) {
+  throwEnvError('"REDIS_ENABLED" must be "true" in production');
+}
+
+if (redisEnabled && !upstashRedisRestUrlRaw) {
+  throwEnvError(
+    '"UPSTASH_REDIS_REST_URL" is required when REDIS_ENABLED=true'
+  );
+}
+
+if (redisEnabled && !upstashRedisRestToken) {
+  throwEnvError(
+    '"UPSTASH_REDIS_REST_TOKEN" is required when REDIS_ENABLED=true'
+  );
+}
+
+const upstashRedisRestUrl = redisEnabled
+  ? validateUrl("UPSTASH_REDIS_REST_URL", upstashRedisRestUrlRaw)
+  : "";
+
 const dbPassword = getOptionalAliasedVar("DB_PASSWORD", "DB_PASS");
 const dbName = getOptionalAliasedVar("DB_NAME", "DB");
+const dbSslEnabled = parseBoolean(
+  getOptionalVar("DB_SSL_ENABLED", "false"),
+  "DB_SSL_ENABLED"
+);
+const dbSslCaBase64 = getOptionalVar("DB_SSL_CA_BASE64");
+
+if (dbSslEnabled && !dbSslCaBase64) {
+  throwEnvError('"DB_SSL_CA_BASE64" is required when DB_SSL_ENABLED=true');
+}
+
 const schoolLatitude = parseFloatValue(
   getRequiredVar("SCHOOL_LATITUDE"),
   "SCHOOL_LATITUDE",
@@ -277,6 +359,24 @@ const adminSessionTtlMs = parseInteger(
   60 * 1000,
   24 * 60 * 60 * 1000
 );
+const mailEnabled = parseBoolean(
+  getOptionalVar("MAIL_ENABLED", IS_PRODUCTION ? "true" : "false"),
+  "MAIL_ENABLED"
+);
+const smtpHost = mailEnabled ? getRequiredVar("SMTP_HOST") : getOptionalVar("SMTP_HOST");
+const smtpPort = parseInteger(
+  mailEnabled ? getRequiredVar("SMTP_PORT") : getOptionalVar("SMTP_PORT", "587"),
+  "SMTP_PORT",
+  1,
+  65535
+);
+const smtpSecure = parseBoolean(getOptionalVar("SMTP_SECURE", "false"), "SMTP_SECURE");
+const smtpUser = mailEnabled ? getRequiredVar("SMTP_USER") : getOptionalVar("SMTP_USER");
+const smtpPass = mailEnabled ? getRequiredVar("SMTP_PASS") : getOptionalVar("SMTP_PASS");
+const mailFrom = mailEnabled
+  ? getRequiredVar("MAIL_FROM")
+  : getOptionalVar("MAIL_FROM", "Atesta Ponto <atestaponto@gmail.com>");
+const appBaseUrl = getOptionalUrl("APP_BASE_URL", "http://127.0.0.1:3000");
 
 // Os dois segredos protegem mecanismos de autenticação diferentes (JWT e
 // sessão); reutilizar o mesmo valor reduziria a segurança caso um dos
@@ -304,8 +404,14 @@ requireAtLeastOneAdminIdentifier(adminSubs, adminEmails);
 const env = {
   NODE_ENV,
   IS_PRODUCTION,
+  REDIS_ENABLED: redisEnabled,
+  REDIS_NAMESPACE: redisNamespace,
+  UPSTASH_REDIS_REST_URL: upstashRedisRestUrl,
+  UPSTASH_REDIS_REST_TOKEN: redisEnabled ? upstashRedisRestToken : "",
   HOST: getOptionalVar("HOST", "0.0.0.0"),
-  PORT: parseInteger(getRequiredVar("PORT"), "PORT", 1, 65535),
+  // A Function da Vercel exporta o Express sem abrir uma porta. O fallback
+  // preserva `npm start` local sem tornar PORT obrigatoria no ambiente serverless.
+  PORT: parseInteger(getOptionalVar("PORT", "3000"), "PORT", 1, 65535),
   DB_HOST: getRequiredVar("DB_HOST"),
   DB_PORT: parseInteger(getOptionalVar("DB_PORT", "3306"), "DB_PORT", 1, 65535),
   DB_USER: getRequiredVar("DB_USER"),
@@ -317,11 +423,13 @@ const env = {
     : dbPassword,
   DB_NAME: getRequiredVar("DB_NAME", dbName),
   DB_CONNECTION_LIMIT: parseInteger(
-    getOptionalVar("DB_CONNECTION_LIMIT", "10"),
+    getOptionalVar("DB_CONNECTION_LIMIT", "2"),
     "DB_CONNECTION_LIMIT",
     1,
     100
   ),
+  DB_SSL_ENABLED: dbSslEnabled,
+  DB_SSL_CA_BASE64: dbSslCaBase64,
   JWT_SECRET: jwtSecret,
   JWT_EXPIRES_IN: validateExpiresIn(
     getRequiredVar("JWT_EXPIRES_IN"),
@@ -332,6 +440,14 @@ const env = {
   FUNCIONARIO_JWT_EXPIRES_IN: validateExpiresIn(
     getOptionalVar("FUNCIONARIO_JWT_EXPIRES_IN", "20m"),
     "FUNCIONARIO_JWT_EXPIRES_IN"
+  ),
+  // Atrasa respostas de login invalido no servidor. Em conjunto com o
+  // loginLimiter, reduz tentativas automatizadas de forca bruta.
+  LOGIN_FAILURE_DELAY_MS: parseInteger(
+    getOptionalVar("LOGIN_FAILURE_DELAY_MS", "2000"),
+    "LOGIN_FAILURE_DELAY_MS",
+    500,
+    10000
   ),
   SESSION_SECRET: sessionSecret,
   ADMIN_SESSION_TTL_MS: adminSessionTtlMs,
@@ -394,6 +510,14 @@ const env = {
   GOVBR_REDIRECT_URI: getGovbrRedirectUri(),
   ADMIN_GOVBR_SUBS: adminSubs,
   ADMIN_GOVBR_EMAILS: adminEmails,
+  MAIL_ENABLED: mailEnabled,
+  SMTP_HOST: smtpHost,
+  SMTP_PORT: smtpPort,
+  SMTP_SECURE: smtpSecure,
+  SMTP_USER: smtpUser,
+  SMTP_PASS: smtpPass,
+  MAIL_FROM: mailFrom,
+  APP_BASE_URL: appBaseUrl,
   BCRYPT_SALT_ROUNDS: parseInteger(
     getOptionalVar("BCRYPT_SALT_ROUNDS", "12"),
     "BCRYPT_SALT_ROUNDS",
