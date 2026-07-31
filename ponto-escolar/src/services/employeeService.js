@@ -14,6 +14,7 @@ const { registerAuditLog } = require("./auditLogService");
 const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const cargoModel = require("../models/cargoModel");
+const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
 const EDITABLE_CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR"]);
@@ -253,9 +254,17 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     },
   });
 
+  // O envio ocorre apenas apos a transacao. Falhas no SMTP nao desfazem o
+  // cadastro que ja foi confirmado no banco.
+  const entregaEmail = await sendEmployeeWelcomeEmail({
+    nome: created.nome,
+    email: created.email,
+    senhaTemporaria,
+  });
+
   return {
     funcionario: mapEmployee(created),
-    senha_temporaria: senhaTemporaria,
+    email_acesso: entregaEmail,
   };
 }
 

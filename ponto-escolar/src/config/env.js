@@ -167,6 +167,13 @@ function getOptionalUrl(name, fallbackValue = "") {
   return value ? validateUrl(name, value) : "";
 }
 
+function parseBoolean(value, name) {
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false") return false;
+  throwEnvError(`"${name}" must be true or false`);
+}
+
 function normalizeBaseUrl(value) {
   return value ? value.replace(/\/+$/, "") : "";
 }
@@ -352,6 +359,24 @@ const adminSessionTtlMs = parseInteger(
   60 * 1000,
   24 * 60 * 60 * 1000
 );
+const mailEnabled = parseBoolean(
+  getOptionalVar("MAIL_ENABLED", IS_PRODUCTION ? "true" : "false"),
+  "MAIL_ENABLED"
+);
+const smtpHost = mailEnabled ? getRequiredVar("SMTP_HOST") : getOptionalVar("SMTP_HOST");
+const smtpPort = parseInteger(
+  mailEnabled ? getRequiredVar("SMTP_PORT") : getOptionalVar("SMTP_PORT", "587"),
+  "SMTP_PORT",
+  1,
+  65535
+);
+const smtpSecure = parseBoolean(getOptionalVar("SMTP_SECURE", "false"), "SMTP_SECURE");
+const smtpUser = mailEnabled ? getRequiredVar("SMTP_USER") : getOptionalVar("SMTP_USER");
+const smtpPass = mailEnabled ? getRequiredVar("SMTP_PASS") : getOptionalVar("SMTP_PASS");
+const mailFrom = mailEnabled
+  ? getRequiredVar("MAIL_FROM")
+  : getOptionalVar("MAIL_FROM", "Atesta Ponto <atestaponto@gmail.com>");
+const appBaseUrl = getOptionalUrl("APP_BASE_URL", "http://127.0.0.1:3000");
 
 // Os dois segredos protegem mecanismos de autenticação diferentes (JWT e
 // sessão); reutilizar o mesmo valor reduziria a segurança caso um dos
@@ -416,6 +441,14 @@ const env = {
     getOptionalVar("FUNCIONARIO_JWT_EXPIRES_IN", "20m"),
     "FUNCIONARIO_JWT_EXPIRES_IN"
   ),
+  // Atrasa respostas de login invalido no servidor. Em conjunto com o
+  // loginLimiter, reduz tentativas automatizadas de forca bruta.
+  LOGIN_FAILURE_DELAY_MS: parseInteger(
+    getOptionalVar("LOGIN_FAILURE_DELAY_MS", "2000"),
+    "LOGIN_FAILURE_DELAY_MS",
+    500,
+    10000
+  ),
   SESSION_SECRET: sessionSecret,
   ADMIN_SESSION_TTL_MS: adminSessionTtlMs,
   SCHOOL_LATITUDE: schoolLatitude,
@@ -477,6 +510,14 @@ const env = {
   GOVBR_REDIRECT_URI: getGovbrRedirectUri(),
   ADMIN_GOVBR_SUBS: adminSubs,
   ADMIN_GOVBR_EMAILS: adminEmails,
+  MAIL_ENABLED: mailEnabled,
+  SMTP_HOST: smtpHost,
+  SMTP_PORT: smtpPort,
+  SMTP_SECURE: smtpSecure,
+  SMTP_USER: smtpUser,
+  SMTP_PASS: smtpPass,
+  MAIL_FROM: mailFrom,
+  APP_BASE_URL: appBaseUrl,
   BCRYPT_SALT_ROUNDS: parseInteger(
     getOptionalVar("BCRYPT_SALT_ROUNDS", "12"),
     "BCRYPT_SALT_ROUNDS",
