@@ -342,9 +342,14 @@ async function exchangeToken(req, res, next) {
       );
     }
 
-    const token = registerAccessToken({
-      userSub: authCode.userSub
-    });
+    let token;
+    try {
+      token = await registerAccessToken({
+        userSub: authCode.userSub
+      });
+    } catch (error) {
+      return next(error);
+    }
 
     return res.status(200).json({
       access_token: token.accessToken,
@@ -369,7 +374,7 @@ function extractBearerToken(req) {
   return match[1];
 }
 
-function showUserInfo(req, res) {
+async function showUserInfo(req, res, next) {
   try {
     const token = extractBearerToken(req);
 
@@ -377,7 +382,12 @@ function showUserInfo(req, res) {
       throw requestError('Bearer token obrigatorio.', 401, 'UNAUTHORIZED');
     }
 
-    const userInfo = findUserInfoByAccessToken(token);
+    let userInfo;
+    try {
+      userInfo = await findUserInfoByAccessToken(token);
+    } catch (error) {
+      return next(error);
+    }
 
     if (!userInfo) {
       throw requestError('Token invalido ou expirado.', 401, 'UNAUTHORIZED');

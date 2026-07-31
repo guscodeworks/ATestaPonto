@@ -123,19 +123,14 @@ class RedisSessionStore extends session.Store {
     }
   }
 
-  async touch(sid, sessionData, callback) {
+  touch(_sid, _sessionData, callback) {
     const done = createOnceCallback(callback);
 
-    try {
-      const ttlMs = getSessionTtlMs(sessionData);
-
-      // PEXPIRE retorna 0 quando a chave nao existe. Isso e um no-op valido
-      // para touch; falhas do Redis rejeitam a Promise e chegam ao callback.
-      await this.client.pexpire(buildSessionKey(sid), ttlMs);
-      done(null);
-    } catch (error) {
-      done(error);
-    }
+    // A sessao administrativa usa expiracao absoluta: rolling=false nao
+    // renova o cookie no navegador em requisicoes sem alteracao. Renovar o
+    // Redis aqui criaria uma sessao no servidor alem da vida util do cookie.
+    // O TTL gravado por set permanece como a unica fonte de expiracao.
+    done(null);
   }
 }
 

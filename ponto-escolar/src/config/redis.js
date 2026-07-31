@@ -2,11 +2,22 @@ const { Redis } = require("@upstash/redis");
 const env = require("./env");
 
 const SAFE_PREFIX_SEGMENT = /^[a-z][a-z_-]*$/;
+const REDIS_REQUEST_TIMEOUT_MS = 2000;
+const REDIS_RETRY_COUNT = 1;
+const REDIS_RETRY_BACKOFF_MS = 50;
 
 const redisClient = env.REDIS_ENABLED
   ? new Redis({
       url: env.UPSTASH_REDIS_REST_URL,
       token: env.UPSTASH_REDIS_REST_TOKEN,
+      retry: {
+        retries: REDIS_RETRY_COUNT,
+        backoff: () => REDIS_RETRY_BACKOFF_MS,
+      },
+      // A SDK aceita uma factory de AbortSignal; assim cada comando recebe
+      // seu proprio prazo e falhas de rede nao bloqueiam a requisicao por
+      // varios segundos. O erro continua sendo propagado ao chamador.
+      signal: () => AbortSignal.timeout(REDIS_REQUEST_TIMEOUT_MS),
     })
   : null;
 

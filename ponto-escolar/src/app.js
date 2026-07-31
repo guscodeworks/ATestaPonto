@@ -133,6 +133,7 @@ app.use(express.urlencoded({ extended: false, limit: "100kb" }));
 const sessionOptions = {
   secret: env.SESSION_SECRET,
   resave: false,
+  rolling: false,
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
@@ -148,7 +149,10 @@ if (env.REDIS_ENABLED) {
   sessionOptions.store = new RedisSessionStore();
 }
 
-app.use(session(sessionOptions));
+// Uma unica instancia atende somente os fluxos administrativos. Rotas publicas,
+// de funcionario, health check e respostas 404 nao precisam carregar ou renovar
+// a sessao Gov.br no Redis.
+const adminSessionMiddleware = session(sessionOptions);
 
 async function checkRedisConnection() {
   if (!env.REDIS_ENABLED) {
@@ -204,16 +208,18 @@ app.get("/health", async (_req, res) => {
   });
 });
 
-app.use("/auth/govbr", govbrAuthRoutes);
+app.use("/auth/govbr", adminSessionMiddleware, govbrAuthRoutes);
 
 function sendView(res, relativePath) {
   res.set(noCacheHtmlHeaders);
   res.sendFile(path.join(viewsRoot, relativePath));
 }
 
+app.use("/admin", adminSessionMiddleware);
 app.use(createPagesRouter({ sendView }));
 
 app.use("/ponto", punchRoutes);
+app.use("/api/admin", adminSessionMiddleware);
 app.use("/api", apiRoutes);
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
