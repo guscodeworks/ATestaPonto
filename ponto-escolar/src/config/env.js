@@ -384,7 +384,9 @@ const env = {
   UPSTASH_REDIS_REST_URL: upstashRedisRestUrl,
   UPSTASH_REDIS_REST_TOKEN: redisEnabled ? upstashRedisRestToken : "",
   HOST: getOptionalVar("HOST", "0.0.0.0"),
-  PORT: parseInteger(getRequiredVar("PORT"), "PORT", 1, 65535),
+  // A Function da Vercel exporta o Express sem abrir uma porta. O fallback
+  // preserva `npm start` local sem tornar PORT obrigatoria no ambiente serverless.
+  PORT: parseInteger(getOptionalVar("PORT", "3000"), "PORT", 1, 65535),
   DB_HOST: getRequiredVar("DB_HOST"),
   DB_PORT: parseInteger(getOptionalVar("DB_PORT", "3306"), "DB_PORT", 1, 65535),
   DB_USER: getRequiredVar("DB_USER"),

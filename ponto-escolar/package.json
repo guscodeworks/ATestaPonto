@@ -4,7 +4,7 @@
   "description": "Backend seguro para ponto escolar institucional",
   "main": "server.js",
   "engines": {
-    "node": ">=18"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node server.js",
