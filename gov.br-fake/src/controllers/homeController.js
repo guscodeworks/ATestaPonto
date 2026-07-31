@@ -17,42 +17,54 @@ function sendView(res, relativePath) {
   return res.sendFile(path.join(viewsRoot, relativePath));
 }
 
-function showHome(req, res) {
-  // Usuário já autenticado não deve ver a home/landing novamente; vai direto para a
-  // área logada.
-  if (getAuthenticatedUser(req)) {
-    res.set({
-      'Cache-Control': 'no-store, max-age=0',
-      Pragma: 'no-cache',
-      Expires: '0'
-    });
-    return res.redirect(303, '/visual.html');
-  }
+async function showHome(req, res, next) {
+  try {
+    // Usuário já autenticado não deve ver a home/landing novamente; vai direto para a
+    // área logada.
+    if (await getAuthenticatedUser(req)) {
+      res.set({
+        'Cache-Control': 'no-store, max-age=0',
+        Pragma: 'no-cache',
+        Expires: '0'
+      });
+      return res.redirect(303, '/visual.html');
+    }
 
-  return sendView(res, 'page/index.html');
+    return sendView(res, 'page/index.html');
+  } catch (error) {
+    return next(error);
+  }
 }
 
 function showGovbrPage(_req, res) {
   return sendView(res, 'page/govbr.html');
 }
 
-function showVisualPage(req, res) {
-  // Área logada: exige sessão fake válida, senão volta para a tela de login simulada.
-  if (!getAuthenticatedUser(req)) {
-    return res.redirect('/govbr');
-  }
+async function showVisualPage(req, res, next) {
+  try {
+    // Área logada: exige sessão fake válida, senão volta para a tela de login simulada.
+    if (!(await getAuthenticatedUser(req))) {
+      return res.redirect('/govbr');
+    }
 
-  return sendView(res, 'page/visual.html');
+    return sendView(res, 'page/visual.html');
+  } catch (error) {
+    return next(error);
+  }
 }
 
-function startPontoEscolarAdmin(req, res) {
-  // Ponto de entrada para o sistema externo "Ponto Escolar": exige autenticação
-  // prévia neste provedor fake antes de redirecionar.
-  if (!getAuthenticatedUser(req)) {
-    return res.redirect('/govbr');
-  }
+async function startPontoEscolarAdmin(req, res, next) {
+  try {
+    // Ponto de entrada para o sistema externo "Ponto Escolar": exige autenticação
+    // prévia neste provedor fake antes de redirecionar.
+    if (!(await getAuthenticatedUser(req))) {
+      return res.redirect('/govbr');
+    }
 
-  return res.redirect(env.pontoEscolarStartUrl);
+    return res.redirect(env.pontoEscolarStartUrl);
+  } catch (error) {
+    return next(error);
+  }
 }
 
 // Endpoint informativo, útil para descobrir rapidamente todas as rotas expostas

@@ -4,7 +4,9 @@ const { env } = require('../config/env');
 const AccessToken = require('../models/AccessToken');
 const { generateSecureToken } = require('../utils/crypto');
 const fakeUserService = require('./fakeUserService');
-const memoryStore = require('../repositories/memoryStore');
+const { createAccessTokenStore } = require('../repositories/accessTokenStoreFactory');
+
+const accessTokenStore = createAccessTokenStore();
 
 function getRequiredString(value, name) {
   const normalized = String(value || '').trim();
@@ -26,12 +28,10 @@ function generateAccessToken() {
 
 // Emite um access token vinculado a um usuário fake existente, seguindo o padrão
 // OAuth2 "Bearer" (usado na troca de authorization code por token).
-function registerAccessToken({
+async function registerAccessToken({
   userSub,
   ttlMs = env.accessTokenTtlMs
 }) {
-  memoryStore.cleanupExpiredRecords();
-
   const user = fakeUserService.findBySub(userSub);
 
   if (!user) {
@@ -44,7 +44,7 @@ function registerAccessToken({
     expiresAt: buildExpiresAt(ttlMs)
   });
 
-  memoryStore.saveAccessToken(accessToken, tokenRecord);
+  await accessTokenStore.saveAccessToken(accessToken, tokenRecord);
 
   return {
     accessToken,
@@ -57,21 +57,21 @@ function registerAccessToken({
 // Resolve as informações públicas do usuário a partir de um access token, usado
 // pelo endpoint /userinfo. Tokens ausentes ou expirados são descartados da store
 // (housekeeping) e tratados como "sem usuário".
-function findUserInfoByAccessToken(accessToken) {
-  memoryStore.cleanupExpiredRecords();
-
+async function findUserInfoByAccessToken(accessToken) {
   const token = getRequiredString(accessToken, 'accessToken');
-  const tokenRecord = memoryStore.getAccessToken(token);
+  const tokenRecord = await accessTokenStore.getAccessToken(token);
 
   if (!tokenRecord || tokenRecord.isExpired()) {
-    memoryStore.deleteAccessToken(token);
+    if (tokenRecord) {
+      await accessTokenStore.deleteAccessToken(token);
+    }
     return null;
   }
 
   const userInfo = fakeUserService.toUserInfo(fakeUserService.findBySub(tokenRecord.userSub));
 
   if (!userInfo) {
-    memoryStore.deleteAccessToken(token);
+    await accessTokenStore.deleteAccessToken(token);
     return null;
   }
 
