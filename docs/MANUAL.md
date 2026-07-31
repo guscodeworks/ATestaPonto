@@ -1,14 +1,16 @@
-# Sistema de Presença nas Escolas — ATestaPonto
+# Manual de uso e instalação - ATestaPonto
 
 O ATestaPonto é um sistema web criado para modernizar o controle de presença de funcionários em ambiente escolar. Desenvolvido por alunos do curso Técnico em Desenvolvimento de Sistemas do Miguel Vicente Cury, o projeto substitui o antigo registro em caderno por um processo digital, seguro e rastreável, combinando login por CPF/senha com leitura de QR Code.
 
 **Tecnologias principais:** Node.js · Express.js · MySQL · JavaScript · HTML · CSS · QR Code
 
+> [!NOTE]
+> Este arquivo é o manual prático de instalação e uso. Para a explicação técnica do projeto, consulte o mapa em [`000.md`](./000.md).
 
 ## Sobre o Projeto
 
 
-### Objetivo do Projeto
+### Objetivo do projeto
 
 O objetivo principal do sistema é registrar a presença de funcionários — por meio de login combinado com leitura de QR Code. Isso garante que o registro só pode ser feito presencialmente, dentro da área física da escola, evitando fraudes e marcações remotas.
 
@@ -20,7 +22,7 @@ O sistema possui dois perfis de uso:
 ## Desenvolvedores
 
 - Dymas Kawam Batista (backend)
-- Gustavo Nascimento da Silva Braga (Lider/backend)
+- Gustavo Nascimento da Silva Braga (Líder/backend)
 - Isaque de Deus Quadros (frontend)
 - Guilherme Daniel Souza (backend)
 - Eduardo Galvão Pereira (frontend)
@@ -58,7 +60,7 @@ Se tiver o Git instalado, pode clonar o repositório:
 git clone <URL_DO_REPOSITORIO>
 cd Ponto-Escolar
 ```
-![clonando_reposítorio](img/passo%201/clonando.png)
+![clonando_repositorio](img/passo%201/clonando.png)
 
 
 ### Passo 2 — Instalar as dependências do servidor principal
@@ -84,11 +86,11 @@ npm install
 Abra o MySQL e crie o banco de dados do sistema — pelo terminal do MySQL ou por uma ferramenta como MySQL Workbench ou phpMyAdmin:
 
 ```sql
-CREATE DATABASE ponto CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE ponto_escolar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 > [!TIP]
-> O nome `ponto` é o padrão definido no arquivo `.env`. Você pode mudar o nome, mas lembre-se de atualizar o arquivo `.env` também.
+> O nome `ponto_escolar` é o padrão definido no arquivo `.env.example` atual do `ponto-escolar`. Você pode mudar o nome, mas lembre-se de atualizar `DB_NAME` também.
 
 ### Passo 5 — Inicializar as tabelas do banco de dados
 
@@ -120,7 +122,7 @@ O projeto usa arquivos `.env` para armazenar todas as configurações importante
 | `DB_PORT` | Porta do MySQL. Padrão: `3306`. |
 | `DB_USER` | Usuário do banco de dados. Padrão: `root`. |
 | `DB_PASSWORD` | Senha do banco de dados. Deixe vazio se não houver senha. |
-| `DB_NAME` | Nome do banco de dados. Padrão: `ponto`. |
+| `DB_NAME` | Nome do banco de dados. Padrão: `ponto_escolar`. |
 
 **Configurações de Autenticação**
 
@@ -137,7 +139,7 @@ O projeto usa arquivos `.env` para armazenar todas as configurações importante
 | `SCHOOL_LATITUDE` | Latitude da escola. O funcionário só pode registrar ponto próximo a este ponto. |
 | `SCHOOL_LONGITUDE` | Longitude da escola. |
 | `SCHOOL_UNIT_CODE` | Código identificador da unidade escolar. Padrão: `DEFAULT`. |
-| `ALLOWED_RADIUS_METERS` | Raio em metros ao redor da escola onde o ponto pode ser registrado. Padrão: `200` metros. |
+| `ALLOWED_RADIUS_METERS` | Raio em metros ao redor da escola onde o ponto pode ser registrado. Padrão: `100` metros no `.env.example` atual. |
 
 > [!TIP]
 > Para localizar as coordenadas da sua escola, acesse o Google Maps, clique com o botão direito no local da escola e anote a latitude e a longitude exibidas.
@@ -148,10 +150,11 @@ O simulador Gov.br tem seu próprio arquivo `.env.example`. Em ambiente de desen
 
 | Variável | Descrição |
 |---|---|
-| `PORT` | Porta do simulador Gov.br. Padrão: `4000`. |
+| `GOVBR_FAKE_PORT` | Porta do simulador Gov.br. Padrão: `4000`. |
 | `GOVBR_FAKE_CLIENT_ID` | ID do cliente do simulador. Padrão: `ponto-escolar`. |
-| `GOVBR_FAKE_CLIENT_SECRET` | Segredo do cliente. Padrão para desenvolvimento: `dev-secret`. |
-| `GOVBR_FAKE_ADMIN_EMAIL` | E-mail do administrador fake. Padrão: `admin@ponto-escolar.local`. |
+| `GOVBR_FAKE_CLIENT_SECRET` | Segredo do cliente usado no fluxo local. Deve coincidir com o valor do `ponto-escolar`. |
+| `GOVBR_FAKE_ADMIN_SUB` | Identificador fictício retornado pelo simulador. Deve constar em `ADMIN_GOVBR_SUBS`. |
+| `GOVBR_FAKE_ADMIN_EMAIL` | E-mail fictício retornado pelo simulador. Deve constar em `ADMIN_GOVBR_EMAILS`, se a autorização for por e-mail. |
 
 > [!NOTE]
 > O simulador Gov.br é apenas para uso em desenvolvimento local. Em produção real, ele deve ser substituído pelo Gov.br oficial.
@@ -188,7 +191,7 @@ npm start
 | Endereço | O que abre |
 |---|---|
 | `http://localhost:3000` | Página inicial do sistema. |
-| `http://localhost:3000/admin/dashboard` | dashboard admin (requer login de admin). |
+| `http://localhost:3000/admin/dashboard` | Dashboard administrativo, com login obrigatório. |
 
 > [!IMPORTANT]
 > Sempre verifique se o MySQL está rodando antes de iniciar o sistema. Sem o banco de dados ativo, o servidor não inicia.
@@ -207,11 +210,11 @@ O funcionário pode fazer login usando CPF ou e-mail cadastrado:
 | Senha | Senha definida pelo administrador no momento do cadastro do funcionário. |
 
 > [!IMPORTANT]
->No primeiro login do funcionário a senha sera enviada no email do funcionario para cadastrar uma nova
+> No cadastro atual, o sistema retorna uma senha temporária uma única vez para o administrador. Essa senha deve ser entregue ao funcionário por um canal seguro definido pela escola.
 
-### Como Registrar Entrada e Saída
+### Como Registrar as Batidas de Ponto
 
-O sistema reconhece automaticamente se o registro é de entrada ou saída com base na sequência de batidas do dia:
+O sistema reconhece automaticamente o tipo de registro com base na sequência de batidas do dia:
 
 | Batida | Tipo de Registro |
 |---|---|
