@@ -83,6 +83,81 @@ function mapFuncionario(funcionario) {
   };
 }
 
+const TODAY_PUNCH_TYPE_MAP = Object.freeze({
+  ENTRADA: "ENTRADA",
+  SAIDA_ALMOCO: "SAIDA_ALMOCO",
+  VOLTA_ALMOCO: "RETORNO_ALMOCO",
+  SAIDA: "SAIDA",
+});
+
+function mapTimeOrNull(value) {
+  const normalized = String(value || "").trim().slice(0, 8);
+  if (!/^\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    return null;
+  }
+  return normalized === EMPTY_PUNCH_TIME ? null : normalized;
+}
+
+function mapRequiredScheduleTime(value) {
+  const normalized = String(value || "").trim().slice(0, 8);
+  if (!/^\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+    throw new Error("Jornada do funcionario incompleta");
+  }
+  return normalized;
+}
+
+/**
+ * Retorna o estado autoritativo da jornada do funcionario autenticado no dia atual.
+ */
+async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
+  const safeFuncionarioId = Number(funcionarioId);
+  if (!Number.isInteger(safeFuncionarioId) || safeFuncionarioId < 1) {
+    throw new UnauthorizedError("Sessao do funcionario invalida");
+  }
+
+  const funcionario = await employeeModel.findForPunchDashboardById(
+    safeFuncionarioId
+  );
+  if (!funcionario) {
+    throw new NotFoundError("Funcionario nao encontrado");
+  }
+  if (!funcionario.ativo) {
+    throw new ForbiddenError("Funcionario inativo");
+  }
+
+  const { date } = getSaoPauloDateTime(referenceDate);
+  const pointRow = await pointModel.findByEmployeeAndDate(
+    safeFuncionarioId,
+    date
+  );
+  const punchTimes = readPunchTimesFromRow(pointRow || {});
+  const nextPunch = resolveNextPunch(punchTimes);
+
+  return {
+    funcionario: {
+      nome: funcionario.nome,
+      cargo: funcionario.cargo,
+    },
+    jornada: {
+      entrada: mapRequiredScheduleTime(funcionario.entrada),
+      saida_almoco: mapRequiredScheduleTime(funcionario.saida_almoco),
+      retorno_almoco: mapRequiredScheduleTime(funcionario.retorno_almoco),
+      saida: mapRequiredScheduleTime(funcionario.saida),
+    },
+    ponto: {
+      data_referencia: date,
+      entrada: mapTimeOrNull(punchTimes.entrada),
+      saida_almoco: mapTimeOrNull(punchTimes.saidaAlmoco),
+      retorno_almoco: mapTimeOrNull(punchTimes.voltaAlmoco),
+      saida: mapTimeOrNull(punchTimes.saida),
+    },
+    proxima_batida: nextPunch
+      ? TODAY_PUNCH_TYPE_MAP[nextPunch.type]
+      : null,
+    jornada_concluida: nextPunch === null,
+  };
+}
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const INVALID_PASSWORD_HASH = bcrypt.hashSync(
   "invalid-login-credential",
@@ -300,6 +375,7 @@ async function registerPunch(
 }
 
 module.exports = {
+  getTodayPunch,
   loginFuncionario,
   registerPunch,
 };

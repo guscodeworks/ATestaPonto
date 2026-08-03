@@ -89,6 +89,13 @@ async function findForPunchRegisterByIdForUpdate(client, employeeId) {
   );
 }
 
+async function findForPunchDashboardById(employeeId) {
+  return database.executeOne(
+    "SELECT f.id, f.nome, f.ativo, c.cargo, TIME_FORMAT(c.entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(c.saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(c.retorno_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(c.saida, '%H:%i:%s') AS saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1",
+    [employeeId]
+  );
+}
+
 async function findForPunchLoginByCpf(cpf) {
   return database.executeOne(
     "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
@@ -239,6 +246,7 @@ module.exports = {
   findAdminEmployeeById,
   findAdminEmployeeByIdForUpdate,
   findByIdForUpdate,
+  findForPunchDashboardById,
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
   findForPunchLoginByEmail,
