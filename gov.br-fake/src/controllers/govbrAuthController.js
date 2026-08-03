@@ -16,7 +16,10 @@ const {
 // PKCE), usado apenas em ambientes de desenvolvimento/demonstração para testar o fluxo de
 // login sem depender do provedor real.
 const FAKE_SESSION_COOKIE = 'govbr_fake_session';
+const PENDING_AUTHORIZE_COOKIE = 'govbr_fake_authorize';
 const POST_LOGIN_REDIRECT_PATH = '/visual.html';
+const RESUME_AUTHORIZE_PATH = '/fake-govbr/authorize';
+const LOGIN_FIELDS = new Set(['login', 'password']);
 const fakeSessionStore = createFakeSessionStore();
 
 function requestError(message, statusCode = 400, code = 'INVALID_REQUEST') {
@@ -133,6 +136,69 @@ function getCookie(req, name) {
   return null;
 }
 
+function readAuthorizeRequest(query = {}) {
+  return {
+    responseType: getRequiredString(query.response_type, 'response_type'),
+    clientId: getRequiredString(query.client_id, 'client_id'),
+    redirectUri: getRequiredString(query.redirect_uri, 'redirect_uri'),
+    state: String(query.state || '').trim(),
+    codeChallenge: String(query.code_challenge || '').trim(),
+    codeChallengeMethod: String(query.code_challenge_method || '').trim()
+  };
+}
+
+function validateAuthorizeRequest(authorizeRequest) {
+  if (authorizeRequest.responseType !== 'code') {
+    throw requestError('response_type invalido.');
+  }
+
+  if (!timingSafeStringEquals(authorizeRequest.clientId, env.clientId)) {
+    throw requestError('client_id invalido.', 401, 'INVALID_CLIENT');
+  }
+
+  if (!isAllowedRedirectUri(authorizeRequest.redirectUri)) {
+    throw requestError('redirect_uri invalido.', 400, 'INVALID_REDIRECT_URI');
+  }
+
+  if (
+    authorizeRequest.codeChallenge &&
+    authorizeRequest.codeChallengeMethod !== 'S256'
+  ) {
+    throw requestError('code_challenge_method invalido.');
+  }
+
+  return authorizeRequest;
+}
+
+function savePendingAuthorizeRequest(res, authorizeRequest) {
+  memoryStore.cleanupExpiredRecords();
+  const requestId = generateSecureToken('authorize_request');
+
+  memoryStore.savePendingAuthorizeRequest(requestId, {
+    ...authorizeRequest,
+    expiresAt: Date.now() + env.pendingAuthorizeRequestTtlMs
+  });
+  res.setHeader('Set-Cookie', buildCookie(PENDING_AUTHORIZE_COOKIE, requestId, {
+    maxAge: Math.floor(env.pendingAuthorizeRequestTtlMs / 1000)
+  }));
+}
+
+function getPendingAuthorizeRequest(req) {
+  memoryStore.cleanupExpiredRecords();
+  const requestId = getCookie(req, PENDING_AUTHORIZE_COOKIE);
+  return requestId ? memoryStore.getPendingAuthorizeRequest(requestId) : null;
+}
+
+function clearPendingAuthorizeRequest(req, res) {
+  const requestId = getCookie(req, PENDING_AUTHORIZE_COOKIE);
+  if (requestId) {
+    memoryStore.deletePendingAuthorizeRequest(requestId);
+  }
+  res.setHeader('Set-Cookie', buildCookie(PENDING_AUTHORIZE_COOKIE, '', {
+    maxAge: 0
+  }));
+}
+
 // Cria uma sessão fake no repositório configurado e só então envia o cookie.
 async function createFakeSession(res, userSub) {
   const sessionId = generateSecureToken('fake_session');
@@ -184,48 +250,40 @@ async function getAuthenticatedUser(req) {
 
 async function showAuthorize(req, res, next) {
   try {
-    const responseType = getRequiredString(req.query.response_type, 'response_type');
-    const clientId = getRequiredString(req.query.client_id, 'client_id');
-    const redirectUri = getRequiredString(req.query.redirect_uri, 'redirect_uri');
-    const state = String(req.query.state || '').trim();
-    const codeChallenge = String(req.query.code_challenge || '').trim();
-    const codeChallengeMethod = String(req.query.code_challenge_method || '').trim();
-
-    // Este provedor fake só suporta o fluxo "Authorization Code".
-    if (responseType !== 'code') {
-      throw requestError('response_type invalido.');
-    }
-
-    if (!timingSafeStringEquals(clientId, env.clientId)) {
-      throw requestError('client_id invalido.', 401, 'INVALID_CLIENT');
-    }
-
-    if (!isAllowedRedirectUri(redirectUri)) {
-      throw requestError('redirect_uri invalido.', 400, 'INVALID_REDIRECT_URI');
-    }
-
-    // PKCE é opcional, mas se o client enviar code_challenge, o método precisa ser S256.
-    if (codeChallenge && codeChallengeMethod !== 'S256') {
-      throw requestError('code_challenge_method invalido.');
-    }
+    const hasAuthorizeQuery = Object.hasOwn(req.query, 'response_type');
+    const pendingAuthorizeRequest = hasAuthorizeQuery
+      ? null
+      : getPendingAuthorizeRequest(req);
+    const authorizeRequest = validateAuthorizeRequest(
+      hasAuthorizeQuery
+        ? readAuthorizeRequest(req.query)
+        : pendingAuthorizeRequest || {}
+    );
 
     const authenticatedUser = await getAuthenticatedUser(req);
     if (!authenticatedUser) {
+      if (hasAuthorizeQuery) {
+        savePendingAuthorizeRequest(res, authorizeRequest);
+      }
       return res.redirect('/govbr');
     }
 
+    if (pendingAuthorizeRequest) {
+      clearPendingAuthorizeRequest(req, res);
+    }
+
     const { code } = await registerAuthorizationCode({
-      codeChallenge,
-      codeChallengeMethod,
-      redirectUri,
-      clientId,
+      codeChallenge: authorizeRequest.codeChallenge,
+      codeChallengeMethod: authorizeRequest.codeChallengeMethod,
+      redirectUri: authorizeRequest.redirectUri,
+      clientId: authorizeRequest.clientId,
       userSub: authenticatedUser.sub
     });
 
-    const callbackUrl = new URL(redirectUri);
+    const callbackUrl = new URL(authorizeRequest.redirectUri);
     callbackUrl.searchParams.set('code', code);
-    if (state) {
-      callbackUrl.searchParams.set('state', state);
+    if (authorizeRequest.state) {
+      callbackUrl.searchParams.set('state', authorizeRequest.state);
     }
 
     return res.redirect(callbackUrl.toString());
@@ -237,18 +295,36 @@ async function showAuthorize(req, res, next) {
 async function login(req, res, next) {
   try {
     const body = req.body || {};
-    const sub = fakeUserService.normalizeSub(body.cpf || body.sub);
-    if (!sub) {
-      throw requestError('CPF ou sub e obrigatorio.', 400, 'INVALID_FAKE_USER_ID');
+    const receivedFields = Object.keys(body);
+
+    if (receivedFields.some((field) => !LOGIN_FIELDS.has(field))) {
+      throw requestError('Payload de login invalido.', 400, 'INVALID_LOGIN_PAYLOAD');
     }
 
-    const user = fakeUserService.findBySub(sub);
+    const loginValue = String(body.login || '').trim();
+    const password = String(body.password || '');
+    const credentialsAreWithinLimits =
+      loginValue.length > 0 && loginValue.length <= 64 &&
+      password.length > 0 && password.length <= 256;
+    const user = credentialsAreWithinLimits
+      ? fakeUserService.authenticate({ login: loginValue, password })
+      : null;
+
     if (!user) {
-      throw requestError('Usuario fake nao encontrado.', 401, 'INVALID_FAKE_USER');
+      throw requestError(
+        'Credenciais demonstrativas invalidas.',
+        401,
+        'INVALID_DEMO_CREDENTIALS'
+      );
     }
 
     await createFakeSession(res, user.sub);
-    return res.redirect(303, POST_LOGIN_REDIRECT_PATH);
+    return res.status(200).json({
+      success: true,
+      redirectTo: getPendingAuthorizeRequest(req)
+        ? RESUME_AUTHORIZE_PATH
+        : POST_LOGIN_REDIRECT_PATH
+    });
   } catch (error) {
     return next(error);
   }

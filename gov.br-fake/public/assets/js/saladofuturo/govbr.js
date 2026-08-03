@@ -1,20 +1,29 @@
-const btn = document.getElementById("continuar");
+const loginForm = document.getElementById("demoLoginForm");
+const loginInput = document.getElementById("login");
+const passwordInput = document.getElementById("password");
+const loginButton = document.getElementById("loginButton");
+const loginStatus = document.getElementById("loginStatus");
 
-btn.addEventListener("click", async () => {
+function setSubmitting(isSubmitting) {
+    loginButton.disabled = isSubmitting;
+    loginButton.setAttribute("aria-busy", String(isSubmitting));
+    loginButton.querySelector("span").textContent = isSubmitting
+        ? "Verificando credenciais…"
+        : "Entrar no ambiente demonstrativo";
+}
 
-    const cpf = document.getElementById("cpf").value.trim();
+function showInvalidCredentials() {
+    loginStatus.textContent = "Credenciais demonstrativas inválidas.";
+    passwordInput.value = "";
+    passwordInput.focus();
+}
 
-    if (cpf === "") {
-        alert("Digite seu CPF.");
-        return;
-    }
-
-    // Desabilita o botao durante a requisicao para evitar duplo clique/duplo envio.
-    btn.disabled = true;
+loginForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    loginStatus.textContent = "";
+    setSubmitting(true);
 
     try {
-        // Endpoint "fake-govbr": simula o login do Gov.br apenas para ambiente
-        // de desenvolvimento/teste, sem depender da integracao OAuth real.
         const response = await fetch("/fake-govbr/login", {
             method: "POST",
             credentials: "same-origin",
@@ -22,21 +31,26 @@ btn.addEventListener("click", async () => {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ cpf })
+            body: JSON.stringify({
+                login: loginInput.value.trim(),
+                password: passwordInput.value
+            })
         });
 
         if (!response.ok) {
-            throw new Error("Falha no login fake.");
+            showInvalidCredentials();
+            return;
         }
 
-        alert("Login realizado com sucesso!");
+        const result = await response.json();
+        if (!result || typeof result.redirectTo !== "string" || !result.redirectTo.startsWith("/")) {
+            throw new Error("Resposta de login inválida.");
+        }
 
-        // Redireciona para visual.html
-        window.location.href = "/visual.html";
-
-    } catch (error) {
-        alert(error.message || "Falha no login fake.");
-        // Reabilita o botao apenas em caso de erro, permitindo nova tentativa.
-        btn.disabled = false;
+        window.location.assign(result.redirectTo);
+    } catch (_error) {
+        loginStatus.textContent = "Não foi possível concluir o login demonstrativo.";
+    } finally {
+        setSubmitting(false);
     }
 });

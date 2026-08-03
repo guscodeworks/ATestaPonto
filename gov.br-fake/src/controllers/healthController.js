@@ -6,7 +6,7 @@ const { getRedisClient } = require('../config/redis');
 function createHealthResponse(redisStatus) {
   return {
     success: redisStatus !== 'unavailable',
-    service: 'gov.br-fake',
+    service: 'Simulador de Identidade — ATestaPonto',
     environment: env.environmentLabel,
     // Este servico e sempre um simulador, inclusive quando publicado para homologacao.
     production: false,
@@ -16,7 +16,7 @@ function createHealthResponse(redisStatus) {
     },
     message: redisStatus === 'unavailable'
       ? 'Servico temporariamente indisponivel.'
-      : 'gov.br-fake rodando em ambiente demonstrativo.'
+      : 'Simulador de identidade rodando em ambiente demonstrativo.'
   };
 }
 

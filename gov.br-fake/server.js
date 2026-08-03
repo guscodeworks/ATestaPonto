@@ -11,7 +11,7 @@ const cleanupTimer = memoryStore.startCleanup(env.cleanupIntervalMs);
 const server = app.listen(env.port, env.host, () => {
   // eslint-disable-next-line no-console
   console.log(
-    `Servidor gov rodando em http://${env.host}:${env.port}`
+    `Simulador de identidade rodando em http://${env.host}:${env.port}`
   );
 });
 

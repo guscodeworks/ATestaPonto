@@ -72,9 +72,9 @@ async function startPontoEscolarAdmin(req, res, next) {
 function showServiceInfo(_req, res) {
   return res.status(200).json({
     success: true,
-    service: 'gov.br-fake',
+    service: 'Simulador de Identidade — ATestaPonto',
     environment: env.environmentLabel,
-    message: 'Gov.br fake local rodando. Ambiente apenas para demonstracao.',
+    message: 'Provedor generico de identidade em ambiente academico de demonstracao.',
     routes: {
       home: '/',
       govbr: '/govbr',

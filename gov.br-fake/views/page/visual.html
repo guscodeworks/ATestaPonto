@@ -1,82 +1,60 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ponto Escolar</title>
-
-    <link rel="stylesheet" href="/assets/css/saladofuturo/visual.css">
-
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Sessão demonstrativa | Simulador de Identidade — ATestaPonto</title>
+  <link rel="stylesheet" href="/assets/css/saladofuturo/visual.css">
 </head>
 <body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="Página inicial do ATestaPonto">
+      <span class="brand-mark" aria-hidden="true">AT</span>
+      <span>ATestaPonto</span>
+    </a>
+    <p class="sidebar-label">Simulador de identidade</p>
 
-    <aside class="sidebar">
+    <nav aria-label="Navegação do simulador">
+      <a class="active" href="/visual.html">Sessão demonstrativa</a>
+      <a href="/fake-govbr/logout">Encerrar simulação</a>
+    </nav>
+  </aside>
 
-        <div class="logo">
-            <img src="img/logo-sala-futuro.png" alt="Sala do Futuro">
+  <main class="content">
+    <header class="topbar">
+      <span class="simulation-tag">SIMULAÇÃO</span>
+      <span class="session-state">Identidade fictícia autenticada</span>
+    </header>
+
+    <div class="demo-notice" role="note" aria-label="Aviso de ambiente demonstrativo">
+      <strong>AMBIENTE ACADÊMICO DE DEMONSTRAÇÃO</strong>
+      <p>Este simulador faz parte do projeto ATestaPonto.</p>
+      <p>Não possui relação com o Governo Federal ou com o serviço Gov.br.</p>
+      <p>Não informe CPF, senha ou qualquer dado pessoal real.</p>
+    </div>
+
+    <section class="welcome-card" aria-labelledby="page-title">
+      <p class="eyebrow">Autenticação concluída no simulador</p>
+      <h1 id="page-title">Uma identidade fictícia está ativa</h1>
+      <p>
+        Esta sessão confirma somente a autenticação demonstrativa. Qualquer permissão de
+        acesso será verificada pelo Ponto Escolar, fora deste simulador.
+      </p>
+    </section>
+
+    <section class="gerenciar-container" aria-labelledby="continue-title">
+      <div class="gerenciar-card" id="gerenciarCard" role="button" tabindex="0">
+        <div class="card-text">
+          <span>Continuar o fluxo OAuth</span>
+          <h2 id="continue-title">Ir para o Ponto Escolar</h2>
+          <p>O sistema de destino decidirá as permissões desta identidade.</p>
         </div>
+        <button id="btnGerenciar" type="button" aria-label="Ir para o Ponto Escolar">→</button>
+      </div>
+    </section>
+  </main>
 
-        <nav>
-            <ul>
-                <li class="active">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </li>
-            </ul>
-        </nav>
-
-    </aside>
-
-    <main class="content">
-
-        <header class="topbar">
-
-            <div></div>
-
-            <div class="user-info">
-                <i class="fas fa-bell"></i>
-
-                <div class="avatar">
-                    ID
-                </div>
-
-                <span>Administrador Local</span>
-            </div>
-
-        </header>
-
-        <section class="welcome-card">
-
-            <h1>Bem-vindo ao Ponto Escolar</h1>
-
-            <p>
-                Sistema de gerenciamento de frequência e registro de ponto escolar.
-            </p>
-
-        </section>
-
-        <section class="gerenciar-container">
-
-            <div class="gerenciar-card" id="gerenciarCard">
-
-                <div class="card-text">
-                    <span>Acessar</span>
-                    <h2>Gerenciar Pontos</h2>
-                </div>
-
-                <button id="btnGerenciar">
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-
-            </div>
-
-        </section>
-
-    </main>
-
-    <script src="/assets/js/saladofuturo/visual.js"></script>
-
+  <script src="/assets/js/saladofuturo/visual.js"></script>
 </body>
 </html>

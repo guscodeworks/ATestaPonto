@@ -1,13 +1,13 @@
 const serverBtn = document.getElementById("serverBtn");
 const loginBox = document.querySelector(".login-box");
-const greeting = loginBox ? loginBox.querySelector("h1") : null;
-const description = loginBox ? loginBox.querySelector("p") : null;
+const greeting = loginBox ? loginBox.querySelector("h2") : null;
+const description = loginBox ? loginBox.querySelector("p:not(.panel-label)") : null;
 const buttonSpan = serverBtn ? serverBtn.querySelector("span") : null;
-const buttonTitle = serverBtn ? serverBtn.querySelector("h2") : null;
+const buttonTitle = serverBtn ? serverBtn.querySelector("h3") : null;
 
 let authenticatedUser = null;
 
-// Consulta a sessao do mock do Gov.br (ambiente de dev/teste), sem lancar erro
+// Consulta a sessao do simulador (ambiente de dev/teste), sem lancar erro
 // visivel ao usuario caso a chamada falhe — a pagina simplesmente permanece
 // no estado "nao autenticado".
 async function carregarSessaoFake() {
@@ -39,15 +39,11 @@ function aplicarSessao(session) {
     authenticatedUser = session.user;
 
     if (greeting) {
-        greeting.textContent =
-            "Olá, " + (authenticatedUser.name || "Servidor") + "!";
+        greeting.textContent = "A simulação já está autenticada";
     }
 
     if (description) {
-        description.textContent =
-            "Você está logado no gov.br-fake como " +
-            (authenticatedUser.email || "admin local") +
-            ".";
+        description.textContent = "Continue com a identidade fictícia ativa ou encerre a sessão para escolher outra.";
     }
 
     if (buttonSpan) {
@@ -55,18 +51,18 @@ function aplicarSessao(session) {
     }
 
     if (buttonTitle) {
-        buttonTitle.textContent = "Gerenciar pontos";
+        buttonTitle.textContent = "Continuar demonstração";
     }
 }
 
-serverBtn.addEventListener("click", () => {
+serverBtn?.addEventListener("click", () => {
     if (authenticatedUser) {
         // Redireciona para o dashboard após login
         window.location.href = "/visual.html";
         return;
     }
 
-    // Redireciona para a tela de login gov.br fake
+    // Redireciona para a escolha de identidade fictícia.
     window.location.href = "/govbr.html";
 });
 

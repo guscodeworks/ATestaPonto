@@ -14,6 +14,30 @@ const assetsRoot = path.join(publicRoot, 'assets');
 // reduzindo a superfície de informação disponível para reconhecimento de ataque.
 app.disable('x-powered-by');
 
+// O deployment é um laboratório acadêmico, não um site indexável nem um provedor
+// oficial. Os recursos da interface são locais e podem ser restringidos à mesma origem.
+app.use((_req, res, next) => {
+  res.set({
+    'Content-Security-Policy': [
+      "default-src 'self'",
+      "base-uri 'none'",
+      "connect-src 'self'",
+      "font-src 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "img-src 'self' data:",
+      "object-src 'none'",
+      "script-src 'self'",
+      "style-src 'self'"
+    ].join('; '),
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet'
+  });
+  return next();
+});
+
 app.use(express.static(publicRoot, { maxAge: '1h' }));
 app.use('/assets', express.static(assetsRoot, { maxAge: '1h' }));
 // Limite de 20kb no payload: suficiente para os fluxos OAuth2/PKCE deste serviço fake,
@@ -32,7 +56,7 @@ app.use((_req, res) => {
     success: false,
     error: {
       code: 'NOT_FOUND',
-      message: 'Rota nao encontrada no gov.br-fake local.'
+      message: 'Rota nao encontrada no simulador de identidade.'
     }
   });
 });
@@ -52,7 +76,7 @@ app.use((error, _req, res, _next) => {
     error: {
       code: error.code || (safeStatusCode === 500 ? 'INTERNAL_ERROR' : 'REQUEST_ERROR'),
       message: safeStatusCode === 500
-        ? 'Erro interno no gov.br-fake local.'
+        ? 'Erro interno no simulador de identidade.'
         : String(error.message || 'Requisicao invalida.')
     }
   });

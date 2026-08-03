@@ -1,81 +1,83 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>gov.br-fake</title>
-
-    <link rel="stylesheet" href="/assets/css/saladofuturo/govbr.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Simulador de Identidade — ATestaPonto</title>
+  <link rel="stylesheet" href="/assets/css/saladofuturo/govbr.css">
 </head>
 <body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Voltar ao início do ATestaPonto">
+      <span class="brand-mark" aria-hidden="true">AT</span>
+      <span>Simulador de Identidade — ATestaPonto</span>
+    </a>
+    <span class="simulation-tag">SIMULAÇÃO</span>
+  </header>
 
-<header>
+  <main class="page-shell">
+    <section class="context" aria-labelledby="page-title">
+      <p class="eyebrow">Etapa demonstrativa</p>
+      <h1 id="page-title">Acesse o ambiente demonstrativo</h1>
+      <p class="context-copy">
+        Esta autenticação confirma somente uma identidade fictícia. Ela não concede
+        acesso administrativo nem define permissões no Ponto Escolar.
+      </p>
 
-    <h1 class="logo-fake">
-        gov.br-fake
-    </h1>
+      <div class="rule-card">
+        <span aria-hidden="true">AUTH ≠ ADMIN</span>
+        <p>O simulador autentica. O Ponto Escolar autoriza.</p>
+      </div>
+    </section>
 
-    <div class="header-links">
-        <a href="#">Alto Contraste</a>
-        <a href="#">VLibras</a>
-    </div>
+    <section class="choice-panel" aria-labelledby="choice-title">
+      <div class="demo-notice" role="note" aria-label="Aviso de ambiente demonstrativo">
+        <strong>AMBIENTE ACADÊMICO DE DEMONSTRAÇÃO</strong>
+        <p>Este é um simulador de identidade utilizado pelo projeto ATestaPonto.</p>
+        <p>Não possui relação com o Governo Federal ou com o serviço oficial Gov.br.</p>
+        <p>Utilize somente as credenciais demonstrativas fornecidas para a apresentação.</p>
+        <p>Não informe CPF, senha pessoal ou dados reais.</p>
+      </div>
 
-</header>
+      <form class="demo-login" id="demoLoginForm" novalidate>
+        <h2 id="choice-title">Login demonstrativo</h2>
+        <p class="form-help">Use exclusivamente as credenciais fornecidas para esta demonstração.</p>
 
-<main>
-
-    <div class="gov-left">
-
-        <div class="banner">
-
-            <div class="content">
-
-                <h1 class="banner-logo">
-                    gov.br-fake
-                </h1>
-
-                <h2>
-                    Uma conta gov.br-fake garante a identificação
-                    dos servidores para acesso ao sistema de ponto.
-                </h2>
-
-            </div>
-
+        <div class="field-group">
+          <label for="login">Login</label>
+          <input
+            id="login"
+            name="login"
+            type="text"
+            autocomplete="username"
+            maxlength="64"
+            required
+          >
         </div>
 
-    </div>
-
-    <div class="gov-right">
-
-        <div class="card">
-
-            <h1>Identifique-se no gov.br-fake com:</h1>
-
-            <h2>Número do CPF</h2>
-
-            <p>
-                Digite seu CPF para criar ou acessar sua conta.
-            </p>
-
-            <label>CPF</label>
-
-            <input
-                type="text"
-                id="cpf"
-                placeholder="Digite seu CPF"
-            >
-
-            <button id="continuar">
-                Continuar
-            </button>
-
+        <div class="field-group">
+          <label for="password">Senha</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            maxlength="256"
+            required
+          >
         </div>
 
-    </div>
+        <p class="status-message" id="loginStatus" role="alert" aria-live="polite"></p>
 
-</main>
+        <button class="login-button" id="loginButton" type="submit">
+          <span>Entrar no ambiente demonstrativo</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </form>
+    </section>
+  </main>
 
-<script src="/assets/js/saladofuturo/govbr.js"></script>
-
+  <script src="/assets/js/saladofuturo/govbr.js"></script>
 </body>
 </html>
