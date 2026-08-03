@@ -6,181 +6,117 @@
   <title>Meu ponto — ATestaPonto</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
   <link rel="stylesheet" href="/assets/css/tokens.css"/>
-  <link rel="stylesheet" href="/assets/css/funcionario.css?v=20260803-mobile-dashboard"/>
+  <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260803-dashboard-api"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
-  <script src="/assets/js/funcionario/ponto.js?v=20260729-loading-states" defer></script>
+  <script src="/assets/js/funcionario/ponto.js?v=20260803-dashboard-api" defer></script>
 </head>
 <body class="employee-dashboard">
 
 <div class="employee-decoration employee-decoration-blue" aria-hidden="true"></div>
 <div class="employee-decoration employee-decoration-red" aria-hidden="true"></div>
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-<div class="app-wrap">
-  <aside class="app-sidebar" id="sidebar" aria-label="Menu do funcionário">
-    <div class="sidebar-brand">
-      <div class="sidebar-brand-mark">
-        <img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="28" height="28"/>
+<div class="employee-shell">
+  <header class="employee-header">
+    <a class="employee-identity" href="/funcionario/perfil" aria-label="Abrir perfil">
+      <span class="employee-avatar" id="tp-avatar" aria-hidden="true">—</span>
+      <span class="employee-identity-copy">
+        <strong class="employee-name" id="hero-name">—</strong>
+        <span class="employee-role" id="hero-cargo">—</span>
+      </span>
+    </a>
+    <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="ATestaPonto" width="38" height="38"/>
+  </header>
+
+  <main class="employee-dashboard-content">
+    <section class="ponto-hero" aria-labelledby="greeting">
+      <div class="ponto-hero-bg" aria-hidden="true"></div>
+      <div class="ponto-hero-glow" aria-hidden="true"></div>
+      <div class="ponto-hero-content">
+        <div class="ponto-card-heading">
+          <div>
+            <p class="ponto-greeting" id="greeting">Olá,</p>
+            <p class="ponto-card-kicker">Horário atual</p>
+          </div>
+          <img class="ponto-card-icon" src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="20" height="20"/>
+        </div>
+
+        <div class="ponto-clock-row">
+          <time class="ponto-time" id="hero-clock">--:--:--</time>
+          <div class="ponto-date-col">
+            <span class="ponto-date-day" id="hero-weekday">--</span>
+            <span class="ponto-date-full" id="hero-date">-- de -- de ----</span>
+          </div>
+        </div>
+
+        <div class="ponto-next-block">
+          <span class="ponto-next-label">Próxima batida</span>
+          <div class="ponto-status-row" id="status-row" aria-live="polite">
+            <span class="ponto-status-dot waiting" id="status-dot" aria-hidden="true"></span>
+            <span class="ponto-status-text" id="status-text">Carregando jornada...</span>
+          </div>
+        </div>
+
+        <div class="ponto-btn-wrap">
+          <button class="ponto-btn entrada" id="btn-ponto" type="button" onclick="baterPonto()" disabled>
+            <span class="ponto-btn-icon" id="btn-icon" aria-hidden="true"></span>
+            <span class="ponto-btn-label" id="btn-label">Carregando</span>
+          </button>
+          <p class="ponto-last-action" id="last-action">Carregando registros...</p>
+        </div>
       </div>
-      <div class="sidebar-brand-text">
-        <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
-        <span class="sidebar-brand-sub">Área do funcionário</span>
+    </section>
+
+    <section class="employee-card timeline-card" aria-labelledby="timeline-title">
+      <div class="employee-card-header">
+        <div>
+          <p class="employee-card-eyebrow">Hoje</p>
+          <h2 class="employee-card-title" id="timeline-title">Suas batidas</h2>
+        </div>
+        <div class="timeline-meta">
+          <span id="timeline-date">--/--/----</span>
+          <span id="timeline-count" aria-live="polite">Carregando</span>
+        </div>
       </div>
-    </div>
-
-    <div class="sidebar-user">
-      <div class="sidebar-user-avatar" id="sb-avatar">FN</div>
-      <div class="sidebar-user-info">
-        <div class="sidebar-user-name" id="sb-name">Funcionário</div>
-        <div class="sidebar-user-role" id="sb-role">Cargo</div>
+      <div class="timeline-wrap" id="timeline-wrap">
+        <div class="ponto-timeline" id="timeline" aria-live="polite"></div>
       </div>
-      <div class="sidebar-status-dot" aria-label="Acesso ativo"></div>
-    </div>
+    </section>
 
-    <nav class="sidebar-nav" aria-label="Navegação principal">
-      <a href="/funcionario" class="nav-link active" aria-current="page">
-        <span class="nav-icon"><img src="/assets/icons/clock.svg" alt="" aria-hidden="true"/></span>
-        Início
-      </a>
-      <a href="/funcionario/relatorio" class="nav-link">
-        <span class="nav-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"/></span>
-        Histórico
-      </a>
-      <a href="/funcionario/perfil" class="nav-link">
-        <span class="nav-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true"/></span>
-        Perfil
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="btn-logout" type="button" onclick="sair()">
-        <span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true"/></span>
-        Sair
-      </button>
-    </div>
-  </aside>
-
-  <div class="app-main">
-    <header class="employee-header">
-      <a class="employee-identity" href="/funcionario/perfil" aria-label="Abrir perfil">
-        <span class="employee-avatar" id="tp-avatar" aria-hidden="true">FN</span>
-        <span class="employee-identity-copy">
-          <strong class="employee-name" id="hero-name">Funcionário</strong>
-          <span class="employee-role" id="hero-cargo">Cargo</span>
+    <section class="employee-card schedule-card" aria-labelledby="schedule-title">
+      <div class="employee-card-header">
+        <div>
+          <p class="employee-card-eyebrow">Horários previstos</p>
+          <h2 class="employee-card-title" id="schedule-title">Sua jornada</h2>
+        </div>
+        <span class="employee-card-header-icon" aria-hidden="true">
+          <img src="/assets/icons/calendar-days.svg" alt="" width="20" height="20"/>
         </span>
-      </a>
-
-      <button class="menu-toggle" id="menu-toggle" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
-        <img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="20" height="20"/>
-      </button>
-
-      <span class="sr-only" id="tp-name">Funcionário</span>
-      <span class="sr-only" id="topbar-time">--:--:--</span>
-      <span class="sr-only" id="topbar-date"></span>
-    </header>
-
-    <main class="page-content employee-dashboard-content">
-      <section class="ponto-hero fade-in" aria-labelledby="greeting">
-        <div class="ponto-hero-bg" aria-hidden="true"></div>
-        <div class="ponto-hero-glow" aria-hidden="true"></div>
-        <div class="ponto-hero-content">
-          <div class="ponto-card-heading">
-            <div>
-              <p class="ponto-greeting" id="greeting">Bom dia,</p>
-              <p class="ponto-card-kicker">Horário atual</p>
-            </div>
-            <img class="ponto-card-icon" src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="20" height="20"/>
-          </div>
-
-          <div class="ponto-clock-row">
-            <time class="ponto-time" id="hero-clock">--:--:--</time>
-            <div class="ponto-date-col">
-              <span class="ponto-date-day" id="hero-weekday">--</span>
-              <span class="ponto-date-full" id="hero-date">-- de -- de ----</span>
-            </div>
-          </div>
-
-          <div class="ponto-next-block">
-            <span class="ponto-next-label">Próxima batida</span>
-            <div class="ponto-status-row" id="status-row" aria-live="polite">
-              <span class="ponto-status-dot waiting" id="status-dot" aria-hidden="true"></span>
-              <span class="ponto-status-text" id="status-text">Aguardando registro de entrada</span>
-            </div>
-          </div>
-
-          <div class="ponto-btn-wrap">
-            <div class="ponto-btn-outer">
-              <span class="ponto-ring" aria-hidden="true"></span>
-              <span class="ponto-ring" aria-hidden="true"></span>
-              <span class="ponto-ring" aria-hidden="true"></span>
-              <button class="ponto-btn entrada" id="btn-ponto" type="button" onclick="baterPonto()">
-                <span class="ponto-btn-icon" id="btn-icon" aria-hidden="true">
-                  <img src="/assets/icons/timer.svg" alt="" width="20" height="20"/>
-                </span>
-                <span class="ponto-btn-label" id="btn-label">Registrar entrada</span>
-              </button>
-            </div>
-            <p class="ponto-last-action" id="last-action">Nenhum registro hoje</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="employee-card timeline-card fade-in" aria-labelledby="timeline-title">
-        <div class="employee-card-header">
-          <div>
-            <p class="employee-card-eyebrow">Hoje</p>
-            <h2 class="employee-card-title" id="timeline-title">Suas batidas</h2>
-          </div>
-          <div class="timeline-meta">
-            <span id="timeline-date">--/--/----</span>
-            <span id="timeline-count" aria-live="polite">0 registro(s)</span>
-          </div>
-        </div>
-        <div class="timeline-wrap" id="timeline-wrap">
-          <div class="ponto-timeline" id="timeline" aria-live="polite">
-            <div class="timeline-empty">
-              <img src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="20" height="20"/>
-              <span>Nenhum registro neste dia</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="employee-card schedule-card fade-in" aria-labelledby="schedule-title">
-        <div class="employee-card-header">
-          <div>
-            <p class="employee-card-eyebrow">Horários previstos</p>
-            <h2 class="employee-card-title" id="schedule-title">Sua jornada</h2>
-          </div>
-          <span class="employee-card-header-icon" aria-hidden="true">
-            <img src="/assets/icons/calendar-days.svg" alt="" width="20" height="20"/>
-          </span>
-        </div>
-        <ol class="schedule-list" aria-label="Jornada definida pelo administrador">
-          <li class="schedule-item">
-            <span class="schedule-marker">1</span>
-            <span class="schedule-label">Entrada</span>
-            <time class="schedule-time">--:--</time>
-          </li>
-          <li class="schedule-item">
-            <span class="schedule-marker">2</span>
-            <span class="schedule-label">Saída para almoço</span>
-            <time class="schedule-time">--:--</time>
-          </li>
-          <li class="schedule-item">
-            <span class="schedule-marker">3</span>
-            <span class="schedule-label">Retorno do almoço</span>
-            <time class="schedule-time">--:--</time>
-          </li>
-          <li class="schedule-item">
-            <span class="schedule-marker">4</span>
-            <span class="schedule-label">Saída</span>
-            <time class="schedule-time">--:--</time>
-          </li>
-        </ol>
-      </section>
-    </main>
-  </div>
+      </div>
+      <ol class="schedule-list" aria-label="Jornada definida pelo administrador">
+        <li class="schedule-item">
+          <span class="schedule-marker">1</span>
+          <span class="schedule-label">Entrada</span>
+          <time class="schedule-time">--:--</time>
+        </li>
+        <li class="schedule-item">
+          <span class="schedule-marker">2</span>
+          <span class="schedule-label">Saída para almoço</span>
+          <time class="schedule-time">--:--</time>
+        </li>
+        <li class="schedule-item">
+          <span class="schedule-marker">3</span>
+          <span class="schedule-label">Retorno do almoço</span>
+          <time class="schedule-time">--:--</time>
+        </li>
+        <li class="schedule-item">
+          <span class="schedule-marker">4</span>
+          <span class="schedule-label">Saída</span>
+          <time class="schedule-time">--:--</time>
+        </li>
+      </ol>
+    </section>
+  </main>
 </div>
 
 <nav class="bottom-nav" aria-label="Navegação do funcionário">
@@ -202,15 +138,13 @@
 
 <dialog class="ponto-confirm" id="confirm-modal" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-sub">
   <div class="ponto-confirm-card">
-    <div class="confirm-icon-wrap success" aria-hidden="true">
-      <span class="confirm-checkmark" id="confirm-icon">
-        <img src="/assets/icons/circle-check.svg" alt="" width="28" height="28"/>
-      </span>
+    <div class="confirm-icon-wrap" aria-hidden="true">
+      <span class="confirm-checkmark" id="confirm-icon">OK</span>
     </div>
     <h2 class="confirm-title" id="confirm-title">Ponto registrado</h2>
     <time class="confirm-time" id="confirm-time">--:--:--</time>
     <p class="confirm-sub" id="confirm-sub">Registro concluído com sucesso</p>
-    <button class="ui-btn ui-btn-primary ui-btn-block confirm-close" type="button" onclick="fecharConfirm()">
+    <button class="employee-button employee-button-primary confirm-close" type="button" onclick="fecharConfirm()">
       Fechar
     </button>
   </div>
