@@ -1,10 +1,11 @@
 'use strict';
 
 class FakeUser {
-  constructor({ sub, name, email, password }) {
+  constructor({ sub, name, email, login, password }) {
     this.sub = String(sub || '').trim();
     this.name = String(name || '').trim();
     this.email = String(email || '').trim();
+    this.login = String(login || '').trim();
     this.password = String(password || '');
 
     Object.freeze(this);

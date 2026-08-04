@@ -1,20 +1,37 @@
-const btn = document.getElementById("continuar");
+const loginForm = document.getElementById("demoLoginForm");
+const loginInput = document.getElementById("login");
+const passwordInput = document.getElementById("password");
+const loginButton = document.getElementById("loginButton");
+const loginStatus = document.getElementById("loginStatus");
+const defaultButtonText = "Entrar como administrador";
+let isSubmitting = false;
 
-btn.addEventListener("click", async () => {
+function setSubmitting(submitting) {
+    isSubmitting = submitting;
+    loginButton.disabled = submitting;
+    loginButton.setAttribute("aria-busy", String(submitting));
+    loginButton.textContent = submitting ? "Autenticando..." : defaultButtonText;
+}
 
-    const cpf = document.getElementById("cpf").value.trim();
+function showError(message) {
+    loginStatus.textContent = message;
+    loginStatus.hidden = false;
+    passwordInput.value = "";
+    passwordInput.focus();
+}
 
-    if (cpf === "") {
-        alert("Digite seu CPF.");
+loginForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (isSubmitting) {
         return;
     }
 
-    // Desabilita o botao durante a requisicao para evitar duplo clique/duplo envio.
-    btn.disabled = true;
+    loginStatus.textContent = "";
+    loginStatus.hidden = true;
+    setSubmitting(true);
 
     try {
-        // Endpoint "fake-govbr": simula o login do Gov.br apenas para ambiente
-        // de desenvolvimento/teste, sem depender da integracao OAuth real.
         const response = await fetch("/fake-govbr/login", {
             method: "POST",
             credentials: "same-origin",
@@ -22,21 +39,21 @@ btn.addEventListener("click", async () => {
                 "Accept": "application/json",
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ cpf })
+            body: JSON.stringify({
+                login: loginInput.value.trim(),
+                password: passwordInput.value
+            })
         });
 
         if (!response.ok) {
-            throw new Error("Falha no login fake.");
+            showError("Login ou senha inválidos.");
+            setSubmitting(false);
+            return;
         }
 
-        alert("Login realizado com sucesso!");
-
-        // Redireciona para visual.html
-        window.location.href = "/visual.html";
-
-    } catch (error) {
-        alert(error.message || "Falha no login fake.");
-        // Reabilita o botao apenas em caso de erro, permitindo nova tentativa.
-        btn.disabled = false;
+        window.location.assign("/auth/dashboard");
+    } catch (_error) {
+        showError("Não foi possível concluir a autenticação.");
+        setSubmitting(false);
     }
 });

@@ -1,211 +1,200 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Arial, Helvetica, sans-serif;
+:root {
+  --ink: #292331;
+  --muted: #686270;
+  --paper: #f4f6f9;
+  --surface: #ffffff;
+  --plum: #5b356f;
+  --coral: #e7685d;
+  --line: #ded9e4;
+  --field: #fbfafc;
+  --error: #a32f37;
 }
 
-body{
-    background:#f3f4f6;
+* {
+  box-sizing: border-box;
 }
 
-/* HEADER */
-
-header{
-    background:white;
-    height:90px;
-
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-
-    padding:0 40px;
-
-    box-shadow:0 2px 10px rgba(0,0,0,.08);
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--ink);
+  background: var(--paper);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.logo-fake{
-    font-size:42px;
-    font-weight:bold;
-    color:#1351b4;
+button,
+input {
+  font: inherit;
 }
 
-.header-links{
-    display:flex;
-    gap:30px;
+.login-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
 }
 
-.header-links a{
-    text-decoration:none;
-    color:#1351b4;
-    font-weight:500;
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 18px 45px rgba(45, 32, 56, .09);
 }
 
-/* MAIN */
-
-main{
-    display:flex;
-    gap:40px;
-    padding:40px;
+.card-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 24px;
 }
 
-/* ESQUERDA */
-
-.gov-left{
-    width:60%;
+.brand-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.01em;
 }
 
-.banner{
-
-    height:650px;
-
-    background:linear-gradient(
-        135deg,
-        #f8fafc,
-        #eef4ff
-    );
-
-    border-radius:12px;
-
-    display:flex;
-    align-items:center;
-    justify-content:center;
-
-    box-shadow:0 2px 15px rgba(0,0,0,.08);
+.brand-name::before {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--coral);
+  border-radius: 2px;
+  content: "";
+  transform: rotate(-8deg);
 }
 
-.content{
-    text-align:center;
-    padding:40px;
+.environment-badge {
+  padding: 6px 9px;
+  border: 1px solid #d8c9e0;
+  border-radius: 999px;
+  background: #f6f0f8;
+  color: var(--plum);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-.banner-logo{
-    font-size:90px;
-    color:#1351b4;
-    margin-bottom:30px;
+.login-card h1 {
+  margin: 0;
+  font-size: clamp(24px, 7vw, 28px);
+  line-height: 1.15;
+  letter-spacing: -.025em;
 }
 
-.content h2{
-    font-size:30px;
-    color:#333;
-    line-height:1.5;
-    max-width:700px;
+.subtitle {
+  margin: 10px 0 24px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
 }
 
-/* DIREITA */
-
-.gov-right{
-    width:40%;
+.login-form {
+  display: grid;
+  gap: 16px;
 }
 
-.card{
-
-    background:white;
-
-    padding:40px;
-
-    border-radius:12px;
-
-    box-shadow:0 2px 15px rgba(0,0,0,.08);
+.field-group + .field-group {
+  margin-top: 0;
 }
 
-.card h1{
-    font-size:36px;
-    margin-bottom:40px;
+.field-group label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 14px;
+  font-weight: 700;
 }
 
-.card h2{
-    margin-bottom:15px;
+.field-group input {
+  width: 100%;
+  height: 46px;
+  padding: 10px 12px;
+  border: 1px solid #bdb7c5;
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--ink);
+  font-size: 16px;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
-.card p{
-    margin-bottom:20px;
-    color:#555;
+.field-group input:focus {
+  border-color: var(--plum);
+  outline: 0;
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(91, 53, 111, .16);
 }
 
-.card label{
-    display:block;
-    margin-bottom:10px;
-    font-weight:bold;
+.status-message {
+  margin: -2px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--error);
+  border-radius: 4px;
+  background: #fff1f2;
+  color: var(--error);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
-.card input{
-
-    width:100%;
-    height:60px;
-
-    padding:15px;
-
-    border:1px solid #ccc;
-    border-radius:8px;
-
-    font-size:18px;
+.status-message[hidden] {
+  display: none;
 }
 
-.card button{
-
-    width:220px;
-    height:60px;
-
-    margin:30px auto;
-
-    display:block;
-
-    border:none;
-    border-radius:30px;
-
-    background:#1351b4;
-    color:white;
-
-    font-size:22px;
-    font-weight:bold;
-
-    cursor:pointer;
+.login-button {
+  width: 100%;
+  height: 48px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--plum);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 
-.card button:hover{
-    opacity:.9;
+.login-button:hover:not(:disabled) {
+  background: #49275c;
+  box-shadow: 0 7px 16px rgba(91, 53, 111, .2);
 }
 
-.opcoes{
-    margin-top:30px;
+.login-button:focus-visible {
+  outline: 3px solid rgba(231, 104, 93, .55);
+  outline-offset: 2px;
 }
 
-.opcoes h3{
-    margin-bottom:20px;
+.login-button:disabled {
+  opacity: .68;
+  cursor: wait;
 }
 
-.opcoes a{
-
-    display:block;
-
-    margin-bottom:15px;
-
-    text-decoration:none;
-
-    color:#0a7d2e;
-
-    font-size:20px;
+.form-note {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
 }
 
-/* RESPONSIVO */
+@media (min-width: 480px) {
+  .login-card {
+    padding: 32px;
+  }
+}
 
-@media(max-width:1100px){
-
-    main{
-        flex-direction:column;
-    }
-
-    .gov-left,
-    .gov-right{
-        width:100%;
-    }
-
-    .banner-logo{
-        font-size:60px;
-    }
-
-    .content h2{
-        font-size:22px;
-    }
+@media (prefers-reduced-motion: reduce) {
+  .field-group input,
+  .login-button {
+    transition: none;
+  }
 }

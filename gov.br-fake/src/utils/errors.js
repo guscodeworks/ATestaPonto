@@ -12,7 +12,7 @@ class AppError extends Error {
 class NotImplementedError extends AppError {
   constructor(routeName) {
     super(
-      `${routeName} sera implementada na proxima etapa tecnica do gov.br-fake.`,
+      `${routeName} sera implementada em uma proxima etapa deste provedor demonstrativo.`,
       501,
       'NOT_IMPLEMENTED'
     );

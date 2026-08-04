@@ -1,82 +1,48 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ponto Escolar</title>
-
-    <link rel="stylesheet" href="/assets/css/saladofuturo/visual.css">
-
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Dashboard demonstrativo | ATestaPonto</title>
+  <link rel="stylesheet" href="/assets/css/saladofuturo/visual.css">
 </head>
 <body>
-
-    <aside class="sidebar">
-
-        <div class="logo">
-            <img src="img/logo-sala-futuro.png" alt="Sala do Futuro">
+  <header class="topbar">
+    <div class="topbar-content">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <p class="brand-name">ATestaPonto</p>
+          <p class="brand-subtitle">Simulador de identidade</p>
         </div>
+      </div>
 
-        <nav>
-            <ul>
-                <li class="active">
-                    <i class="fas fa-home"></i>
-                    <span>Home</span>
-                </li>
-            </ul>
-        </nav>
+      <div class="topbar-actions">
+        <span class="environment-badge">Ambiente demonstrativo</span>
+        <a class="logout-link" href="/auth/logout">Sair</a>
+      </div>
+    </div>
+  </header>
 
-    </aside>
+  <main class="dashboard-shell">
+    <section class="welcome" aria-labelledby="page-title">
+      <h1 id="page-title">Olá, Administrador</h1>
+      <p>Sua identidade demonstrativa foi autenticada.</p>
+      <div class="auth-status">
+        <span class="status-dot" aria-hidden="true"></span>
+        Autenticação concluída
+      </div>
+    </section>
 
-    <main class="content">
-
-        <header class="topbar">
-
-            <div></div>
-
-            <div class="user-info">
-                <i class="fas fa-bell"></i>
-
-                <div class="avatar">
-                    ID
-                </div>
-
-                <span>Administrador Local</span>
-            </div>
-
-        </header>
-
-        <section class="welcome-card">
-
-            <h1>Bem-vindo ao Ponto Escolar</h1>
-
-            <p>
-                Sistema de gerenciamento de frequência e registro de ponto escolar.
-            </p>
-
-        </section>
-
-        <section class="gerenciar-container">
-
-            <div class="gerenciar-card" id="gerenciarCard">
-
-                <div class="card-text">
-                    <span>Acessar</span>
-                    <h2>Gerenciar Pontos</h2>
-                </div>
-
-                <button id="btnGerenciar">
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-
-            </div>
-
-        </section>
-
-    </main>
-
-    <script src="/assets/js/saladofuturo/visual.js"></script>
+    <section class="action-card" aria-labelledby="action-title">
+      <div>
+        <h2 id="action-title">Gerenciar Pontos</h2>
+        <p>Acesse o painel administrativo do ATestaPonto.</p>
+      </div>
+      <a class="primary-action" href="/auth/continue">Gerenciar Pontos</a>
+    </section>
+  </main>
 
 </body>
 </html>

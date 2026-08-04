@@ -17,34 +17,26 @@ function sendView(res, relativePath) {
   return res.sendFile(path.join(viewsRoot, relativePath));
 }
 
-async function showHome(req, res, next) {
+function showHome(_req, res) {
+  return res.redirect('/auth/login');
+}
+
+async function showLoginPage(req, res, next) {
   try {
-    // Usuário já autenticado não deve ver a home/landing novamente; vai direto para a
-    // área logada.
     if (await getAuthenticatedUser(req)) {
-      res.set({
-        'Cache-Control': 'no-store, max-age=0',
-        Pragma: 'no-cache',
-        Expires: '0'
-      });
-      return res.redirect(303, '/visual.html');
+      return res.redirect('/auth/dashboard');
     }
 
-    return sendView(res, 'page/index.html');
+    return sendView(res, 'page/govbr.html');
   } catch (error) {
     return next(error);
   }
 }
 
-function showGovbrPage(_req, res) {
-  return sendView(res, 'page/govbr.html');
-}
-
-async function showVisualPage(req, res, next) {
+async function showDashboardPage(req, res, next) {
   try {
-    // Área logada: exige sessão fake válida, senão volta para a tela de login simulada.
     if (!(await getAuthenticatedUser(req))) {
-      return res.redirect('/govbr');
+      return res.redirect('/auth/login');
     }
 
     return sendView(res, 'page/visual.html');
@@ -53,12 +45,10 @@ async function showVisualPage(req, res, next) {
   }
 }
 
-async function startPontoEscolarAdmin(req, res, next) {
+async function continueToPontoEscolar(req, res, next) {
   try {
-    // Ponto de entrada para o sistema externo "Ponto Escolar": exige autenticação
-    // prévia neste provedor fake antes de redirecionar.
     if (!(await getAuthenticatedUser(req))) {
-      return res.redirect('/govbr');
+      return res.redirect('/auth/login');
     }
 
     return res.redirect(env.pontoEscolarStartUrl);
@@ -72,13 +62,15 @@ async function startPontoEscolarAdmin(req, res, next) {
 function showServiceInfo(_req, res) {
   return res.status(200).json({
     success: true,
-    service: 'gov.br-fake',
+    service: 'Simulador de Identidade — ATestaPonto',
     environment: env.environmentLabel,
-    message: 'Gov.br fake local rodando. Ambiente apenas para demonstracao.',
+    message: 'Provedor generico de identidade em ambiente academico de demonstracao.',
     routes: {
       home: '/',
-      govbr: '/govbr',
-      visual: '/visual.html',
+      login: '/auth/login',
+      dashboard: '/auth/dashboard',
+      continue: '/auth/continue',
+      logout: '/auth/logout',
       health: '/health',
       authorize: '/fake-govbr/authorize',
       token: '/fake-govbr/token',
@@ -90,8 +82,8 @@ function showServiceInfo(_req, res) {
 
 module.exports = {
   showHome,
-  showGovbrPage,
-  showVisualPage,
-  startPontoEscolarAdmin,
+  showLoginPage,
+  showDashboardPage,
+  continueToPontoEscolar,
   showServiceInfo
 };

@@ -1,81 +1,60 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>gov.br-fake</title>
-
-    <link rel="stylesheet" href="/assets/css/saladofuturo/govbr.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <title>Autenticação administrativa</title>
+  <link rel="stylesheet" href="/assets/css/saladofuturo/govbr.css">
 </head>
 <body>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="page-title">
+      <div class="card-heading">
+        <p class="brand-name">AtestaPonto ID</p>
+        <span class="environment-badge">Ambiente demonstrativo</span>
+      </div>
 
-<header>
+      <h1 id="page-title">Autenticação administrativa</h1>
+      <p class="subtitle">Entre com as credenciais de teste para continuar.</p>
 
-    <h1 class="logo-fake">
-        gov.br-fake
-    </h1>
+      <form class="login-form" id="demoLoginForm">
 
-    <div class="header-links">
-        <a href="#">Alto Contraste</a>
-        <a href="#">VLibras</a>
-    </div>
-
-</header>
-
-<main>
-
-    <div class="gov-left">
-
-        <div class="banner">
-
-            <div class="content">
-
-                <h1 class="banner-logo">
-                    gov.br-fake
-                </h1>
-
-                <h2>
-                    Uma conta gov.br-fake garante a identificação
-                    dos servidores para acesso ao sistema de ponto.
-                </h2>
-
-            </div>
-
+        <div class="field-group">
+          <label for="login">Login</label>
+          <input
+            id="login"
+            name="login"
+            type="text"
+            autocomplete="username"
+            maxlength="64"
+            required
+          >
         </div>
 
-    </div>
-
-    <div class="gov-right">
-
-        <div class="card">
-
-            <h1>Identifique-se no gov.br-fake com:</h1>
-
-            <h2>Número do CPF</h2>
-
-            <p>
-                Digite seu CPF para criar ou acessar sua conta.
-            </p>
-
-            <label>CPF</label>
-
-            <input
-                type="text"
-                id="cpf"
-                placeholder="Digite seu CPF"
-            >
-
-            <button id="continuar">
-                Continuar
-            </button>
-
+        <div class="field-group">
+          <label for="password">Senha</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            maxlength="256"
+            required
+          >
         </div>
 
-    </div>
+        <p class="status-message" id="loginStatus" role="alert" aria-live="polite" hidden></p>
 
-</main>
+        <button class="login-button" id="loginButton" type="submit">
+          Entrar como administrador
+        </button>
+      </form>
 
-<script src="/assets/js/saladofuturo/govbr.js"></script>
+      <p class="form-note">Use somente credenciais fornecidas para testes.</p>
+    </section>
+  </main>
 
+  <script src="/assets/js/saladofuturo/govbr.js"></script>
 </body>
 </html>

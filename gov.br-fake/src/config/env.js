@@ -113,6 +113,22 @@ const upstashRedisRestUrl = redisEnabled
   ? validateUrl("UPSTASH_REDIS_REST_URL", upstashRedisRestUrlRaw)
   : "";
 
+const fakeAdminLogin = getOptionalVar("GOVBR_FAKE_ADMIN_LOGIN");
+const fakeAdminPassword = getOptionalVar("GOVBR_FAKE_ADMIN_PASSWORD");
+
+if (fakeAdminLogin !== "adminlocal") {
+  throwEnvError('"GOVBR_FAKE_ADMIN_LOGIN" must be "adminlocal"');
+}
+
+if (
+  fakeAdminPassword.length < 8 ||
+  fakeAdminPassword === "replace-with-demo-password"
+) {
+  throwEnvError(
+    '"GOVBR_FAKE_ADMIN_PASSWORD" must be replaced with a demo password of at least 8 characters'
+  );
+}
+
 // Configuracao do servidor mock/fake do Gov.br, usado apenas em ambiente local
 // de desenvolvimento para simular o fluxo OAuth sem depender da integracao real
 // (ver "environmentLabel" abaixo, que sinaliza explicitamente esse proposito).
@@ -154,6 +170,8 @@ const env = Object.freeze({
   fakeAdminEmail: String(
     process.env.GOVBR_FAKE_ADMIN_EMAIL || "admin@ponto-escolar.local"
   ).trim(),
+  fakeAdminLogin,
+  fakeAdminPassword,
   fakeSessionTtlMs: 2 * 60 * 60 * 1000,
   authCodeTtlMs: 5 * 60 * 1000,
   accessTokenTtlMs: 60 * 60 * 1000,
