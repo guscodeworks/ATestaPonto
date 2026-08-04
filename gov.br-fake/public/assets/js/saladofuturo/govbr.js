@@ -3,24 +3,32 @@ const loginInput = document.getElementById("login");
 const passwordInput = document.getElementById("password");
 const loginButton = document.getElementById("loginButton");
 const loginStatus = document.getElementById("loginStatus");
+const defaultButtonText = "Entrar como administrador";
+let isSubmitting = false;
 
-function setSubmitting(isSubmitting) {
-    loginButton.disabled = isSubmitting;
-    loginButton.setAttribute("aria-busy", String(isSubmitting));
-    loginButton.querySelector("span").textContent = isSubmitting
-        ? "Verificando credenciais…"
-        : "Entrar no ambiente demonstrativo";
+function setSubmitting(submitting) {
+    isSubmitting = submitting;
+    loginButton.disabled = submitting;
+    loginButton.setAttribute("aria-busy", String(submitting));
+    loginButton.textContent = submitting ? "Autenticando..." : defaultButtonText;
 }
 
-function showInvalidCredentials() {
-    loginStatus.textContent = "Credenciais demonstrativas inválidas.";
+function showError(message) {
+    loginStatus.textContent = message;
+    loginStatus.hidden = false;
     passwordInput.value = "";
     passwordInput.focus();
 }
 
 loginForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    if (isSubmitting) {
+        return;
+    }
+
     loginStatus.textContent = "";
+    loginStatus.hidden = true;
     setSubmitting(true);
 
     try {
@@ -38,19 +46,14 @@ loginForm?.addEventListener("submit", async (event) => {
         });
 
         if (!response.ok) {
-            showInvalidCredentials();
+            showError("Login ou senha inválidos.");
+            setSubmitting(false);
             return;
         }
 
-        const result = await response.json();
-        if (!result || typeof result.redirectTo !== "string" || !result.redirectTo.startsWith("/")) {
-            throw new Error("Resposta de login inválida.");
-        }
-
-        window.location.assign(result.redirectTo);
+        window.location.assign("/auth/dashboard");
     } catch (_error) {
-        loginStatus.textContent = "Não foi possível concluir o login demonstrativo.";
-    } finally {
+        showError("Não foi possível concluir a autenticação.");
         setSubmitting(false);
     }
 });

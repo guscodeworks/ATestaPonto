@@ -4,45 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
-  <title>Simulador de Identidade — ATestaPonto</title>
+  <title>Autenticação administrativa | AtestaPonto ID</title>
   <link rel="stylesheet" href="/assets/css/saladofuturo/govbr.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="brand" href="/" aria-label="Voltar ao início do ATestaPonto">
-      <span class="brand-mark" aria-hidden="true">AT</span>
-      <span>Simulador de Identidade — ATestaPonto</span>
-    </a>
-    <span class="simulation-tag">SIMULAÇÃO</span>
-  </header>
-
-  <main class="page-shell">
-    <section class="context" aria-labelledby="page-title">
-      <p class="eyebrow">Etapa demonstrativa</p>
-      <h1 id="page-title">Acesse o ambiente demonstrativo</h1>
-      <p class="context-copy">
-        Esta autenticação confirma somente uma identidade fictícia. Ela não concede
-        acesso administrativo nem define permissões no Ponto Escolar.
-      </p>
-
-      <div class="rule-card">
-        <span aria-hidden="true">AUTH ≠ ADMIN</span>
-        <p>O simulador autentica. O Ponto Escolar autoriza.</p>
-      </div>
-    </section>
-
-    <section class="choice-panel" aria-labelledby="choice-title">
-      <div class="demo-notice" role="note" aria-label="Aviso de ambiente demonstrativo">
-        <strong>AMBIENTE ACADÊMICO DE DEMONSTRAÇÃO</strong>
-        <p>Este é um simulador de identidade utilizado pelo projeto ATestaPonto.</p>
-        <p>Não possui relação com o Governo Federal ou com o serviço oficial Gov.br.</p>
-        <p>Utilize somente as credenciais demonstrativas fornecidas para a apresentação.</p>
-        <p>Não informe CPF, senha pessoal ou dados reais.</p>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="page-title">
+      <div class="card-heading">
+        <p class="brand-name">AtestaPonto ID</p>
+        <span class="environment-badge">Ambiente demonstrativo</span>
       </div>
 
-      <form class="demo-login" id="demoLoginForm" novalidate>
-        <h2 id="choice-title">Login demonstrativo</h2>
-        <p class="form-help">Use exclusivamente as credenciais fornecidas para esta demonstração.</p>
+      <h1 id="page-title">Autenticação administrativa</h1>
+      <p class="subtitle">Entre com as credenciais de teste para continuar.</p>
+
+      <form class="login-form" id="demoLoginForm">
 
         <div class="field-group">
           <label for="login">Login</label>
@@ -68,13 +44,14 @@
           >
         </div>
 
-        <p class="status-message" id="loginStatus" role="alert" aria-live="polite"></p>
+        <p class="status-message" id="loginStatus" role="alert" aria-live="polite" hidden></p>
 
         <button class="login-button" id="loginButton" type="submit">
-          <span>Entrar no ambiente demonstrativo</span>
-          <span aria-hidden="true">→</span>
+          Entrar como administrador
         </button>
       </form>
+
+      <p class="form-note">Use somente credenciais fornecidas para testes.</p>
     </section>
   </main>
 

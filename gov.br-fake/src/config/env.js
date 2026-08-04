@@ -121,11 +121,11 @@ if (fakeAdminLogin !== "adminlocal") {
 }
 
 if (
-  fakeAdminPassword.length < 12 ||
+  fakeAdminPassword.length < 8 ||
   fakeAdminPassword === "replace-with-demo-password"
 ) {
   throwEnvError(
-    '"GOVBR_FAKE_ADMIN_PASSWORD" must be replaced with a demo password of at least 12 characters'
+    '"GOVBR_FAKE_ADMIN_PASSWORD" must be replaced with a demo password of at least 8 characters'
   );
 }
 

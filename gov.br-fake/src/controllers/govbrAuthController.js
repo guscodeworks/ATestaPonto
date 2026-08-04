@@ -17,8 +17,7 @@ const {
 // login sem depender do provedor real.
 const FAKE_SESSION_COOKIE = 'govbr_fake_session';
 const PENDING_AUTHORIZE_COOKIE = 'govbr_fake_authorize';
-const POST_LOGIN_REDIRECT_PATH = '/visual.html';
-const RESUME_AUTHORIZE_PATH = '/fake-govbr/authorize';
+const POST_LOGIN_REDIRECT_PATH = '/auth/dashboard';
 const LOGIN_FIELDS = new Set(['login', 'password']);
 const fakeSessionStore = createFakeSessionStore();
 
@@ -265,7 +264,7 @@ async function showAuthorize(req, res, next) {
       if (hasAuthorizeQuery) {
         savePendingAuthorizeRequest(res, authorizeRequest);
       }
-      return res.redirect('/govbr');
+      return res.redirect('/auth/login');
     }
 
     if (pendingAuthorizeRequest) {
@@ -312,7 +311,7 @@ async function login(req, res, next) {
 
     if (!user) {
       throw requestError(
-        'Credenciais demonstrativas invalidas.',
+        'Login ou senha inválidos.',
         401,
         'INVALID_DEMO_CREDENTIALS'
       );
@@ -321,9 +320,7 @@ async function login(req, res, next) {
     await createFakeSession(res, user.sub);
     return res.status(200).json({
       success: true,
-      redirectTo: getPendingAuthorizeRequest(req)
-        ? RESUME_AUTHORIZE_PATH
-        : POST_LOGIN_REDIRECT_PATH
+      redirectTo: POST_LOGIN_REDIRECT_PATH
     });
   } catch (error) {
     return next(error);
@@ -353,7 +350,7 @@ async function showSession(req, res, next) {
 async function logout(req, res, next) {
   try {
     await clearFakeSession(req, res);
-    return res.redirect('/govbr');
+    return res.redirect('/auth/login');
   } catch (error) {
     return next(error);
   }

@@ -17,7 +17,7 @@ const {
 } = require("../services/adminAuthorization.service");
 const env = require("../config/env");
 
-// URL do logout do mock/fake do Gov.br usado em ambientes de desenvolvimento/teste.
+// URL do logout do simulador de identidade usado em desenvolvimento/teste.
 function getGovbrFakeLogoutUrl() {
   const baseUrl = String(
     process.env.GOVBR_FAKE_BASE_URL || "http://127.0.0.1:4000"
@@ -25,7 +25,7 @@ function getGovbrFakeLogoutUrl() {
     .trim()
     .replace(/\/+$/, "");
 
-  return `${baseUrl}/fake-govbr/logout`;
+  return `${baseUrl}/auth/logout`;
 }
 
 // Comparação em tempo constante para evitar timing attack na validação do state OAuth.

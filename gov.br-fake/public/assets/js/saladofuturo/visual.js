@@ -1,13 +1,19 @@
-const gerenciarCard = document.getElementById("gerenciarCard");
+const continueButton = document.getElementById("continueButton");
 
-function continueToPontoEscolar() {
-    window.location.href = "/views/admin/dashboard.html";
-}
+if (continueButton) {
+    let hasRedirected = false;
+    let redirectTimeout;
 
-gerenciarCard?.addEventListener("click", continueToPontoEscolar);
-gerenciarCard?.addEventListener("keydown", (event) => {
-    if (event.target === gerenciarCard && (event.key === "Enter" || event.key === " ")) {
-        event.preventDefault();
-        continueToPontoEscolar();
+    function continueToPontoEscolar() {
+        if (hasRedirected) {
+            return;
+        }
+
+        hasRedirected = true;
+        clearTimeout(redirectTimeout);
+        window.location.assign("/auth/continue");
     }
-});
+
+    continueButton.addEventListener("click", continueToPontoEscolar);
+    redirectTimeout = window.setTimeout(continueToPontoEscolar, 1500);
+}
