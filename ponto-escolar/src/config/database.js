@@ -1,6 +1,6 @@
 const mysql = require("mysql2/promise");
 const env = require("./env");
-const { normalizeError } = require("../utils/errors");
+const { DatabaseError, normalizeError } = require("../utils/errors");
 
 // timezone 'Z': força o driver a tratar/converter datas em UTC, evitando
 // que o fuso horário do processo Node interfira na leitura/escrita de
@@ -116,7 +116,44 @@ async function withTransaction(callback) {
 }
 
 async function checkConnection() {
-  await execute("SELECT 1");
+  try {
+    await pool.execute("SELECT 1");
+  } catch (error) {
+    const code = String(error?.code || "");
+
+    if (code === "EAI_AGAIN" || code === "ETIMEDOUT" || code === "ECONNRESET") {
+      throw new DatabaseError(
+        "Falha temporaria ao conectar ao banco de dados.",
+        { transient: true, reason: "TEMPORARY_CONNECTION_FAILURE" }
+      );
+    }
+
+    if (code === "ENOTFOUND") {
+      throw new DatabaseError(
+        "Nao foi possivel resolver o endereco do banco de dados.",
+        { transient: false, reason: "DATABASE_HOST_NOT_FOUND" }
+      );
+    }
+
+    if (code === "ECONNREFUSED") {
+      throw new DatabaseError(
+        "A conexao com o banco de dados foi recusada.",
+        { transient: false, reason: "DATABASE_CONNECTION_REFUSED" }
+      );
+    }
+
+    if (code === "ER_ACCESS_DENIED_ERROR") {
+      throw new DatabaseError(
+        "As credenciais do banco de dados foram recusadas.",
+        { transient: false, reason: "DATABASE_ACCESS_DENIED" }
+      );
+    }
+
+    throw new DatabaseError(
+      "Nao foi possivel validar a conexao com o banco de dados.",
+      { transient: false, reason: "DATABASE_CONNECTION_FAILED" }
+    );
+  }
 }
 
 async function closePool() {

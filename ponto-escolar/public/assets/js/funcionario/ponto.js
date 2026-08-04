@@ -35,43 +35,53 @@ const ETAPAS = Object.freeze([
     tipo: 'ENTRADA',
     campo: 'entrada',
     label: 'Entrada',
+    rotuloCard: 'Entrada',
     botao: 'Registrar entrada',
-    icon: 'ENT',
-    classe: 'entrada'
+    asset: '/assets/icons/clock.svg'
   },
   {
     tipo: 'SAIDA_ALMOCO',
     campo: 'saida_almoco',
     label: 'Saída para almoço',
+    rotuloCard: 'Almoço',
     botao: 'Iniciar almoço',
-    icon: 'ALM',
-    classe: 'pausa'
+    asset: '/assets/icons/timer.svg'
   },
   {
     tipo: 'RETORNO_ALMOCO',
     campo: 'retorno_almoco',
     label: 'Retorno do almoço',
+    rotuloCard: 'Retorno',
     botao: 'Retornar do almoço',
-    icon: 'RET',
-    classe: 'retorno'
+    asset: '/assets/icons/arrow-up-right.svg'
   },
   {
     tipo: 'SAIDA',
     campo: 'saida',
     label: 'Saída',
+    rotuloCard: 'Saída',
     botao: 'Registrar saída',
-    icon: 'SAI',
-    classe: 'saida'
+    asset: '/assets/icons/log-out.svg'
   }
 ]);
 
 const ETAPAS_POR_TIPO = new Map(ETAPAS.map((etapa) => [etapa.tipo, etapa]));
 const TIPOS_PROXIMA_BATIDA = new Set([...ETAPAS_POR_TIPO.keys(), null]);
+const CLASSES_ESTADO_BOTAO = [
+  'is-loading',
+  'is-unavailable',
+  'is-registering',
+  'is-confirmed',
+  'is-sync-pending'
+];
+const FEEDBACK_REGISTRO_MINIMO_MS = 700;
+const ATRASO_REPETICAO_GET_MS = 900;
 
 let estadoHoje = null;
 let carregandoHoje = false;
 let promessaCarregamentoHoje = null;
 let registrando = false;
+let registroConfirmadoPendenteAtualizacao = false;
 let temporizadorRedirecionamento = null;
 
 class ApiError extends Error {
@@ -85,6 +95,10 @@ class ApiError extends Error {
 
 function getElement(id) {
   return document.getElementById(id);
+}
+
+function aguardar(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function getInitials(nome) {
@@ -111,14 +125,6 @@ function formatarCargo(cargo) {
 function formatarHorario(horario) {
   const valor = String(horario || '').trim();
   return /^\d{2}:\d{2}(?::\d{2})?$/.test(valor) ? valor.slice(0, 5) : '--:--';
-}
-
-function formatarDataReferencia(dataReferencia) {
-  const correspondencia = /^(\d{4})-(\d{2})-(\d{2})$/.exec(
-    String(dataReferencia || '').trim()
-  );
-  if (!correspondencia) return '--/--/----';
-  return `${correspondencia[3]}/${correspondencia[2]}/${correspondencia[1]}`;
 }
 
 function validarContratoHoje(data) {
@@ -199,39 +205,57 @@ function atualizarRelogio() {
   const now = new Date();
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
-  const ss = String(now.getSeconds()).padStart(2, '0');
-  const time = `${hh}:${mm}:${ss}`;
+  const time = `${hh}:${mm}`;
 
   getElement('hero-clock').textContent = time;
   getElement('hero-weekday').textContent = DIAS_SEMANA[now.getDay()];
   getElement('hero-date').textContent = `${String(now.getDate()).padStart(2, '0')} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`;
 
-  const h = now.getHours();
-  getElement('greeting').textContent = `${h < 12 ? 'Bom dia' : h < 18 ? 'Boa tarde' : 'Boa noite'},`;
 }
 
-function aplicarEstiloSkeleton(elemento, largura, altura) {
-  elemento.setAttribute('aria-hidden', 'true');
-  Object.assign(elemento.style, {
-    display: 'block',
-    width: largura,
-    maxWidth: '100%',
-    height: altura,
-    borderRadius: '999px',
-    background: 'linear-gradient(90deg, rgba(20, 80, 240, 0.06) 25%, rgba(20, 80, 240, 0.13) 50%, rgba(20, 80, 240, 0.06) 75%)',
-    backgroundSize: '200% 100%',
-    animation: 'employee-skeleton-loading 1.2s ease-in-out infinite'
-  });
-}
-
-function criarSkeleton(largura, altura) {
+function criarSkeleton(variante) {
   const skeleton = document.createElement('span');
-  aplicarEstiloSkeleton(skeleton, largura, altura);
+  skeleton.className = `employee-skeleton employee-skeleton-${variante}`;
+  skeleton.setAttribute('aria-hidden', 'true');
   return skeleton;
 }
 
+function definirEstadoBotao(button, ...classes) {
+  button.classList.remove(...CLASSES_ESTADO_BOTAO);
+  button.classList.add(...classes.filter(Boolean));
+}
+
+function anunciarEstadoBotao(mensagem) {
+  getElement('ponto-action-announcer').textContent = '';
+  window.setTimeout(() => {
+    getElement('ponto-action-announcer').textContent = mensagem;
+  }, 20);
+}
+
+function aplicarEstadoBotao({
+  estado,
+  texto,
+  icone = '/assets/icons/clock.svg',
+  desabilitado,
+  classes = [],
+  anuncio = ''
+}) {
+  const button = getElement('btn-ponto');
+  const estadoAnterior = button.dataset.state;
+  const textoAnterior = getElement('btn-label').textContent;
+  definirEstadoBotao(button, ...classes);
+  button.dataset.state = estado;
+  button.disabled = desabilitado;
+  button.setAttribute('aria-label', texto);
+  getElement('btn-icon').src = icone;
+  getElement('btn-label').textContent = texto;
+  if (anuncio && (estadoAnterior !== estado || textoAnterior !== texto)) {
+    anunciarEstadoBotao(anuncio);
+  }
+}
+
 function definirBusy(valor) {
-  document.querySelectorAll('.ponto-hero, .timeline-card, .schedule-card')
+  document.querySelectorAll('.journey-card')
     .forEach((elemento) => elemento.setAttribute('aria-busy', String(valor)));
 }
 
@@ -240,39 +264,30 @@ function mostrarSkeleton() {
 
   const heroName = getElement('hero-name');
   const heroCargo = getElement('hero-cargo');
-  heroName.replaceChildren(criarSkeleton('168px', '16px'));
-  heroCargo.replaceChildren(criarSkeleton('92px', '12px'));
+  heroName.replaceChildren(criarSkeleton('name'));
+  heroCargo.replaceChildren(criarSkeleton('role'));
 
   getElement('tp-avatar').textContent = '—';
-
-  document.querySelectorAll('.schedule-time').forEach((elemento) => {
-    elemento.replaceChildren(criarSkeleton('52px', '12px'));
-  });
 
   const timeline = getElement('timeline');
   timeline.replaceChildren();
   for (let index = 0; index < 4; index += 1) {
-    const row = document.createElement('div');
-    row.className = 'ponto-timeline-item';
-    row.append(
-      criarSkeleton('36px', '36px'),
-      criarSkeleton('118px', '13px'),
-      criarSkeleton('46px', '13px')
-    );
-    timeline.appendChild(row);
+    const step = document.createElement('li');
+    step.className = 'journey-step';
+    step.append(criarSkeleton('marker'), criarSkeleton('label'), criarSkeleton('time'));
+    timeline.appendChild(step);
   }
 
-  getElement('timeline-count').textContent = 'Carregando';
   getElement('last-action').textContent = 'Carregando registros...';
-  getElement('status-dot').className = 'ponto-status-dot waiting';
-  getElement('status-text').textContent = 'Carregando jornada...';
+  getElement('next-label').textContent = 'Carregando jornada';
+  getElement('next-time').textContent = '';
 
-  const button = getElement('btn-ponto');
-  button.disabled = true;
-  button.style.opacity = '0.58';
-  button.style.cursor = 'wait';
-  getElement('btn-icon').textContent = '';
-  getElement('btn-label').textContent = 'Carregando';
+  aplicarEstadoBotao({
+    estado: 'LOADING',
+    texto: 'Carregando',
+    desabilitado: true,
+    classes: ['is-loading']
+  });
 }
 
 function renderFuncionario(funcionario) {
@@ -285,58 +300,43 @@ function renderFuncionario(funcionario) {
   getElement('hero-cargo').textContent = cargo;
 }
 
-function renderJornada(jornada) {
-  const campos = ['entrada', 'saida_almoco', 'retorno_almoco', 'saida'];
-  const horarios = document.querySelectorAll('.schedule-time');
+function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
+  const horarioRegistrado = ponto[etapa.campo];
+  const item = document.createElement('li');
+  item.className = 'journey-step';
+  if (horarioRegistrado) item.classList.add('is-complete');
+  if (proximaBatida === etapa.tipo) item.classList.add('is-current');
 
-  campos.forEach((campo, index) => {
-    if (horarios[index]) {
-      horarios[index].textContent = formatarHorario(jornada[campo]);
-    }
-  });
-}
+  const marker = document.createElement('span');
+  marker.className = 'journey-step-marker';
 
-function criarTimelineItem(etapa, horario, dataReferencia) {
-  const item = document.createElement('div');
-  item.className = 'ponto-timeline-item';
+  const icon = document.createElement('img');
+  icon.src = etapa.asset;
+  icon.alt = '';
+  icon.setAttribute('aria-hidden', 'true');
+  marker.appendChild(icon);
 
-  const marker = document.createElement('div');
-  marker.className = `ponto-tl-marker ${etapa.classe}`;
-  marker.textContent = etapa.icon;
+  const label = document.createElement('span');
+  label.className = 'journey-step-label';
+  label.textContent = etapa.rotuloCard;
 
-  const info = document.createElement('div');
-  info.className = 'ponto-tl-info';
-
-  const label = document.createElement('div');
-  label.className = 'ponto-tl-label';
-  label.textContent = etapa.label;
-
-  const sub = document.createElement('div');
-  sub.className = 'ponto-tl-sub';
-  sub.textContent = horario ? `Registrado em ${formatarDataReferencia(dataReferencia)}` : 'Aguardando registro';
+  const state = document.createElement('span');
+  state.className = 'journey-step-state';
+  state.textContent = horarioRegistrado ? 'Registrada' : 'Prevista';
 
   const time = document.createElement('time');
-  time.className = 'ponto-tl-time';
-  time.textContent = formatarHorario(horario);
+  time.className = 'journey-step-time';
+  time.textContent = formatarHorario(horarioRegistrado || jornada[etapa.campo]);
 
-  info.append(label, sub);
-  item.append(marker, info, time);
+  item.append(marker, label, state, time);
   return item;
 }
 
-function renderTimeline(ponto) {
+function renderTimeline(ponto, jornada, proximaBatida) {
   const timeline = getElement('timeline');
-  const batidas = ETAPAS.filter((etapa) => Boolean(ponto[etapa.campo]));
   timeline.replaceChildren(
-    ...ETAPAS.map((etapa) => criarTimelineItem(
-      etapa,
-      ponto[etapa.campo],
-      ponto.data_referencia
-    ))
+    ...ETAPAS.map((etapa) => criarEtapaJornada(etapa, jornada, ponto, proximaBatida))
   );
-
-  getElement('timeline-count').textContent = `${batidas.length} registro(s)`;
-  getElement('timeline-date').textContent = formatarDataReferencia(ponto.data_referencia);
 
   const ultimaBatida = [...ETAPAS]
     .reverse()
@@ -347,15 +347,47 @@ function renderTimeline(ponto) {
     : 'Nenhum registro hoje';
 }
 
+function mostrarEstadoRegistrando(etapa) {
+  aplicarEstadoBotao({
+    estado: etapa.tipo,
+    texto: 'Registrando...',
+    icone: etapa.asset,
+    desabilitado: true,
+    classes: ['is-registering'],
+    anuncio: `${etapa.label}: registrando ponto.`
+  });
+}
+
+function mostrarEstadoConfirmado({ atualizando = false } = {}) {
+  const texto = atualizando
+    ? 'Registro confirmado — atualizando...'
+    : 'Registro confirmado';
+  aplicarEstadoBotao({
+    estado: atualizando ? 'SYNC_PENDING' : 'CONFIRMADO',
+    texto,
+    icone: '/assets/icons/circle-check.svg',
+    desabilitado: true,
+    classes: [atualizando ? 'is-sync-pending' : 'is-confirmed'],
+    anuncio: atualizando
+      ? 'Registro confirmado. Atualizando os dados da jornada.'
+      : 'Registro confirmado com sucesso.'
+  });
+}
+
 function renderEstado() {
-  const button = getElement('btn-ponto');
-  const buttonIcon = getElement('btn-icon');
-  const buttonLabel = getElement('btn-label');
-  const statusDot = getElement('status-dot');
-  const statusText = getElement('status-text');
+  const nextLabel = getElement('next-label');
+  const nextTime = getElement('next-time');
+
+  if (registroConfirmadoPendenteAtualizacao) return;
 
   if (!estadoHoje) {
-    button.disabled = true;
+    aplicarEstadoBotao({
+      estado: 'ERRO',
+      texto: 'Ponto indisponível',
+      icone: '/assets/icons/circle-x.svg',
+      desabilitado: true,
+      classes: ['is-unavailable']
+    });
     return;
   }
 
@@ -364,48 +396,52 @@ function renderEstado() {
   const concluida = estadoHoje.jornada_concluida || proximaBatida === null;
 
   if (concluida) {
-    button.className = 'ponto-btn saida';
-    button.disabled = true;
-    button.style.opacity = '0.58';
-    button.style.cursor = 'not-allowed';
-    buttonIcon.textContent = 'OK';
-    buttonLabel.textContent = 'Jornada concluída';
-    statusDot.className = 'ponto-status-dot closed';
-    statusText.textContent = 'Jornada concluída';
+    aplicarEstadoBotao({
+      estado: 'CONCLUIDA',
+      texto: 'Jornada concluída',
+      icone: '/assets/icons/circle-check.svg',
+      desabilitado: true,
+      classes: ['is-unavailable'],
+      anuncio: 'Jornada concluída.'
+    });
+    nextLabel.textContent = 'Todos os registros de hoje foram concluídos';
+    nextTime.textContent = '';
     return;
   }
 
-  button.className = `ponto-btn ${etapa.classe}`;
-  button.disabled = registrando || carregandoHoje;
-  button.style.opacity = registrando || carregandoHoje ? '0.68' : '';
-  button.style.cursor = registrando || carregandoHoje ? 'wait' : '';
-  buttonIcon.textContent = registrando ? '...' : etapa.icon;
-  buttonLabel.textContent = registrando
-    ? 'Registrando ponto'
-    : carregandoHoje
-      ? 'Atualizando'
-      : etapa.botao;
+  if (registrando) {
+    mostrarEstadoRegistrando(etapa);
+    return;
+  }
 
-  const statusPorTipo = {
-    ENTRADA: 'Aguardando registro de entrada',
-    SAIDA_ALMOCO: 'Entrada registrada',
-    RETORNO_ALMOCO: 'Intervalo de almoço iniciado',
-    SAIDA: 'Retorno do almoço registrado'
+  aplicarEstadoBotao({
+    estado: etapa.tipo,
+    texto: carregandoHoje ? 'Atualizando...' : etapa.botao,
+    icone: etapa.asset,
+    desabilitado: carregandoHoje,
+    classes: carregandoHoje ? ['is-loading'] : [],
+    anuncio: carregandoHoje ? '' : `Próxima ação: ${etapa.botao}.`
+  });
+
+  const descricaoPorTipo = {
+    ENTRADA: 'Entrada prevista para',
+    SAIDA_ALMOCO: 'Almoço previsto para',
+    RETORNO_ALMOCO: 'Retorno previsto para',
+    SAIDA: 'Saída prevista para'
   };
-  statusDot.className = `ponto-status-dot ${proximaBatida === 'RETORNO_ALMOCO' ? 'paused' : 'active'}`;
-  statusText.textContent = statusPorTipo[proximaBatida];
+  nextLabel.textContent = descricaoPorTipo[proximaBatida];
+  nextTime.textContent = formatarHorario(estadoHoje.jornada[etapa.campo]);
 }
 
 function renderHoje(data) {
   renderFuncionario(data.funcionario);
-  renderJornada(data.jornada);
-  renderTimeline(data.ponto);
+  renderTimeline(data.ponto, data.jornada, data.proxima_batida);
   renderEstado();
 }
 
 function criarEstadoErro(mensagem, permitirRetry) {
-  const container = document.createElement('div');
-  container.className = 'timeline-empty';
+  const container = document.createElement('li');
+  container.className = 'employee-state employee-state-error';
 
   const texto = document.createElement('span');
   texto.textContent = mensagem;
@@ -440,29 +476,30 @@ function tratarErroCarregamento(error, { notificar = true } = {}) {
   getElement('hero-name').textContent = '—';
   getElement('hero-cargo').textContent = '—';
   getElement('tp-avatar').textContent = '—';
-  document.querySelectorAll('.schedule-time').forEach((elemento) => {
-    elemento.textContent = '--:--';
-  });
-
   const timeline = getElement('timeline');
   timeline.replaceChildren(criarEstadoErro(mensagem, !isUnauthorized && !isForbidden));
-  getElement('timeline-count').textContent = 'Indisponível';
   getElement('last-action').textContent = mensagem;
-  getElement('status-dot').className = 'ponto-status-dot waiting';
-  getElement('status-text').textContent = mensagem;
+  getElement('next-label').textContent = mensagem;
+  getElement('next-time').textContent = '';
 
-  const button = getElement('btn-ponto');
-  button.disabled = true;
-  button.style.opacity = '0.58';
-  button.style.cursor = 'not-allowed';
-  getElement('btn-icon').textContent = '!';
-  getElement('btn-label').textContent = 'Ponto indisponível';
+  aplicarEstadoBotao({
+    estado: 'ERRO',
+    texto: 'Ponto indisponível',
+    icone: '/assets/icons/circle-x.svg',
+    desabilitado: true,
+    classes: ['is-unavailable'],
+    anuncio: mensagem
+  });
 
   if (notificar) toast(mensagem, 'error');
 
   if (isUnauthorized && !temporizadorRedirecionamento) {
     temporizadorRedirecionamento = window.setTimeout(sair, 1400);
   }
+}
+
+async function buscarPontoHoje() {
+  return validarContratoHoje(await apiRequest('/pontos/hoje'));
 }
 
 function carregarPontoHoje({
@@ -477,7 +514,7 @@ function carregarPontoHoje({
 
   promessaCarregamentoHoje = (async () => {
     try {
-      const data = validarContratoHoje(await apiRequest('/pontos/hoje'));
+      const data = await buscarPontoHoje();
       estadoHoje = data;
       renderHoje(data);
       return data;
@@ -496,35 +533,7 @@ function carregarPontoHoje({
   return promessaCarregamentoHoje;
 }
 
-function registroFromResponse(ponto) {
-  const tipos = {
-    ENTRADA: { label: 'Entrada', icon: 'ENT' },
-    SAIDA_ALMOCO: { label: 'Saída para almoço', icon: 'ALM' },
-    VOLTA_ALMOCO: { label: 'Retorno do almoço', icon: 'RET' },
-    RETORNO_ALMOCO: { label: 'Retorno do almoço', icon: 'RET' },
-    SAIDA: { label: 'Saída', icon: 'SAI' }
-  };
-  const meta = tipos[ponto.tipo] || tipos.ENTRADA;
-  const dataRegistro = ponto.registrado_em
-    ? new Date(String(ponto.registrado_em).replace(' ', 'T'))
-    : new Date();
-
-  return {
-    ...meta,
-    hora: dataRegistro.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  };
-}
-
-function mostrarConfirmacao(registro) {
-  getElement('confirm-title').textContent = `${registro.label} registrada`;
-  getElement('confirm-time').textContent = registro.hora;
-  getElement('confirm-sub').textContent = `${registro.label} registrada com sucesso`;
-  getElement('confirm-icon').textContent = registro.icon;
-
+function abrirModal() {
   const modal = getElement('confirm-modal');
   modal.classList.add('show');
   if (typeof modal.showModal === 'function' && !modal.open) {
@@ -532,7 +541,95 @@ function mostrarConfirmacao(registro) {
   }
 }
 
-async function baterPonto() {
+function definirDialogOcupado(valor) {
+  const modal = getElement('confirm-modal');
+  modal.setAttribute('aria-busy', String(valor));
+  getElement('confirm-cancel').disabled = valor;
+  getElement('confirm-submit').disabled = valor;
+}
+
+function mostrarConfirmacaoRegistro() {
+  const etapa = ETAPAS_POR_TIPO.get(estadoHoje?.proxima_batida);
+  if (!etapa) return;
+
+  getElement('confirm-title').textContent = `Confirmar ${etapa.label.toLowerCase()}`;
+  getElement('confirm-time').textContent = formatarHorario(estadoHoje.jornada[etapa.campo]);
+  getElement('confirm-sub').textContent = 'A localização será verificada antes de concluir o registro.';
+  getElement('confirm-icon').src = etapa.asset;
+  getElement('confirm-actions').hidden = false;
+  definirDialogOcupado(false);
+  abrirModal();
+  getElement('confirm-submit').focus();
+}
+
+function baterPonto() {
+  if (
+    !estadoHoje ||
+    estadoHoje.proxima_batida === null ||
+    estadoHoje.jornada_concluida ||
+    registrando ||
+    carregandoHoje
+  ) {
+    return;
+  }
+
+  mostrarConfirmacaoRegistro();
+}
+
+function aplicarJornadaAtualizada(data) {
+  estadoHoje = data;
+  registroConfirmadoPendenteAtualizacao = false;
+  registrando = false;
+  renderHoje(data);
+}
+
+async function sincronizarAposRegistro(confirmadoEm) {
+  let dataAtualizada = null;
+
+  try {
+    dataAtualizada = await buscarPontoHoje();
+  } catch (_error) {
+    dataAtualizada = null;
+  }
+
+  const tempoDecorrido = window.performance.now() - confirmadoEm;
+  await aguardar(Math.max(FEEDBACK_REGISTRO_MINIMO_MS - tempoDecorrido, 0));
+
+  if (dataAtualizada) {
+    aplicarJornadaAtualizada(dataAtualizada);
+    return true;
+  }
+
+  mostrarEstadoConfirmado({ atualizando: true });
+  await aguardar(ATRASO_REPETICAO_GET_MS);
+
+  try {
+    dataAtualizada = await buscarPontoHoje();
+    aplicarJornadaAtualizada(dataAtualizada);
+    return true;
+  } catch (error) {
+    toast(
+      'Registro confirmado, mas ainda não foi possível atualizar a jornada. Recarregue a página para consultar o estado atual.',
+      'error'
+    );
+    if (error.status === 401 && !temporizadorRedirecionamento) {
+      temporizadorRedirecionamento = window.setTimeout(sair, 1400);
+    }
+    return false;
+  }
+}
+
+function mensagemSeguraRegistro(error) {
+  if (error.status === 401) return 'Sua sessão expirou. Entre novamente.';
+  if (error.status === 403) return 'Seu acesso ao registro de ponto não está autorizado.';
+  if (error.code === 'NETWORK_ERROR') {
+    return 'Sem conexão com o servidor. Verifique sua internet e tente novamente.';
+  }
+  if (error.status >= 500) return 'Não foi possível registrar o ponto agora. Tente novamente.';
+  return error.message || 'Falha ao registrar ponto.';
+}
+
+async function confirmarRegistroPonto() {
   if (
     !estadoHoje ||
     estadoHoje.proxima_batida === null ||
@@ -548,44 +645,33 @@ async function baterPonto() {
     return;
   }
 
+  const etapa = ETAPAS_POR_TIPO.get(estadoHoje.proxima_batida);
   registrando = true;
-  renderEstado();
-  const carregamento = iniciarCarregamento(getElement('btn-ponto'), {
-    tamanho: 'md',
-    mensagem: 'Registrando ponto'
-  });
+  definirDialogOcupado(true);
+  fecharConfirm();
+  mostrarEstadoRegistrando(etapa);
 
   try {
     const location = await getCurrentLocation();
-    const data = await apiRequest('/pontos/registrar', {
+    await apiRequest('/pontos/registrar', {
       method: 'POST',
       body: { ...location }
     });
-    const registro = registroFromResponse(data.ponto || {});
-    mostrarConfirmacao(registro);
-
-    try {
-      await carregarPontoHoje({
-        mostrarCarregamento: false,
-        notificarErro: false
-      });
-    } catch (_error) {
-      toast(
-        'Ponto registrado, mas não foi possível atualizar a tela. Tente novamente.',
-        'error'
-      );
-    }
   } catch (error) {
-    const message = error.message || 'Falha ao registrar ponto.';
-    toast(message, 'error');
+    registrando = false;
+    definirDialogOcupado(false);
+    renderEstado();
+    toast(mensagemSeguraRegistro(error), 'error');
     if (error.status === 401) {
       window.setTimeout(sair, 1400);
     }
-  } finally {
-    await finalizarCarregamento(carregamento);
-    registrando = false;
-    renderEstado();
+    return;
   }
+
+  registroConfirmadoPendenteAtualizacao = true;
+  const confirmadoEm = window.performance.now();
+  mostrarEstadoConfirmado();
+  await sincronizarAposRegistro(confirmadoEm);
 }
 
 function fecharConfirm() {
@@ -621,6 +707,10 @@ function sair() {
 }
 
 if (funcionarioToken) {
+  getElement('confirm-modal').addEventListener('cancel', (event) => {
+    event.preventDefault();
+    if (!registrando) fecharConfirm();
+  });
   setInterval(atualizarRelogio, 1000);
   atualizarRelogio();
   mostrarSkeleton();

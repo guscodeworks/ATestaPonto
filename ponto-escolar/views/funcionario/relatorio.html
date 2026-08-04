@@ -1,208 +1,132 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Meus Relatórios — Sala do Futuro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Histórico de ponto — ATestaPonto</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link rel="stylesheet" href="/assets/css/funcionario.css?v=20260729-loading-states"/>
-  <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
-  <script src="/assets/js/funcionario/relatorio.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/tokens.css"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260803-employee-base"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/relatorio.css?v=20260804-history-redesign"/>
+  <script src="/assets/js/funcionario/relatorio.js?v=20260804-history-redesign" defer></script>
 </head>
-<body>
+<body class="employee-area employee-report">
 
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="employee-shell">
+  <header class="employee-header">
+    <a class="employee-identity" href="/funcionario/perfil" aria-label="Abrir perfil">
+      <span class="employee-avatar" id="header-avatar" aria-hidden="true">—</span>
+      <span class="employee-identity-copy">
+        <strong class="employee-name" id="header-name">Carregando...</strong>
+        <span class="employee-role" id="header-cargo">Carregando...</span>
+      </span>
+    </a>
+    <span class="employee-brand-frame" aria-hidden="true">
+      <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" width="42" height="42"/>
+    </span>
+  </header>
 
-<div class="app-wrap">
-
-  <!-- SIDEBAR -->
-  <aside class="app-sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <div class="sidebar-brand-mark">🏫</div>
-      <div class="sidebar-brand-text">
-        <span class="sidebar-brand-name">Sala do Futuro</span>
-        <span class="sidebar-brand-sub">Funcionário</span>
-      </div>
-    </div>
-
-    <div class="sidebar-user">
-      <div class="sidebar-user-avatar" id="sb-avatar">IO</div>
-      <div class="sidebar-user-info">
-        <div class="sidebar-user-name" id="sb-name">Isaque Oliveira</div>
-        <div class="sidebar-user-role" id="sb-role">Técnico de Suporte</div>
-      </div>
-      <div class="sidebar-status-dot"></div>
-    </div>
-
-    <nav class="sidebar-nav">
-      <div class="sidebar-section-label">Principal</div>
-      <a href="/funcionario" class="nav-link">
-        <span class="nav-icon">⏱</span> Bater Ponto
-      </a>
-      <div class="sidebar-section-label">Histórico</div>
-      <a href="/funcionario/relatorio" class="nav-link active">
-        <span class="nav-icon">📊</span> Meus Relatórios
-      </a>
-      <div class="sidebar-section-label">Conta</div>
-      <a href="/funcionario/perfil" class="nav-link">
-        <span class="nav-icon">👤</span> Meu Perfil
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="btn-logout" onclick="sair()">
-        <span class="nav-icon">⎋</span> Sair
-      </button>
-    </div>
-  </aside>
-
-  <!-- MAIN -->
-  <div class="app-main">
-
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle">☰</button>
-        <div class="breadcrumb">
-          <span>Funcionário</span>
-          <span class="breadcrumb-sep">›</span>
-          <span class="breadcrumb-current">Meus Relatórios</span>
-        </div>
-      </div>
-      <div class="topbar-right">
-        <div class="topbar-clock">
-          <div class="topbar-time" id="topbar-time">--:--</div>
-          <div class="topbar-date" id="topbar-date"></div>
-        </div>
-        <div class="topbar-user" onclick="window.location.href='/funcionario/perfil'">
-          <div class="topbar-avatar" id="tp-avatar">IO</div>
-          <div class="topbar-user-info">
-            <span class="topbar-user-name" id="tp-name">Isaque</span>
-            <span class="topbar-user-role">Funcionário</span>
-          </div>
-        </div>
-      </div>
+  <main class="employee-main report-main" id="report-content" aria-busy="true">
+    <header class="report-page-heading">
+      <p>Minha jornada</p>
+      <h1>Histórico de ponto</h1>
     </header>
 
-    <main class="page-content">
-
-      <div class="page-header fade-in">
-        <h1 class="page-title">Meus Relatórios</h1>
-        <p class="page-subtitle">Visualize seu histórico de ponto e horas trabalhadas</p>
-      </div>
-
-      <!-- Stat cards -->
-      <div class="stat-row">
-        <div class="stat-card blue fade-in">
-          <div class="stat-icon">📅</div>
-          <div class="stat-value" id="stat-dias">22</div>
-          <div class="stat-label">Dias Trabalhados</div>
-          <div class="stat-meta">Neste mês</div>
-        </div>
-        <div class="stat-card green fade-in">
-          <div class="stat-icon">⏰</div>
-          <div class="stat-value" id="stat-horas">176h</div>
-          <div class="stat-label">Horas Trabalhadas</div>
-          <div class="stat-meta">Total do mês</div>
-        </div>
-        <div class="stat-card amber fade-in">
-          <div class="stat-icon">⚡</div>
-          <div class="stat-value" id="stat-extras">4h</div>
-          <div class="stat-label">Horas Extras</div>
-          <div class="stat-meta">Acima da jornada</div>
-        </div>
-        <div class="stat-card red fade-in">
-          <div class="stat-icon">📋</div>
-          <div class="stat-value" id="stat-faltas">0</div>
-          <div class="stat-label">Faltas</div>
-          <div class="stat-meta">Neste mês</div>
+    <section class="employee-card report-filter-card" aria-labelledby="period-filter-title">
+      <div class="report-filter-copy">
+        <span class="report-filter-icon" aria-hidden="true">
+          <img src="/assets/icons/calendar-days.svg" alt="" width="20" height="20"/>
+        </span>
+        <div>
+          <p>Período</p>
+          <h2 id="period-filter-title">Selecionar mês</h2>
         </div>
       </div>
+      <label class="report-month-field" for="report-month">
+        <span>Mês de referência</span>
+        <input id="report-month" name="mes" type="month" autocomplete="off"/>
+      </label>
+    </section>
 
-      <!-- Filtros -->
-      <div class="ui-panel fade-in" style="margin-bottom:20px;">
-        <div style="padding:16px 24px;">
-          <div class="report-filters">
-            <span style="font-size:14px;font-weight:600;color:var(--text-700);">Filtrar por:</span>
-            <select class="filter-select" id="filtro-mes">
-              <option value="0">Mês atual</option>
-              <option value="-1">Mês anterior</option>
-              <option value="-2">Há 2 meses</option>
-              <option value="-3">Há 3 meses</option>
-              <option value="-4">Há 4 meses</option>
-            </select>
-            <select class="filter-select" id="filtro-status">
-              <option value="">Todos os registros</option>
-              <option value="ok">Normal</option>
-              <option value="late">Atraso</option>
-              <option value="extra">Hora extra</option>
-              <option value="absent">Falta</option>
-            </select>
-            <button class="ui-btn ui-btn-secondary ui-btn-sm" onclick="exportarRelatorio()">
-              ⬇ Exportar
-            </button>
-          </div>
+    <section class="employee-card report-summary" aria-labelledby="summary-title">
+      <header class="report-summary-header">
+        <div>
+          <p>Resumo do período</p>
+          <h2 id="summary-title">Visão mensal</h2>
         </div>
+        <img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="20" height="20"/>
+      </header>
+      <dl class="report-summary-grid">
+        <div>
+          <dt>Período</dt>
+          <dd id="summary-period">Carregando...</dd>
+        </div>
+        <div>
+          <dt>Registros</dt>
+          <dd id="summary-records">—</dd>
+        </div>
+        <div>
+          <dt>Total trabalhado</dt>
+          <dd id="summary-worked">—</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="report-history" aria-labelledby="history-title">
+      <header class="report-history-header">
+        <div>
+          <p>Registros do mês</p>
+          <h2 id="history-title">Dias registrados</h2>
+        </div>
+        <span id="history-count" aria-live="polite">—</span>
+      </header>
+
+      <div class="report-state report-state-loading" id="report-loading" role="status" aria-live="polite">
+        <span class="report-state-spinner" aria-hidden="true"></span>
+        <strong>Carregando histórico</strong>
+        <p>Buscando seus registros do período.</p>
       </div>
 
-      <!-- Tabela (desktop) -->
-      <div class="ui-panel fade-in">
-        <div class="ui-panel-header">
-          <div>
-            <div class="ui-panel-title">Registro de Pontos</div>
-            <div class="ui-panel-subtitle">Mês selecionado</div>
-          </div>
-          <span style="font-size:13px;color:var(--text-300);" id="total-registros">22 dias</span>
-        </div>
-
-        <!-- Tabela Desktop -->
-        <div class="report-table-wrap">
-          <table class="report-table" id="tabela-pontos">
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Entrada</th>
-                <th>Pausa</th>
-                <th>Retorno</th>
-                <th>Saída</th>
-                <th>Total</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-pontos">
-              <!-- preenchido via JS -->
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Cards Mobile -->
-        <div class="report-card-list" id="report-card-list" style="padding:16px;gap:10px;display:none;">
-          <!-- preenchido via JS -->
-        </div>
+      <div class="report-state" id="report-empty" hidden>
+        <img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="28" height="28"/>
+        <strong>Nenhum registro neste mês</strong>
+        <p>Não há marcações de ponto para o período selecionado.</p>
       </div>
 
-    </main>
-  </div>
+      <div class="report-state report-state-error" id="report-error" role="alert" hidden>
+        <img src="/assets/icons/circle-x.svg" alt="" aria-hidden="true" width="28" height="28"/>
+        <strong>Não foi possível carregar</strong>
+        <p>Verifique sua conexão e tente novamente.</p>
+        <button class="report-retry" id="report-retry" type="button">Tentar novamente</button>
+      </div>
+
+      <div class="report-state report-state-unavailable" id="report-unavailable" role="status" hidden>
+        <img src="/assets/icons/info.svg" alt="" aria-hidden="true" width="28" height="28"/>
+        <strong>Histórico ainda indisponível</strong>
+        <p>A consulta mensal ainda não está integrada ao sistema. Nenhum registro foi simulado.</p>
+      </div>
+
+      <div class="report-day-list" id="report-day-list" aria-live="polite" hidden></div>
+    </section>
+  </main>
 </div>
 
-<!-- BOTTOM NAV -->
-<nav class="bottom-nav">
-  <div class="bottom-nav-inner">
-    <a href="/funcionario" class="bottom-nav-link">
-      <span class="bottom-nav-icon">⏱</span>
-      <span>Ponto</span>
+<nav class="employee-bottom-nav" aria-label="Navegação do funcionário">
+  <div class="employee-bottom-nav-inner">
+    <a href="/funcionario" class="employee-bottom-nav-link">
+      <span class="employee-bottom-nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true"/></span>
+      <span>Início</span>
     </a>
-    <a href="/funcionario/relatorio" class="bottom-nav-link active">
-      <span class="bottom-nav-icon">📊</span>
-      <span>Relatório</span>
+    <a href="/funcionario/relatorio" class="employee-bottom-nav-link active" aria-current="page">
+      <span class="employee-bottom-nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true"/></span>
+      <span>Histórico</span>
     </a>
-    <a href="/funcionario/perfil" class="bottom-nav-link">
-      <span class="bottom-nav-icon">👤</span>
+    <a href="/funcionario/perfil" class="employee-bottom-nav-link">
+      <span class="employee-bottom-nav-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true"/></span>
       <span>Perfil</span>
     </a>
   </div>
 </nav>
-
-<div class="toast-stack" id="toast-stack"></div>
 
 </body>
 </html>

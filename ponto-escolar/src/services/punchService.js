@@ -106,6 +106,122 @@ function mapRequiredScheduleTime(value) {
   return normalized;
 }
 
+const HISTORY_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
+function resolveHistoryPeriod(rawMonth, referenceDate = new Date()) {
+  const currentMonth = getSaoPauloDateTime(referenceDate).date.slice(0, 7);
+  const month = rawMonth === undefined ? currentMonth : rawMonth;
+
+  if (typeof month !== "string") {
+    throw new BadRequestError("mes deve usar o formato YYYY-MM");
+  }
+
+  const match = HISTORY_MONTH_PATTERN.exec(month);
+  if (!match) {
+    throw new BadRequestError("mes deve usar o formato YYYY-MM");
+  }
+
+  const year = Number(match[1]);
+  const monthNumber = Number(match[2]);
+  if (year < 1000 || year > 9999) {
+    throw new BadRequestError("mes deve conter um ano valido");
+  }
+
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  return {
+    month,
+    startDate: `${month}-01`,
+    endDate: `${month}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+function mapDateReference(value) {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const year = value.getUTCFullYear();
+    const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(value.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  throw new Error("Data de referencia invalida no historico de ponto");
+}
+
+function timeToSeconds(value) {
+  if (!value) {
+    return null;
+  }
+
+  const [hours, minutes, seconds] = value.split(":").map(Number);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+function mapHistoryRow(row) {
+  const entrada = mapTimeOrNull(row.entrada);
+  const saidaAlmoco = mapTimeOrNull(row.saida_almoco);
+  const retornoAlmoco = mapTimeOrNull(row.retorno_almoco);
+  const saida = mapTimeOrNull(row.saida);
+  const seconds = [entrada, saidaAlmoco, retornoAlmoco, saida].map(
+    timeToSeconds
+  );
+  const isComplete =
+    seconds.every(Number.isFinite) &&
+    seconds[0] < seconds[1] &&
+    seconds[1] < seconds[2] &&
+    seconds[2] < seconds[3];
+  const totalSeconds = isComplete
+    ? seconds[1] - seconds[0] + (seconds[3] - seconds[2])
+    : null;
+
+  return {
+    data_referencia: mapDateReference(row.data_referencia),
+    entrada,
+    saida_almoco: saidaAlmoco,
+    retorno_almoco: retornoAlmoco,
+    saida,
+    total_minutos: isComplete ? Math.floor(totalSeconds / 60) : null,
+    status: isComplete ? "COMPLETO" : "INCOMPLETO",
+  };
+}
+
+/**
+ * Retorna apenas os registros mensais do funcionario identificado pelo JWT.
+ */
+async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date()) {
+  const safeFuncionarioId = Number(funcionarioId);
+  if (!Number.isInteger(safeFuncionarioId) || safeFuncionarioId < 1) {
+    throw new UnauthorizedError("Sessao do funcionario invalida");
+  }
+
+  const period = resolveHistoryPeriod(rawMonth, referenceDate);
+  const rows = await pointModel.listByEmployeeAndDateRange(
+    safeFuncionarioId,
+    period.startDate,
+    period.endDate
+  );
+  const records = rows.map(mapHistoryRow);
+  const completeRecords = records.filter(
+    (record) => record.status === "COMPLETO"
+  );
+
+  return {
+    periodo: period.month,
+    resumo: {
+      dias_com_registro: records.length,
+      jornadas_completas: completeRecords.length,
+      jornadas_incompletas: records.length - completeRecords.length,
+      total_minutos: completeRecords.reduce(
+        (total, record) => total + record.total_minutos,
+        0
+      ),
+    },
+    registros: records,
+  };
+}
+
 /**
  * Retorna o estado autoritativo da jornada do funcionario autenticado no dia atual.
  */
@@ -384,6 +500,7 @@ async function registerPunch(
 }
 
 module.exports = {
+  getPunchHistory,
   getTodayPunch,
   loginFuncionario,
   registerPunch,

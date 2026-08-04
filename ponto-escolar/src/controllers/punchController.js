@@ -32,6 +32,19 @@ async function getTodayPunch(req, res, next) {
   }
 }
 
+async function getPunchHistory(req, res, next) {
+  try {
+    const result = await punchService.getPunchHistory(req.auth.id, req.query.mes);
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function registerPunch(req, res, next) {
   try {
     // O controlador envia identidade e contexto; o servico decide a regra do ponto.
@@ -58,6 +71,7 @@ async function registerPunch(req, res, next) {
 }
 
 module.exports = {
+  getPunchHistory,
   getTodayPunch,
   loginFuncionario,
   registerPunch,
