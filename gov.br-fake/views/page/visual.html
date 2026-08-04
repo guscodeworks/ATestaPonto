@@ -4,20 +4,45 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
-  <title>Identidade autenticada | AtestaPonto ID</title>
+  <title>Dashboard demonstrativo | ATestaPonto</title>
   <link rel="stylesheet" href="/assets/css/saladofuturo/visual.css">
 </head>
 <body>
-  <main class="transition-shell">
-    <section class="transition-card" aria-labelledby="page-title">
-      <span class="success-icon" aria-hidden="true"></span>
-      <h1 id="page-title">Identidade autenticada</h1>
-      <p class="confirmation">O administrador de demonstração foi validado.</p>
-      <p class="redirect-message">Redirecionando para o painel administrativo do ATestaPonto...</p>
-      <button class="continue-button" id="continueButton" type="button">Continuar agora</button>
+  <header class="topbar">
+    <div class="topbar-content">
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <p class="brand-name">ATestaPonto</p>
+          <p class="brand-subtitle">Simulador de identidade</p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <span class="environment-badge">Ambiente demonstrativo</span>
+        <a class="logout-link" href="/auth/logout">Sair</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="dashboard-shell">
+    <section class="welcome" aria-labelledby="page-title">
+      <h1 id="page-title">Olá, Administrador</h1>
+      <p>Sua identidade demonstrativa foi autenticada.</p>
+      <div class="auth-status">
+        <span class="status-dot" aria-hidden="true"></span>
+        Autenticação concluída
+      </div>
+    </section>
+
+    <section class="action-card" aria-labelledby="action-title">
+      <div>
+        <h2 id="action-title">Gerenciar Pontos</h2>
+        <p>Acesse o painel administrativo do ATestaPonto.</p>
+      </div>
+      <a class="primary-action" href="/auth/continue">Gerenciar Pontos</a>
     </section>
   </main>
 
-  <script src="/assets/js/saladofuturo/visual.js"></script>
 </body>
 </html>
