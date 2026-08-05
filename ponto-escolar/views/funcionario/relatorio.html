@@ -7,8 +7,8 @@
   <link rel="icon" href="/assets/img/favicon.svg"/>
   <link rel="stylesheet" href="/assets/css/tokens.css"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/relatorio.css?v=20260804-mobile-legibility"/>
-  <script src="/assets/js/funcionario/relatorio.js?v=20260804-history-redesign" defer></script>
+  <link rel="stylesheet" href="/assets/css/funcionario/relatorio.css?v=20260804-history-api"/>
+  <script src="/assets/js/funcionario/relatorio.js?v=20260804-history-api" defer></script>
 </head>
 <body class="employee-area employee-report">
 
@@ -28,41 +28,19 @@
 
   <main class="employee-main report-main" id="report-content" aria-busy="true">
     <header class="report-page-heading">
-      <p>Minha jornada</p>
-      <h1>Histórico de ponto</h1>
+      <h1>Histórico</h1>
     </header>
 
-    <section class="employee-card report-filter-card" aria-labelledby="period-filter-title">
-      <div class="report-filter-copy">
-        <span class="report-filter-icon" aria-hidden="true">
-          <img src="/assets/icons/calendar-days.svg" alt="" width="20" height="20"/>
-        </span>
-        <div>
-          <p>Período</p>
-          <h2 id="period-filter-title">Selecionar mês</h2>
-        </div>
-      </div>
-      <label class="report-month-field" for="report-month">
-        <span>Mês de referência</span>
-        <input id="report-month" name="mes" type="month" autocomplete="off"/>
-      </label>
-    </section>
+    <label class="report-month-field" for="report-month">
+      <span>Mês</span>
+      <input id="report-month" name="mes" type="month" autocomplete="off"/>
+    </label>
 
     <section class="employee-card report-summary" aria-labelledby="summary-title">
-      <header class="report-summary-header">
-        <div>
-          <p>Resumo do período</p>
-          <h2 id="summary-title">Visão mensal</h2>
-        </div>
-        <img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="20" height="20"/>
-      </header>
+      <h2 class="report-summary-title" id="summary-title">Resumo</h2>
       <dl class="report-summary-grid">
         <div>
-          <dt>Período</dt>
-          <dd id="summary-period">Carregando...</dd>
-        </div>
-        <div>
-          <dt>Registros</dt>
+          <dt>Dias registrados</dt>
           <dd id="summary-records">—</dd>
         </div>
         <div>
@@ -74,36 +52,23 @@
 
     <section class="report-history" aria-labelledby="history-title">
       <header class="report-history-header">
-        <div>
-          <p>Registros do mês</p>
-          <h2 id="history-title">Dias registrados</h2>
-        </div>
-        <span id="history-count" aria-live="polite">—</span>
+        <h2 id="history-title">Registros</h2>
       </header>
 
       <div class="report-state report-state-loading" id="report-loading" role="status" aria-live="polite">
         <span class="report-state-spinner" aria-hidden="true"></span>
         <strong>Carregando histórico</strong>
-        <p>Buscando seus registros do período.</p>
       </div>
 
       <div class="report-state" id="report-empty" hidden>
         <img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="28" height="28"/>
         <strong>Nenhum registro neste mês</strong>
-        <p>Não há marcações de ponto para o período selecionado.</p>
       </div>
 
       <div class="report-state report-state-error" id="report-error" role="alert" hidden>
         <img src="/assets/icons/circle-x.svg" alt="" aria-hidden="true" width="28" height="28"/>
         <strong>Não foi possível carregar</strong>
-        <p>Verifique sua conexão e tente novamente.</p>
         <button class="report-retry" id="report-retry" type="button">Tentar novamente</button>
-      </div>
-
-      <div class="report-state report-state-unavailable" id="report-unavailable" role="status" hidden>
-        <img src="/assets/icons/info.svg" alt="" aria-hidden="true" width="28" height="28"/>
-        <strong>Histórico ainda indisponível</strong>
-        <p>A consulta mensal ainda não está integrada ao sistema. Nenhum registro foi simulado.</p>
       </div>
 
       <div class="report-day-list" id="report-day-list" aria-live="polite" hidden></div>
