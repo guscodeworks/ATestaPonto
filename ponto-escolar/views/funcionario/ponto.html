@@ -7,14 +7,12 @@
   <link rel="icon" href="/assets/img/favicon.svg"/>
   <link rel="stylesheet" href="/assets/css/tokens.css"/>
   <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260803-dashboard-api"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260804-confirm-sheet"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
-  <script src="/assets/js/funcionario/ponto.js?v=20260803-dashboard-api" defer></script>
+  <script src="/assets/js/funcionario/ponto.js?v=20260804-confirm-sheet" defer></script>
 </head>
-<body class="employee-dashboard">
-
-<div class="employee-decoration employee-decoration-blue" aria-hidden="true"></div>
-<div class="employee-decoration employee-decoration-red" aria-hidden="true"></div>
+<body class="employee-area employee-dashboard">
 
 <div class="employee-shell">
   <header class="employee-header">
@@ -25,128 +23,94 @@
         <span class="employee-role" id="hero-cargo">—</span>
       </span>
     </a>
-    <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="ATestaPonto" width="38" height="38"/>
+    <span class="employee-brand-frame" aria-hidden="true">
+      <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" width="42" height="42"/>
+    </span>
   </header>
 
-  <main class="employee-dashboard-content">
-    <section class="ponto-hero" aria-labelledby="greeting">
-      <div class="ponto-hero-bg" aria-hidden="true"></div>
-      <div class="ponto-hero-glow" aria-hidden="true"></div>
-      <div class="ponto-hero-content">
-        <div class="ponto-card-heading">
-          <div>
-            <p class="ponto-greeting" id="greeting">Olá,</p>
-            <p class="ponto-card-kicker">Horário atual</p>
-          </div>
-          <img class="ponto-card-icon" src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="20" height="20"/>
-        </div>
+  <main class="employee-main">
+    <section class="ponto-overview" aria-labelledby="dashboard-title">
+      <h1 class="ponto-sr-title" id="dashboard-title">Registro de ponto</h1>
 
-        <div class="ponto-clock-row">
-          <time class="ponto-time" id="hero-clock">--:--:--</time>
-          <div class="ponto-date-col">
-            <span class="ponto-date-day" id="hero-weekday">--</span>
-            <span class="ponto-date-full" id="hero-date">-- de -- de ----</span>
-          </div>
-        </div>
+      <div class="ponto-now" aria-label="Data e horário atuais">
+        <p class="ponto-current-date">
+          <span id="hero-weekday">--</span>,
+          <span id="hero-date">-- de -- de ----</span>
+        </p>
+        <time class="ponto-time" id="hero-clock">--:--</time>
+      </div>
 
-        <div class="ponto-next-block">
-          <span class="ponto-next-label">Próxima batida</span>
-          <div class="ponto-status-row" id="status-row" aria-live="polite">
-            <span class="ponto-status-dot waiting" id="status-dot" aria-hidden="true"></span>
-            <span class="ponto-status-text" id="status-text">Carregando jornada...</span>
-          </div>
-        </div>
+      <div class="ponto-next" aria-live="polite">
+        <h2>Próximo registro</h2>
+        <p class="ponto-next-message" id="status-text">
+          <span id="next-label">Carregando jornada</span>
+          <strong id="next-time"></strong>
+        </p>
+      </div>
 
-        <div class="ponto-btn-wrap">
-          <button class="ponto-btn entrada" id="btn-ponto" type="button" onclick="baterPonto()" disabled>
-            <span class="ponto-btn-icon" id="btn-icon" aria-hidden="true"></span>
+      <section class="employee-card journey-card" aria-labelledby="journey-title" aria-busy="true">
+        <div class="journey-card-accent journey-card-accent-blue" aria-hidden="true"></div>
+        <div class="journey-card-accent journey-card-accent-red" aria-hidden="true"></div>
+        <h2 class="journey-title" id="journey-title">Jornada de hoje</h2>
+        <ol class="journey-steps" id="timeline" aria-live="polite"></ol>
+        <p class="journey-summary" id="last-action">Carregando registros...</p>
+      </section>
+
+      <div class="ponto-action-area">
+        <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" aria-label="Carregando estado do ponto" aria-busy="true" disabled>
+          <span class="ponto-action-copy">
+            <span class="ponto-action-visual" aria-hidden="true">
+              <img class="ponto-action-icon" id="btn-icon" src="/assets/icons/clock.svg" alt="" width="22" height="22"/>
+              <span class="ponto-action-spinner"></span>
+            </span>
             <span class="ponto-btn-label" id="btn-label">Carregando</span>
-          </button>
-          <p class="ponto-last-action" id="last-action">Carregando registros...</p>
-        </div>
+          </span>
+        </button>
+        <button class="ponto-state-retry" id="retry-ponto-state" type="button" hidden>
+          Recarregar estado
+        </button>
+        <span class="ponto-action-announcer" id="ponto-action-announcer" aria-live="polite" aria-atomic="true"></span>
       </div>
-    </section>
-
-    <section class="employee-card timeline-card" aria-labelledby="timeline-title">
-      <div class="employee-card-header">
-        <div>
-          <p class="employee-card-eyebrow">Hoje</p>
-          <h2 class="employee-card-title" id="timeline-title">Suas batidas</h2>
-        </div>
-        <div class="timeline-meta">
-          <span id="timeline-date">--/--/----</span>
-          <span id="timeline-count" aria-live="polite">Carregando</span>
-        </div>
-      </div>
-      <div class="timeline-wrap" id="timeline-wrap">
-        <div class="ponto-timeline" id="timeline" aria-live="polite"></div>
-      </div>
-    </section>
-
-    <section class="employee-card schedule-card" aria-labelledby="schedule-title">
-      <div class="employee-card-header">
-        <div>
-          <p class="employee-card-eyebrow">Horários previstos</p>
-          <h2 class="employee-card-title" id="schedule-title">Sua jornada</h2>
-        </div>
-        <span class="employee-card-header-icon" aria-hidden="true">
-          <img src="/assets/icons/calendar-days.svg" alt="" width="20" height="20"/>
-        </span>
-      </div>
-      <ol class="schedule-list" aria-label="Jornada definida pelo administrador">
-        <li class="schedule-item">
-          <span class="schedule-marker">1</span>
-          <span class="schedule-label">Entrada</span>
-          <time class="schedule-time">--:--</time>
-        </li>
-        <li class="schedule-item">
-          <span class="schedule-marker">2</span>
-          <span class="schedule-label">Saída para almoço</span>
-          <time class="schedule-time">--:--</time>
-        </li>
-        <li class="schedule-item">
-          <span class="schedule-marker">3</span>
-          <span class="schedule-label">Retorno do almoço</span>
-          <time class="schedule-time">--:--</time>
-        </li>
-        <li class="schedule-item">
-          <span class="schedule-marker">4</span>
-          <span class="schedule-label">Saída</span>
-          <time class="schedule-time">--:--</time>
-        </li>
-      </ol>
     </section>
   </main>
 </div>
 
-<nav class="bottom-nav" aria-label="Navegação do funcionário">
-  <div class="bottom-nav-inner">
-    <a href="/funcionario" class="bottom-nav-link active" aria-current="page">
-      <span class="bottom-nav-icon"><img src="/assets/icons/clock.svg" alt="" aria-hidden="true"/></span>
+<nav class="employee-bottom-nav" aria-label="Navegação do funcionário">
+  <div class="employee-bottom-nav-inner">
+    <a href="/funcionario" class="employee-bottom-nav-link active" aria-current="page">
+      <span class="employee-bottom-nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true"/></span>
       <span>Início</span>
     </a>
-    <a href="/funcionario/relatorio" class="bottom-nav-link">
-      <span class="bottom-nav-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"/></span>
+    <a href="/funcionario/relatorio" class="employee-bottom-nav-link">
+      <span class="employee-bottom-nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true"/></span>
       <span>Histórico</span>
     </a>
-    <a href="/funcionario/perfil" class="bottom-nav-link">
-      <span class="bottom-nav-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true"/></span>
+    <a href="/funcionario/perfil" class="employee-bottom-nav-link">
+      <span class="employee-bottom-nav-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true"/></span>
       <span>Perfil</span>
     </a>
   </div>
 </nav>
 
-<dialog class="ponto-confirm" id="confirm-modal" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-sub">
-  <div class="ponto-confirm-card">
+<dialog class="employee-modal ponto-confirm" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-schedule confirm-sub">
+  <div class="employee-modal-card ponto-confirm-card">
+    <span class="confirm-handle" aria-hidden="true"></span>
     <div class="confirm-icon-wrap" aria-hidden="true">
-      <span class="confirm-checkmark" id="confirm-icon">OK</span>
+      <img id="confirm-icon" src="/assets/icons/clock.svg" alt="" width="24" height="24"/>
     </div>
-    <h2 class="confirm-title" id="confirm-title">Ponto registrado</h2>
-    <time class="confirm-time" id="confirm-time">--:--:--</time>
-    <p class="confirm-sub" id="confirm-sub">Registro concluído com sucesso</p>
-    <button class="employee-button employee-button-primary confirm-close" type="button" onclick="fecharConfirm()">
-      Fechar
-    </button>
+    <h2 class="confirm-title" id="confirm-title">Confirmar registro</h2>
+    <p class="confirm-schedule" id="confirm-schedule">
+      Horário previsto: <time class="confirm-time" id="confirm-time"></time>
+    </p>
+    <p class="confirm-sub" id="confirm-sub">Sua localização será verificada.</p>
+    <form class="confirm-actions" id="confirm-form">
+      <button class="employee-button employee-button-primary confirm-submit" id="confirm-submit" type="submit">
+        Confirmar
+      </button>
+      <button class="employee-button confirm-cancel" id="confirm-cancel" type="button">
+        Cancelar
+      </button>
+    </form>
   </div>
 </dialog>
 

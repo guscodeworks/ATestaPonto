@@ -1,834 +1,840 @@
-/* Dashboard mobile do funcionario. Nao depende dos estilos administrativos. */
+/* Dashboard mobile de registro de ponto. */
 
-@font-face {
-  font-family: "Inter";
-  font-style: normal;
-  font-weight: 400 700;
-  font-display: swap;
-  src: url("../../fonts/inter-latin-400-700.woff2") format("woff2");
+.employee-dashboard .employee-header {
+  position: relative;
+  min-height: 72px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  overflow: hidden;
+  border: 0;
+  border-top: 0;
+  border-bottom: 1px solid rgba(20, 80, 240, 0.09);
+  border-radius: 0 0 12px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 5px 16px rgba(20, 80, 240, 0.075);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  min-width: 320px;
-  background: var(--color-bg);
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-}
-
-body.employee-dashboard {
-  min-width: 320px;
-  min-height: 100dvh;
-  overflow-x: hidden;
-  background: var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-main);
-  font-size: 15px;
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-.employee-dashboard a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.employee-dashboard button {
-  font: inherit;
-}
-
-.employee-dashboard img {
-  display: block;
-  max-width: 100%;
-}
-
-.employee-dashboard button,
-.employee-dashboard a {
-  -webkit-tap-highlight-color: transparent;
-}
-
-.employee-dashboard button:focus-visible,
-.employee-dashboard a:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-primary) 38%, white);
-  outline-offset: 3px;
-}
-
-.employee-decoration {
-  position: fixed;
-  z-index: 0;
-  border-radius: 999px;
+.employee-dashboard .employee-header::before {
+  content: "";
+  position: absolute;
+  top: -45px;
+  right: -18px;
+  width: 104px;
+  height: 62px;
+  border-radius: 0 0 0 54px;
+  background: var(--color-primary);
   pointer-events: none;
 }
 
-.employee-decoration-blue {
-  top: 96px;
-  right: -66px;
-  width: 126px;
-  height: 126px;
-  border: 22px solid rgba(20, 80, 240, 0.08);
-}
-
-.employee-decoration-red {
-  top: 222px;
-  left: -38px;
-  width: 68px;
-  height: 14px;
+.employee-dashboard .employee-header::after {
+  content: "";
+  position: absolute;
+  right: 17px;
+  bottom: 0;
+  width: 36px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
   background: var(--color-accent);
-  opacity: 0.16;
-  transform: rotate(-18deg);
+  pointer-events: none;
 }
 
-.employee-shell {
+.employee-dashboard .employee-identity,
+.employee-dashboard .employee-brand-frame {
   position: relative;
   z-index: 1;
-  width: 100%;
-  max-width: 430px;
-  min-height: 100dvh;
-  margin: 0 auto;
 }
 
-.employee-header {
-  position: sticky;
-  top: 0;
-  z-index: 90;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 72px;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(20, 20, 20, 0.07);
-  background: rgba(248, 249, 252, 0.94);
-  backdrop-filter: blur(14px);
+.employee-dashboard .employee-avatar {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  border: 2px solid var(--color-surface);
+  outline: 1px solid rgba(20, 80, 240, 0.14);
+  background: color-mix(in srgb, var(--color-primary) 7%, white);
+  box-shadow: 0 4px 12px rgba(20, 80, 240, 0.11);
+  font-size: 14px;
 }
 
-.employee-identity {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 11px;
-  min-width: 0;
-  border-radius: var(--radius-card);
+.employee-dashboard .employee-name {
+  font-size: 15px;
+  font-weight: 700;
 }
 
-.employee-avatar {
+.employee-dashboard .employee-role {
+  color: #737985;
+  font-size: 12px;
+}
+
+.employee-brand-frame {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  flex: 0 0 46px;
-  border: 1px solid rgba(20, 80, 240, 0.16);
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  overflow: hidden;
+  border: 2px solid var(--color-primary);
+  border-bottom-color: var(--color-accent);
   border-radius: 50%;
   background: var(--color-surface);
-  box-shadow: 0 4px 14px rgba(20, 80, 240, 0.1);
-  color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  box-shadow: 0 3px 10px rgba(20, 80, 240, 0.11);
 }
 
-.employee-identity-copy {
+.employee-dashboard .employee-brand-mark {
+  width: 36px;
+  height: 36px;
+}
+
+.employee-dashboard .employee-main {
+  justify-content: flex-start;
+  padding-top: 18px;
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+}
+
+.ponto-overview {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  align-items: center;
+  width: 100%;
   min-width: 0;
 }
 
-.employee-name,
-.employee-role {
-  display: block;
-  max-width: 100%;
+.ponto-sr-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
-.employee-name {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.employee-role {
-  margin-top: 2px;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.employee-brand-mark {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  object-fit: contain;
-}
-
-.employee-dashboard-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.ponto-now {
   width: 100%;
-  padding: 10px 16px calc(96px + env(safe-area-inset-bottom));
+  padding: 8px 12px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 8px 22px rgba(20, 80, 240, 0.07);
+  backdrop-filter: blur(8px);
+  text-align: center;
 }
 
-.ponto-hero,
-.employee-card {
-  width: 100%;
-  overflow: hidden;
-  border: 1px solid rgba(20, 20, 20, 0.075);
-  border-radius: 20px;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.ponto-hero {
-  position: relative;
-  padding: 20px;
-  border-color: rgba(20, 80, 240, 0.1);
-  box-shadow: 0 14px 30px rgba(20, 80, 240, 0.12);
-}
-
-.ponto-hero-bg {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(20, 80, 240, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(20, 80, 240, 0.045) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: linear-gradient(to bottom, black, transparent 78%);
-  pointer-events: none;
-}
-
-.ponto-hero-glow {
-  position: absolute;
-  top: -62px;
-  right: -46px;
-  width: 164px;
-  height: 164px;
-  border: 28px solid rgba(20, 80, 240, 0.065);
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.ponto-hero::after {
-  content: "";
-  position: absolute;
-  right: 22px;
-  bottom: 0;
-  width: 52px;
-  height: 4px;
-  border-radius: 4px 4px 0 0;
-  background: var(--color-accent);
-  pointer-events: none;
-}
-
-.ponto-hero-content {
-  position: relative;
-  z-index: 1;
-}
-
-.ponto-card-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.ponto-greeting {
+.ponto-current-date {
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: clamp(12px, 3.5vw, 14px);
   font-weight: 600;
-}
-
-.ponto-card-kicker,
-.ponto-next-label,
-.employee-card-eyebrow {
-  color: var(--color-primary);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
-.ponto-card-kicker {
-  margin-top: 12px;
-}
-
-.ponto-card-icon,
-.employee-card-header-icon {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
-  padding: 9px;
-  border: 1px solid rgba(20, 80, 240, 0.12);
-  border-radius: 11px;
-  background: rgba(20, 80, 240, 0.07);
-}
-
-.ponto-card-icon,
-.employee-card-header-icon img {
-  filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
-}
-
-.ponto-clock-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 7px;
-  margin-top: 6px;
+  letter-spacing: -0.01em;
 }
 
 .ponto-time {
-  color: var(--color-primary);
-  font-size: clamp(38px, 12vw, 50px);
+  display: block;
+  margin-top: 2px;
+  color: #141414;
+  font-size: clamp(3rem, 16vw, 4rem);
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  letter-spacing: -0.055em;
-  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
 }
 
-.ponto-date-col {
+.ponto-next {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 6px 18px rgba(20, 80, 240, 0.06);
+  backdrop-filter: blur(8px);
+  text-align: center;
+}
+
+.ponto-next h2 {
+  color: #2b2d32;
+  font-size: clamp(12px, 3.4vw, 14px);
+  font-weight: 700;
+}
+
+.ponto-next-message {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 4px;
+  min-height: 24px;
+  margin-top: 3px;
+  color: color-mix(in srgb, var(--color-primary) 46%, var(--color-text-muted));
+  font-size: clamp(12px, 3.4vw, 13px);
 }
 
-.ponto-date-day,
-.ponto-date-full {
-  color: var(--color-text-muted);
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.ponto-date-day {
+.ponto-next-message strong {
+  color: var(--color-primary);
+  font-size: 1.08em;
   font-weight: 700;
 }
 
-.ponto-date-day::after {
-  content: "·";
-  margin-left: 7px;
-  color: rgba(20, 20, 20, 0.24);
+.journey-card {
+  position: relative;
+  margin-top: 20px;
+  padding: 14px 10px 16px;
+  overflow: hidden;
+  border-color: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  box-shadow:
+    0 12px 28px rgba(20, 80, 240, 0.1),
+    0 2px 6px rgba(20, 20, 20, 0.035);
 }
 
-.ponto-next-block {
-  margin-top: 22px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(20, 20, 20, 0.08);
-}
-
-.ponto-status-row {
+.journey-title {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 9px;
-  min-width: 0;
-  margin-top: 7px;
-}
-
-.ponto-status-dot {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 9px;
-  border: 2px solid rgba(20, 80, 240, 0.5);
-  border-radius: 50%;
-}
-
-.ponto-status-dot.active,
-.ponto-status-dot.paused {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(20, 80, 240, 0.12);
-}
-
-.ponto-status-dot.closed {
-  border-color: rgba(20, 20, 20, 0.28);
-  background: rgba(20, 20, 20, 0.28);
-}
-
-.ponto-status-text {
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.ponto-btn-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  margin-top: 18px;
-}
-
-.ponto-btn,
-.ponto-btn.entrada,
-.ponto-btn.pausa,
-.ponto-btn.retorno,
-.ponto-btn.saida,
-.employee-button-primary {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: #ffffff;
-}
-
-.ponto-btn,
-.employee-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 54px;
-  padding: 12px 18px;
-  border: 1px solid var(--color-primary);
-  border-radius: 12px;
-  box-shadow: 0 8px 22px rgba(20, 80, 240, 0.22);
-  font-size: 14px;
+  margin: 0 8px 13px;
+  color: #616875;
+  font-size: 12px;
   font-weight: 700;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.ponto-btn {
-  width: 100%;
-}
-
-.ponto-btn:hover:not(:disabled),
-.employee-button:hover:not(:disabled) {
-  border-color: var(--color-primary-hover);
-  background: var(--color-primary-hover);
-  transform: translateY(-1px);
-}
-
-.ponto-btn:disabled,
-.employee-button:disabled {
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.ponto-btn-icon {
-  display: inline-grid;
-  place-items: center;
-  min-width: 26px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-}
-
-.ponto-btn-label {
-  line-height: 1.2;
-}
-
-.ponto-btn .at-loading-original {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-}
-
-.ponto-last-action {
-  min-height: 18px;
-  overflow: hidden;
-  color: var(--color-text-muted);
-  font-size: 11px;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.employee-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 18px 18px 14px;
-  border-bottom: 1px solid rgba(20, 20, 20, 0.07);
-}
-
-.employee-card-title {
-  margin-top: 3px;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
-.timeline-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  color: var(--color-text-muted);
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-.timeline-meta span:last-child {
-  color: var(--color-primary);
-  font-weight: 700;
-}
-
-.timeline-wrap {
-  padding: 4px 18px 12px;
-}
-
-.ponto-timeline {
-  display: flex;
-  flex-direction: column;
-}
-
-.ponto-timeline-item {
-  position: relative;
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  min-height: 66px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(20, 20, 20, 0.065);
-}
-
-.ponto-timeline-item:last-child {
-  border-bottom: 0;
-}
-
-.ponto-timeline-item:not(:last-child)::after {
+.journey-title::after {
   content: "";
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, rgba(20, 80, 240, 0.16), rgba(20, 80, 240, 0.025));
+}
+
+.journey-card-accent {
   position: absolute;
-  z-index: 0;
-  top: 46px;
-  bottom: -20px;
-  left: 17px;
-  width: 2px;
-  background: color-mix(in srgb, var(--color-primary) 15%, white);
+  bottom: -46px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
   pointer-events: none;
 }
 
-.ponto-tl-marker {
+.journey-card-accent-blue {
+  left: -32px;
+  background: var(--color-primary);
+}
+
+.journey-card-accent-red {
+  right: -32px;
+  background: var(--color-accent);
+}
+
+.journey-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: 100%;
+  list-style: none;
+}
+
+.journey-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.journey-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 19px;
+  left: calc(50% + 21px);
+  width: calc(100% - 42px);
+  height: 3px;
+  border-radius: 2px;
+  background: #e5e8ee;
+}
+
+.journey-step.is-complete:not(:last-child)::after {
+  background: linear-gradient(90deg, var(--color-primary), rgba(20, 80, 240, 0.5));
+}
+
+.journey-step-marker {
   position: relative;
   z-index: 1;
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid color-mix(in srgb, var(--color-primary) 16%, white);
+  width: 40px;
+  height: 40px;
+  border: 1px solid #d9dde5;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-primary) 8%, white);
-  color: var(--color-primary);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  background: #f7f8fb;
 }
 
-.ponto-tl-info {
-  min-width: 0;
+.journey-step-marker img {
+  width: 19px;
+  height: 19px;
+  opacity: 0.56;
 }
 
-.ponto-tl-label {
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.journey-step.is-current .journey-step-marker {
+  border: 2px solid var(--color-primary);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 4px rgba(20, 80, 240, 0.08);
 }
 
-.ponto-tl-sub {
-  margin-top: 2px;
-  color: var(--color-text-muted);
-  font-size: 11px;
-}
-
-.ponto-tl-time {
-  color: var(--color-primary);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.timeline-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 150px;
-  padding: 20px 0;
-  color: var(--color-text-muted);
-  font-size: 12px;
-  text-align: center;
-}
-
-.schedule-list {
-  list-style: none;
-  padding: 5px 18px 12px;
-}
-
-.schedule-item {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  min-height: 52px;
-  border-bottom: 1px solid rgba(20, 20, 20, 0.065);
-}
-
-.schedule-item:last-child {
-  border-bottom: 0;
-}
-
-.schedule-marker {
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--color-primary) 8%, white);
-  color: var(--color-primary);
-  font-size: 10px;
-  font-weight: 800;
-}
-
-.schedule-label {
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.schedule-time {
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
-.bottom-nav {
-  position: fixed;
-  z-index: 150;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  border-top: 1px solid rgba(20, 20, 20, 0.08);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 -8px 24px rgba(20, 20, 20, 0.08);
-  backdrop-filter: blur(14px);
-}
-
-.bottom-nav-inner {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  max-width: 430px;
-  min-height: 66px;
-  margin: 0 auto;
-  padding: 6px 8px max(6px, env(safe-area-inset-bottom));
-}
-
-.bottom-nav-link {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  min-width: 0;
-  min-height: 52px;
-  padding: 4px 8px;
-  border-radius: 12px;
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.bottom-nav-link.active {
-  background: color-mix(in srgb, var(--color-primary) 7%, white);
-  color: var(--color-primary);
-}
-
-.bottom-nav-icon,
-.bottom-nav-icon img {
-  width: 20px;
-  height: 20px;
-}
-
-.bottom-nav-icon img {
-  opacity: 0.62;
-}
-
-.bottom-nav-link.active img {
+.journey-step.is-current .journey-step-marker img {
   opacity: 1;
   filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
 }
 
-dialog.ponto-confirm {
-  position: fixed;
-  z-index: 500;
-  inset: 0;
-  display: none;
-  place-items: center;
-  width: 100%;
-  max-width: none;
-  height: 100%;
-  max-height: none;
-  margin: 0;
-  padding: 16px;
-  overflow: auto;
-  border: 0;
-  background: rgba(20, 20, 20, 0.54);
-  backdrop-filter: blur(5px);
+.journey-step.is-complete .journey-step-marker {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  box-shadow: 0 3px 9px rgba(20, 80, 240, 0.2);
 }
 
-dialog.ponto-confirm.show {
+.journey-step.is-complete .journey-step-marker img {
+  opacity: 1;
+  filter: brightness(0) invert(1);
+}
+
+.journey-step-label {
+  width: 100%;
+  margin-top: 9px;
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journey-step.is-current .journey-step-label {
+  color: var(--color-primary);
+}
+
+.journey-step-state,
+.journey-step-time {
+  color: #525966;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.journey-step-state {
+  margin-top: 7px;
+}
+
+.journey-step-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.journey-step.is-complete .journey-step-time {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.journey-summary {
+  display: none;
+}
+
+.employee-dashboard .employee-bottom-nav {
+  min-height: calc(70px + env(safe-area-inset-bottom));
+  border-top-color: rgba(20, 80, 240, 0.08);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -7px 22px rgba(20, 80, 240, 0.085);
+}
+
+.employee-dashboard .employee-bottom-nav-inner {
+  min-height: calc(70px + env(safe-area-inset-bottom));
+  padding: 5px 10px max(5px, env(safe-area-inset-bottom));
+}
+
+.employee-dashboard .employee-bottom-nav-link {
+  position: relative;
+  gap: 4px;
+  min-height: 54px;
+  padding: 7px 8px 4px;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.employee-dashboard .employee-bottom-nav-link.active {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.employee-dashboard .employee-bottom-nav-link.active::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  transform: translateX(-50%);
+}
+
+.employee-dashboard .employee-bottom-nav-icon,
+.employee-dashboard .employee-bottom-nav-icon img {
+  width: 21px;
+  height: 21px;
+}
+
+.ponto-action-area {
   display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 100%;
+  min-height: clamp(168px, 27dvh, 220px);
+  padding: clamp(22px, 4dvh, 32px) 0 clamp(26px, 4dvh, 36px);
+}
+
+.ponto-action {
+  --ponto-action-color: #6b7280;
+  --ponto-action-hover: #5a606c;
+  --ponto-action-border: rgba(255, 255, 255, 0.24);
+  --ponto-action-ring: rgba(107, 114, 128, 0.1);
+  --ponto-action-shadow: rgba(107, 114, 128, 0.24);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(96px, 28vw, 124px);
+  height: clamp(96px, 28vw, 124px);
+  flex: 0 0 auto;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid var(--ponto-action-border);
+  border-radius: 50%;
+  background-color: var(--ponto-action-color);
+  box-shadow:
+    0 0 0 clamp(5px, 1.5vw, 7px) var(--ponto-action-ring),
+    0 20px 42px var(--ponto-action-shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color 260ms ease,
+    border-color 260ms ease,
+    box-shadow 260ms ease,
+    opacity 240ms ease,
+    transform 240ms ease;
+}
+
+.ponto-action.is-entrada {
+  --ponto-action-color: #1450f0;
+  --ponto-action-hover: #0040cc;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
+  --ponto-action-ring: rgba(20, 80, 240, 0.09);
+  --ponto-action-shadow: rgba(20, 80, 240, 0.34);
+}
+
+.ponto-action.is-saida-almoco {
+  --ponto-action-color: #d97706;
+  --ponto-action-hover: #b96005;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
+  --ponto-action-ring: rgba(217, 119, 6, 0.1);
+  --ponto-action-shadow: rgba(217, 119, 6, 0.3);
+}
+
+.ponto-action.is-retorno-almoco,
+.ponto-action.is-success,
+.ponto-action.is-sync-pending {
+  --ponto-action-color: #0c7c4e;
+  --ponto-action-hover: #08643f;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
+  --ponto-action-ring: rgba(12, 124, 78, 0.1);
+  --ponto-action-shadow: rgba(12, 124, 78, 0.3);
+}
+
+.ponto-action.is-saida {
+  --ponto-action-color: #1251a3;
+  --ponto-action-hover: #0d4388;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
+  --ponto-action-ring: rgba(18, 81, 163, 0.1);
+  --ponto-action-shadow: rgba(18, 81, 163, 0.3);
+}
+
+.ponto-action.is-concluido {
+  --ponto-action-color: #6b7280;
+  --ponto-action-hover: #5a606c;
+  --ponto-action-border: rgba(255, 255, 255, 0.22);
+  --ponto-action-ring: rgba(107, 114, 128, 0.1);
+  --ponto-action-shadow: rgba(107, 114, 128, 0.24);
+}
+
+.ponto-action:hover:not(:disabled) {
+  background-color: var(--ponto-action-hover);
+  transform: translateY(-2px);
+}
+
+.ponto-action:active:not(:disabled) {
+  box-shadow:
+    0 0 0 clamp(5px, 1.5vw, 7px) var(--ponto-action-ring),
+    0 12px 24px var(--ponto-action-shadow);
+  transform: translateY(1px) scale(0.97);
+}
+
+.ponto-action:focus-visible {
+  outline: 3px solid rgba(20, 80, 240, 0.42);
+  outline-offset: 8px;
+}
+
+.ponto-action:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  box-shadow: 0 0 0 5px rgba(107, 114, 128, 0.08);
+}
+
+.ponto-action.is-loading:disabled,
+.ponto-action.is-sync-pending:disabled {
+  cursor: progress;
+}
+
+.ponto-action.is-loading:disabled,
+.ponto-action.is-success:disabled,
+.ponto-action.is-sync-pending:disabled,
+.ponto-action.is-concluido:disabled,
+.ponto-action.is-unavailable:disabled {
+  opacity: 1;
+  box-shadow:
+    0 0 0 clamp(5px, 1.5vw, 7px) var(--ponto-action-ring),
+    0 16px 34px var(--ponto-action-shadow);
+}
+
+.ponto-action.is-success {
+  transform: scale(1.035);
+}
+
+.ponto-action::after {
+  content: "";
+  position: absolute;
+  right: -10px;
+  bottom: -12px;
+  width: clamp(38px, 11vw, 48px);
+  height: clamp(28px, 8vw, 36px);
+  border-radius: 50% 0 0 0;
+  background: var(--color-accent);
+  transform: rotate(-20deg);
+  pointer-events: none;
+}
+
+.ponto-action-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.ponto-action-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(20px, 6vw, 26px);
+  height: clamp(20px, 6vw, 26px);
+  margin-bottom: 3px;
+}
+
+.ponto-action-icon {
+  width: 100%;
+  height: 100%;
+  filter: brightness(0) invert(1);
+}
+
+.ponto-action-spinner {
+  display: none;
+  width: clamp(20px, 6vw, 26px);
+  height: clamp(20px, 6vw, 26px);
+  border: 2px solid rgba(255, 255, 255, 0.34);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: ponto-action-spin 0.72s linear infinite;
+}
+
+.ponto-action.is-loading .ponto-action-icon {
+  display: none;
+}
+
+.ponto-action.is-loading .ponto-action-spinner {
+  display: block;
+}
+
+.ponto-btn-label {
+  max-width: 88%;
+  font-size: clamp(12px, 3vw, 13px);
+  font-weight: 750;
+  line-height: 1.14;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.ponto-action.is-sync-pending .ponto-btn-label {
+  font-size: clamp(10px, 2.7vw, 11px);
+}
+
+.ponto-state-retry {
+  min-height: 48px;
+  margin-top: -18px;
+  padding: 10px 16px;
+  border: 1px solid rgba(20, 80, 240, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ponto-state-retry[hidden] {
+  display: none;
+}
+
+.ponto-state-retry:focus-visible {
+  outline: 3px solid rgba(20, 80, 240, 0.35);
+  outline-offset: 3px;
+}
+
+.ponto-state-retry:disabled {
+  color: #6b7280;
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.ponto-action-announcer {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes ponto-action-spin {
+  to { transform: rotate(360deg); }
+}
+
+dialog.ponto-confirm {
+  --confirm-action-color: #1450f0;
+  --confirm-action-soft: rgba(20, 80, 240, 0.1);
+  align-items: end;
+  justify-items: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(20, 20, 20, 0.28);
+  backdrop-filter: blur(2px);
+}
+
+dialog.ponto-confirm::backdrop {
+  background: transparent;
+}
+
+dialog.ponto-confirm.is-saida-almoco {
+  --confirm-action-color: #d97706;
+  --confirm-action-soft: rgba(217, 119, 6, 0.11);
+}
+
+dialog.ponto-confirm.is-retorno-almoco {
+  --confirm-action-color: #0c7c4e;
+  --confirm-action-soft: rgba(12, 124, 78, 0.1);
+}
+
+dialog.ponto-confirm.is-saida {
+  --confirm-action-color: #1251a3;
+  --confirm-action-soft: rgba(18, 81, 163, 0.1);
 }
 
 .ponto-confirm-card {
-  width: min(100%, 360px);
-  padding: 28px 20px 20px;
-  border-radius: 20px;
-  background: var(--color-surface);
-  box-shadow: 0 24px 60px rgba(20, 20, 20, 0.2);
+  width: min(100%, 430px);
+  padding: 10px 16px 14px;
+  border: 1px solid rgba(20, 20, 20, 0.07);
+  border-radius: 24px 24px 16px 16px;
+  background: #ffffff;
+  box-shadow: 0 -10px 34px rgba(20, 20, 20, 0.14);
   text-align: center;
+  animation: ponto-sheet-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.confirm-handle {
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.18);
 }
 
 .confirm-icon-wrap {
   display: grid;
   place-items: center;
-  width: 62px;
-  height: 62px;
-  margin: 0 auto 16px;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 10px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-primary) 9%, white);
-  color: var(--color-primary);
-  font-size: 11px;
-  font-weight: 800;
+  background: var(--confirm-action-color);
+  box-shadow: 0 7px 18px var(--confirm-action-soft);
+}
+
+.confirm-icon-wrap img {
+  width: 21px;
+  height: 21px;
+  filter: brightness(0) invert(1);
 }
 
 .confirm-title {
-  font-size: 20px;
+  color: var(--color-text);
+  font-size: 18px;
   font-weight: 700;
+  line-height: 1.25;
+}
+
+.confirm-schedule {
+  margin-top: 7px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .confirm-time {
-  display: block;
-  margin-top: 8px;
-  color: var(--color-primary);
-  font-size: 30px;
+  color: var(--confirm-action-color);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
 
 .confirm-sub {
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--color-text-muted);
   font-size: 13px;
+  line-height: 1.4;
 }
 
-.confirm-close {
-  width: 100%;
+.confirm-actions {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.ponto-confirm .confirm-submit {
   min-height: 48px;
-  margin-top: 22px;
+  border-color: var(--confirm-action-color);
+  background: var(--confirm-action-color);
+  box-shadow: 0 8px 18px var(--confirm-action-soft);
+  color: #ffffff;
 }
 
-.toast-stack {
-  position: fixed;
-  z-index: 700;
-  top: 14px;
-  right: 16px;
-  left: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 398px;
-  margin: 0 auto;
-  pointer-events: none;
+.ponto-confirm .confirm-submit:hover:not(:disabled) {
+  filter: brightness(0.94);
 }
 
-.toast {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 13px 14px;
-  border: 1px solid rgba(20, 20, 20, 0.08);
-  border-left: 4px solid var(--color-primary);
-  border-radius: 10px;
-  background: var(--color-surface);
-  box-shadow: 0 12px 30px rgba(20, 20, 20, 0.14);
-  font-size: 13px;
-  pointer-events: auto;
+.ponto-confirm .confirm-submit.is-submitting::before {
+  content: "";
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: ponto-action-spin 0.72s linear infinite;
 }
 
-.toast-error {
-  border-left-color: var(--color-accent);
+.confirm-cancel {
+  min-height: 48px;
+  border-color: rgba(20, 20, 20, 0.12);
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-text-muted);
 }
 
-.toast-icon {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 18px;
-  background: center / contain no-repeat url("../../icons/info.svg");
-  color: transparent;
-  font-size: 0;
+.confirm-cancel:hover:not(:disabled) {
+  border-color: rgba(20, 20, 20, 0.2);
+  background: var(--color-bg);
 }
 
-.toast-error .toast-icon {
-  background-image: url("../../icons/circle-x.svg");
-}
-
-.toast-success .toast-icon {
-  background-image: url("../../icons/circle-check.svg");
-}
-
-.toast-warning .toast-icon {
-  background-image: url("../../icons/triangle-alert.svg");
-}
-
-.toast-msg {
-  flex: 1;
-  font-weight: 600;
-}
-
-@keyframes employee-skeleton-loading {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
-}
-
-@media (max-width: 350px) {
-  .ponto-hero {
-    padding: 18px;
+@keyframes ponto-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
   }
-
-  .ponto-time {
-    font-size: 38px;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
+}
 
-  .ponto-date-day,
-  .ponto-date-full {
-    font-size: 11px;
-  }
-
-  .employee-card-header,
-  .timeline-wrap,
-  .schedule-list {
+@media (min-width: 375px) {
+  dialog.ponto-confirm {
     padding-right: 16px;
     padding-left: 16px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .employee-dashboard *,
-  .employee-dashboard *::before,
-  .employee-dashboard *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  .ponto-confirm-card {
+    animation: none;
   }
+}
+
+.journey-card .employee-state {
+  grid-column: 1 / -1;
+  min-height: 128px;
+  padding: 16px 8px;
+}
+
+@media (max-width: 350px) {
+  .employee-dashboard .employee-main {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .employee-dashboard .employee-header {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .employee-dashboard .employee-avatar {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .employee-brand-frame {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .employee-dashboard .employee-brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .ponto-current-date {
+    font-size: 13px;
+  }
+
+  .journey-card {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
+  .journey-title {
+    margin-right: 7px;
+    margin-left: 7px;
+  }
+
+  .journey-step:not(:last-child)::after {
+    left: calc(50% + 19px);
+    width: calc(100% - 38px);
+  }
+
+  .journey-step-marker {
+    width: 38px;
+    height: 38px;
+  }
+
 }

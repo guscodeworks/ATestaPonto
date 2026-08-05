@@ -20,6 +20,17 @@ async function findByEmployeeAndDate(funcionarioId, date) {
 }
 
 /**
+ * Lista somente as linhas do funcionario no intervalo solicitado. A coluna
+ * data_referencia permanece sem funcoes no WHERE para permitir uso de indice.
+ */
+async function listByEmployeeAndDateRange(funcionarioId, startDate, endDate) {
+  return database.execute(
+    "SELECT data_referencia, entrada, saida_almoco, retorno_almoco, saida FROM registro_de_pontos WHERE funcionario_id = ? AND data_referencia >= ? AND data_referencia <= ? ORDER BY data_referencia DESC, id DESC",
+    [funcionarioId, startDate, endDate]
+  );
+}
+
+/**
  * Trava o registro do dia para decidir a proxima batida sem corrida entre requisicoes.
  */
 async function findByEmployeeAndDateForUpdate(client, funcionarioId, date) {
@@ -72,6 +83,7 @@ async function replacePunchRow(client, { rowId, funcionarioId, date, times }) {
 module.exports = {
   withTransaction,
   findByEmployeeAndDate,
+  listByEmployeeAndDateRange,
   findByEmployeeAndDateForUpdate,
   listRowsByDate,
   createFirstPunch,

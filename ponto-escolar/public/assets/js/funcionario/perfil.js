@@ -1,258 +1,218 @@
-// Dados do usuário
-const nome = sessionStorage.getItem('func_nome') || 'Isaque Oliveira';
-const cargo = sessionStorage.getItem('func_cargo') || 'Técnico de Suporte';
-const matricula = sessionStorage.getItem('func_matricula') || 'MAT-20241';
-const iniciais = nome
-  .split(' ')
-  .map(n => n[0])
-  .slice(0, 2)
-  .join('')
-  .toUpperCase();
+'use strict';
 
-document.getElementById('sb-avatar').textContent = iniciais;
-document.getElementById('sb-name').textContent = nome;
-document.getElementById('sb-role').textContent = cargo;
-document.getElementById('tp-avatar').textContent = iniciais;
-document.getElementById('tp-name').textContent = nome.split(' ')[0];
-document.getElementById('profile-avatar').textContent = iniciais;
-document.getElementById('profile-name').textContent = nome;
-document.getElementById('profile-cargo').textContent = cargo;
-document.getElementById('pf-nome').textContent = nome;
-document.getElementById('pf-cargo').textContent = cargo;
+const funcionarioToken = sessionStorage.getItem('funcionario_token');
+const TEXTO_INDISPONIVEL = 'Não informado';
 
-// Relógio
-function tick() {
-  const now = new Date();
-
-  document.getElementById('topbar-time').textContent =
-    now.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-  document.getElementById('topbar-date').textContent =
-    now.toLocaleDateString('pt-BR');
+if (!funcionarioToken) {
+  window.location.replace('/login');
 }
 
-setInterval(tick, 1000);
-tick();
-
-// Mostrar/Ocultar senha
-document.querySelectorAll('.toggle-pw').forEach(btn => {
-
-  btn.addEventListener('click', function () {
-
-    const target = document.getElementById(this.dataset.target);
-
-    if (!target) return;
-
-    const oculta = target.type === 'password';
-
-    target.type = oculta ? 'text' : 'password';
-
-    this.textContent = oculta ? '🙈' : '👁';
-
-  });
-
-});
-
-// Força da senha
-const pwNova = document.getElementById('pw-nova');
-const strengthWrap = document.getElementById('pw-strength');
-const strengthText = document.getElementById('pw-strength-text');
-const bars = document.querySelectorAll('.pw-bar');
-
-pwNova.addEventListener('input', function () {
-
-  const valor = this.value;
-
-  if (!valor) {
-    strengthWrap.style.display = 'none';
-    return;
-  }
-
-  strengthWrap.style.display = 'block';
-
-  let score = 0;
-
-  if (valor.length >= 8) score++;
-  if (/[A-Z]/.test(valor)) score++;
-  if (/[0-9]/.test(valor)) score++;
-  if (/[^A-Za-z0-9]/.test(valor)) score++;
-
-  const colors = [
-    'var(--red-500)',
-    'var(--amber-500)',
-    'var(--amber-500)',
-    'var(--green-500)',
-    'var(--green-500)'
-  ];
-
-  const labels = [
-    '',
-    'Fraca',
-    'Razoável',
-    'Boa',
-    'Forte'
-  ];
-
-  bars.forEach((bar, i) => {
-
-    bar.style.background =
-      i < score
-        ? colors[score]
-        : 'var(--border-light)';
-
-  });
-
-  strengthText.textContent = labels[score] || '';
-
-  strengthText.style.color =
-    colors[score] || 'var(--text-300)';
-
-});
-
-// Alterar senha
-function alterarSenha() {
-
-  const atual = document.getElementById('pw-atual').value;
-  const nova = document.getElementById('pw-nova').value;
-  const confirm = document.getElementById('pw-confirm').value;
-
-  const erro = document.getElementById('pw-match-error');
-
-  erro.style.display = 'none';
-
-  document
-    .getElementById('pw-confirm')
-    .classList.remove('has-error');
-
-  if (!atual || !nova) {
-
-    toast('Preencha todos os campos', 'warning');
-    return;
-
-  }
-
-  if (nova.length < 8) {
-
-    toast(
-      'A nova senha deve ter ao menos 8 caracteres',
-      'warning'
-    );
-
-    return;
-
-  }
-
-  if (nova !== confirm) {
-
-    erro.style.display = 'block';
-
-    document
-      .getElementById('pw-confirm')
-      .classList.add('has-error');
-
-    return;
-
-  }
-
-  toast('Senha alterada com sucesso!', 'success');
-
-  limparForm();
-
+function getElement(id) {
+  return document.getElementById(id);
 }
 
-function limparForm() {
-
-  ['pw-atual', 'pw-nova', 'pw-confirm'].forEach(id => {
-
-    document.getElementById(id).value = '';
-
-    document.getElementById(id).type = 'password';
-
-  });
-
-  document
-    .querySelectorAll('.toggle-pw')
-    .forEach(btn => btn.textContent = '👁');
-
-  document.getElementById('pw-strength').style.display = 'none';
-
-  document.getElementById('pw-match-error').style.display = 'none';
-
+function lerFuncionarioDoLogin() {
+  try {
+    const data = JSON.parse(sessionStorage.getItem('funcionario_data') || '{}');
+    return data && typeof data === 'object' ? data : {};
+  } catch (_error) {
+    return {};
+  }
 }
 
-// Sidebar
-const sidebar = document.getElementById('sidebar');
-const overlay = document.getElementById('sidebar-overlay');
+function textoReal(value) {
+  const text = String(value || '').trim();
+  return text || TEXTO_INDISPONIVEL;
+}
 
-document
-  .getElementById('menu-toggle')
-  .addEventListener('click', () => {
+function obterIniciais(nome) {
+  const partes = String(nome || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
 
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('active');
+  if (!partes.length) return '—';
 
-  });
+  return partes
+    .slice(0, 2)
+    .map((parte) => parte.charAt(0))
+    .join('')
+    .toUpperCase();
+}
 
-overlay.addEventListener('click', () => {
-
-  sidebar.classList.remove('open');
-  overlay.classList.remove('active');
-
-});
-
-// Toast
-function toast(msg, tipo = 'info') {
-
-  const icons = {
-    success: '✅',
-    error: '❌',
-    info: 'ℹ️',
-    warning: '⚠️'
+function formatarCargo(cargo) {
+  const cargos = {
+    FUNCIONARIO: 'Funcionário(a)',
+    INSPETOR: 'Inspetor(a)',
+    PROFESSOR: 'Professor(a)'
   };
-
-  const el = document.createElement('div');
-
-  el.className = `toast toast-${tipo}`;
-
-  el.innerHTML = `
-    <span class="toast-icon">${icons[tipo]}</span>
-    <span class="toast-msg">${msg}</span>
-  `;
-
-  document
-    .getElementById('toast-stack')
-    .appendChild(el);
-
-  setTimeout(() => el.remove(), 3200);
-
+  const valor = String(cargo || '').trim().toUpperCase();
+  return cargos[valor] || textoReal(valor);
 }
 
-// Logout
+function formatarCpfMascarado(cpf) {
+  const valor = String(cpf || '').trim();
+  const digitos = valor.replace(/\D/g, '');
+
+  if (digitos.length === 11) {
+    return `***.***.***-${digitos.slice(-2)}`;
+  }
+
+  if (/^\*{3}\.\*{3}\.\*{3}-\d{2}$/.test(valor)) {
+    return valor;
+  }
+
+  return TEXTO_INDISPONIVEL;
+}
+
+function formatarTelefone(telefone) {
+  const digitos = String(telefone || '').replace(/\D/g, '');
+
+  if (digitos.length === 11) {
+    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
+  }
+
+  if (digitos.length === 10) {
+    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+  }
+
+  return TEXTO_INDISPONIVEL;
+}
+
+function formatarHorario(horario) {
+  const valor = String(horario || '').trim();
+  return /^\d{2}:\d{2}(?::\d{2})?$/.test(valor)
+    ? valor.slice(0, 5)
+    : TEXTO_INDISPONIVEL;
+}
+
+function validarRespostaHoje(data) {
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    !data.funcionario ||
+    !data.jornada ||
+    typeof data.funcionario.nome !== 'string' ||
+    typeof data.funcionario.cargo !== 'string'
+  ) {
+    throw new Error('INVALID_PROFILE_RESPONSE');
+  }
+
+  return data;
+}
+
+async function buscarPerfilAtual() {
+  const response = await fetch('/api/pontos/hoje', {
+    headers: {
+      Authorization: `Bearer ${funcionarioToken}`
+    }
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || payload.success === false) {
+    const error = new Error('PROFILE_REQUEST_FAILED');
+    error.status = response.status;
+    throw error;
+  }
+
+  return validarRespostaHoje(payload.data);
+}
+
+function definirTexto(id, value) {
+  const element = getElement(id);
+  if (element) element.textContent = value;
+}
+
+function renderizarPerfil(data) {
+  const dadosLogin = lerFuncionarioDoLogin();
+  const nome = textoReal(data.funcionario.nome || dadosLogin.nome);
+  const cargo = formatarCargo(data.funcionario.cargo);
+  const iniciais = obterIniciais(nome === TEXTO_INDISPONIVEL ? '' : nome);
+
+  definirTexto('header-avatar', iniciais);
+  definirTexto('header-name', nome);
+  definirTexto('header-cargo', cargo);
+  definirTexto('profile-avatar', iniciais);
+  definirTexto('profile-name', nome);
+  definirTexto('profile-cargo', cargo);
+  definirTexto('profile-status', 'Ativo');
+  getElement('profile-status').classList.remove('is-unavailable');
+  definirTexto('profile-personal-name', nome);
+  definirTexto('profile-email', textoReal(dadosLogin.email));
+  definirTexto('profile-cpf', formatarCpfMascarado(dadosLogin.cpf));
+  definirTexto('profile-phone', formatarTelefone(dadosLogin.telefone));
+  definirTexto('schedule-entry', formatarHorario(data.jornada.entrada));
+  definirTexto('schedule-lunch-out', formatarHorario(data.jornada.saida_almoco));
+  definirTexto('schedule-lunch-return', formatarHorario(data.jornada.retorno_almoco));
+  definirTexto('schedule-exit', formatarHorario(data.jornada.saida));
+  getElement('profile-content').setAttribute('aria-busy', 'false');
+}
+
+function renderizarIndisponivel() {
+  const ids = [
+    'header-name',
+    'header-cargo',
+    'profile-name',
+    'profile-cargo',
+    'profile-status',
+    'profile-personal-name',
+    'profile-email',
+    'profile-cpf',
+    'profile-phone',
+    'schedule-entry',
+    'schedule-lunch-out',
+    'schedule-lunch-return',
+    'schedule-exit'
+  ];
+
+  ids.forEach((id) => definirTexto(id, TEXTO_INDISPONIVEL));
+  definirTexto('header-avatar', '—');
+  definirTexto('profile-avatar', '—');
+  getElement('profile-status').classList.add('is-unavailable');
+  getElement('profile-content').setAttribute('aria-busy', 'false');
+}
+
+function toast(message, type = 'error') {
+  const stack = getElement('toast-stack');
+  const element = document.createElement('div');
+  const icon = document.createElement('span');
+  const text = document.createElement('span');
+
+  element.className = `toast toast-${type}`;
+  icon.className = 'toast-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  text.className = 'toast-msg';
+  text.textContent = message;
+  element.append(icon, text);
+  stack.replaceChildren(element);
+  window.setTimeout(() => element.remove(), 3500);
+}
+
 function sair() {
-
-  sessionStorage.clear();
-
-  window.location.href = '/login';
-
+  sessionStorage.removeItem('funcionario_token');
+  sessionStorage.removeItem('funcionario_data');
+  sessionStorage.removeItem('func_nome');
+  sessionStorage.removeItem('func_cpf');
+  window.location.replace('/login');
 }
 
-// Responsividade
-function checkCols() {
+async function iniciarPerfil() {
+  try {
+    const data = await buscarPerfilAtual();
+    renderizarPerfil(data);
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      sair();
+      return;
+    }
 
-  const grid = document.querySelector('.profile-cols');
-
-  if (!grid) return;
-
-  grid.style.gridTemplateColumns =
-    window.innerWidth <= 768
-      ? '1fr'
-      : '1fr 1fr';
-
+    renderizarIndisponivel();
+    toast('Não foi possível carregar seu perfil. Tente novamente mais tarde.');
+  }
 }
 
-window.addEventListener('resize', checkCols);
+getElement('profile-logout').addEventListener('click', sair);
 
-checkCols();
+if (funcionarioToken) {
+  iniciarPerfil();
+}
