@@ -1,40 +1,5 @@
 /* Dashboard mobile de registro de ponto. */
 
-body.employee-dashboard {
-  background:
-    radial-gradient(ellipse 84% 28% at 50% 18%, rgba(20, 80, 240, 0.11) 0, rgba(20, 80, 240, 0.035) 48%, transparent 76%),
-    radial-gradient(circle at 50% 70%, rgba(20, 80, 240, 0.075) 0, rgba(20, 80, 240, 0.018) 30%, transparent 52%),
-    radial-gradient(circle at 0 96%, rgba(240, 20, 20, 0.055) 0, transparent 28%),
-    linear-gradient(180deg, #f8f9fc 0%, #fbfcff 46%, #f8f9fc 100%);
-}
-
-.employee-dashboard::before,
-.employee-dashboard::after {
-  content: "";
-  position: fixed;
-  z-index: 0;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.employee-dashboard::before {
-  top: 164px;
-  right: -42px;
-  width: 76px;
-  height: 76px;
-  border: 12px solid rgba(20, 80, 240, 0.055);
-  background: transparent;
-}
-
-.employee-dashboard::after {
-  bottom: 92px;
-  left: -38px;
-  width: 66px;
-  height: 66px;
-  border: 11px solid rgba(240, 20, 20, 0.045);
-  background: transparent;
-}
-
 .employee-dashboard .employee-header {
   position: relative;
   min-height: 72px;
@@ -45,7 +10,7 @@ body.employee-dashboard {
   border-top: 0;
   border-bottom: 1px solid rgba(20, 80, 240, 0.09);
   border-radius: 0 0 12px 12px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 5px 16px rgba(20, 80, 240, 0.075);
 }
 
@@ -97,7 +62,7 @@ body.employee-dashboard {
 
 .employee-dashboard .employee-role {
   color: #737985;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .employee-brand-frame {
@@ -122,7 +87,7 @@ body.employee-dashboard {
 .employee-dashboard .employee-main {
   justify-content: flex-start;
   padding-top: 18px;
-  padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
 }
 
 .ponto-overview {
@@ -145,6 +110,12 @@ body.employee-dashboard {
 
 .ponto-now {
   width: 100%;
+  padding: 8px 12px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 8px 22px rgba(20, 80, 240, 0.07);
+  backdrop-filter: blur(8px);
   text-align: center;
 }
 
@@ -157,18 +128,24 @@ body.employee-dashboard {
 
 .ponto-time {
   display: block;
-  margin-top: 4px;
-  color: var(--color-text);
-  font-size: clamp(56px, 19vw, 78px);
+  margin-top: 2px;
+  color: #141414;
+  font-size: clamp(3rem, 16vw, 4rem);
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  letter-spacing: -0.07em;
-  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
 }
 
 .ponto-next {
   width: 100%;
-  margin-top: 17px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: 0 6px 18px rgba(20, 80, 240, 0.06);
+  backdrop-filter: blur(8px);
   text-align: center;
 }
 
@@ -200,7 +177,7 @@ body.employee-dashboard {
   margin-top: 20px;
   padding: 14px 10px 16px;
   overflow: hidden;
-  border-color: rgba(20, 80, 240, 0.1);
+  border-color: rgba(255, 255, 255, 0.8);
   border-radius: 16px;
   box-shadow:
     0 12px 28px rgba(20, 80, 240, 0.1),
@@ -215,7 +192,7 @@ body.employee-dashboard {
   gap: 9px;
   margin: 0 8px 13px;
   color: #616875;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -324,7 +301,7 @@ body.employee-dashboard {
   margin-top: 9px;
   overflow: hidden;
   color: var(--color-text);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -336,8 +313,8 @@ body.employee-dashboard {
 
 .journey-step-state,
 .journey-step-time {
-  color: #626975;
-  font-size: 9px;
+  color: #525966;
+  font-size: 12px;
   line-height: 1.35;
 }
 
@@ -377,7 +354,7 @@ body.employee-dashboard {
   padding: 7px 8px 4px;
   border-radius: 10px;
   background: transparent;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -406,18 +383,19 @@ body.employee-dashboard {
 
 .ponto-action-area {
   display: grid;
-  flex: 1 0 clamp(190px, 30dvh, 250px);
+  flex: 0 0 auto;
   place-items: center;
   width: 100%;
-  min-height: 190px;
-  padding: clamp(32px, 5dvh, 48px) 0 clamp(24px, 4dvh, 36px);
+  min-height: clamp(168px, 27dvh, 220px);
+  padding: clamp(22px, 4dvh, 32px) 0 clamp(26px, 4dvh, 36px);
 }
 
 .ponto-action {
-  --ponto-action-color: #1450f0;
-  --ponto-action-hover: #0040cc;
-  --ponto-action-ring: rgba(20, 80, 240, 0.09);
-  --ponto-action-shadow: rgba(20, 80, 240, 0.34);
+  --ponto-action-color: #6b7280;
+  --ponto-action-hover: #5a606c;
+  --ponto-action-border: rgba(255, 255, 255, 0.24);
+  --ponto-action-ring: rgba(107, 114, 128, 0.1);
+  --ponto-action-shadow: rgba(107, 114, 128, 0.24);
   position: relative;
   display: grid;
   place-items: center;
@@ -426,7 +404,7 @@ body.employee-dashboard {
   flex: 0 0 auto;
   padding: 12px;
   overflow: hidden;
-  border: 0;
+  border: 1px solid var(--ponto-action-border);
   border-radius: 50%;
   background-color: var(--ponto-action-color);
   box-shadow:
@@ -436,55 +414,58 @@ body.employee-dashboard {
   color: #ffffff;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease, transform 160ms ease;
+  transition:
+    background-color 260ms ease,
+    border-color 260ms ease,
+    box-shadow 260ms ease,
+    opacity 240ms ease,
+    transform 240ms ease;
 }
 
-.ponto-action[data-state="ENTRADA"],
-.ponto-action[data-state="LOADING"] {
+.ponto-action.is-entrada {
   --ponto-action-color: #1450f0;
   --ponto-action-hover: #0040cc;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
   --ponto-action-ring: rgba(20, 80, 240, 0.09);
   --ponto-action-shadow: rgba(20, 80, 240, 0.34);
-  background-color: #1450f0;
 }
 
-.ponto-action[data-state="SAIDA_ALMOCO"] {
+.ponto-action.is-saida-almoco {
   --ponto-action-color: #d97706;
   --ponto-action-hover: #b96005;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
   --ponto-action-ring: rgba(217, 119, 6, 0.1);
   --ponto-action-shadow: rgba(217, 119, 6, 0.3);
-  background-color: #d97706;
 }
 
-.ponto-action[data-state="RETORNO_ALMOCO"],
-.ponto-action[data-state="CONFIRMADO"],
-.ponto-action[data-state="SYNC_PENDING"] {
+.ponto-action.is-retorno-almoco,
+.ponto-action.is-success,
+.ponto-action.is-sync-pending {
   --ponto-action-color: #0c7c4e;
   --ponto-action-hover: #08643f;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
   --ponto-action-ring: rgba(12, 124, 78, 0.1);
   --ponto-action-shadow: rgba(12, 124, 78, 0.3);
-  background-color: #0c7c4e;
 }
 
-.ponto-action[data-state="SAIDA"] {
+.ponto-action.is-saida {
   --ponto-action-color: #1251a3;
   --ponto-action-hover: #0d4388;
+  --ponto-action-border: rgba(255, 255, 255, 0.28);
   --ponto-action-ring: rgba(18, 81, 163, 0.1);
   --ponto-action-shadow: rgba(18, 81, 163, 0.3);
-  background-color: #1251a3;
 }
 
-.ponto-action[data-state="CONCLUIDA"],
-.ponto-action[data-state="ERRO"] {
+.ponto-action.is-concluido {
   --ponto-action-color: #6b7280;
   --ponto-action-hover: #5a606c;
+  --ponto-action-border: rgba(255, 255, 255, 0.22);
   --ponto-action-ring: rgba(107, 114, 128, 0.1);
   --ponto-action-shadow: rgba(107, 114, 128, 0.24);
-  background-color: #6b7280;
 }
 
 .ponto-action:hover:not(:disabled) {
-  background: var(--ponto-action-hover);
+  background-color: var(--ponto-action-hover);
   transform: translateY(-2px);
 }
 
@@ -507,14 +488,14 @@ body.employee-dashboard {
 }
 
 .ponto-action.is-loading:disabled,
-.ponto-action.is-registering:disabled,
 .ponto-action.is-sync-pending:disabled {
   cursor: progress;
 }
 
-.ponto-action.is-registering:disabled,
-.ponto-action.is-confirmed:disabled,
+.ponto-action.is-loading:disabled,
+.ponto-action.is-success:disabled,
 .ponto-action.is-sync-pending:disabled,
+.ponto-action.is-concluido:disabled,
 .ponto-action.is-unavailable:disabled {
   opacity: 1;
   box-shadow:
@@ -522,7 +503,7 @@ body.employee-dashboard {
     0 16px 34px var(--ponto-action-shadow);
 }
 
-.ponto-action.is-confirmed {
+.ponto-action.is-success {
   transform: scale(1.035);
 }
 
@@ -574,19 +555,17 @@ body.employee-dashboard {
   animation: ponto-action-spin 0.72s linear infinite;
 }
 
-.ponto-action.is-loading .ponto-action-icon,
-.ponto-action.is-registering .ponto-action-icon {
+.ponto-action.is-loading .ponto-action-icon {
   display: none;
 }
 
-.ponto-action.is-loading .ponto-action-spinner,
-.ponto-action.is-registering .ponto-action-spinner {
+.ponto-action.is-loading .ponto-action-spinner {
   display: block;
 }
 
 .ponto-btn-label {
   max-width: 88%;
-  font-size: clamp(10px, 3vw, 13px);
+  font-size: clamp(12px, 3vw, 13px);
   font-weight: 750;
   line-height: 1.14;
   text-align: center;
@@ -594,7 +573,36 @@ body.employee-dashboard {
 }
 
 .ponto-action.is-sync-pending .ponto-btn-label {
-  font-size: clamp(9px, 2.7vw, 11px);
+  font-size: clamp(10px, 2.7vw, 11px);
+}
+
+.ponto-state-retry {
+  min-height: 48px;
+  margin-top: -18px;
+  padding: 10px 16px;
+  border: 1px solid rgba(20, 80, 240, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ponto-state-retry[hidden] {
+  display: none;
+}
+
+.ponto-state-retry:focus-visible {
+  outline: 3px solid rgba(20, 80, 240, 0.35);
+  outline-offset: 3px;
+}
+
+.ponto-state-retry:disabled {
+  color: #6b7280;
+  cursor: progress;
+  opacity: 0.72;
 }
 
 .ponto-action-announcer {
@@ -613,66 +621,133 @@ body.employee-dashboard {
   to { transform: rotate(360deg); }
 }
 
+dialog.ponto-confirm {
+  --confirm-action-color: #1450f0;
+  --confirm-action-soft: rgba(20, 80, 240, 0.1);
+  align-items: end;
+  justify-items: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: rgba(20, 20, 20, 0.28);
+  backdrop-filter: blur(2px);
+}
+
+dialog.ponto-confirm::backdrop {
+  background: transparent;
+}
+
+dialog.ponto-confirm.is-saida-almoco {
+  --confirm-action-color: #d97706;
+  --confirm-action-soft: rgba(217, 119, 6, 0.11);
+}
+
+dialog.ponto-confirm.is-retorno-almoco {
+  --confirm-action-color: #0c7c4e;
+  --confirm-action-soft: rgba(12, 124, 78, 0.1);
+}
+
+dialog.ponto-confirm.is-saida {
+  --confirm-action-color: #1251a3;
+  --confirm-action-soft: rgba(18, 81, 163, 0.1);
+}
+
 .ponto-confirm-card {
+  width: min(100%, 430px);
+  padding: 10px 16px 14px;
+  border: 1px solid rgba(20, 20, 20, 0.07);
+  border-radius: 24px 24px 16px 16px;
+  background: #ffffff;
+  box-shadow: 0 -10px 34px rgba(20, 20, 20, 0.14);
   text-align: center;
+  animation: ponto-sheet-enter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.confirm-handle {
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.18);
 }
 
 .confirm-icon-wrap {
   display: grid;
   place-items: center;
-  width: 58px;
-  height: 58px;
-  margin: 0 auto 16px;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 10px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--color-primary) 8%, white);
-  color: var(--color-primary);
-  font-size: 10px;
-  font-weight: 700;
+  background: var(--confirm-action-color);
+  box-shadow: 0 7px 18px var(--confirm-action-soft);
 }
 
 .confirm-icon-wrap img {
-  width: 24px;
-  height: 24px;
-  filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
+  width: 21px;
+  height: 21px;
+  filter: brightness(0) invert(1);
 }
 
 .confirm-title {
-  font-size: 19px;
+  color: var(--color-text);
+  font-size: 18px;
   font-weight: 700;
+  line-height: 1.25;
+}
+
+.confirm-schedule {
+  margin-top: 7px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .confirm-time {
-  display: block;
-  min-height: 1px;
-  margin-top: 7px;
-  color: var(--color-primary);
-  font-size: 28px;
+  color: var(--confirm-action-color);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
 }
 
-.confirm-time:empty {
-  display: none;
-}
-
 .confirm-sub {
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--color-text-muted);
   font-size: 13px;
+  line-height: 1.4;
 }
 
 .confirm-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 22px;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.ponto-confirm .confirm-submit {
+  min-height: 48px;
+  border-color: var(--confirm-action-color);
+  background: var(--confirm-action-color);
+  box-shadow: 0 8px 18px var(--confirm-action-soft);
+  color: #ffffff;
+}
+
+.ponto-confirm .confirm-submit:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.ponto-confirm .confirm-submit.is-submitting::before {
+  content: "";
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.38);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: ponto-action-spin 0.72s linear infinite;
 }
 
 .confirm-cancel {
+  min-height: 48px;
   border-color: rgba(20, 20, 20, 0.12);
-  background: var(--color-surface);
+  background: transparent;
   box-shadow: none;
-  color: var(--color-text);
+  color: var(--color-text-muted);
 }
 
 .confirm-cancel:hover:not(:disabled) {
@@ -680,8 +755,28 @@ body.employee-dashboard {
   background: var(--color-bg);
 }
 
-.confirm-submit {
-  min-height: 48px;
+@keyframes ponto-sheet-enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 375px) {
+  dialog.ponto-confirm {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ponto-confirm-card {
+    animation: none;
+  }
 }
 
 .journey-card .employee-state {
@@ -691,20 +786,6 @@ body.employee-dashboard {
 }
 
 @media (max-width: 350px) {
-  .employee-dashboard::before {
-    right: -38px;
-    width: 64px;
-    height: 64px;
-    border-width: 10px;
-  }
-
-  .employee-dashboard::after {
-    left: -34px;
-    width: 56px;
-    height: 56px;
-    border-width: 9px;
-  }
-
   .employee-dashboard .employee-main {
     padding-right: 12px;
     padding-left: 12px;
@@ -744,7 +825,6 @@ body.employee-dashboard {
   .journey-title {
     margin-right: 7px;
     margin-left: 7px;
-    font-size: 9px;
   }
 
   .journey-step:not(:last-child)::after {
@@ -757,12 +837,4 @@ body.employee-dashboard {
     height: 38px;
   }
 
-  .journey-step-label {
-    font-size: 10px;
-  }
-
-  .journey-step-state,
-  .journey-step-time {
-    font-size: 8px;
-  }
 }

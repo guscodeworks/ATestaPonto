@@ -7,10 +7,10 @@
   <link rel="icon" href="/assets/img/favicon.svg"/>
   <link rel="stylesheet" href="/assets/css/tokens.css"/>
   <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260803-employee-base"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260803-dashboard-redesign"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260804-confirm-sheet"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
-  <script src="/assets/js/funcionario/ponto.js?v=20260803-dashboard-redesign" defer></script>
+  <script src="/assets/js/funcionario/ponto.js?v=20260804-confirm-sheet" defer></script>
 </head>
 <body class="employee-area employee-dashboard">
 
@@ -57,7 +57,7 @@
       </section>
 
       <div class="ponto-action-area">
-        <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" onclick="baterPonto()" aria-label="Carregando estado do ponto" disabled>
+        <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" aria-label="Carregando estado do ponto" aria-busy="true" disabled>
           <span class="ponto-action-copy">
             <span class="ponto-action-visual" aria-hidden="true">
               <img class="ponto-action-icon" id="btn-icon" src="/assets/icons/clock.svg" alt="" width="22" height="22"/>
@@ -65,6 +65,9 @@
             </span>
             <span class="ponto-btn-label" id="btn-label">Carregando</span>
           </span>
+        </button>
+        <button class="ponto-state-retry" id="retry-ponto-state" type="button" hidden>
+          Recarregar estado
         </button>
         <span class="ponto-action-announcer" id="ponto-action-announcer" aria-live="polite" aria-atomic="true"></span>
       </div>
@@ -89,22 +92,25 @@
   </div>
 </nav>
 
-<dialog class="employee-modal ponto-confirm" id="confirm-modal" aria-labelledby="confirm-title" aria-describedby="confirm-sub">
+<dialog class="employee-modal ponto-confirm" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-schedule confirm-sub">
   <div class="employee-modal-card ponto-confirm-card">
+    <span class="confirm-handle" aria-hidden="true"></span>
     <div class="confirm-icon-wrap" aria-hidden="true">
       <img id="confirm-icon" src="/assets/icons/clock.svg" alt="" width="24" height="24"/>
     </div>
     <h2 class="confirm-title" id="confirm-title">Confirmar registro</h2>
-    <time class="confirm-time" id="confirm-time"></time>
-    <p class="confirm-sub" id="confirm-sub">Confirme antes de registrar o ponto.</p>
-    <div class="confirm-actions" id="confirm-actions">
-      <button class="employee-button confirm-cancel" id="confirm-cancel" type="button" onclick="fecharConfirm()">
-        Cancelar
-      </button>
-      <button class="employee-button employee-button-primary confirm-submit" id="confirm-submit" type="button" onclick="confirmarRegistroPonto()">
+    <p class="confirm-schedule" id="confirm-schedule">
+      Horário previsto: <time class="confirm-time" id="confirm-time"></time>
+    </p>
+    <p class="confirm-sub" id="confirm-sub">Sua localização será verificada.</p>
+    <form class="confirm-actions" id="confirm-form">
+      <button class="employee-button employee-button-primary confirm-submit" id="confirm-submit" type="submit">
         Confirmar
       </button>
-    </div>
+      <button class="employee-button confirm-cancel" id="confirm-cancel" type="button">
+        Cancelar
+      </button>
+    </form>
   </div>
 </dialog>
 

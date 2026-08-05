@@ -24,15 +24,26 @@ html {
 }
 
 body.employee-area {
+  position: relative;
+  isolation: isolate;
   min-width: 320px;
   min-height: 100dvh;
   overflow-x: hidden;
-  background: var(--color-bg);
+  background: transparent;
   color: var(--color-text);
   font-family: var(--font-main);
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+body.employee-area::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background: url("/assets/img/background-mobile.webp") center top / cover no-repeat;
+  pointer-events: none;
 }
 
 .employee-area [hidden] {
@@ -77,6 +88,7 @@ body.employee-area {
   flex-direction: column;
   width: 100%;
   max-width: 430px;
+  overflow-x: clip;
   min-height: 100dvh;
   margin: 0 auto;
 }
@@ -90,8 +102,9 @@ body.employee-area {
   gap: 12px;
   min-height: 72px;
   padding: 10px 16px;
-  border-bottom: 1px solid rgba(20, 20, 20, 0.07);
-  background: rgba(248, 249, 252, 0.94);
+  border-bottom: 1px solid rgba(20, 80, 240, 0.1);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 5px 18px rgba(20, 80, 240, 0.08);
   backdrop-filter: blur(14px);
 }
 
@@ -101,6 +114,7 @@ body.employee-area {
   align-items: center;
   gap: 11px;
   min-width: 0;
+  min-height: 48px;
   border-radius: var(--radius-card);
 }
 
@@ -161,16 +175,21 @@ body.employee-area {
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  padding: 10px 16px calc(96px + env(safe-area-inset-bottom));
+  min-width: 0;
+  padding: 10px 16px calc(104px + env(safe-area-inset-bottom));
 }
 
 .employee-card {
   width: 100%;
+  min-width: 0;
   overflow: hidden;
-  border: 1px solid rgba(20, 20, 20, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: 20px;
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 12px 28px rgba(20, 80, 240, 0.1),
+    0 2px 8px rgba(20, 20, 20, 0.06);
+  backdrop-filter: blur(10px);
 }
 
 .employee-card-header {
@@ -184,7 +203,7 @@ body.employee-area {
 
 .employee-card-eyebrow {
   color: var(--color-primary);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.11em;
   text-transform: uppercase;
@@ -285,7 +304,7 @@ body.employee-area {
   padding: 4px 8px;
   border-radius: 12px;
   color: var(--color-text-muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -301,7 +320,7 @@ body.employee-area {
 }
 
 .employee-bottom-nav-icon img {
-  opacity: 0.62;
+  opacity: 0.72;
 }
 
 .employee-bottom-nav-link.active img {

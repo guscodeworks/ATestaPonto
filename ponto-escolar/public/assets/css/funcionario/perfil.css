@@ -1,37 +1,5 @@
 /* Perfil mobile do funcionario. */
 
-body.employee-profile {
-  background:
-    radial-gradient(ellipse 86% 27% at 72% 10%, rgba(20, 80, 240, 0.12) 0, rgba(20, 80, 240, 0.035) 48%, transparent 76%),
-    radial-gradient(circle at 0 94%, rgba(240, 20, 20, 0.05) 0, transparent 27%),
-    linear-gradient(180deg, #f8f9fc 0%, #fbfcff 48%, #f8f9fc 100%);
-}
-
-.employee-profile::before,
-.employee-profile::after {
-  content: "";
-  position: fixed;
-  z-index: 0;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.employee-profile::before {
-  top: 188px;
-  right: -42px;
-  width: 76px;
-  height: 76px;
-  border: 12px solid rgba(20, 80, 240, 0.05);
-}
-
-.employee-profile::after {
-  bottom: 92px;
-  left: -38px;
-  width: 66px;
-  height: 66px;
-  border: 11px solid rgba(240, 20, 20, 0.04);
-}
-
 .employee-profile .employee-header {
   position: relative;
   min-height: 72px;
@@ -40,7 +8,7 @@ body.employee-profile {
   overflow: hidden;
   border-bottom: 1px solid rgba(20, 80, 240, 0.09);
   border-radius: 0 0 12px 12px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 5px 16px rgba(20, 80, 240, 0.075);
 }
 
@@ -90,7 +58,7 @@ body.employee-profile {
 
 .employee-profile .employee-role {
   color: #737985;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .employee-profile .employee-brand-frame {
@@ -115,17 +83,22 @@ body.employee-profile {
 .profile-main {
   gap: 14px;
   padding-top: 18px;
-  padding-bottom: calc(94px + env(safe-area-inset-bottom));
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
 }
 
 .profile-page-heading {
-  padding: 0 2px 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 6px 18px rgba(20, 80, 240, 0.06);
+  backdrop-filter: blur(8px);
 }
 
 .profile-page-heading p,
 .profile-card-header p {
   color: var(--color-primary);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -147,7 +120,7 @@ body.employee-profile {
   min-height: 118px;
   padding: 20px 18px;
   overflow: hidden;
-  border-color: rgba(20, 80, 240, 0.1);
+  border-color: rgba(255, 255, 255, 0.8);
   box-shadow:
     0 14px 30px rgba(20, 80, 240, 0.1),
     0 2px 6px rgba(20, 20, 20, 0.035);
@@ -234,7 +207,7 @@ body.employee-profile {
   border-radius: 999px;
   background: var(--color-success-bg);
   color: var(--color-success);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -253,7 +226,7 @@ body.employee-profile {
 
 .profile-card {
   position: relative;
-  border-color: rgba(20, 80, 240, 0.085);
+  border-color: rgba(255, 255, 255, 0.8);
   border-radius: 16px;
   box-shadow:
     0 10px 24px rgba(20, 80, 240, 0.075),
@@ -312,7 +285,7 @@ body.employee-profile {
 .profile-data-row dt,
 .profile-schedule-item dt {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -336,7 +309,7 @@ body.employee-profile {
 .profile-schedule-item {
   min-width: 0;
   padding: 12px 10px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .profile-schedule-item dd {
@@ -357,7 +330,7 @@ body.employee-profile {
   border-radius: 12px;
   background: var(--color-info-bg);
   color: #4d5869;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -378,7 +351,7 @@ body.employee-profile {
   padding: 12px 16px;
   border: 1px solid rgba(240, 20, 20, 0.2);
   border-radius: 13px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 7px 18px rgba(240, 20, 20, 0.06);
   color: var(--color-accent);
   font-size: 13px;
@@ -443,11 +416,6 @@ body.employee-profile {
 }
 
 @media (max-width: 350px) {
-  .employee-profile::before,
-  .employee-profile::after {
-    opacity: 0.55;
-  }
-
   .profile-main {
     padding-right: 14px;
     padding-left: 14px;

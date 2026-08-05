@@ -1,37 +1,5 @@
 /* Historico mobile do funcionario. */
 
-body.employee-report {
-  background:
-    radial-gradient(ellipse 86% 27% at 72% 10%, rgba(20, 80, 240, 0.12) 0, rgba(20, 80, 240, 0.035) 48%, transparent 76%),
-    radial-gradient(circle at 0 94%, rgba(240, 20, 20, 0.05) 0, transparent 27%),
-    linear-gradient(180deg, #f8f9fc 0%, #fbfcff 48%, #f8f9fc 100%);
-}
-
-.employee-report::before,
-.employee-report::after {
-  content: "";
-  position: fixed;
-  z-index: 0;
-  border-radius: 50%;
-  pointer-events: none;
-}
-
-.employee-report::before {
-  top: 190px;
-  right: -42px;
-  width: 76px;
-  height: 76px;
-  border: 12px solid rgba(20, 80, 240, 0.05);
-}
-
-.employee-report::after {
-  bottom: 92px;
-  left: -38px;
-  width: 66px;
-  height: 66px;
-  border: 11px solid rgba(240, 20, 20, 0.04);
-}
-
 .employee-report .employee-header {
   position: relative;
   min-height: 72px;
@@ -40,7 +8,7 @@ body.employee-report {
   overflow: hidden;
   border-bottom: 1px solid rgba(20, 80, 240, 0.09);
   border-radius: 0 0 12px 12px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 5px 16px rgba(20, 80, 240, 0.075);
 }
 
@@ -86,7 +54,7 @@ body.employee-report {
 
 .employee-report .employee-role {
   color: #737985;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .employee-report .employee-brand-frame {
@@ -111,11 +79,16 @@ body.employee-report {
 .report-main {
   gap: 14px;
   padding-top: 18px;
-  padding-bottom: calc(94px + env(safe-area-inset-bottom));
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
 }
 
 .report-page-heading {
-  padding: 0 2px 2px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 6px 18px rgba(20, 80, 240, 0.06);
+  backdrop-filter: blur(8px);
 }
 
 .report-page-heading p,
@@ -123,7 +96,7 @@ body.employee-report {
 .report-summary-header p,
 .report-history-header p {
   color: var(--color-primary);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -140,7 +113,7 @@ body.employee-report {
 .report-filter-card,
 .report-summary {
   position: relative;
-  border-color: rgba(20, 80, 240, 0.09);
+  border-color: rgba(255, 255, 255, 0.8);
   border-radius: 16px;
   box-shadow:
     0 10px 24px rgba(20, 80, 240, 0.075),
@@ -212,7 +185,7 @@ body.employee-report {
 
 .report-month-field span {
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -257,14 +230,15 @@ body.employee-report {
 .report-summary-grid > div {
   min-width: 0;
   padding: 12px 10px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .report-summary-grid dt {
   color: var(--color-text-muted);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
+  line-height: 1.25;
   text-transform: uppercase;
 }
 
@@ -272,7 +246,7 @@ body.employee-report {
   margin-top: 5px;
   overflow: hidden;
   color: #343840;
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   line-height: 1.35;
@@ -294,7 +268,7 @@ body.employee-report {
   border-radius: 999px;
   background: rgba(20, 80, 240, 0.07);
   color: var(--color-primary);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -305,10 +279,13 @@ body.employee-report {
   justify-content: center;
   min-height: 190px;
   padding: 28px 20px;
-  border: 1px solid rgba(20, 80, 240, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 16px;
-  background: var(--color-surface);
-  box-shadow: 0 10px 24px rgba(20, 80, 240, 0.07);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 12px 28px rgba(20, 80, 240, 0.1),
+    0 2px 8px rgba(20, 20, 20, 0.06);
+  backdrop-filter: blur(10px);
   text-align: center;
 }
 
@@ -329,7 +306,7 @@ body.employee-report {
   max-width: 270px;
   margin-top: 5px;
   color: var(--color-text-muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.55;
 }
 
@@ -353,7 +330,7 @@ body.employee-report {
 
 .report-state-unavailable {
   border-style: dashed;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .report-retry {
@@ -383,11 +360,14 @@ body.employee-report {
 
 .report-day-card {
   overflow: hidden;
-  border: 1px solid rgba(20, 20, 20, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.8);
   border-left: 4px solid var(--report-status-color, var(--color-text-muted));
   border-radius: 15px;
-  background: var(--color-surface);
-  box-shadow: 0 8px 20px rgba(20, 80, 240, 0.065);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 12px 28px rgba(20, 80, 240, 0.1),
+    0 2px 8px rgba(20, 20, 20, 0.06);
+  backdrop-filter: blur(10px);
 }
 
 .report-day-card.is-complete {
@@ -434,7 +414,7 @@ body.employee-report {
   border-radius: 999px;
   background: var(--report-status-bg, rgba(107, 114, 128, 0.08));
   color: var(--report-status-color, var(--color-text-muted));
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -447,13 +427,13 @@ body.employee-report {
 
 .report-day-time {
   padding: 11px 13px;
-  background: var(--color-surface);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .report-day-time span {
   display: block;
   color: var(--color-text-muted);
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -468,7 +448,7 @@ body.employee-report {
 .report-day-total {
   padding: 10px 14px;
   color: var(--color-text-muted);
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .report-day-total strong {
@@ -528,11 +508,6 @@ body.employee-report {
 }
 
 @media (max-width: 350px) {
-  .employee-report::before,
-  .employee-report::after {
-    opacity: 0.55;
-  }
-
   .report-main {
     padding-right: 14px;
     padding-left: 14px;
@@ -547,7 +522,4 @@ body.employee-report {
     padding-left: 8px;
   }
 
-  .report-summary-grid dd {
-    font-size: 10px;
-  }
 }

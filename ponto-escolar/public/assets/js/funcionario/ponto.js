@@ -36,7 +36,8 @@ const ETAPAS = Object.freeze([
     campo: 'entrada',
     label: 'Entrada',
     rotuloCard: 'Entrada',
-    botao: 'Registrar entrada',
+    botao: 'REGISTRAR ENTRADA',
+    confirmacao: 'Registrar entrada?',
     asset: '/assets/icons/clock.svg'
   },
   {
@@ -44,7 +45,8 @@ const ETAPAS = Object.freeze([
     campo: 'saida_almoco',
     label: 'Saída para almoço',
     rotuloCard: 'Almoço',
-    botao: 'Iniciar almoço',
+    botao: 'INICIAR ALMOÇO',
+    confirmacao: 'Iniciar almoço?',
     asset: '/assets/icons/timer.svg'
   },
   {
@@ -52,7 +54,8 @@ const ETAPAS = Object.freeze([
     campo: 'retorno_almoco',
     label: 'Retorno do almoço',
     rotuloCard: 'Retorno',
-    botao: 'Retornar do almoço',
+    botao: 'RETORNAR DO ALMOÇO',
+    confirmacao: 'Retornar do almoço?',
     asset: '/assets/icons/arrow-up-right.svg'
   },
   {
@@ -60,29 +63,51 @@ const ETAPAS = Object.freeze([
     campo: 'saida',
     label: 'Saída',
     rotuloCard: 'Saída',
-    botao: 'Registrar saída',
+    botao: 'REGISTRAR SAÍDA',
+    confirmacao: 'Registrar saída?',
     asset: '/assets/icons/log-out.svg'
   }
 ]);
 
 const ETAPAS_POR_TIPO = new Map(ETAPAS.map((etapa) => [etapa.tipo, etapa]));
-const TIPOS_PROXIMA_BATIDA = new Set([...ETAPAS_POR_TIPO.keys(), null]);
+const TIPOS_PROXIMA_BATIDA = new Set([
+  ...ETAPAS_POR_TIPO.keys(),
+  'CONCLUIDO',
+  null
+]);
+const CLASSE_ACAO_POR_TIPO = Object.freeze({
+  ENTRADA: 'is-entrada',
+  SAIDA_ALMOCO: 'is-saida-almoco',
+  RETORNO_ALMOCO: 'is-retorno-almoco',
+  SAIDA: 'is-saida',
+  CONCLUIDO: 'is-concluido',
+  CONCLUIDA: 'is-concluido'
+});
+const CLASSES_ACAO_BOTAO = Object.freeze([
+  'is-entrada',
+  'is-saida-almoco',
+  'is-retorno-almoco',
+  'is-saida',
+  'is-concluido'
+]);
 const CLASSES_ESTADO_BOTAO = [
+  ...CLASSES_ACAO_BOTAO,
   'is-loading',
   'is-unavailable',
-  'is-registering',
-  'is-confirmed',
+  'is-success',
   'is-sync-pending'
 ];
 const FEEDBACK_REGISTRO_MINIMO_MS = 700;
-const ATRASO_REPETICAO_GET_MS = 900;
 
 let estadoHoje = null;
 let carregandoHoje = false;
 let promessaCarregamentoHoje = null;
-let registrando = false;
+let promessaSincronizacaoRegistro = null;
+let isSubmitting = false;
 let registroConfirmadoPendenteAtualizacao = false;
 let temporizadorRedirecionamento = null;
+let eventosPontoInicializados = false;
+let focoAntesDoModal = null;
 
 class ApiError extends Error {
   constructor(message, { status = 0, code = '' } = {}) {
@@ -136,7 +161,7 @@ function validarContratoHoje(data) {
     !data.ponto ||
     typeof data.funcionario.nome !== 'string' ||
     typeof data.funcionario.cargo !== 'string' ||
-    !TIPOS_PROXIMA_BATIDA.has(data.proxima_batida) ||
+    (data.proxima_batida !== null && typeof data.proxima_batida !== 'string') ||
     typeof data.jornada_concluida !== 'boolean'
   ) {
     throw new ApiError('A API retornou dados inválidos para o ponto de hoje.', {
@@ -237,15 +262,18 @@ function aplicarEstadoBotao({
   texto,
   icone = '/assets/icons/clock.svg',
   desabilitado,
+  ocupado = false,
   classes = [],
   anuncio = ''
 }) {
   const button = getElement('btn-ponto');
   const estadoAnterior = button.dataset.state;
   const textoAnterior = getElement('btn-label').textContent;
-  definirEstadoBotao(button, ...classes);
+  const classeAcao = CLASSE_ACAO_POR_TIPO[estado] || null;
+  definirEstadoBotao(button, classeAcao, ...classes);
   button.dataset.state = estado;
   button.disabled = desabilitado;
+  button.setAttribute('aria-busy', String(ocupado));
   button.setAttribute('aria-label', texto);
   getElement('btn-icon').src = icone;
   getElement('btn-label').textContent = texto;
@@ -286,6 +314,7 @@ function mostrarSkeleton() {
     estado: 'LOADING',
     texto: 'Carregando',
     desabilitado: true,
+    ocupado: true,
     classes: ['is-loading']
   });
 }
@@ -350,28 +379,36 @@ function renderTimeline(ponto, jornada, proximaBatida) {
 function mostrarEstadoRegistrando(etapa) {
   aplicarEstadoBotao({
     estado: etapa.tipo,
-    texto: 'Registrando...',
+    texto: 'REGISTRANDO...',
     icone: etapa.asset,
     desabilitado: true,
-    classes: ['is-registering'],
+    ocupado: true,
+    classes: ['is-loading'],
     anuncio: `${etapa.label}: registrando ponto.`
   });
 }
 
-function mostrarEstadoConfirmado({ atualizando = false } = {}) {
-  const texto = atualizando
-    ? 'Registro confirmado — atualizando...'
-    : 'Registro confirmado';
+function mostrarEstadoConfirmado() {
   aplicarEstadoBotao({
-    estado: atualizando ? 'SYNC_PENDING' : 'CONFIRMADO',
-    texto,
+    estado: 'CONFIRMADO',
+    texto: 'REGISTRO CONFIRMADO',
     icone: '/assets/icons/circle-check.svg',
     desabilitado: true,
-    classes: [atualizando ? 'is-sync-pending' : 'is-confirmed'],
-    anuncio: atualizando
-      ? 'Registro confirmado. Atualizando os dados da jornada.'
-      : 'Registro confirmado com sucesso.'
+    classes: ['is-success'],
+    anuncio: 'Registro confirmado com sucesso.'
   });
+}
+
+function mostrarEstadoAtualizacaoPendente() {
+  aplicarEstadoBotao({
+    estado: 'SYNC_PENDING',
+    texto: 'ATUALIZE PARA CONTINUAR',
+    icone: '/assets/icons/clock.svg',
+    desabilitado: true,
+    classes: ['is-sync-pending'],
+    anuncio: 'Registro confirmado. Atualize o estado antes de continuar.'
+  });
+  getElement('retry-ponto-state').hidden = false;
 }
 
 function renderEstado() {
@@ -383,7 +420,7 @@ function renderEstado() {
   if (!estadoHoje) {
     aplicarEstadoBotao({
       estado: 'ERRO',
-      texto: 'Ponto indisponível',
+      texto: 'INDISPONÍVEL',
       icone: '/assets/icons/circle-x.svg',
       desabilitado: true,
       classes: ['is-unavailable']
@@ -392,16 +429,17 @@ function renderEstado() {
   }
 
   const proximaBatida = estadoHoje.proxima_batida;
-  const etapa = ETAPAS_POR_TIPO.get(proximaBatida);
-  const concluida = estadoHoje.jornada_concluida || proximaBatida === null;
+  const concluida =
+    estadoHoje.jornada_concluida ||
+    proximaBatida === null ||
+    proximaBatida === 'CONCLUIDO';
 
   if (concluida) {
     aplicarEstadoBotao({
       estado: 'CONCLUIDA',
-      texto: 'Jornada concluída',
+      texto: 'JORNADA CONCLUÍDA',
       icone: '/assets/icons/circle-check.svg',
       desabilitado: true,
-      classes: ['is-unavailable'],
       anuncio: 'Jornada concluída.'
     });
     nextLabel.textContent = 'Todos os registros de hoje foram concluídos';
@@ -409,16 +447,32 @@ function renderEstado() {
     return;
   }
 
-  if (registrando) {
+  const etapa = ETAPAS_POR_TIPO.get(proximaBatida);
+  if (!etapa || !TIPOS_PROXIMA_BATIDA.has(proximaBatida)) {
+    aplicarEstadoBotao({
+      estado: 'INDISPONIVEL',
+      texto: 'INDISPONÍVEL',
+      icone: '/assets/icons/circle-x.svg',
+      desabilitado: true,
+      classes: ['is-unavailable'],
+      anuncio: 'Próxima ação indisponível.'
+    });
+    nextLabel.textContent = 'Próximo registro indisponível';
+    nextTime.textContent = '';
+    return;
+  }
+
+  if (isSubmitting) {
     mostrarEstadoRegistrando(etapa);
     return;
   }
 
   aplicarEstadoBotao({
     estado: etapa.tipo,
-    texto: carregandoHoje ? 'Atualizando...' : etapa.botao,
+    texto: carregandoHoje ? 'ATUALIZANDO...' : etapa.botao,
     icone: etapa.asset,
     desabilitado: carregandoHoje,
+    ocupado: carregandoHoje,
     classes: carregandoHoje ? ['is-loading'] : [],
     anuncio: carregandoHoje ? '' : `Próxima ação: ${etapa.botao}.`
   });
@@ -484,7 +538,7 @@ function tratarErroCarregamento(error, { notificar = true } = {}) {
 
   aplicarEstadoBotao({
     estado: 'ERRO',
-    texto: 'Ponto indisponível',
+    texto: 'INDISPONÍVEL',
     icone: '/assets/icons/circle-x.svg',
     desabilitado: true,
     classes: ['is-unavailable'],
@@ -535,6 +589,7 @@ function carregarPontoHoje({
 
 function abrirModal() {
   const modal = getElement('confirm-modal');
+  focoAntesDoModal = getElement('btn-ponto');
   modal.classList.add('show');
   if (typeof modal.showModal === 'function' && !modal.open) {
     modal.showModal();
@@ -543,20 +598,30 @@ function abrirModal() {
 
 function definirDialogOcupado(valor) {
   const modal = getElement('confirm-modal');
+  const confirmar = getElement('confirm-submit');
   modal.setAttribute('aria-busy', String(valor));
   getElement('confirm-cancel').disabled = valor;
-  getElement('confirm-submit').disabled = valor;
+  confirmar.disabled = valor;
+  confirmar.classList.toggle('is-submitting', valor);
+  confirmar.textContent = valor ? 'Registrando...' : 'Confirmar';
+}
+
+function aplicarEstadoConfirmacao(tipo) {
+  const modal = getElement('confirm-modal');
+  modal.classList.remove(...CLASSES_ACAO_BOTAO);
+  const classe = CLASSE_ACAO_POR_TIPO[tipo];
+  if (classe) modal.classList.add(classe);
 }
 
 function mostrarConfirmacaoRegistro() {
   const etapa = ETAPAS_POR_TIPO.get(estadoHoje?.proxima_batida);
   if (!etapa) return;
 
-  getElement('confirm-title').textContent = `Confirmar ${etapa.label.toLowerCase()}`;
+  aplicarEstadoConfirmacao(etapa.tipo);
+  getElement('confirm-title').textContent = etapa.confirmacao;
   getElement('confirm-time').textContent = formatarHorario(estadoHoje.jornada[etapa.campo]);
-  getElement('confirm-sub').textContent = 'A localização será verificada antes de concluir o registro.';
+  getElement('confirm-sub').textContent = 'Sua localização será verificada.';
   getElement('confirm-icon').src = etapa.asset;
-  getElement('confirm-actions').hidden = false;
   definirDialogOcupado(false);
   abrirModal();
   getElement('confirm-submit').focus();
@@ -566,8 +631,9 @@ function baterPonto() {
   if (
     !estadoHoje ||
     estadoHoje.proxima_batida === null ||
+    !ETAPAS_POR_TIPO.has(estadoHoje.proxima_batida) ||
     estadoHoje.jornada_concluida ||
-    registrando ||
+    registroConfirmadoPendenteAtualizacao ||
     carregandoHoje
   ) {
     return;
@@ -576,47 +642,87 @@ function baterPonto() {
   mostrarConfirmacaoRegistro();
 }
 
-function aplicarJornadaAtualizada(data) {
+function aplicarJornadaAtualizada(data, { renderizar = true } = {}) {
   estadoHoje = data;
   registroConfirmadoPendenteAtualizacao = false;
-  registrando = false;
-  renderHoje(data);
+  getElement('retry-ponto-state').hidden = true;
+  if (renderizar) renderHoje(data);
 }
 
 async function sincronizarAposRegistro(confirmadoEm) {
-  let dataAtualizada = null;
-
-  try {
-    dataAtualizada = await buscarPontoHoje();
-  } catch (_error) {
-    dataAtualizada = null;
-  }
+  const tentativa = buscarPontoHoje()
+    .then((data) => ({ data, error: null }))
+    .catch((error) => ({ data: null, error }));
 
   const tempoDecorrido = window.performance.now() - confirmadoEm;
-  await aguardar(Math.max(FEEDBACK_REGISTRO_MINIMO_MS - tempoDecorrido, 0));
+  const [resultado] = await Promise.all([
+    tentativa,
+    aguardar(Math.max(FEEDBACK_REGISTRO_MINIMO_MS - tempoDecorrido, 0))
+  ]);
 
-  if (dataAtualizada) {
-    aplicarJornadaAtualizada(dataAtualizada);
+  if (resultado.data) {
+    aplicarJornadaAtualizada(resultado.data, { renderizar: false });
     return true;
   }
 
-  mostrarEstadoConfirmado({ atualizando: true });
-  await aguardar(ATRASO_REPETICAO_GET_MS);
-
-  try {
-    dataAtualizada = await buscarPontoHoje();
-    aplicarJornadaAtualizada(dataAtualizada);
-    return true;
-  } catch (error) {
-    toast(
-      'Registro confirmado, mas ainda não foi possível atualizar a jornada. Recarregue a página para consultar o estado atual.',
-      'error'
-    );
-    if (error.status === 401 && !temporizadorRedirecionamento) {
-      temporizadorRedirecionamento = window.setTimeout(sair, 1400);
-    }
-    return false;
+  mostrarEstadoAtualizacaoPendente();
+  toast(
+    'Registro confirmado, mas não foi possível atualizar a jornada. Tente recarregar o estado.',
+    'error'
+  );
+  if (resultado.error?.status === 401 && !temporizadorRedirecionamento) {
+    temporizadorRedirecionamento = window.setTimeout(sair, 1400);
   }
+  return false;
+}
+
+function recarregarEstadoAposRegistro() {
+  if (
+    !registroConfirmadoPendenteAtualizacao ||
+    promessaSincronizacaoRegistro
+  ) {
+    return promessaSincronizacaoRegistro || Promise.resolve(null);
+  }
+
+  const retry = getElement('retry-ponto-state');
+  retry.disabled = true;
+  retry.setAttribute('aria-busy', 'true');
+  retry.textContent = 'Atualizando...';
+
+  aplicarEstadoBotao({
+    estado: 'SYNC_PENDING',
+    texto: 'ATUALIZANDO...',
+    icone: '/assets/icons/clock.svg',
+    desabilitado: true,
+    ocupado: true,
+    classes: ['is-sync-pending', 'is-loading']
+  });
+
+  promessaSincronizacaoRegistro = buscarPontoHoje()
+    .then((data) => {
+      isSubmitting = false;
+      aplicarJornadaAtualizada(data);
+      return data;
+    })
+    .catch((error) => {
+      mostrarEstadoAtualizacaoPendente();
+      toast(
+        'Ainda não foi possível atualizar a jornada. Verifique sua conexão e tente novamente.',
+        'error'
+      );
+      if (error.status === 401 && !temporizadorRedirecionamento) {
+        temporizadorRedirecionamento = window.setTimeout(sair, 1400);
+      }
+      return null;
+    })
+    .finally(() => {
+      promessaSincronizacaoRegistro = null;
+      retry.setAttribute('aria-busy', 'false');
+      retry.textContent = 'Recarregar estado';
+      retry.disabled = !registroConfirmadoPendenteAtualizacao;
+    });
+
+  return promessaSincronizacaoRegistro;
 }
 
 function mensagemSeguraRegistro(error) {
@@ -633,8 +739,10 @@ async function confirmarRegistroPonto() {
   if (
     !estadoHoje ||
     estadoHoje.proxima_batida === null ||
+    !ETAPAS_POR_TIPO.has(estadoHoje.proxima_batida) ||
     estadoHoje.jornada_concluida ||
-    registrando ||
+    isSubmitting ||
+    registroConfirmadoPendenteAtualizacao ||
     carregandoHoje
   ) {
     return;
@@ -646,9 +754,10 @@ async function confirmarRegistroPonto() {
   }
 
   const etapa = ETAPAS_POR_TIPO.get(estadoHoje.proxima_batida);
-  registrando = true;
+  let postConfirmado = false;
+  if (isSubmitting) return;
+  isSubmitting = true;
   definirDialogOcupado(true);
-  fecharConfirm();
   mostrarEstadoRegistrando(etapa);
 
   try {
@@ -657,27 +766,76 @@ async function confirmarRegistroPonto() {
       method: 'POST',
       body: { ...location }
     });
+    postConfirmado = true;
+    registroConfirmadoPendenteAtualizacao = true;
+    fecharConfirm({ forcar: true });
+    const confirmadoEm = window.performance.now();
+    mostrarEstadoConfirmado();
+    await sincronizarAposRegistro(confirmadoEm);
   } catch (error) {
-    registrando = false;
-    definirDialogOcupado(false);
-    renderEstado();
-    toast(mensagemSeguraRegistro(error), 'error');
-    if (error.status === 401) {
-      window.setTimeout(sair, 1400);
+    if (!postConfirmado) {
+      toast(mensagemSeguraRegistro(error), 'error');
+      if (error.status === 401) {
+        window.setTimeout(sair, 1400);
+      }
+    } else {
+      mostrarEstadoAtualizacaoPendente();
+      toast(
+        'Registro confirmado, mas não foi possível atualizar a jornada. Tente recarregar o estado.',
+        'error'
+      );
     }
-    return;
+  } finally {
+    if (!postConfirmado || !registroConfirmadoPendenteAtualizacao) {
+      isSubmitting = false;
+    }
+    definirDialogOcupado(false);
+    if (!postConfirmado) renderEstado();
+    else if (!registroConfirmadoPendenteAtualizacao && estadoHoje) renderHoje(estadoHoje);
   }
-
-  registroConfirmadoPendenteAtualizacao = true;
-  const confirmadoEm = window.performance.now();
-  mostrarEstadoConfirmado();
-  await sincronizarAposRegistro(confirmadoEm);
 }
 
-function fecharConfirm() {
+function fecharConfirm({ forcar = false, restaurarFoco = true } = {}) {
+  if (isSubmitting && !forcar) return;
   const modal = getElement('confirm-modal');
   if (modal.open) modal.close();
   modal.classList.remove('show');
+
+  if (restaurarFoco) {
+    const alvoFoco = focoAntesDoModal || getElement('btn-ponto');
+    focoAntesDoModal = null;
+    window.setTimeout(() => {
+      if (alvoFoco && !alvoFoco.disabled) alvoFoco.focus();
+    }, 0);
+  } else {
+    focoAntesDoModal = null;
+  }
+}
+
+function manterFocoNoDialogo(event) {
+  const modal = getElement('confirm-modal');
+  if (event.key !== 'Tab' || !modal.open) return;
+
+  const elementos = [getElement('confirm-submit'), getElement('confirm-cancel')]
+    .filter((elemento) => !elemento.disabled);
+
+  if (elementos.length === 0) {
+    event.preventDefault();
+    return;
+  }
+
+  const primeiro = elementos[0];
+  const ultimo = elementos[elementos.length - 1];
+  if (!modal.contains(document.activeElement)) {
+    event.preventDefault();
+    primeiro.focus();
+  } else if (event.shiftKey && document.activeElement === primeiro) {
+    event.preventDefault();
+    ultimo.focus();
+  } else if (!event.shiftKey && document.activeElement === ultimo) {
+    event.preventDefault();
+    primeiro.focus();
+  }
 }
 
 function toast(msg, tipo = 'info') {
@@ -706,11 +864,34 @@ function sair() {
   window.location.href = '/login';
 }
 
-if (funcionarioToken) {
+function inicializarEventosPonto() {
+  if (eventosPontoInicializados) return;
+  eventosPontoInicializados = true;
+
+  getElement('btn-ponto').addEventListener('click', baterPonto);
+  getElement('retry-ponto-state').addEventListener('click', () => {
+    recarregarEstadoAposRegistro();
+  });
+  getElement('confirm-form').addEventListener('submit', (event) => {
+    event.preventDefault();
+    confirmarRegistroPonto();
+  });
+  getElement('confirm-cancel').addEventListener('click', () => {
+    fecharConfirm();
+  });
+
   getElement('confirm-modal').addEventListener('cancel', (event) => {
     event.preventDefault();
-    if (!registrando) fecharConfirm();
+    if (!isSubmitting) fecharConfirm();
   });
+  getElement('confirm-modal').addEventListener('keydown', manterFocoNoDialogo);
+  getElement('confirm-modal').addEventListener('click', (event) => {
+    if (event.target === event.currentTarget && !isSubmitting) fecharConfirm();
+  });
+}
+
+if (funcionarioToken) {
+  inicializarEventosPonto();
   setInterval(atualizarRelogio, 1000);
   atualizarRelogio();
   mostrarSkeleton();
