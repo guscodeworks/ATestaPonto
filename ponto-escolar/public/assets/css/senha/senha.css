@@ -113,7 +113,7 @@ html::-webkit-scrollbar {
   body {
     min-height: 100vh;
     background:
-      url("/assets/img/background-mobile.png")
+      url("/assets/img/background-mobile.webp")
       center center / cover
       no-repeat fixed;
   }
@@ -125,7 +125,7 @@ html::-webkit-scrollbar {
   body {
     align-items: center;
     padding: 40px 20px;
-    background: url("/assets/img/background-desktop.png") center center / cover no-repeat fixed;
+    background: url("/assets/img/background-desktop.webp") center center / cover no-repeat fixed;
   }
 
   .logo-desktop {
@@ -142,9 +142,9 @@ html::-webkit-scrollbar {
   }
 
   .phone-frame {
-    width: min(100%, 620px);
-    max-width: 620px;
-    min-width: min(520px, 100%);
+    width: min(100%, 520px);
+    max-width: 520px;
+    min-width: min(440px, 100%);
     min-height: 0;
     height: auto;
     border-radius: 28px;
@@ -152,13 +152,32 @@ html::-webkit-scrollbar {
   }
 
   .content {
-    padding: 48px 56px 44px;
+    padding: 36px 42px 34px;
   }
+}
+
+/* Laptops: card mais compacto, sem comprometer a leitura. */
+@media (min-width: 992px) and (max-width: 1439.98px) {
+  body { padding: 28px 20px; }
+
+  .phone-frame {
+    width: min(100%, 480px);
+    max-width: 480px;
+    min-width: 0;
+  }
+
+  .content { padding: 30px 36px 30px; }
+  .logo-desktop { margin-bottom: 16px; }
+  .logo-desktop img { width: 64px; height: 64px; }
+  .brand { font-size: 34px; margin-bottom: 20px; }
+  .subtitle { margin-bottom: 20px; }
+  .method-block { margin-bottom: 20px; }
+  .btn-primary { height: 50px; }
 }
 
 @media (min-width: 1440px) {
   .phone-frame {
-    max-width: 700px;
+    max-width: 540px;
   }
 }
 
