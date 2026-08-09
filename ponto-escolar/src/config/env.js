@@ -336,18 +336,6 @@ if (dbSslEnabled && !dbSslCaBase64) {
   throwEnvError('"DB_SSL_CA_BASE64" is required when DB_SSL_ENABLED=true');
 }
 
-const schoolLatitude = parseFloatValue(
-  getRequiredVar("SCHOOL_LATITUDE"),
-  "SCHOOL_LATITUDE",
-  -90,
-  90
-);
-const schoolLongitude = parseFloatValue(
-  getRequiredVar("SCHOOL_LONGITUDE"),
-  "SCHOOL_LONGITUDE",
-  -180,
-  180
-);
 const jwtSecret = validateSecret("JWT_SECRET", getRequiredVar("JWT_SECRET"));
 const sessionSecret = validateSecret(
   "SESSION_SECRET",
@@ -451,22 +439,8 @@ const env = {
   ),
   SESSION_SECRET: sessionSecret,
   ADMIN_SESSION_TTL_MS: adminSessionTtlMs,
-  SCHOOL_LATITUDE: schoolLatitude,
-  SCHOOL_LONGITUDE: schoolLongitude,
   SCHOOL_UNIT_CODE: getOptionalVar("SCHOOL_UNIT_CODE", "DEFAULT") || "DEFAULT",
-  // Aliases de compatibilidade: mesmo valor de latitude/longitude da
-  // escola, exposto também sob nomes genéricos (COMPANY_*) para código
-  // que trata a unidade escolar como uma "empresa" genericamente.
-  COMPANY_LATITUDE: schoolLatitude,
-  COMPANY_LONGITUDE: schoolLongitude,
-  // Raio (em metros) a partir da localização da escola dentro do qual o
-  // funcionário pode registrar ponto — regra de geolocalização do sistema.
-  ALLOWED_RADIUS_METERS: parseFloatValue(
-    getRequiredVar("ALLOWED_RADIUS_METERS"),
-    "ALLOWED_RADIUS_METERS",
-    1,
-    10000
-  ),
+
   POINT_RATE_LIMIT_WINDOW_MS: parseInteger(
     getOptionalVar("POINT_RATE_LIMIT_WINDOW_MS", String(5 * 60 * 1000)),
     "POINT_RATE_LIMIT_WINDOW_MS",

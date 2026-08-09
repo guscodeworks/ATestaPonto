@@ -48,9 +48,24 @@ async function findByIdForUpdate(client, cargoId) {
   );
 }
 
+/**
+ * Busca e trava um cargo pelo nome (cargo é UNIQUE no novo schema). Usado no
+ * find-or-create do cadastro: se já existir reutiliza o id, caso contrário
+ * cria. O FOR UPDATE evita que duas criações concorrentes de funcionários
+ * com o mesmo cargo gerem o mesmo cargo (a UNIQUE previne a duplicata no
+ * banco, mas o lock torna o find-or-create determinístico).
+ */
+async function findByNomeForUpdate(client, cargo) {
+  return getClient(client).executeOne(
+    "SELECT id, cargo, ativo FROM cargos WHERE cargo = ? LIMIT 1 FOR UPDATE",
+    [cargo]
+  );
+}
+
 module.exports = {
   listCargos,
   createCargo,
   updateCargo,
   findByIdForUpdate,
+  findByNomeForUpdate,
 };

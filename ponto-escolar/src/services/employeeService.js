@@ -14,6 +14,8 @@ const { registerAuditLog } = require("./auditLogService");
 const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const cargoModel = require("../models/cargoModel");
+const vinculoModel = require("../models/vinculoModel");
+const unidadeEscolarModel = require("../models/unidadeEscolarModel");
 const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
@@ -161,6 +163,47 @@ function generateTemporaryPassword() {
 }
 
 /**
+ * Normaliza a unidade escolar informada no cadastro. No novo schema é
+ * obrigatória (o vínculo funcional exige uma unidade, e a geolocalização do
+ * ponto passa a vir dela), então ausência/nulo são rejeitados aqui. A
+ * existência da unidade é confirmada no fluxo de transação (consulta ao
+ * model), não nesta normalização.
+ */
+function normalizeUnidadeEscolarId(value) {
+  if (value === undefined || value === null || value === "") {
+    throw new BadRequestError("unidade_escolar_id e obrigatorio");
+  }
+
+  const id = Number(value);
+  if (!Number.isInteger(id) || id < 1) {
+    throw new BadRequestError("unidade_escolar_id invalido");
+  }
+
+  return id;
+}
+
+/**
+ * Resolve o id de um cargo pelo nome, criando-o se ainda não existir. No novo
+ * schema `cargo` é UNIQUE e compartilhada entre funcionários, então o
+ * cadastro/edição reutiliza o row existente em vez de criar um por funcionário.
+ * Roda dentro da transação (mesmo client) e trava o row com FOR UPDATE para
+ * que dois cadastros concorrentes do mesmo cargo sejam determinísticos.
+ */
+async function findOrCreateCargo(client, cargo) {
+  const existing = await cargoModel.findByNomeForUpdate(client, cargo);
+  if (existing) {
+    return Number(existing.id);
+  }
+
+  const insert = await cargoModel.createCargo(client, { cargo });
+  const cargoId = Number(insert.insertId);
+  if (!Number.isInteger(cargoId) || cargoId < 1) {
+    throw new Error("Falha ao obter o ID do cargo criado");
+  }
+  return cargoId;
+}
+
+/**
  * Cria funcionario e login juntos para evitar credencial sem cadastro ativo.
  */
 async function createEmployee(body, { adminId, ipOrigem } = {}) {
@@ -175,6 +218,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   if (Object.prototype.hasOwnProperty.call(body, "cargo_id")) {
     throw new BadRequestError("cargo_id nao e aceito no cadastro de funcionario");
   }
+  const unidadeEscolarId = normalizeUnidadeEscolarId(body.unidade_escolar_id);
   const senhaTemporaria = generateTemporaryPassword();
   const senhaHash = await bcrypt.hash(
     senhaTemporaria,
@@ -193,11 +237,19 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    const cargoInsert = await cargoModel.createCargo(tx, cargoSchedule);
-    const cargoId = Number(cargoInsert.insertId);
-    if (!Number.isInteger(cargoId) || cargoId < 1) {
-      throw new Error("Falha ao obter o ID do cargo criado");
+    // unidade agora obrigatoria: confirma sua existencia antes de criar o
+    // funcionario, para falhar cedo com mensagem de negocio em vez de estourar
+    // a FK no INSERT do vinculo.
+    const unidade = await unidadeEscolarModel.findByIdForUpdate(
+      tx,
+      unidadeEscolarId
+    );
+    if (!unidade) {
+      throw new NotFoundError("Unidade escolar nao encontrada");
     }
+
+    // cargo e UNIQUE/compartilhada: reutiliza o row existente ou cria um novo.
+    const cargoId = await findOrCreateCargo(tx, cargoSchedule.cargo);
 
     const result = await employeeModel.createEmployee(tx, {
       cpf,
@@ -213,6 +265,20 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     }
 
     await loginModel.createLogin(tx, { funcionarioId, senhaHash });
+    // Cria o vínculo funcional na mesma transação, reutilizando o cargoId e
+    // os horários já validados em cargoSchedule (sem novas consultas). Se
+    // falhar, o rollback da transação desfaz funcionário, login e cargo
+    // conjuntamente.
+    await vinculoModel.createVinculo(tx, {
+      funcionarioId,
+      unidadeEscolarId,
+      cargoId,
+      entrada: cargoSchedule.entrada,
+      saidaAlmoco: cargoSchedule.saidaAlmoco,
+      retornoAlmoco: cargoSchedule.retornoAlmoco,
+      saida: cargoSchedule.saida,
+    });
+
     return { funcionarioId, cargoId };
   });
 
@@ -405,44 +471,59 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
       throw new NotFoundError("Funcionario nao encontrado");
     }
 
-    const values = resolveEditableEmployee(body, existing);
+    // No novo schema a jornada e o cargo do funcionario vivem no vinculo ativo
+    // (e nao mais na tabela cargos, que agora e UNIQUE/compartilhada). Trava o
+    // vinculo ativo aqui; sem ele nao ha onde aplicar a edicao de jornada.
+    // Renomear o row de cargos jamais faria sentido (afetaria outros
+    // funcionarios que compartilham o mesmo cargo) — em vez disso re-pontamos o
+    // vinculo para o cargo alvo (find-or-create pelo nome).
+    const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
+      tx,
+      employeeId
+    );
+    if (!vinculo) {
+      throw new ConflictError("Funcionario sem vinculo ativo para editar");
+    }
+
+    const edits = resolveEditableEmployee(body, existing);
     const emailExists = await employeeModel.findEmailConflictForUpdate(
       tx,
-      values.email,
+      edits.email,
       employeeId
     );
     if (emailExists) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    const employeeResult = await employeeModel.updateAdminEmployee(
-      tx,
-      employeeId,
-      values
-    );
-    if (!employeeResult.affectedRows) {
-      throw new NotFoundError("Funcionario nao encontrado");
-    }
+    // As atualizacoes (funcionario + vinculo) operam sobre rows recem-travadas
+    // (existing e vinculo via FOR UPDATE), garantindo o match da clausula WHERE.
+    // Nao ha guard em affectedRows: o UPDATE do mysql2 devolve linhas ALTERADAS
+    // (nao "matched"), entao uma edicao no-op (ex.: so `nome` mudou, jornada
+    // repetida) resultaria 0 e dispararia um falso "nao encontrado".
+    await employeeModel.updateAdminEmployee(tx, employeeId, edits);
 
-    const cargoResult = await cargoModel.updateCargo(
-      tx,
-      existing.cargo_id,
-      values.cargoSchedule
-    );
-    if (!cargoResult.affectedRows) {
-      throw new Error("Falha ao atualizar o cargo do funcionario");
-    }
+    // Reaponta o vinculo ao cargo alvo (find-or-create pelo nome, ja que cargo e
+    // UNIQUE/compartilhada) e sobrescreve a jornada no proprio vinculo.
+    const cargoId = await findOrCreateCargo(tx, edits.cargoSchedule.cargo);
+    await vinculoModel.update(tx, vinculo.id, {
+      cargoId,
+      entrada: edits.cargoSchedule.entrada,
+      saidaAlmoco: edits.cargoSchedule.saidaAlmoco,
+      retornoAlmoco: edits.cargoSchedule.retornoAlmoco,
+      saida: edits.cargoSchedule.saida,
+    });
 
     return {
       ...existing,
-      nome: values.nome,
-      email: values.email,
-      telefone: values.telefone,
-      cargo: values.cargoSchedule.cargo,
-      entrada: values.cargoSchedule.entrada,
-      saida_almoco: values.cargoSchedule.saidaAlmoco,
-      retorno_almoco: values.cargoSchedule.retornoAlmoco,
-      saida: values.cargoSchedule.saida,
+      cargo_id: cargoId,
+      nome: edits.nome,
+      email: edits.email,
+      telefone: edits.telefone,
+      cargo: edits.cargoSchedule.cargo,
+      entrada: edits.cargoSchedule.entrada,
+      saida_almoco: edits.cargoSchedule.saidaAlmoco,
+      retorno_almoco: edits.cargoSchedule.retornoAlmoco,
+      saida: edits.cargoSchedule.saida,
     };
   });
 

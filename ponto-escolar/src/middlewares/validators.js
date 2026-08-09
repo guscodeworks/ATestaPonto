@@ -122,10 +122,28 @@ const createFuncionarioValidator = withValidation([
     .isEmail()
     .withMessage("Email invalido")
     .normalizeEmail({ gmail_remove_dots: false }),
-  body("cargo_id")
-    .custom((_value, { req }) => {
-      if (Object.prototype.hasOwnProperty.call(req.body, "cargo_id")) {
-        throw new Error("cargo_id nao e aceito no cadastro de funcionario");
+ body("cargo_id")
+   .custom((_value, { req }) => {
+     if (Object.prototype.hasOwnProperty.call(req.body, "cargo_id")) {
+       throw new Error("cargo_id nao e aceito no cadastro de funcionario");
+     }
+     return true;
+   }),
+  // unidade_escolar_id é OBRIGATORIO no novo schema: o vínculo funcional
+  // (que carrega a jornada) exige uma unidade, e a geolocalização do ponto
+  // passa a vir dessa unidade. Aqui validamos apenas a forma (inteiro > 0);
+  // a existência da unidade é confirmada no service (consulta ao model), que
+  // também recebe essa mesma gestão de transação para o vínculo.
+  body("unidade_escolar_id")
+    .customSanitizer((value) => {
+      if (value === undefined || value === null || value === "") return NaN;
+      return Number(value);
+    })
+    .custom((value) => {
+      if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
+        throw new Error(
+          "unidade_escolar_id e obrigatorio e deve ser um inteiro positivo"
+        );
       }
       return true;
     }),
