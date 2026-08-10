@@ -6,6 +6,8 @@ const env = require("../config/env");
 const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const pointModel = require("../models/pointModel");
+const vinculoModel = require("../models/vinculoModel");
+const unidadeEscolarModel = require("../models/unidadeEscolarModel");
 const { isWithinRadius } = require("../utils/location");
 const { isValidCpf, maskCpf, normalizeCpf } = require("../utils/cpf");
 const {
@@ -52,16 +54,43 @@ function getSaoPauloDateTime(referenceDate = new Date()) {
 }
 
 /**
- * Valida se o funcionario esta dentro do raio permitido antes de abrir a transacao.
+ * Valida se o funcionario esta dentro do raio permitido da SUA unidade escolar
+ * antes de abrir a transacao. No novo schema a geolocalizacao (latitude,
+ * longitude, raio_permitido_metros) passou a residir por unidade em
+ * `unidades_escolares`, lida a partir do vinculo funcional ativo — antes vinha
+ * de variaveis de ambiente globais (env.SCHOOL_*), que foram removidas.
+ *
+ * Roda fora da transacao (fail-fast): se o funcionario estiver fora da area,
+ * nem abrimos a transacao de batida. Ja lanca NotFound/Forbidden quando o
+ * funcionario nao tem vinculo/unidade cadastrados.
  */
-function validateLocation(latitude, longitude) {
+async function resolveUnidadeGeolocation(funcionarioId) {
+  const vinculo = await vinculoModel.findActiveByFuncionarioId(funcionarioId);
+  if (!vinculo) {
+    throw new NotFoundError("Funcionario sem vinculo ativo");
+  }
+
+  const geolocation = await unidadeEscolarModel.findGeolocationByVinculo(
+    vinculo.id
+  );
+  if (!geolocation) {
+    throw new NotFoundError("Unidade escolar do vinculo nao encontrada");
+  }
+
+  return { vinculoId: vinculo.id, geolocation };
+}
+
+function validateDistanceAgainst(geolocation, latitude, longitude) {
   const distanceCheck = isWithinRadius(
-    { latitude: env.SCHOOL_LATITUDE, longitude: env.SCHOOL_LONGITUDE },
+    { latitude: geolocation.latitude, longitude: geolocation.longitude },
     { latitude, longitude },
-    env.ALLOWED_RADIUS_METERS
+    geolocation.raio_permitido_metros
   );
 
-  if (!distanceCheck.distanceMeters && distanceCheck.distanceMeters !== 0) {
+  if (
+    !distanceCheck.distanceMeters &&
+    distanceCheck.distanceMeters !== 0
+  ) {
     throw new BadRequestError("Localizacao invalida para registro de ponto");
   }
 
@@ -159,11 +188,16 @@ function timeToSeconds(value) {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
-function mapHistoryRow(row) {
-  const entrada = mapTimeOrNull(row.entrada);
-  const saidaAlmoco = mapTimeOrNull(row.saida_almoco);
-  const retornoAlmoco = mapTimeOrNull(row.retorno_almoco);
-  const saida = mapTimeOrNull(row.saida);
+// NOVO SCHEMA: o historico mensal agora e um array de batidas (1 linha por
+// batida, coluna `tipo` + `registrado_em`), ordenadas por data e tipo. Para
+// montar o dia-agregado que o cliente ja consome, agrupamos as batidas por
+// data_referencia e puxamos cada horario pelo seu tipo.
+function mapHistoryDay(date, punches) {
+  const times = readPunchTimesFromRow(punches);
+  const entrada = mapTimeOrNull(times.entrada);
+  const saidaAlmoco = mapTimeOrNull(times.saidaAlmoco);
+  const retornoAlmoco = mapTimeOrNull(times.voltaAlmoco);
+  const saida = mapTimeOrNull(times.saida);
   const seconds = [entrada, saidaAlmoco, retornoAlmoco, saida].map(
     timeToSeconds
   );
@@ -177,7 +211,7 @@ function mapHistoryRow(row) {
     : null;
 
   return {
-    data_referencia: mapDateReference(row.data_referencia),
+    data_referencia: mapDateReference(date),
     entrada,
     saida_almoco: saidaAlmoco,
     retorno_almoco: retornoAlmoco,
@@ -196,13 +230,27 @@ async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date
     throw new UnauthorizedError("Sessao do funcionario invalida");
   }
 
+  const { vinculoId } = await resolveUnidadeGeolocation(safeFuncionarioId);
   const period = resolveHistoryPeriod(rawMonth, referenceDate);
   const rows = await pointModel.listByEmployeeAndDateRange(
-    safeFuncionarioId,
+    vinculoId,
     period.startDate,
     period.endDate
   );
-  const records = rows.map(mapHistoryRow);
+
+  // Agrupa as batidas (1 linha por batida) por data_referencia para reconstruir
+  // o dia e entao mapear no formato agregado que o cliente consome.
+  const byDate = new Map();
+  for (const row of rows) {
+    const key = mapDateReference(row.data_referencia);
+    if (!byDate.has(key)) {
+      byDate.set(key, []);
+    }
+    byDate.get(key).push(row);
+  }
+  const records = Array.from(byDate.entries())
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([date, punches]) => mapHistoryDay(date, punches));
   const completeRecords = records.filter(
     (record) => record.status === "COMPLETO"
   );
@@ -241,12 +289,22 @@ async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
     throw new ForbiddenError("Funcionario inativo");
   }
 
+  // A jornada vem do vinculo ativo (resolvido via LATERAL em
+  // findForPunchDashboardById). Sem vinculo ativo nao ha jornada nem batida
+  // possivel: sinalizamos de forma amigavel em vez de estourar.
+  if (
+    !funcionario.entrada ||
+    !funcionario.saida_almoco ||
+    !funcionario.retorno_almoco ||
+    !funcionario.saida
+  ) {
+    throw new ConflictError("Funcionario sem jornada ativa configurada");
+  }
+
+  const { vinculoId } = await resolveUnidadeGeolocation(safeFuncionarioId);
   const { date } = getSaoPauloDateTime(referenceDate);
-  const pointRow = await pointModel.findByEmployeeAndDate(
-    safeFuncionarioId,
-    date
-  );
-  const punchTimes = readPunchTimesFromRow(pointRow || {});
+  const punchRows = await pointModel.findByEmployeeAndDate(vinculoId, date);
+  const punchTimes = readPunchTimesFromRow(punchRows);
   const nextPunch = resolveNextPunch(punchTimes);
 
   return {
@@ -385,16 +443,24 @@ async function registerPunch(
     throw new BadRequestError("Localizacao invalida para registro de ponto");
   }
 
-  const distanceCheck = validateLocation(safeLatitude, safeLongitude);
+  // Geolocalizacao agora por unidade (via vinculo), fail-fast antes da
+  // transacao: se o funcionario estiver fora da area, nem abrimos a tx.
+  const { vinculoId, geolocation } =
+    await resolveUnidadeGeolocation(funcionarioId);
+  const distanceCheck = validateDistanceAgainst(
+    geolocation,
+    safeLatitude,
+    safeLongitude
+  );
   const { date, time, dateTime } = getSaoPauloDateTime(new Date());
 
   try {
     // Toda a leitura+decisao+escrita da batida roda em uma transacao com
-    // FOR UPDATE na linha do funcionario e na linha do dia, para evitar que
+    // FOR UPDATE no vinculo ativo e nas batidas do dia, para evitar que
     // duas batidas quase simultaneas do mesmo funcionario gerem uma condicao
-    // de corrida (ex: duas "entradas" no mesmo dia).
+    // de corrida (ex: duas "entradas" no mesmo dia). No novo schema a chave de
+    // negocio e `vinculo_funcional_id` (nao mais funcionario_id direto).
     const punch = await pointModel.withTransaction(async (tx) => {
-      // Bloqueios no funcionario e no dia evitam duas batidas concorrentes na mesma sequencia.
       const funcionario = await employeeModel.findForPunchRegisterByIdForUpdate(
         tx,
         funcionarioId
@@ -408,31 +474,42 @@ async function registerPunch(
         throw new ForbiddenError("Funcionario inativo");
       }
 
-      const existingRow = await pointModel.findByEmployeeAndDateForUpdate(
+      // Reconfirma e trava o vinculo ativo DENTRO da transacao (o FOR UPDATE
+      // aqui e o que evita a corrida entre duas batidas concorrentes do mesmo
+      // funcionario — a leitura fora da tx era so para fail-fast de geolocation).
+      const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
         tx,
-        funcionario.id,
+        funcionarioId
+      );
+      if (!vinculo) {
+        throw new NotFoundError("Funcionario sem vinculo ativo");
+      }
+
+      const existingPunches = await pointModel.findByEmployeeAndDateForUpdate(
+        tx,
+        vinculo.id,
         date
       );
 
-      let rowId = {};
+      let rowId = null;
       let sequence = 1;
       let type = PUNCH_TYPES[0];
 
-      if (!existingRow) {
-        // Primeira batida do dia para este funcionario: cria a linha do dia
-        // com a "entrada" preenchida e os demais horarios vazios.
+      if (existingPunches.length === 0) {
+        // Primeira batida do dia: cria a linha ENTRADA (1 linha por batida no
+        // novo schema; as demais virao pelas proximas batidas via replacePunchRow).
         const insertResult = await pointModel.createFirstPunch(tx, {
-          funcionarioId: funcionario.id,
+          vinculoFuncionalId: vinculo.id,
           date,
           time,
           emptyTime: EMPTY_PUNCH_TIME,
         });
         rowId = Number(insertResult.insertId);
       } else {
-        const times = readPunchTimesFromRow(existingRow);
+        const times = readPunchTimesFromRow(existingPunches);
         const nextPunch = resolveNextPunch(times);
 
-        // resolveNextPunch retorna {} quando as 4 batidas do dia ja foram
+        // resolveNextPunch retorna null quando as 4 batidas do dia ja foram
         // registradas, impedindo uma quinta batida no mesmo dia.
         if (!nextPunch) {
           throw new ConflictError("Funcionario ja realizou 4 batidas hoje");
@@ -442,15 +519,22 @@ async function registerPunch(
         type = nextPunch.type;
         times[nextPunch.field] = time;
 
-        // Regrava a linha do dia inteira com o novo horario preenchido
-        // (ver observacao sobre replacePunchRow no repository de pointModel).
+        // Persiste a batida como sua propria linha (INSERT ... ON DUPLICATE
+        // KEY UPDATE resolve a idempotencia via UNIQUE(vinculo, data, tipo)).
         await pointModel.replacePunchRow(tx, {
-          rowId: existingRow.id,
-          funcionarioId: funcionario.id,
+          vinculoFuncionalId: vinculo.id,
           date,
           times,
         });
-        rowId = Number(existingRow.id);
+
+        // Localiza o id da linha recem-gravada para a resposta.
+        const updated = await pointModel.findByEmployeeAndDateForUpdate(
+          tx,
+          vinculo.id,
+          date
+        );
+        const matched = (updated || []).find((row) => row.tipo === type);
+        rowId = matched ? Number(matched.id) : null;
       }
 
       return {

@@ -2,6 +2,7 @@
 
 const employeeModel = require("../models/employeeModel");
 const pointModel = require("../models/pointModel");
+const vinculoModel = require("../models/vinculoModel");
 const { maskCpf } = require("../utils/cpf");
 const {
   EMPTY_PUNCH_TIME,
@@ -20,6 +21,16 @@ const PUNCH_STEPS = [
   { key: "voltaAlmoco", tipo: PUNCH_TYPES[2], sequencia: 3 },
   { key: "saida", tipo: PUNCH_TYPES[3], sequencia: 4 },
 ];
+
+// Mapeia o enum `tipo` lido do banco para o field lógico do shape de 4 batidas.
+// O banco grava RETORNO_ALMOCO (ver pointModel), mas o field lógico/sequência é
+// voltaAlmoco — precisa bater com o STEP correspondente para somar a batida.
+const TIPO_TO_SEQUENCIA = {
+  ENTRADA: 1,
+  SAIDA_ALMOCO: 2,
+  RETORNO_ALMOCO: 3,
+  SAIDA: 4,
+};
 
 // Data "de hoje" calculada no fuso de Sao Paulo, independente do fuso do
 // servidor onde a aplicacao roda, para que o relatorio do dia bata com o
@@ -51,19 +62,19 @@ function toDateTime(date, time) {
   return `${date} ${normalizeTimeValue(time)}`;
 }
 
-// Gera um id sintetico para cada batida (id da linha * 10 + sequencia da etapa),
-// já que a tabela guarda os 4 horarios em colunas de uma unica linha por dia,
-// e nao existe um id individual por batida no banco.
-function buildPunchList(rowId, date, times) {
-  // IDs derivados mantem cada batida enderecavel sem criar novas linhas no banco.
-  return PUNCH_STEPS.filter((step) => hasPunchTime(times[step.key])).map(
-    (step) => ({
-      id: Number(rowId) * 10 + step.sequencia,
-      tipo: step.tipo,
-      sequencia: step.sequencia,
-      registrado_em: toDateTime(date, times[step.key]),
-    })
-  );
+// NOVO SCHEMA: cada batida do dia é uma linha própria em registro_de_pontos
+// (id individual por batida), então o id vem direto da linha — não mais um
+// id sintético derivado de linha do dia. A sequência resolve pelo enum `tipo`.
+function buildPunchList(date, punches) {
+  return (Array.isArray(punches) ? punches : [])
+    .filter((row) => row && TIPO_TO_SEQUENCIA[row.tipo])
+    .map((row) => ({
+      id: Number(row.id),
+      tipo: row.tipo,
+      sequencia: TIPO_TO_SEQUENCIA[row.tipo],
+      registrado_em: `${date} ${normalizeTimeValue(row.registrado_em)}`,
+    }))
+    .sort((a, b) => a.sequencia - b.sequencia);
 }
 
 function getEmptyPunchTimes() {
@@ -77,11 +88,13 @@ function getEmptyPunchTimes() {
 
 // Regra de negocio do status do dia: sem nenhuma batida = AUSENTE; com a saida
 // registrada = COMPLETO; com pelo menos uma batida mas sem a saida = EM_ANDAMENTO.
-function summarizeEmployeeDay(employee, punchRow, date) {
-  const times = punchRow
-    ? readPunchTimesFromRow(punchRow)
+function summarizeEmployeeDay(employee, punches, date) {
+  const times = punches && punches.length
+    ? readPunchTimesFromRow(punches)
     : getEmptyPunchTimes();
-  const registros = punchRow ? buildPunchList(punchRow.id, date, times) : [];
+  const registros = punches && punches.length
+    ? buildPunchList(date, punches)
+    : [];
   const totalBatidas = registros.length;
   const status =
     totalBatidas === 0
@@ -107,20 +120,39 @@ function summarizeEmployeeDay(employee, punchRow, date) {
   };
 }
 
-// A query de batidas do dia pode trazer mais de uma linha por funcionario
-// (ex: historico duplicado); mantem apenas a primeira ocorrencia encontrada
-// por funcionario_id, que corresponde a linha mais recente conforme a
-// ordenacao definida em pointModel.listRowsByDate (funcionario_id ASC, id DESC).
-function indexLatestPunchRowsByEmployee(punchRows) {
+// NOVO SCHEMA: a query de batidas (pointModel.listRowsByDate) retorna 1 linha
+// por batida, ordenada por vinculo_funcional_id/tipo — sem coluna funcionario_id.
+// Como o relatório agrupa por funcionário, precisamos resolver cada vínculo ao
+// seu funcionário. Vínculos repetidos reaproveitam a mesma resolução.
+async function resolveVinculoToFuncionario(vinculoIds) {
+  const uniqueIds = [...new Set(vinculoIds.map(Number).filter(Number.isInteger))];
+  const byVinculo = new Map();
+  for (const vinculoId of uniqueIds) {
+    const vinculo = await vinculoModel.getById(vinculoId);
+    if (vinculo) {
+      byVinculo.set(vinculoId, Number(vinculo.funcionario_id));
+    }
+  }
+  return byVinculo;
+}
+
+// Agrupa as batidas do dia (1 linha por batida) por funcionário. Cada vínculo
+// resolve-se em seu funcionário e agrupa suas batidas; funcionários sem batidas
+// não aparecem aqui (são completados pelo cruzamento com a lista de ativos).
+function indexPunchesByEmployee(punchRows, vinculoToFuncionario) {
   const byEmployee = new Map();
 
-  punchRows.forEach((row) => {
-    const employeeId = Number(row.funcionario_id);
-
-    if (!byEmployee.has(employeeId)) {
-      byEmployee.set(employeeId, row);
+  for (const row of punchRows) {
+    const vinculoId = Number(row.vinculo_funcional_id);
+    const funcionarioId = vinculoToFuncionario.get(vinculoId);
+    if (!Number.isInteger(funcionarioId)) {
+      continue;
     }
-  });
+    if (!byEmployee.has(funcionarioId)) {
+      byEmployee.set(funcionarioId, []);
+    }
+    byEmployee.get(funcionarioId).push(row);
+  }
 
   return byEmployee;
 }
@@ -155,11 +187,14 @@ function buildSummary(summaries) {
 async function buildDailySnapshot(date) {
   const employees = await employeeModel.listForPointReport();
   const punchRows = await pointModel.listRowsByDate(date);
-  const byEmployee = indexLatestPunchRowsByEmployee(punchRows);
+  const vinculoToFuncionario = await resolveVinculoToFuncionario(
+    punchRows.map((row) => row.vinculo_funcional_id)
+  );
+  const byEmployee = indexPunchesByEmployee(punchRows, vinculoToFuncionario);
   const summaries = employees.map((employee) =>
     summarizeEmployeeDay(
       employee,
-      byEmployee.get(Number(employee.id)) || {},
+      byEmployee.get(Number(employee.id)) || [],
       date
     )
   );

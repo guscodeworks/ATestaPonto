@@ -12,14 +12,44 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
+// NOVO SCHEMA: `funcionarios` não tem mais `cargo_id` nem `unidade_escolar_id`.
+// Cargo, unidade escolar e jornada (horários) passaram a residir em
+// `vinculos_funcionais`. Os métodos públicos preservam o shape que os Services
+// já esperam (cargo_id, cargo, entrada, saida_almoco, retorno_almoco, saida),
+// agora resolvidos via JOIN lateral no vínculo ATIVO. Isso evita duplicar linhas
+// quando um funcionário possui múltiplos vínculos (LIMIT 1 dentro do LATERAL).
+
+// Trecho SQL reutilizável: jornada atual do funcionário (vínculo mais recente,
+// preferindo o ATIVO). Retorna no máximo 1 linha por funcionário (sem multiplicar).
+const ACTIVE_VINCULO_LATERAL = `
+  SELECT v.cargo_id, c.cargo,
+         TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
+         TIME_FORMAT(v.horario_saida_almoco, '%H:%i:%s') AS saida_almoco,
+         TIME_FORMAT(v.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco,
+         TIME_FORMAT(v.horario_saida, '%H:%i:%s') AS saida
+  FROM vinculos_funcionais v
+  INNER JOIN cargos c ON c.id = v.cargo_id
+  WHERE v.funcionario_id = f.id AND v.status = 'ATIVO'
+  ORDER BY v.id DESC
+  LIMIT 1
+`;
+
 // Consultas fixas: filtros opcionais continuam parametrizados e nenhum valor
-// recebido da requisicao e usado para montar SQL dinamicamente.
+// recebido da requisicao e usado para montar SQL dinamicamente. O filtro por cargo
+// agora é satisfeito pelo vínculo ativo (EXISTS), mantendo a contagem sem inflar
+// mesmo se houver mais de um vínculo por funcionário.
 const COUNT_EMPLOYEES_QUERY =
-  "SELECT COUNT(*) AS total FROM funcionarios f INNER JOIN cargos c ON f.cargo_id = c.id WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
+  "SELECT COUNT(*) AS total FROM funcionarios f WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR EXISTS (SELECT 1 FROM vinculos_funcionais v INNER JOIN cargos c ON c.id = v.cargo_id WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' AND c.cargo = ?)) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
 const LIST_EMPLOYEES_QUERY =
-  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON f.cargo_id = c.id WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%'))) ORDER BY f.id DESC LIMIT ? OFFSET ?";
+  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f INNER JOIN LATERAL (" +
+  ACTIVE_VINCULO_LATERAL +
+  ") lv ON TRUE WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%'))) ORDER BY f.id DESC LIMIT ? OFFSET ?";
 
+// Cargo não é mais coluna de funcionarios: a allowlist de campos editáveis do
+// funcionário perdeu a entrada `cargoId` (atualizar cargo/enviarcargo_id direto em
+// `funcionarios` jamais faria sentido no novo schema). A edição de jornada migra
+// para o vínculo (fora deste Model).
 const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
   cpf: "UPDATE funcionarios SET cpf = ? WHERE id = ?",
   email: "UPDATE funcionarios SET email = ? WHERE id = ?",
@@ -27,7 +57,6 @@ const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
   telefone: "UPDATE funcionarios SET telefone = ? WHERE id = ?",
   ativo:
     "UPDATE funcionarios SET ativo = ?, desativado_em = IF(? = 1, NULL, CURRENT_TIMESTAMP) WHERE id = ?",
-  cargoId: "UPDATE funcionarios SET cargo_id = ? WHERE id = ?",
 });
 
 // Monta filtros dinâmicos de forma parametrizada (evitando SQL injection) para
@@ -50,31 +79,38 @@ function resolveEmployeeFilter({ ativo, cargo, q } = {}) {
 
 async function findById(employeeId, client) {
   return getClient(client).executeOne(
-    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, f.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
+    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, lv.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f LEFT JOIN LATERAL (" +
+      ACTIVE_VINCULO_LATERAL +
+      ") lv ON TRUE LEFT JOIN cargos c ON c.id = lv.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
     [employeeId]
   );
 }
 
 async function findAdminEmployeeById(employeeId, client) {
   return getClient(client).executeOne(
-    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1",
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
+      ACTIVE_VINCULO_LATERAL +
+      ") lv ON TRUE WHERE f.id = ? LIMIT 1",
     [employeeId]
   );
 }
 
 async function findAdminEmployeeByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
-    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.cargo_id, c.cargo, c.entrada, c.saida_almoco, c.retorno_almoco, c.saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1 FOR UPDATE",
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
+      ACTIVE_VINCULO_LATERAL +
+      ") lv ON TRUE WHERE f.id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
 
 /**
- * Trava o cadastro antes de atualizar campos que tambem afetam login e cargo.
+ * Trava o cadastro antes de atualizar campos que tambem afetam login e ativação.
+ * (Cargo não faz mais parte do cadastro do funcionário: vínculo cuida disso.)
  */
 async function findByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
-    "SELECT id, cpf, email, nome, telefone, ativo, desativado_em, cargo_id FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
+    "SELECT id, cpf, email, nome, telefone, ativo, desativado_em FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
@@ -91,7 +127,9 @@ async function findForPunchRegisterByIdForUpdate(client, employeeId) {
 
 async function findForPunchDashboardById(employeeId) {
   return database.executeOne(
-    "SELECT f.id, f.nome, f.ativo, c.cargo, TIME_FORMAT(c.entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(c.saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(c.retorno_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(c.saida, '%H:%i:%s') AS saida FROM funcionarios f INNER JOIN cargos c ON c.id = f.cargo_id WHERE f.id = ? LIMIT 1",
+    "SELECT f.id, f.nome, f.ativo, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f INNER JOIN LATERAL (" +
+      ACTIVE_VINCULO_LATERAL +
+      ") lv ON TRUE WHERE f.id = ? LIMIT 1",
     [employeeId]
   );
 }
@@ -162,18 +200,23 @@ async function listEmployees({ ativo, cargo, q, limit, offset } = {}) {
 
 async function listForPointReport() {
   return database.execute(
-    "SELECT id, nome, email, cpf, ativo, cargo_id FROM funcionarios ORDER BY nome ASC",
+    "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id FROM funcionarios f LEFT JOIN LATERAL (" +
+      "SELECT v.cargo_id FROM vinculos_funcionais v WHERE v.funcionario_id = f.id ORDER BY v.id DESC LIMIT 1" +
+      ") lv ON TRUE ORDER BY f.nome ASC",
     []
   );
 }
 
+// cargoId aceito por compatibilidade com o Service, mas no novo schema ele não
+// pertence à tabela funcionarios: a associação cargo↔funcionário vive no vínculo.
 async function createEmployee(
   client,
   { cargoId, cpf, email, nome, telefone = null, ativo }
 ) {
+  void cargoId; // cargo_id migrated to vinculos_funcionais (see vinculoModel).
   return getClient(client).execute(
-    "INSERT INTO funcionarios (cargo_id, cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?, ?)",
-    [cargoId, cpf, email, nome, telefone, ativo ? 1 : 0]
+    "INSERT INTO funcionarios (cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?)",
+    [cpf, email, nome, telefone, ativo ? 1 : 0]
   );
 }
 

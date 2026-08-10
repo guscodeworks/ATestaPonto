@@ -8,41 +8,57 @@ function getClient(client) {
   return client || database;
 }
 
+// No novo schema, `cargos` representa SOMENTE o cargo (sem horários de jornada).
+// A jornada (entrada/saída de almoço/retorno/saída) migrou para `vinculos_funcionais`.
+// Por isso as queries não selecionam nem filtram por colunas de horário, e o
+// antigo GROUP BY por horário (que "deduplicava" cargos por nome) desaparece.
+
 async function listCargos() {
   return database.execute(
-    "SELECT MIN(id) AS id, cargo, cargo AS nome, TIME_FORMAT(entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(entrada, '%H:%i:%s') AS hora_entrada_padrao, TIME_FORMAT(saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(retorno_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(saida, '%H:%i:%s') AS saida, TIME_FORMAT(saida, '%H:%i:%s') AS hora_saida_padrao FROM cargos GROUP BY cargo, entrada, saida_almoco, retorno_almoco, saida ORDER BY cargo ASC, MIN(id) ASC",
+    "SELECT id, cargo, ativo FROM cargos ORDER BY cargo ASC",
     []
   );
 }
 
-async function updateCargo(
-  client,
-  cargoId,
-  { cargo, entrada, saidaAlmoco, retornoAlmoco, saida }
-) {
+// Aceita o mesmo shape enviado pelo service (com horários) por compatibilidade de
+// assinatura, mas ignora os campos de horário — no novo schema eles pertencem ao
+// vínculo, não ao cargo. Cadastra apenas o nome do cargo (coluna `cargo` é UNIQUE).
+async function createCargo(client, { cargo } = {}) {
   return getClient(client).execute(
-    "UPDATE cargos SET cargo = ?, entrada = ?, saida_almoco = ?, retorno_almoco = ?, saida = ? WHERE id = ?",
-    [cargo, entrada, saidaAlmoco, retornoAlmoco, saida, cargoId]
+    "INSERT INTO cargos (cargo) VALUES (?)",
+    [cargo]
   );
 }
 
-async function createCargo(
-  client,
-  { cargo, entrada, saidaAlmoco, retornoAlmoco, saida }
-) {
+// Idem: atualiza somente o nome do cargo. Horários recebidos são ignorados.
+async function updateCargo(client, cargoId, { cargo } = {}) {
   return getClient(client).execute(
-    "INSERT INTO cargos (cargo, entrada, saida_almoco, retorno_almoco, saida) VALUES (?, ?, ?, ?, ?)",
-    [cargo, entrada, saidaAlmoco, retornoAlmoco, saida]
+    "UPDATE cargos SET cargo = ? WHERE id = ?",
+    [cargo, cargoId]
   );
 }
 
 /**
- * Usa o cliente da transacao para travar o cargo enquanto o funcionario e salvo.
+ * Trava o cargo enquanto o funcionário é salvo.
  */
 async function findByIdForUpdate(client, cargoId) {
   return getClient(client).executeOne(
-    "SELECT id, cargo, cargo AS nome, entrada, saida_almoco, retorno_almoco, saida FROM cargos WHERE id = ? LIMIT 1 FOR UPDATE",
+    "SELECT id, cargo, ativo FROM cargos WHERE id = ? LIMIT 1 FOR UPDATE",
     [cargoId]
+  );
+}
+
+/**
+ * Busca e trava um cargo pelo nome (cargo é UNIQUE no novo schema). Usado no
+ * find-or-create do cadastro: se já existir reutiliza o id, caso contrário
+ * cria. O FOR UPDATE evita que duas criações concorrentes de funcionários
+ * com o mesmo cargo gerem o mesmo cargo (a UNIQUE previne a duplicata no
+ * banco, mas o lock torna o find-or-create determinístico).
+ */
+async function findByNomeForUpdate(client, cargo) {
+  return getClient(client).executeOne(
+    "SELECT id, cargo, ativo FROM cargos WHERE cargo = ? LIMIT 1 FOR UPDATE",
+    [cargo]
   );
 }
 
@@ -51,4 +67,5 @@ module.exports = {
   createCargo,
   updateCargo,
   findByIdForUpdate,
+  findByNomeForUpdate,
 };
