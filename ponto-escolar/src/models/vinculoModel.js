@@ -154,6 +154,21 @@ async function update(client, vinculoId, fields = {}) {
 }
 
 /**
+ * Encerra o vínculo no desligamento do funcionário usando data_fim calculada
+ * no servidor (CURRENT_DATE, consistente com CURDATE() usado no cadastro) —
+ * evita divergência de fuso do processo Node e mantém o histórico de pontos
+ * intacto (não há DELETE em registro_de_pontos). status passa a ENCERRADO.
+ * Espera ser chamado dentro da transação de desativação após travar o vínculo
+ * ativo via findActiveByFuncionarioIdForUpdate.
+ */
+async function encerrarVinculo(client, vinculoId) {
+  return getClient(client).execute(
+    "UPDATE vinculos_funcionais SET status = 'ENCERRADO', data_fim = CURRENT_DATE WHERE id = ?",
+    [vinculoId]
+  );
+}
+
+/**
  * Todos os vínculos do funcionário (ordenados do mais recente ao mais antigo).
  */
 async function findByFuncionarioId(funcionarioId, client) {
@@ -215,6 +230,7 @@ module.exports = {
   getById,
   getByIdForUpdate,
   update,
+  encerrarVinculo,
   findByFuncionarioId,
   findActiveByFuncionarioId,
   findActiveByFuncionarioIdForUpdate,

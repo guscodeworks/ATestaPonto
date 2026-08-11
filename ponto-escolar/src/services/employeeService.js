@@ -19,7 +19,10 @@ const unidadeEscolarModel = require("../models/unidadeEscolarModel");
 const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
-const EDITABLE_CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR"]);
+
+// Edição aceita o mesmo conjunto do cadastro (inclui PROFESSOR). Antes o filtro
+// extra impedia editar a jornada de um PROFESSOR já cadastrado.
+const EDITABLE_CARGO_TYPES = CARGO_TYPES;
 const EDITABLE_EMPLOYEE_FIELDS = new Set([
   "nome",
   "email",
@@ -59,12 +62,12 @@ function mapListedEmployee(employee) {
     ativo: Boolean(employee.ativo),
     desativado_em: employee.desativado_em || null,
     criado_em: employee.criado_em,
-    cargo_id: Number(employee.cargo_id),
-    cargo: String(employee.cargo),
-    entrada: String(employee.entrada),
-    saida_almoco: String(employee.saida_almoco),
-    retorno_almoco: String(employee.retorno_almoco),
-    saida: String(employee.saida),
+    cargo_id: employee.cargo_id ? Number(employee.cargo_id) : null,
+    cargo: employee.cargo ? String(employee.cargo) : null,
+    entrada: employee.entrada ? String(employee.entrada) : null,
+    saida_almoco: employee.saida_almoco ? String(employee.saida_almoco) : null,
+    retorno_almoco: employee.retorno_almoco ? String(employee.retorno_almoco) : null,
+    saida: employee.saida ? String(employee.saida) : null,
   };
 }
 
@@ -75,11 +78,11 @@ function mapEditableEmployee(employee) {
     cpf: formatCpf(employee.cpf),
     email: employee.email,
     telefone: employee.telefone || null,
-    cargo: String(employee.cargo),
-    entrada: String(employee.entrada),
-    saida_almoco: String(employee.saida_almoco),
-    retorno_almoco: String(employee.retorno_almoco),
-    saida: String(employee.saida),
+    cargo: employee.cargo ? String(employee.cargo) : null,
+    entrada: employee.entrada ? String(employee.entrada) : null,
+    saida_almoco: employee.saida_almoco ? String(employee.saida_almoco) : null,
+    retorno_almoco: employee.retorno_almoco ? String(employee.retorno_almoco) : null,
+    saida: employee.saida ? String(employee.saida) : null,
   };
 }
 
@@ -578,6 +581,21 @@ async function changeEmployeeActivation(
     );
     if (!result.affectedRows) {
       throw new Error("Falha ao atualizar o status do funcionario");
+    }
+
+    // Desativar encerra o vínculo ativo (status=ENCERRADO + data_fim) para
+    // refletir o desligamento no novo schema, onde cargo/escola/jornada vivem
+    // no vínculo. Não apaga registro_de_pontos (histórico permanece intacto).
+    // Reativar não (re)abre vínculo: a reabertura de vínculo é uma operação
+    // de cadastro separada, não parte desta ativação.
+    if (!ativo) {
+      const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
+        tx,
+        employeeId
+      );
+      if (vinculo) {
+        await vinculoModel.encerrarVinculo(tx, vinculo.id);
+      }
     }
 
     const status = await employeeModel.findEmployeeActivationById(

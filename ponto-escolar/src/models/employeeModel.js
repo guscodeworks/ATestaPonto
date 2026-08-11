@@ -127,7 +127,7 @@ async function findForPunchRegisterByIdForUpdate(client, employeeId) {
 
 async function findForPunchDashboardById(employeeId) {
   return database.executeOne(
-    "SELECT f.id, f.nome, f.ativo, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f INNER JOIN LATERAL (" +
+    "SELECT f.id, f.nome, f.ativo, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
       ACTIVE_VINCULO_LATERAL +
       ") lv ON TRUE WHERE f.id = ? LIMIT 1",
     [employeeId]
@@ -199,9 +199,13 @@ async function listEmployees({ ativo, cargo, q, limit, offset } = {}) {
 }
 
 async function listForPointReport() {
+  // Mesma noção de "cargo atual" das demais leituras admin: somente o vínculo
+  // ATIVO (LEFT JOIN LATERAL com filtro de status). Antes pegava o vínculo mais
+  // recente independente de status, podendo mostrar cargo de vínculo
+  // AFASTADO/ENCERRADO — inconsistente com listEmployees/findAdminEmployeeById.
   return database.execute(
     "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id FROM funcionarios f LEFT JOIN LATERAL (" +
-      "SELECT v.cargo_id FROM vinculos_funcionais v WHERE v.funcionario_id = f.id ORDER BY v.id DESC LIMIT 1" +
+      "SELECT v.cargo_id FROM vinculos_funcionais v WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1" +
       ") lv ON TRUE ORDER BY f.nome ASC",
     []
   );

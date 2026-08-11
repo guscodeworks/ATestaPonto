@@ -12,18 +12,16 @@
 const EMPTY_PUNCH_TIME = '00:00:00';
 
 // Ordem natural das batidas conforme o enum da coluna `tipo`.
-// Observação: o enum do banco usa RETORNO_ALMOCO (ver pointModel.replacePunchRow),
-// mas PUNCH_TYPES preserva o nome lógico VOLTA_ALMOCO consumido pelos Services.
-const PUNCH_TYPES = ['ENTRADA', 'SAIDA_ALMOCO', 'VOLTA_ALMOCO', 'SAIDA'];
+// O enum do banco é RETORNO_ALMOCO (ver pointModel.replacePunchRow), e este é o
+// único nome usado em todo o sistema (escrita, leitura e respostas da API).
+const PUNCH_TYPES = ['ENTRADA', 'SAIDA_ALMOCO', 'RETORNO_ALMOCO', 'SAIDA'];
 
 // Mapeia o valor do enum `tipo` (lido do banco) -> field lógico do shape de 4
-// batidas. Aceita ambos os nomes do "retorno do almoço" (VOLTA_ALMOCO e
-// RETORNO_ALMOCO) para o mesmo field "voltaAlmoco", já que a escrita usa
-// RETORNO_ALMOCO e o nome lógico nos Services é VOLTA_ALMOCO.
+// batidas. O field interno "voltaAlmoco" é apenas um nome de propriedade JS do
+// shape lógico (não exposto ao cliente); o enum do banco é RETORNO_ALMOCO.
 const TIPO_TO_FIELD = {
   ENTRADA: 'entrada',
   SAIDA_ALMOCO: 'saidaAlmoco',
-  VOLTA_ALMOCO: 'voltaAlmoco',
   RETORNO_ALMOCO: 'voltaAlmoco',
   SAIDA: 'saida',
 };
