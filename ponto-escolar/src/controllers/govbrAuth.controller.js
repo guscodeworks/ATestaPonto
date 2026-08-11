@@ -12,10 +12,9 @@ const {
   trocarCodePorToken,
   buscarUserInfo,
 } = require("../services/govbrAuth.service");
-const {
-  verificarSeUsuarioGovbrEhAdmin,
-} = require("../services/adminAuthorization.service");
+const { verificarSeUsuarioGovbrEhAdmin } = require("../services/adminAuthorization.service");
 const env = require("../config/env");
+const usuarioAdministrativoModel = require("../models/usuarioAdministrativoModel");
 
 // URL do logout do simulador de identidade usado em desenvolvimento/teste.
 function getGovbrFakeLogoutUrl() {
@@ -165,16 +164,32 @@ async function concluirLoginGovbr(req, res, next) {
 
     const userInfo = await buscarUserInfo(accessToken);
 
-    // Regra de negócio: apenas usuários Gov.br autorizados como admin podem acessar o painel.
-    if (!verificarSeUsuarioGovbrEhAdmin(userInfo)) {
-      throw new ForbiddenError("Acesso negado.");
+    // Busca o administrativo real no banco pelo email do Gov.br
+    const admin = await usuarioAdministrativoModel.findByEmail(
+      userInfo.email
+    );
+
+    if (!admin) {
+      throw new ForbiddenError(
+        "Usuario Gov.br nao cadastrado como administrativo."
+      );
     }
+
+    if (!admin.ativo) {
+      throw new ForbiddenError(
+        "Administrativo inativo."
+      );
+    }
+
+    // Regra de negocio: autorizacao via banco de dados (admin cadastrado e ativo)
+    // Gov.br apenas confirma a identidade; ATestaPonto confirma a permissao de admin.
 
     const adminSession = {
       authProvider: "govbr",
+      id: admin.id, // ID real do administrativo do banco
       sub: String(userInfo.sub).trim(),
-      name: String(userInfo.name || "").trim(),
-      email: String(userInfo.email || "").trim(),
+      name: String(admin.nome || "").trim(), // Nome do banco (pode ser diferente do Gov.br)
+      email: String(admin.email || "").trim(), // Email do banco
       loginAt: new Date().toISOString(),
     };
 
@@ -182,6 +197,9 @@ async function concluirLoginGovbr(req, res, next) {
     await regenerateSession(req);
     req.session.admin = adminSession;
     await saveSession(req);
+
+    // Atualiza ultimo login do administrativo
+    await usuarioAdministrativoModel.updateLastLogin(admin.id);
 
     return res.redirect("/admin/dashboard");
   } catch (error) {
