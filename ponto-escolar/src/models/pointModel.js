@@ -2,7 +2,6 @@
 
 const database = require("../config/database");
 
-// getClient: transação explícita ou conexão padrão.
 function getClient(client) {
   return client || database;
 }
@@ -11,7 +10,7 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-// 1 linha/batida por vinculo+dia; chave = vinculo_funcional_id (não funcionario_id).
+// 1 linha/batida por vínculo+dia; chave = vinculo_funcional_id (não funcionario_id).
 
 async function findByEmployeeAndDate(vinculoFuncionalId, date) {
   return database.execute(
@@ -20,7 +19,7 @@ async function findByEmployeeAndDate(vinculoFuncionalId, date) {
   );
 }
 
-// Batidas do vínculo no intervalo (data_referencia sem função no WHERE → índice).
+// WHERE por data_referencia (sem função) preserva o índice do intervalo.
 async function listByEmployeeAndDateRange(vinculoFuncionalId, startDate, endDate) {
   return database.execute(
     "SELECT id, vinculo_funcional_id, data_referencia, tipo, registrado_em, created_at, updated_at FROM registro_de_pontos WHERE vinculo_funcional_id = ? AND data_referencia >= ? AND data_referencia <= ? ORDER BY data_referencia ASC, tipo ASC",
@@ -28,7 +27,7 @@ async function listByEmployeeAndDateRange(vinculoFuncionalId, startDate, endDate
   );
 }
 
-// Trava batidas do dia do vínculo (decide próxima batida sem corrida).
+// Trava as batidas do dia do vínculo para decidir a próxima sem corrida.
 async function findByEmployeeAndDateForUpdate(client, vinculoFuncionalId, date) {
   return getClient(client).execute(
     "SELECT id, vinculo_funcional_id, data_referencia, tipo, registrado_em, created_at, updated_at FROM registro_de_pontos WHERE vinculo_funcional_id = ? AND data_referencia = ? ORDER BY tipo ASC FOR UPDATE",
@@ -36,10 +35,7 @@ async function findByEmployeeAndDateForUpdate(client, vinculoFuncionalId, date) 
   );
 }
 
-/**
- * Lista as batidas do dia (todos os vinculos), ordenadas por vinculo e tipo,
- * para consolidar o snapshot diário do relatório.
- */
+// Snapshot diário do relatório: batidas do dia de todos os vínculos.
 async function listRowsByDate(date) {
   return database.execute(
     "SELECT id, vinculo_funcional_id, data_referencia, tipo, registrado_em, created_at, updated_at FROM registro_de_pontos WHERE data_referencia = ? ORDER BY vinculo_funcional_id ASC, tipo ASC",
@@ -47,12 +43,12 @@ async function listRowsByDate(date) {
   );
 }
 
-// Primeira batida do dia (ENTRADA). emptyTime ignorado (ausência = sem linha).
+// Primeira batida do dia (ENTRADA); batida faltante = sem linha.
 async function createFirstPunch(
   client,
   { vinculoFuncionalId, date, time, emptyTime }
 ) {
-  void emptyTime; // sentinel removed; missing punch = no row.
+  void emptyTime; // sentinel removido; ausência = sem linha.
   const registradoEm = `${date} ${time}`;
   return getClient(client).execute(
     "INSERT INTO registro_de_pontos (vinculo_funcional_id, data_referencia, tipo, registrado_em) VALUES (?, ?, 'ENTRADA', ?)",

@@ -2,7 +2,6 @@
 
 const database = require("../config/database");
 
-// getClient: transação explícita ou conexão padrão.
 function getClient(client) {
   return client || database;
 }
@@ -11,8 +10,7 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-// Cargo/jornada/unidade via vínculo ATIVO (LATERAL LIMIT 1 evita duplicar linhas).
-
+// Vínculo ATIVO mais recente por funcionário; LATERAL + LIMIT 1 evita duplicar linhas.
 const ACTIVE_VINCULO_LATERAL = `
   SELECT v.cargo_id, c.cargo, v.unidade_escolar_id,
          TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
@@ -26,7 +24,7 @@ const ACTIVE_VINCULO_LATERAL = `
   LIMIT 1
 `;
 
-// Filtro por unidades permitidas ao escopo admin (null/vazio = sem restrição).
+// Filtra por unidades do escopo admin (null/vazio = sem restrição).
 function buildEscopoUnidadeFilter(unidadesPermitidas) {
   if (!Array.isArray(unidadesPermitidas) || unidadesPermitidas.length === 0) {
     return { clause: "", params: [] };
@@ -39,7 +37,7 @@ function buildEscopoUnidadeFilter(unidadesPermitidas) {
   };
 }
 
-// Filtro por cargo via EXISTS no vínculo ativo (contagem sem inflar linhas).
+// EXISTS no vínculo ativo evita inflar a contagem (sem LATERAL).
 const COUNT_EMPLOYEES_QUERY =
   "SELECT COUNT(*) AS total FROM funcionarios f WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR EXISTS (SELECT 1 FROM vinculos_funcionais v INNER JOIN cargos c ON c.id = v.cargo_id WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' AND c.cargo = ?)) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
@@ -48,7 +46,7 @@ const LIST_EMPLOYEES_QUERY =
   ACTIVE_VINCULO_LATERAL +
   ") lv ON TRUE WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
-// cargoId saiu de funcionarios; jornada/cargo migram para vinculos_funcionais.
+// allowlist sem cargoId (jornada/cargo migraram para vinculos_funcionais).
 const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
   cpf: "UPDATE funcionarios SET cpf = ? WHERE id = ?",
   email: "UPDATE funcionarios SET email = ? WHERE id = ?",
@@ -58,8 +56,7 @@ const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
     "UPDATE funcionarios SET ativo = ?, desativado_em = IF(? = 1, NULL, CURRENT_TIMESTAMP) WHERE id = ?",
 });
 
-// Monta filtros dinâmicos de forma parametrizada (evitando SQL injection) para
-// serem reaproveitados tanto na contagem quanto na listagem paginada de funcionários.
+// Parâmetros posicionais reutilizados por contagem e listagem (mesma ordem de ?).
 function resolveEmployeeFilter({ ativo, cargo, q } = {}) {
   const activeValue = typeof ativo === "boolean" ? (ativo ? 1 : 0) : null;
   const cargoValue = String(cargo || "").trim().toUpperCase();
@@ -103,10 +100,7 @@ async function findAdminEmployeeByIdForUpdate(client, employeeId) {
   );
 }
 
-/**
- * Trava o cadastro antes de atualizar campos que tambem afetam login e ativação.
- * (Cargo não faz mais parte do cadastro do funcionário: vínculo cuida disso.)
- */
+// Trava o cadastro antes de atualizar campos que afetam login/ativação.
 async function findByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
     "SELECT id, cpf, email, nome, telefone, ativo, desativado_em FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
@@ -114,9 +108,7 @@ async function findByIdForUpdate(client, employeeId) {
   );
 }
 
-/**
- * Trava o funcionario durante o registro de ponto para evitar batidas concorrentes.
- */
+// Trava o funcionário no registro de ponto (evita batidas concorrentes).
 async function findForPunchRegisterByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
     "SELECT id, cpf, nome, email, ativo FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
@@ -161,8 +153,7 @@ async function findByEmailForUpdate(client, email) {
   );
 }
 
-// Verifica se o CPF já está em uso por outro funcionário (id <> excludedEmployeeId),
-// necessário na atualização para não bloquear o próprio registro como "conflito".
+// Exclui o próprio registro (id <> excluded) para não travar a si mesmo na alteração.
 async function findCpfConflictForUpdate(client, cpf, excludedEmployeeId) {
   return getClient(client).executeOne(
     "SELECT id FROM funcionarios WHERE cpf = ? AND id <> ? LIMIT 1 FOR UPDATE",
@@ -170,7 +161,7 @@ async function findCpfConflictForUpdate(client, cpf, excludedEmployeeId) {
   );
 }
 
-// Mesma lógica de findCpfConflictForUpdate, mas para verificação de e-mail duplicado.
+// Análogo a findCpfConflictForUpdate para e-mail.
 async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
   return getClient(client).executeOne(
     "SELECT id FROM funcionarios WHERE email = ? AND id <> ? LIMIT 1 FOR UPDATE",
@@ -178,9 +169,6 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
   );
 }
 
-/**
- * Reaproveita os filtros de listagem e contagem para manter paginacao coerente.
- */
 async function countEmployees(filters = {}, escopoUnidades = null) {
   const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.executeOne(
@@ -200,7 +188,6 @@ async function listEmployees({ ativo, cargo, q, limit, offset } = {}, escopoUnid
 }
 
 async function listForPointReport(escopoUnidades = null) {
-  // Só vínculo ATIVO (consistente com listEmployees/findAdminEmployeeById).
   const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.execute(
     "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id, lv.unidade_escolar_id FROM funcionarios f LEFT JOIN LATERAL (" +
@@ -210,12 +197,12 @@ async function listForPointReport(escopoUnidades = null) {
   );
 }
 
-// cargoId na assinatura por compat.; associação real fica no vínculo.
+// cargoId na assinatura por compat.; a associação real fica no vínculo.
 async function createEmployee(
   client,
   { cargoId, cpf, email, nome, telefone = null, ativo }
 ) {
-  void cargoId; // cargo_id migrated to vinculos_funcionais (see vinculoModel).
+  void cargoId; // cargo_id migrou para vinculos_funcionais (ver vinculoModel).
   return getClient(client).execute(
     "INSERT INTO funcionarios (cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?)",
     [cpf, email, nome, telefone, ativo ? 1 : 0]
@@ -233,9 +220,7 @@ async function updateAdminEmployee(
   );
 }
 
-/**
- * Monta somente as colunas alteradas para preservar campos fora da requisicao.
- */
+// Atualiza só as colunas fornecidas; preserva campos ausentes da requisição.
 async function updateEmployee(client, employeeId, fields) {
   let lastResult = { affectedRows: 0 };
   let totalAffectedRows = 0;

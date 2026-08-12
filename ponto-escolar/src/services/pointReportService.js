@@ -14,7 +14,7 @@ const {
 const { BadRequestError } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
-// A ordem do relatorio segue a mesma sequencia usada para registrar as batidas.
+// Ordem do relatório = mesma sequência usada para registrar as batidas.
 const PUNCH_STEPS = [
   { key: "entrada", tipo: PUNCH_TYPES[0], sequencia: 1 },
   { key: "saidaAlmoco", tipo: PUNCH_TYPES[1], sequencia: 2 },
@@ -22,9 +22,8 @@ const PUNCH_STEPS = [
   { key: "saida", tipo: PUNCH_TYPES[3], sequencia: 4 },
 ];
 
-// Mapeia o enum `tipo` lido do banco para o field lógico do shape de 4 batidas.
-// O banco grava RETORNO_ALMOCO (ver pointModel), mas o field lógico/sequência é
-// voltaAlmoco — precisa bater com o STEP correspondente para somar a batida.
+// enum `tipo` → sequência lógica. Banco grava RETORNO_ALMOCO; field lógico é
+// voltaAlmoco (bate com o STEP correspondente p/ somar a batida).
 const TIPO_TO_SEQUENCIA = {
   ENTRADA: 1,
   SAIDA_ALMOCO: 2,
@@ -32,9 +31,8 @@ const TIPO_TO_SEQUENCIA = {
   SAIDA: 4,
 };
 
-// Data "de hoje" calculada no fuso de Sao Paulo, independente do fuso do
-// servidor onde a aplicacao roda, para que o relatorio do dia bata com o
-// horario local dos funcionarios.
+// "Hoje" no fuso de São Paulo (independente do fuso do servidor) p/ que o
+// relatório do dia bata com o horário local dos funcionários.
 function getTodayDateInSaoPaulo() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -62,9 +60,7 @@ function toDateTime(date, time) {
   return `${date} ${normalizeTimeValue(time)}`;
 }
 
-// NOVO SCHEMA: cada batida do dia é uma linha própria em registro_de_pontos
-// (id individual por batida), então o id vem direto da linha — não mais um
-// id sintético derivado de linha do dia. A sequência resolve pelo enum `tipo`.
+// Cada batida é uma linha própria (id individual); sequência resolve pelo enum `tipo`.
 function buildPunchList(date, punches) {
   return (Array.isArray(punches) ? punches : [])
     .filter((row) => row && TIPO_TO_SEQUENCIA[row.tipo])
@@ -86,8 +82,7 @@ function getEmptyPunchTimes() {
   };
 }
 
-// Regra de negocio do status do dia: sem nenhuma batida = AUSENTE; com a saida
-// registrada = COMPLETO; com pelo menos uma batida mas sem a saida = EM_ANDAMENTO.
+// Status do dia: sem batidas = AUSENTE; com saída = COMPLETO; demais = EM_ANDAMENTO.
 function summarizeEmployeeDay(employee, punches, date) {
   const times = punches && punches.length
     ? readPunchTimesFromRow(punches)
@@ -120,10 +115,9 @@ function summarizeEmployeeDay(employee, punches, date) {
   };
 }
 
-// NOVO SCHEMA: a query de batidas (pointModel.listRowsByDate) retorna 1 linha
-// por batida, ordenada por vinculo_funcional_id/tipo — sem coluna funcionario_id.
-// Como o relatório agrupa por funcionário, precisamos resolver cada vínculo ao
-// seu funcionário. Vínculos repetidos reaproveitam a mesma resolução.
+// listRowsByDate retorna 1 linha por batida (sem coluna funcionario_id, ordenada
+// por vínculo/tipo). Agrupando por funcionário, resolvemos cada vínculo ao seu
+// funcionário; vínculos repetidos reaproveitam a resolução.
 async function resolveVinculoToFuncionario(vinculoIds) {
   const uniqueIds = [...new Set(vinculoIds.map(Number).filter(Number.isInteger))];
   const byVinculo = new Map();
@@ -136,9 +130,8 @@ async function resolveVinculoToFuncionario(vinculoIds) {
   return byVinculo;
 }
 
-// Agrupa as batidas do dia (1 linha por batida) por funcionário. Cada vínculo
-// resolve-se em seu funcionário e agrupa suas batidas; funcionários sem batidas
-// não aparecem aqui (são completados pelo cruzamento com a lista de ativos).
+// Agrupa batidas do dia por funcionário. Cada vínculo resolve-se em seu
+// funcionário; sem batidas não aparecem (completados pelo cruzamento com ativos).
 function indexPunchesByEmployee(punchRows, vinculoToFuncionario) {
   const byEmployee = new Map();
 
@@ -157,9 +150,7 @@ function indexPunchesByEmployee(punchRows, vinculoToFuncionario) {
   return byEmployee;
 }
 
-// Taxa de presenca calculada apenas sobre funcionarios ativos, para nao
-// distorcer o indicador com funcionarios desligados/inativos que nunca
-// vao bater ponto.
+// Taxa de presença só sobre ativos (desligados nunca batem ponto e distorceriam).
 function buildSummary(summaries) {
   const activeSummaries = summaries.filter((item) => item.funcionario.ativo);
   const presentes = activeSummaries.filter((item) => item.total_batidas > 0);
@@ -181,9 +172,7 @@ function buildSummary(summaries) {
   };
 }
 
-/**
- * A visao diaria nasce em memoria para nao alterar registros durante consultas.
- */
+// Visão diária nasce em memória (não altera registros durante a consulta).
 async function buildDailySnapshot(date, escopoUnidades = null) {
   const employees = await employeeModel.listForPointReport(escopoUnidades);
   const punchRows = await pointModel.listRowsByDate(date);
@@ -191,8 +180,7 @@ async function buildDailySnapshot(date, escopoUnidades = null) {
     punchRows.map((row) => row.vinculo_funcional_id)
   );
   const byEmployee = indexPunchesByEmployee(punchRows, vinculoToFuncionario);
-  // Filtra batidas de funcionarios fora do escopo: o snapshot nasce a partir
-  // da lista de funcionarios permitidos, entao so agregamos batidas desses.
+  // Filtra batidas de fora do escopo: snapshot nasce da lista de permitidos.
   const permittedIds = new Set(employees.map((e) => Number(e.id)));
   const summaries = employees.map((employee) =>
     summarizeEmployeeDay(

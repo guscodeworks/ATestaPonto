@@ -2,17 +2,11 @@
 
 const database = require("../config/database");
 
-// getClient: transação explícita ou conexão padrão (padrão dos models).
 function getClient(client) {
   return client || database;
 }
 
-// Jornada em vinculos_funcionais (horario_*, status ATIVO/AFASTADO/ENCERRADO).
-
-/**
- * Cria vínculo no cadastro (mesma transação). Mapeia horários lógicos → horario_*.
- * unidade_escolar_id é NOT NULL — null será rejeitado pelo banco.
- */
+// Cria vínculo na mesma transação; unidade_escolar_id NOT NULL (null rejeitado pelo banco).
 async function createVinculo(
   client,
   {
@@ -40,7 +34,7 @@ async function createVinculo(
   );
 }
 
-// Colunas de horário formatadas e campos básicos, reutilizados por leituras.
+// Horários formatados + campos básicos; reutilizado pelas leituras.
 const VINCULO_SELECT = `
   v.id, v.funcionario_id, v.unidade_escolar_id, v.cargo_id, v.matricula,
   TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
@@ -66,9 +60,6 @@ const VINCULO_WITH_DETAILS_JOINS = `
   LEFT JOIN diretorias_ensino de ON de.id = ue.diretoria_ensino_id
 `;
 
-/**
- * Retorna o vínculo pelo id (sem travar).
- */
 async function getById(vinculoId, client) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_SELECT} FROM vinculos_funcionais v WHERE v.id = ? LIMIT 1`,
@@ -76,9 +67,7 @@ async function getById(vinculoId, client) {
   );
 }
 
-/**
- * Trava o vínculo para alteração dentro de uma transação.
- */
+// Trava o vínculo para alteração dentro de uma transação.
 async function getByIdForUpdate(client, vinculoId) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_SELECT} FROM vinculos_funcionais v WHERE v.id = ? LIMIT 1 FOR UPDATE`,
@@ -123,9 +112,7 @@ async function update(client, vinculoId, fields = {}) {
   };
 }
 
-/**
- * Encerra vínculo (status ENCERRADO, data_fim CURRENT_DATE). Histórico de pontos intacto.
- */
+// Encerra vínculo (status ENCERRADO, data_fim CURRENT_DATE); histórico de pontos intacto.
 async function encerrarVinculo(client, vinculoId) {
   return getClient(client).execute(
     "UPDATE vinculos_funcionais SET status = 'ENCERRADO', data_fim = CURRENT_DATE WHERE id = ?",
@@ -133,9 +120,7 @@ async function encerrarVinculo(client, vinculoId) {
   );
 }
 
-/**
- * Todos os vínculos do funcionário (ordenados do mais recente ao mais antigo).
- */
+// Vínculos do funcionário, do mais recente ao mais antigo.
 async function findByFuncionarioId(funcionarioId, client) {
   return getClient(client).execute(
     `SELECT ${VINCULO_SELECT} FROM vinculos_funcionais v WHERE v.funcionario_id = ? ORDER BY v.id DESC`,
@@ -143,7 +128,7 @@ async function findByFuncionarioId(funcionarioId, client) {
   );
 }
 
-// Vínculo ATIVO mais recente (jornada/cargo/escola para ponto e dashboard).
+// Vínculo ATIVO mais recente (jornada/cargo/escola para ponto/dashboard).
 async function findActiveByFuncionarioId(funcionarioId, client) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_SELECT} FROM vinculos_funcionais v WHERE v.funcionario_id = ? AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1`,
@@ -151,7 +136,7 @@ async function findActiveByFuncionarioId(funcionarioId, client) {
   );
 }
 
-// Trava vínculo ativo no registro de ponto (evita batidas concorrentes).
+// Trava o vínculo ativo no registro de ponto (evita batidas concorrentes).
 async function findActiveByFuncionarioIdForUpdate(client, funcionarioId) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_SELECT} FROM vinculos_funcionais v WHERE v.funcionario_id = ? AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1 FOR UPDATE`,
@@ -175,9 +160,7 @@ async function findByIdWithDetails(vinculoId, client) {
   );
 }
 
-/**
- * Vínculo mais recente (qualquer status) com detalhes. Usado na autorização de reativação.
- */
+// Vínculo mais recente (qualquer status) com detalhes; usado na reativação.
 async function findLatestByFuncionarioIdWithDetails(funcionarioId, client) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_WITH_DETAILS_SELECT} ${VINCULO_WITH_DETAILS_JOINS} WHERE v.funcionario_id = ? ORDER BY v.id DESC LIMIT 1`,

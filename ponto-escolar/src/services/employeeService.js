@@ -20,8 +20,7 @@ const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
 
-// Edição aceita o mesmo conjunto do cadastro (inclui PROFESSOR). Antes o filtro
-// extra impedia editar a jornada de um PROFESSOR já cadastrado.
+// Edição aceita o mesmo conjunto do cadastro.
 const EDITABLE_CARGO_TYPES = CARGO_TYPES;
 const EDITABLE_EMPLOYEE_FIELDS = new Set([
   "nome",
@@ -35,8 +34,7 @@ const EDITABLE_EMPLOYEE_FIELDS = new Set([
 ]);
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
-// CPF sempre mascarado ao sair da API, evitando expor o dado completo em
-// respostas/listagens (o valor completo só é usado internamente para lógica).
+// CPF mascarado na saída; só usado internamente para lógica.
 function mapEmployee(employee) {
   return {
     id: employee.id,
@@ -165,13 +163,8 @@ function generateTemporaryPassword() {
   return randomBytes(18).toString("base64url");
 }
 
-/**
- * Normaliza a unidade escolar informada no cadastro. No novo schema é
- * obrigatória (o vínculo funcional exige uma unidade, e a geolocalização do
- * ponto passa a vir dela), então ausência/nulo são rejeitados aqui. A
- * existência da unidade é confirmada no fluxo de transação (consulta ao
- * model), não nesta normalização.
- */
+// Unidade obrigatória (vínculo exige + geolocalização do ponto vem dela).
+// Existência é confirmada na transação, não aqui.
 function normalizeUnidadeEscolarId(value) {
   if (value === undefined || value === null || value === "") {
     throw new BadRequestError("unidade_escolar_id e obrigatorio");
@@ -185,13 +178,8 @@ function normalizeUnidadeEscolarId(value) {
   return id;
 }
 
-/**
- * Resolve o id de um cargo pelo nome, criando-o se ainda não existir. No novo
- * schema `cargo` é UNIQUE e compartilhada entre funcionários, então o
- * cadastro/edição reutiliza o row existente em vez de criar um por funcionário.
- * Roda dentro da transação (mesmo client) e trava o row com FOR UPDATE para
- * que dois cadastros concorrentes do mesmo cargo sejam determinísticos.
- */
+// `cargo` é UNIQUE/compartilhada: reutiliza o row existente. Roda na transação
+// com FOR UPDATE p/ que dois cadastros concorrentes do mesmo cargo sejam determinísticos.
 async function findOrCreateCargo(client, cargo) {
   const existing = await cargoModel.findByNomeForUpdate(client, cargo);
   if (existing) {
@@ -206,9 +194,7 @@ async function findOrCreateCargo(client, cargo) {
   return cargoId;
 }
 
-/**
- * Cria funcionario e login juntos para evitar credencial sem cadastro ativo.
- */
+// Cria funcionário + login juntos: evita credencial sem cadastro ativo.
 async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const nome = String(body.nome || "").trim();
   const cpf = String(body.cpf || "").trim();
@@ -228,7 +214,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     env.BCRYPT_SALT_ROUNDS
   );
 
-  // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
+  // Transação cobre duplicidade, cargo, login e funcionário como uma unidade.
   const createdIds = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists?.id) {
@@ -240,9 +226,8 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    // unidade agora obrigatoria: confirma sua existencia antes de criar o
-    // funcionario, para falhar cedo com mensagem de negocio em vez de estourar
-    // a FK no INSERT do vinculo.
+    // unidade obrigatória: confirma existência p/ falhar cedo com msg de negócio
+    // em vez de estourar a FK no INSERT do vínculo.
     const unidade = await unidadeEscolarModel.findByIdForUpdate(
       tx,
       unidadeEscolarId
@@ -251,7 +236,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       throw new NotFoundError("Unidade escolar nao encontrada");
     }
 
-    // cargo e UNIQUE/compartilhada: reutiliza o row existente ou cria um novo.
+    // cargo: reutiliza o row existente ou cria um novo (UNIQUE/compartilhada).
     const cargoId = await findOrCreateCargo(tx, cargoSchedule.cargo);
 
     const result = await employeeModel.createEmployee(tx, {
@@ -268,10 +253,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     }
 
     await loginModel.createLogin(tx, { funcionarioId, senhaHash });
-    // Cria o vínculo funcional na mesma transação, reutilizando o cargoId e
-    // os horários já validados em cargoSchedule (sem novas consultas). Se
-    // falhar, o rollback da transação desfaz funcionário, login e cargo
-    // conjuntamente.
+    // Vínculo na mesma transação; rollback desfaz funcionário, login e cargo juntos.
     await vinculoModel.createVinculo(tx, {
       funcionarioId,
       unidadeEscolarId,
@@ -323,8 +305,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     },
   });
 
-  // O envio ocorre apenas apos a transacao. Falhas no SMTP nao desfazem o
-  // cadastro que ja foi confirmado no banco.
+  // E-mail só após a transação; falhas de SMTP não desfazem o cadastro já confirmado.
   const entregaEmail = await sendEmployeeWelcomeEmail({
     nome: created.nome,
     email: created.email,
@@ -341,8 +322,7 @@ async function listEmployees(query = {}, escopoUnidades = null) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
   const offset = (page - 1) * limit;
-  // Express 5 expoe req.query por getter; sanitizadores podem validar sem
-  // substituir o valor original. Normaliza novamente na regra de negocio.
+  // Express 5 expõe req.query por getter; normaliza novamente na regra de negócio.
   const ativo = normalizeActiveFilter(query.ativo);
   const cargo = String(query.cargo || "").trim().toUpperCase();
   const q = String(query.q || "").trim();
@@ -474,12 +454,10 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
       throw new NotFoundError("Funcionario nao encontrado");
     }
 
-    // No novo schema a jornada e o cargo do funcionario vivem no vinculo ativo
-    // (e nao mais na tabela cargos, que agora e UNIQUE/compartilhada). Trava o
-    // vinculo ativo aqui; sem ele nao ha onde aplicar a edicao de jornada.
-    // Renomear o row de cargos jamais faria sentido (afetaria outros
-    // funcionarios que compartilham o mesmo cargo) — em vez disso re-pontamos o
-    // vinculo para o cargo alvo (find-or-create pelo nome).
+    // Jornada/cargo vivem no vínculo ativo (cargos é UNIQUE/compartilhada, não
+    // por funcionário). Sem vínculo ativo não há onde editar a jornada. Nunca
+    // renomeia o row de cargos (afetaria outros funcionários) — re-aponta o
+    // vínculo p/ o cargo-alvo (find-or-create pelo nome).
     const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
       tx,
       employeeId
@@ -498,15 +476,11 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    // As atualizacoes (funcionario + vinculo) operam sobre rows recem-travadas
-    // (existing e vinculo via FOR UPDATE), garantindo o match da clausula WHERE.
-    // Nao ha guard em affectedRows: o UPDATE do mysql2 devolve linhas ALTERADAS
-    // (nao "matched"), entao uma edicao no-op (ex.: so `nome` mudou, jornada
-    // repetida) resultaria 0 e dispararia um falso "nao encontrado".
+    // Sem guard em affectedRows: o UPDATE do mysql2 devolve linhas ALTERADAS (não
+    // "matched"), então uma edição no-op (jornada repetida) daria 0 → falso "não encontrado".
     await employeeModel.updateAdminEmployee(tx, employeeId, edits);
 
-    // Reaponta o vinculo ao cargo alvo (find-or-create pelo nome, ja que cargo e
-    // UNIQUE/compartilhada) e sobrescreve a jornada no proprio vinculo.
+    // Re-aponta o vínculo ao cargo-alvo (find-or-create pelo nome) e sobrescreve a jornada.
     const cargoId = await findOrCreateCargo(tx, edits.cargoSchedule.cargo);
     await vinculoModel.update(tx, vinculo.id, {
       cargoId,
@@ -583,11 +557,9 @@ async function changeEmployeeActivation(
       throw new Error("Falha ao atualizar o status do funcionario");
     }
 
-    // Desativar encerra o vínculo ativo (status=ENCERRADO + data_fim) para
-    // refletir o desligamento no novo schema, onde cargo/escola/jornada vivem
-    // no vínculo. Não apaga registro_de_pontos (histórico permanece intacto).
-    // Reativar não (re)abre vínculo: a reabertura de vínculo é uma operação
-    // de cadastro separada, não parte desta ativação.
+    // Desativar encerra o vínculo ativo (cargo/escola/jornada vive nele); não
+    // apaga pontos (histórico intacto). Reativar NÃO (re)abre vínculo — isso é
+    // operação de cadastro separada.
     if (!ativo) {
       const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
         tx,

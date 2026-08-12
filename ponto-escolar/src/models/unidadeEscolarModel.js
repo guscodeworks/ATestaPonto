@@ -2,30 +2,19 @@
 
 const database = require("../config/database");
 
-// Permite que as queries participem de uma transação (client passado
-// explicitamente) ou usem a conexão padrão do módulo, alinhado aos demais
-// models.
 function getClient(client) {
   return client || database;
 }
 
-// NOVO SCHEMA: a geolocalização de batida passou a residir em `unidades_escolares`
-// (latitude, longitude, raio_permitido_metros), por unidade — antes vinha de
-// variáveis de ambiente globais (SCHOOL_LATITUDE/LONGITUDE/ALLOWED_RADIUS_METERS).
-// Este Model é somente leitura: criar/atualizar escolas fica fora do escopo
-// da migração atual (a tarefa pede apenas consultas).
+// A geolocalização da batida reside em unidades_escolares (lat/lng/raio_permitido_metros),
+// por unidade — antes vinha de env vars globais. Model só de leitura.
 
-// Colunas básicas da unidade escolar, reutilizadas pelas leituras. Qualificadas
-// com `ue.` para permanecerem sem ambiguidade nas leituras que fazem JOIN
-// (findByVinculo / findGeolocationByVinculo), no mesmo padrão do vinculoModel.
+// Colunas básicas; `ue.` qualifica para JOINs sem ambiguidade.
 const UNIDADE_SELECT = `
   ue.id, ue.diretoria_ensino_id, ue.nome, ue.latitude, ue.longitude, ue.raio_permitido_metros,
   ue.ativa, ue.codigo_inep, ue.endereco, ue.cidade, ue.criado_em, ue.atualizado_em
 `;
 
-/**
- * Retorna a escola por id (sem travar).
- */
 async function findById(escolaId, client) {
   return getClient(client).executeOne(
     `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ue.id = ? LIMIT 1`,
@@ -33,9 +22,7 @@ async function findById(escolaId, client) {
   );
 }
 
-/**
- * Trava a escola para alteração dentro de uma transação.
- */
+// Trava a escola para alteração dentro de uma transação.
 async function findByIdForUpdate(client, escolaId) {
   return getClient(client).executeOne(
     `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ue.id = ? LIMIT 1 FOR UPDATE`,
@@ -43,11 +30,7 @@ async function findByIdForUpdate(client, escolaId) {
   );
 }
 
-/**
- * Escola associada a um vínculo funcional (via vinculos_funcionais.unidade_escolar_id).
- * Caminho usado para resolver a unidade a partir do vínculo do funcionário
- * (ex.: geolocalização no registro de ponto).
- */
+// Escola do vínculo (via vinculos_funcionais.unidade_escolar_id); uso: geolocalização no ponto.
 async function findByVinculo(vinculoId, client) {
   return getClient(client).executeOne(
     `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue INNER JOIN vinculos_funcionais v ON v.unidade_escolar_id = ue.id WHERE v.id = ? LIMIT 1`,
@@ -55,10 +38,7 @@ async function findByVinculo(vinculoId, client) {
   );
 }
 
-/**
- * Dados de geolocalização de uma escola (latitude, longitude, raio_permitido_metros).
- * Subset enxuto para a validação de raio ao bater ponto.
- */
+// Subset enxuto de geolocalização para validar o raio ao bater ponto.
 async function findGeolocationById(escolaId, client) {
   return getClient(client).executeOne(
     "SELECT ue.id, ue.latitude, ue.longitude, ue.raio_permitido_metros FROM unidades_escolares ue WHERE ue.id = ? LIMIT 1",
@@ -66,11 +46,7 @@ async function findGeolocationById(escolaId, client) {
   );
 }
 
-/**
- * Geolocalização da escola associada a um vínculo. Resolve direto a partir do
- * `vinculo_funcional_id` (chave usada por registro_de_pontos), sem precisar
- * consultar o funcionário antes.
- */
+// Geolocalização direto do vinculo_funcional_id (chave de registro_de_pontos), sem consultar o funcionário.
 async function findGeolocationByVinculo(vinculoId, client) {
   return getClient(client).executeOne(
     "SELECT ue.id, ue.latitude, ue.longitude, ue.raio_permitido_metros FROM unidades_escolares ue INNER JOIN vinculos_funcionais v ON v.unidade_escolar_id = ue.id WHERE v.id = ? LIMIT 1",
@@ -78,9 +54,6 @@ async function findGeolocationByVinculo(vinculoId, client) {
   );
 }
 
-/**
- * Lista escolas, com filtro opcional de ativa (true/false).
- */
 async function list({ ativa } = {}, client) {
   const whereAtiva =
     ativa === true || ativa === false || ativa === 1 || ativa === 0
@@ -94,9 +67,7 @@ async function list({ ativa } = {}, client) {
   );
 }
 
-/**
- * Escolas vinculadas a uma diretoria de ensino.
- */
+// Escolas vinculadas a uma diretoria de ensino.
 async function findByDiretoriaId(diretoriaEnsinoId, client) {
   return getClient(client).execute(
     `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ue.diretoria_ensino_id = ? ORDER BY ue.nome ASC`,

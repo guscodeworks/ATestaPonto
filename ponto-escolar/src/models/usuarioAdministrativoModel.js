@@ -2,7 +2,6 @@
 
 const database = require("../config/database");
 
-// getClient: transação explícita ou conexão padrão.
 function getClient(client) {
   return client || database;
 }
@@ -11,16 +10,13 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-// Trecho SQL reutilizável: dados básicos do administrativo.
-// Schema real (ponto_backup.sql): usuarios_administrativos é keyed por cpf
-// próprio — NÃO possui funcionario_id nem govbr_sub. O concessório é uma
-// identidade admin independente do cadastro de funcionários.
+// usuarios_administrativos é keyed por próprio CPF — sem funcionario_id nem
+// govbr_sub; identidade admin independente do cadastro de funcionários.
 const ADMIN_BASIC_SELECT = `
   ua.id, ua.cpf, ua.nome, ua.email, ua.ativo,
   ua.ultimo_login_em, ua.criado_em, ua.atualizado_em
 `;
 
-// Trecho SQL reutilizável: dados básicos de acesso administrativo
 const ACESSO_BASIC_SELECT = `
   aa.id, aa.usuario_administrativo_id, aa.perfil, aa.diretoria_ensino_id, 
   aa.unidade_escolar_id, aa.status, aa.data_inicio, aa.data_fim, 
@@ -34,7 +30,7 @@ async function findById(adminId, client) {
   );
 }
 
-// Localiza o administrativo pelo seu próprio CPF (não via funcionários).
+// CPF do próprio admin (a tabela de funcionários não participa da busca).
 async function findByCpf(cpf, client) {
   return getClient(client).executeOne(
     `SELECT ${ADMIN_BASIC_SELECT} FROM usuarios_administrativos ua
@@ -43,9 +39,7 @@ async function findByCpf(cpf, client) {
   );
 }
 
-// find-or-create de identidade admin: cria o usuário administrativo quando o
-// CPF ainda não existe. Espera ser chamado dentro de uma transação (client
-// passado explicitamente), logo antes de conceder o acesso.
+// Cria a identidade admin dentro da transação, antes de conceder o acesso.
 async function create(client, { cpf, nome, email, ativo = true } = {}) {
   return getClient(client).execute(
     "INSERT INTO usuarios_administrativos (cpf, nome, email, ativo) VALUES (?, ?, ?, ?)",
@@ -67,7 +61,6 @@ async function findByEmail(email, client) {
   );
 }
 
-// Novo método: buscar acessos ativos e válidos para um administrativo
 async function findAcessosAtivosPorUsuario(adminId, client) {
   const query = `
     SELECT ${ACESSO_BASIC_SELECT}

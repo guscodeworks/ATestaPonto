@@ -2,29 +2,18 @@
 
 const database = require("../config/database");
 
-// Permite que as queries participem de uma transação (client passado
-// explicitamente) ou usem a conexão padrão do módulo, alinhado aos demais
-// models.
 function getClient(client) {
   return client || database;
 }
 
-// NOVO SCHEMA: `diretorias_ensino` agrupa unidades escolares. Colunas: id,
-// nome (UNIQUE), codigo (UNIQUE), cidade_sede, ativo, criado_em, atualizado_em.
-// CRUD compatível: criar/ler/atualizar/excluir. A exclusão é bloqueada pelo
-// banco (FK unidades_escolares.diretoria_ensino_id ON DELETE RESTRICT) quando
-// ainda existem unidades vinculadas — o Model apenas executa o DELETE; a
-// decisão de integridade referencial é do banco.
+// diretorias_ensino agrupa unidades escolares (nome/codigo UNIQUE). O DELETE
+// é bloqueado pelo banco (FK ON DELETE RESTRICT) se houver unidades vinculadas.
 
-// Colunas básicas, reutilizadas pelas leituras. Qualificadas com `de.` no
-// mesmo padrão dos demais models, evitando ambiguidade em JOINs futuros.
+// Colunas básicas; `de.` qualifica para JOINs futuros sem ambiguidade.
 const DIRETORIA_SELECT = `
   de.id, de.nome, de.codigo, de.cidade_sede, de.ativo, de.criado_em, de.atualizado_em
 `;
 
-/**
- * Lista diretorias, com filtro opcional de ativo (true/false).
- */
 async function list({ ativo } = {}, client) {
   const whereAtivo =
     ativo === true || ativo === false || ativo === 1 || ativo === 0
@@ -38,9 +27,6 @@ async function list({ ativo } = {}, client) {
   );
 }
 
-/**
- * Retorna a diretoria por id (sem travar).
- */
 async function findById(diretoriaId, client) {
   return getClient(client).executeOne(
     `SELECT ${DIRETORIA_SELECT} FROM diretorias_ensino de WHERE de.id = ? LIMIT 1`,
@@ -48,9 +34,7 @@ async function findById(diretoriaId, client) {
   );
 }
 
-/**
- * Trava a diretoria para alteração dentro de uma transação.
- */
+// Trava a diretoria para alteração dentro de uma transação.
 async function findByIdForUpdate(client, diretoriaId) {
   return getClient(client).executeOne(
     `SELECT ${DIRETORIA_SELECT} FROM diretorias_ensino de WHERE de.id = ? LIMIT 1 FOR UPDATE`,
@@ -58,9 +42,7 @@ async function findByIdForUpdate(client, diretoriaId) {
   );
 }
 
-/**
- * Busca diretoria por código (coluna UNIQUE).
- */
+// Busca por código (coluna UNIQUE).
 async function findByCodigo(codigo, client) {
   return getClient(client).executeOne(
     `SELECT ${DIRETORIA_SELECT} FROM diretorias_ensino de WHERE de.codigo = ? LIMIT 1`,
@@ -68,9 +50,7 @@ async function findByCodigo(codigo, client) {
   );
 }
 
-/**
- * Cria uma diretoria de ensino. `ativo` default true quando omitido.
- */
+// ativo default true quando omitido.
 async function createDiretoria(
   client,
   { nome, codigo, cidadeSede, ativo = true }
@@ -81,10 +61,7 @@ async function createDiretoria(
   );
 }
 
-// Mapeia campos lógicos (recebidos do service) -> SQL de atualização de uma
-// coluna só, no mesmo estilo da allowlist dos demais models. Os nomes de
-// coluna nunca são interpolados a partir da requisição (seguro contra SQL
-// injection).
+// Allowlist campo→SQL; nomes de coluna nunca interpolados da requisição (anti SQL injection).
 const DIRETORIA_UPDATE_ALLOWLIST = Object.freeze({
   nome: "UPDATE diretorias_ensino SET nome = ? WHERE id = ?",
   codigo: "UPDATE diretorias_ensino SET codigo = ? WHERE id = ?",
@@ -92,10 +69,7 @@ const DIRETORIA_UPDATE_ALLOWLIST = Object.freeze({
   ativo: "UPDATE diretorias_ensino SET ativo = ? WHERE id = ?",
 });
 
-/**
- * Atualiza somente os campos fornecidos, preservando os demais. Espera ser
- * chamado dentro de uma transação, preferencialmente após findByIdForUpdate.
- */
+// Atualiza só os campos fornecidos; dentro de transação, após findByIdForUpdate.
 async function updateDiretoria(client, diretoriaId, fields = {}) {
   let lastResult = { affectedRows: 0 };
   let totalAffectedRows = 0;
@@ -120,10 +94,7 @@ async function updateDiretoria(client, diretoriaId, fields = {}) {
   };
 }
 
-/**
- * Exclui uma diretoria. Falha com erro de constraint do banco se ainda houver
- * unidades escolares vinculadas (FK ON DELETE RESTRICT).
- */
+// Falha com erro de constraint do banco se houver unidades vinculadas (FK ON DELETE RESTRICT).
 async function deleteDiretoria(client, diretoriaId) {
   return getClient(client).execute(
     "DELETE FROM diretorias_ensino WHERE id = ?",
