@@ -230,10 +230,16 @@
 
       window.location.href = '/funcionario';
     } catch (error) {
-      const message = error instanceof TypeError
-        ? 'Não foi possível conectar ao servidor. Tente novamente.'
-        : 'CPF/e-mail ou senha inválidos.';
-      toast(message, 'error');
+      if (error instanceof TypeError) {
+        toast('Não foi possível conectar ao servidor. Tente novamente.', 'error');
+      } else {
+        // Erro de credencial do servidor: aplica o mesmo estado visual de erro
+        // dos campos (borda vermelha + mensagem via aria-live) além do toast.
+        const message = 'CPF/e-mail ou senha inválidos.';
+        setFieldError(identificadorInput, identificadorError, message);
+        setFieldError(senhaInput, senhaError, message);
+        toast(message, 'error');
+      }
     } finally {
       await setLoading(false);
     }
