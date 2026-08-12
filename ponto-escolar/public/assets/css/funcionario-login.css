@@ -516,9 +516,6 @@ form {
     display: grid;
     place-items: center;
     padding: clamp(40px, 7vh, 76px) clamp(24px, 5vw, 64px);
-    background:
-      radial-gradient(circle at 50% 48%, rgba(20, 20, 20, 0.035), transparent 34%),
-      #fff;
   }
 
   .login-page::before {
@@ -616,11 +613,10 @@ form {
     width: min(100%, 464px);
     min-height: 0;
     padding: clamp(32px, 4vw, 44px);
-    border: 2px solid var(--login-black);
-    border-radius: 20px;
-    box-shadow:
-      7px 9px 0 rgba(20, 20, 20, 0.92),
-      0 24px 64px rgba(20, 20, 20, 0.16);
+    border: 1px solid rgba(20, 20, 20, 0.08);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(20, 20, 20, 0.12);
   }
 
   .login-form-panel {
@@ -669,7 +665,19 @@ form {
   }
 }
 
-/* Tablets e iPads: preserva o card completo com uma composicao intermediaria. */
+/* Tablets e iPads: imagem estática de fundo a partir do tablet. Mobile mantém a onda/blobs. */
+@media (min-width: 768px) {
+  .login-page {
+    background: url("../img/background-desktop.webp") center / cover no-repeat;
+  }
+
+  /* Remove os gradientes/blobs (onda azul, blob vermelho e pontos) feitos em CSS. */
+  .login-page::before,
+  .login-page::after,
+  .login-art {
+    display: none;
+  }
+}
 
 
 
