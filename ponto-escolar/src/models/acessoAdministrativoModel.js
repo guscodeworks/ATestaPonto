@@ -84,6 +84,17 @@ async function findById(acessoId, client) {
   );
 }
 
+// Atualiza apenas o status de um acesso, preservando a linha e todo o
+// histórico (perfil, diretoria/unidade, concedido_por, datas). O ciclo de vida
+// é transição de status, nunca exclusão — nem do acesso nem do
+// usuario_administrativo. Espera ser chamado dentro da transação passada (tx).
+async function updateStatus(acessoId, novoStatus, client) {
+  return getClient(client).execute(
+    "UPDATE acessos_administrativos SET status = ? WHERE id = ?",
+    [novoStatus, acessoId]
+  );
+}
+
 // Monta a cláusula WHERE de escopo para listagens de acessos. SEDUC não filtra;
 // demais perfis veem acessos cuja diretoria ou unidade esteja no seu escopo.
 // Retorna { clause, params } — clause vazia quando sem filtro.
@@ -153,6 +164,7 @@ module.exports = {
   withTransaction,
   createAcesso,
   findById,
+  updateStatus,
   listAcessos,
   countAcessos,
 };

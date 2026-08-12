@@ -57,6 +57,28 @@ function podeConceder(perfilConcedente, perfilConcedido) {
   return Boolean(permitidos && permitidos.has(objetivo));
 }
 
+// Avalia se um concedente pode suspender/revogar um acesso de perfil-alvo. Reusa
+// a mesma MATRIZ_DELEGACAO (não cria segunda matriz) para todos os perfis; apenas
+// ADMIN_SEDUC é exceção pontual: suspende/revoga qualquer acesso abaixo de SEDUC
+// (DIRETORIA/DIRETOR/VICE/SECRETARIA/COORDENADOR), exceto outro SEDUC — coerente
+// com "acessos abaixo de SEDUC", e mais permissivo que podeConceder só neste
+// perfil (podeConceder não dá DIRETOR/VICE ao SEDUC). Demais perfis seguem
+// podeConceder literal (anti-escalada idêntica à concessão).
+function podeAlterar(perfilConcedente, perfilAlvo) {
+  const concedente = String(perfilConcedente || "").trim().toUpperCase();
+  const alvo = String(perfilAlvo || "").trim().toUpperCase();
+  if (concedente === PERFIL_SEDUC) {
+    return alvo !== PERFIL_SEDUC && (
+      alvo === PERFIL_DIRETORIA ||
+      alvo === PERFIL_DIRETOR ||
+      alvo === PERFIL_VICE_DIRETOR ||
+      alvo === PERFIL_SECRETARIA ||
+      alvo === PERFIL_COORDENADOR
+    );
+  }
+  return podeConceder(concedente, alvo);
+}
+
 // Consolida acessos ativos (OR entre perfis) → { isSeduc, diretoriasPermitidas, unidadesPermitidas, temAcesso }.
 function buildEscopo(acessos) {
   const lista = Array.isArray(acessos) ? acessos : [];
@@ -347,6 +369,7 @@ module.exports = {
   PERFIS_ESCOLARES,
   MATRIZ_DELEGACAO,
   podeConceder,
+  podeAlterar,
   buildEscopo,
   recursoNoEscopo,
   expandirUnidadesPermitidas,

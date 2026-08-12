@@ -11,6 +11,7 @@ const {
   buildEscopo,
   recursoNoEscopo,
   podeConceder,
+  podeAlterar,
 } = require("../middlewares/adminScope");
 const { registerAuditLog } = require("./auditLogService");
 const { maskCpf, normalizeCpf } = require("../utils/cpf");
@@ -64,6 +65,59 @@ function mapAcesso(acesso, extras = {}) {
       ativo: Boolean(acesso.usuario_ativo),
     },
     ...extras,
+  };
+}
+
+// Shaping dos acessos do próprio administrador (contexto /meu). Diferente de
+// mapAcesso: a origem é findAcessosAtivosPorUsuario (select básico, sem JOINs
+// de nomes nem dados de terceiros), então não há bloco `usuario` nem nomes de
+// diretoria/unidade — é o contexto do próprio admin. Leitura pura; sem DB extra.
+function mapMeuAcesso(acesso) {
+  return {
+    id: Number(acesso.id),
+    perfil: acesso.perfil,
+    diretoria_ensino_id:
+      acesso.diretoria_ensino_id != null
+        ? Number(acesso.diretoria_ensino_id)
+        : null,
+    unidade_escolar_id:
+      acesso.unidade_escolar_id != null
+        ? Number(acesso.unidade_escolar_id)
+        : null,
+    status: acesso.status,
+    data_inicio: toDateString(acesso.data_inicio),
+    data_fim: toDateString(acesso.data_fim),
+    concedido_por_acesso_id:
+      acesso.concedido_por_acesso_id != null
+        ? Number(acesso.concedido_por_acesso_id)
+        : null,
+    criado_em: acesso.criado_em,
+    atualizado_em: acesso.atualizado_em,
+  };
+}
+
+// Serializa escopo para JSON: Sets viram arrays ordenados (ints). Mantém a
+// estrutura { isSeduc, diretoriasPermitidas, unidadesPermitidas, temAcesso }
+// já resolvida pelo escopoMiddleware (buildEscopo).
+function resumirEscopo(escopo) {
+  if (!escopo) {
+    return {
+      isSeduc: false,
+      diretoriasPermitidas: [],
+      unidadesPermitidas: [],
+      temAcesso: false,
+    };
+  }
+  const toSortedNums = (set) =>
+    [...set]
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0)
+      .sort((a, b) => a - b);
+  return {
+    isSeduc: Boolean(escopo.isSeduc),
+    diretoriasPermitidas: toSortedNums(escopo.diretoriasPermitidas),
+    unidadesPermitidas: toSortedNums(escopo.unidadesPermitidas),
+    temAcesso: Boolean(escopo.temAcesso),
   };
 }
 
@@ -354,8 +408,137 @@ async function getAcesso(acessoId, { escopo } = {}) {
   return { acesso: mapAcesso(acesso) };
 }
 
+// Ações de ciclo de vida suportadas: suspender/reativar/revogar. Cada ação mapeia
+// para um status-alvo e um conjunto de status de origem válidos (transições).
+const ACOES_STATUS = {
+  suspender: {
+    para: "SUSPENSO",
+    de: new Set(["ATIVO"]),
+  },
+  reativar: {
+    para: "ATIVO",
+    de: new Set(["SUSPENSO"]),
+  },
+  revogar: {
+    para: "REVOGADO",
+    de: new Set(["ATIVO", "SUSPENSO"]),
+  },
+};
+
+/**
+ * Altera o status de um acesso (suspende/reativa/revoga). Reusa a matriz de
+ * delegação (podeAlterar → podeConceder + extensão SEDUC) e a checagem de escopo
+ * (recursoNoEscopo) existentes; não duplica regras de perfil/escopo.
+ * Nunca apaga o acesso nem o usuario_administrativo — só muda status e audita.
+ */
+async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acessos } = {}) {
+  const acaoNorm = String(acao || "").trim().toLowerCase();
+  const regra = ACOES_STATUS[acaoNorm];
+  if (!regra) {
+    throw new BadRequestError("acao de status invalida");
+  }
+
+  const acesso = await acessoAdministrativoModel.findById(acessoId);
+  if (!acesso) {
+    throw new NotFoundError("Acesso administrativo nao encontrado");
+  }
+
+  // Bloqueio: ninguém altera o próprio acesso (auto-suspensão/revogação).
+  if (adminId != null && Number(acesso.usuario_administrativo_id) === Number(adminId)) {
+    throw new ForbiddenError("Nao e permitido alterar o proprio acesso");
+  }
+
+  // Bloqueio: acesso fora do escopo do administrador (diretoria/unidade).
+  if (!recursoNoEscopo(escopo, {
+    diretoriaEnsinoId: acesso.diretoria_ensino_id,
+    unidadeEscolarId: acesso.unidade_escolar_id,
+  })) {
+    throw new ForbiddenError(
+      "Acesso administrativo fora do escopo do administrador"
+    );
+  }
+
+  // Bloqueio: nível — só pode alterar acesso cujo perfil a matriz permite
+  // (abaixo do próprio nível). Reusa podeAlterar (MESMA matriz de delegação).
+  const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
+  const perfis = perfisDoConcedente(acessos);
+  const podeAlterarPerfil = Array.from(perfis).some((p) => podeAlterar(p, perfilAlvo));
+  if (!podeAlterarPerfil) {
+    throw new ForbiddenError(
+      "Perfil do administrador nao permite alterar este acesso"
+    );
+  }
+
+  // Bloqueio: REVOGADO é definitivo — nunca volta a ATIVO/SUSPENSO. Reativar um
+  // acesso REVOGADO é rejeitado (transição inválida → ConflictError).
+  const statusAtual = String(acesso.status || "").trim().toUpperCase();
+  if (!regra.de.has(statusAtual)) {
+    const definitivo = statusAtual === "REVOGADO" && regra.para !== "REVOGADO";
+    if (definitivo) {
+      throw new ConflictError(
+        "Acesso REVOGADO e definitivo: nao pode ser reativado"
+      );
+    }
+    throw new ConflictError(
+      `Transicao invalida de ${statusAtual} para ${regra.para}`
+    );
+  }
+
+  const deStatus = statusAtual;
+  const paraStatus = regra.para;
+
+  await acessoAdministrativoModel.withTransaction(async (tx) => {
+    await acessoAdministrativoModel.updateStatus(acessoId, paraStatus, tx);
+  });
+
+  // Recarrega pós-update para refletir status/atualizado_em no payload de saída.
+  const atualizado = await acessoAdministrativoModel.findById(acessoId);
+
+  await registerAuditLog({
+    evento: `acesso_administrativo_${acaoNorm}`,
+    adminId,
+    mensagem: `${acaoNorm} acesso administrativo`,
+    ipOrigem,
+    metadados: {
+      acesso_id: Number(acessoId),
+      usuario_administrativo_id: acesso.usuario_administrativo_id,
+      perfil: perfilAlvo,
+      diretoria_ensino_id:
+        acesso.diretoria_ensino_id != null
+          ? Number(acesso.diretoria_ensino_id)
+          : null,
+      unidade_escolar_id:
+        acesso.unidade_escolar_id != null
+          ? Number(acesso.unidade_escolar_id)
+          : null,
+      de_status: deStatus,
+      para_status: paraStatus,
+    },
+  });
+
+  return { acesso: mapAcesso(atualizado || acesso) };
+}
+
+/**
+ * Contexto do administrador autenticado: seus acessos ativos e o escopo efetivo
+ * que lhe confere poder de concessão/alteração. Leitura pura — consome apenas o
+ * que o middleware já resolveu (req.acessos + req.escopo), sem novo model/DB.
+ */
+function getMeusAcessos({ escopo, acessos, escopoUnidades } = {}) {
+  const lista = Array.isArray(acessos) ? acessos : [];
+  return {
+    acessos: lista.map(mapMeuAcesso),
+    escopo: resumirEscopo(escopo),
+    // escopoUnidades é null para SEDUC/ausência (sem filtro); preservamos para
+    // indicar o universo de unidades visíveis ao admin (já expandido).
+    unidadesVisiveis: escopoUnidades == null ? null : [...escopoUnidades].map(Number).filter((n) => Number.isInteger(n) && n > 0),
+  };
+}
+
 module.exports = {
   createAcesso,
   listAcessos,
   getAcesso,
+  alterarStatus,
+  getMeusAcessos,
 };
