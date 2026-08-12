@@ -4,29 +4,18 @@ const { ForbiddenError } = require("../utils/errors");
 const vinculoModel = require("../models/vinculoModel");
 const unidadeEscolarModel = require("../models/unidadeEscolarModel");
 
-// Perfis reconhecidos nos acessos_administrativos. A regra de escopo por perfil
-// vive neste único módulo — services/models nunca interpretam perfis, apenas
-// recebem o conjunto de unidades permitidas (ou null = acesso total).
+// Escopo por perfil: só este módulo interpreta perfis; demais camadas recebem ids ou null (SEDUC).
 
-// ADMIN_SEDUC: acesso estadual — qualquer diretoria e qualquer escola.
-const PERFIL_SEDUC = "ADMIN_SEDUC";
-// ADMIN_DIRETORIA: escopo de diretoria de ensino — toda escola da sua diretoria.
-const PERFIL_DIRETORIA = "ADMIN_DIRETORIA";
-// Perfis escolares: escopo de uma única unidade escolar.
-const PERFIS_ESCOLARES = new Set([
+const PERFIL_SEDUC = "ADMIN_SEDUC"; // estadual
+const PERFIL_DIRETORIA = "ADMIN_DIRETORIA"; // diretoria de ensino
+const PERFIS_ESCOLARES = new Set([ // unidade escolar
   "DIRETOR",
   "VICE_DIRETOR",
   "SECRETARIA",
   "COORDENADOR",
 ]);
 
-// Monta o escopo consolidado a partir dos acessos ativos do administrador.
-// Um admin pode ter múltiplos acessos; a autorização é OR entre eles:
-// qualquer acesso válido que autorize o recurso libera a operação.
-//
-// Resultado:
-//   { isSeduc, diretoriasPermitidas: Set<number>, unidadesPermitidas: Set<number>,
-//     temAcesso: boolean }
+// Consolida acessos ativos (OR entre perfis) → { isSeduc, diretoriasPermitidas, unidadesPermitidas, temAcesso }.
 function buildEscopo(acessos) {
   const lista = Array.isArray(acessos) ? acessos : [];
 
@@ -65,21 +54,13 @@ function buildEscopo(acessos) {
       }
       continue;
     }
-    // Perfis desconhecidos são ignorados (não autorizam nada). Evita presumir
-    // uma convenção para enums que não constam no spec desta etapa.
+    // Perfis desconhecidos são ignorados.
   }
 
   return escopo;
 }
 
-// Verifica, de forma pura (sem consultas ao banco), se um recurso identificado
-// por diretoria_ensino_id e/ou unidade_escolar_id está no escopo do admin.
-//   - SEDUC: sempre liberado.
-//   - Perfil de escola: liberado se o recurso pertence à unidade permitida.
-//   - Perfil de diretoria: liberado se o recurso pertence a uma diretoria
-//     permitida. Para recurso identificado só por unidade, é necessário o
-//     caller resolver a diretoria da unidade antes de chamar (ou usar
-//     expandirUnidadesPermitidas).
+// Checagem pura de escopo por diretoria/unidade. SEDUC sempre passa; só-unidade exige expandirUnidadesPermitidas.
 function recursoNoEscopo(escopo, { diretoriaEnsinoId, unidadeEscolarId } = {}) {
   if (!escopo || !escopo.temAcesso) {
     return false;
@@ -105,12 +86,7 @@ function recursoNoEscopo(escopo, { diretoriaEnsinoId, unidadeEscolarId } = {}) {
   return false;
 }
 
-// Resolve o conjunto de unidades_escolar_id permitidas ao admin. Para acessos
-// de diretoria, expande buscando as unidades sob cada diretoria permitida e
-// unindo com as unidades diretamente permitidas.
-//   - SEDUC ou sem acessos processáveis: retorna null (sinal de "sem filtro",
-//     isto é, acesso total). O caller deve interpretar null como "não filtra".
-//   - Caso contrário: array de ids (possivelmente vazio = nenhum permitido).
+// Expande diretorias → unidades. null = sem filtro (SEDUC); [] = nenhuma permitida.
 async function expandirUnidadesPermitidas(escopo) {
   if (!escopo || !escopo.temAcesso) {
     return null;
@@ -130,18 +106,14 @@ async function expandirUnidadesPermitidas(escopo) {
         }
       }
     } catch (_error) {
-      // Diretoria sem unidades (ou falha temporária): não expande nada, mas
-      // mantém as demais permissões. Outras unidades sob outras diretorias
-      // continuam válidas.
+      // Falha em uma diretoria não invalida as demais permissões.
     }
   }
 
   return [...permitidas];
 }
 
-// Middleware que popula req.escopo a partir de req.acessos (já carregado pelo
-// ensureAdminApiAuthenticated). Bloqueia acesso se o admin não tem nenhum
-// acesso ativo.
+// Popula req.escopo e req.escopoUnidades a partir de req.acessos.
 async function escopoMiddleware(req, _res, next) {
   const escopo = buildEscopo(req.acessos);
 
@@ -153,8 +125,7 @@ async function escopoMiddleware(req, _res, next) {
 
   req.escopo = escopo;
 
-  // Pré-computa o conjunto de unidades permitidas para os services/models
-  // filtrarem listagens/relatórios sem conhecer perfis. null = sem filtro.
+  // Pré-computa unidades permitidas para filtros em listagens (null = sem filtro).
   try {
     req.escopoUnidades = await expandirUnidadesPermitidas(escopo);
   } catch (error) {
@@ -166,9 +137,7 @@ async function escopoMiddleware(req, _res, next) {
   return next();
 }
 
-// Verifica o escopo sobre um funcionário identificado por req.params[paramName].
-// Resolve o vínculo ativo do funcionário no backend (não confia em IDs do
-// frontend) e bloqueia se o recurso estiver fora do escopo do admin.
+// Valida escopo via vínculo ativo do funcionário (resolvido no backend).
 function restringirEscopoFuncionario(paramName = "id") {
   return async function (req, _res, next) {
     const escopo = req.escopo || buildEscopo(req.acessos);
@@ -189,8 +158,6 @@ function restringirEscopoFuncionario(paramName = "id") {
       return next(new ForbiddenError("Identificador de funcionario invalido"));
     }
 
-    // Resolve o vínculo ativo com detalhes de unidade + diretoria no backend.
-    // Não há confiança em valor enviado pelo cliente.
     let vinculo;
     try {
       vinculo = await vinculoModel.findActiveByFuncionarioIdWithDetails(
@@ -202,8 +169,6 @@ function restringirEscopoFuncionario(paramName = "id") {
       );
     }
 
-    // Sem vínculo ativo: não há contexto de escola/diretoria para autorizar.
-    // Apenas SEDUC (já tratado acima) operaria; demais perfis são bloqueados.
     if (!vinculo) {
       return next(
         new ForbiddenError(
@@ -227,10 +192,7 @@ function restringirEscopoFuncionario(paramName = "id") {
   };
 }
 
-// Verifica o escopo sobre a unidade_escolar_id informada no body (cadastro de
-// funcionário). Resolve a unidade → diretoria no backend e bloqueia se estiver
-// fora do escopo do admin. Não confia no ID enviado pelo frontend além de usá-lo
-// apenas como alvo da validação.
+// Valida escopo da unidade_escolar_id do body (unidade → diretoria resolvida no backend).
 function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
   return async function (req, _res, next) {
     const escopo = req.escopo || buildEscopo(req.acessos);
@@ -247,8 +209,6 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
 
     const unidadeId = Number(req.body && req.body[field]);
     if (!Number.isInteger(unidadeId) || unidadeId <= 0) {
-      // Não é papel deste middleware rejeitar campo obrigatório (o validador
-      // express-validator cuida disso); apenas não autoriza sem alvo válido.
       return next(new ForbiddenError("Unidade escolar nao informada"));
     }
 
@@ -280,16 +240,7 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
   };
 }
 
-// Autorização de escopo para a REATIVAÇÃO de funcionário. A regra de negócio
-// diz que reativar NÃO reabre o vínculo, então o funcionário pode ter apenas
-// vínculo ENCERRADO. Diferente de restringirEscopoFuncionario (que busca o
-// vínculo ATIVO), esta factory deriva o escopo do vínculo MAIS RECENTE,
-// independente de status, aplicando exatamente as mesmas regras por perfil.
-// Não reabre nem cria vínculo; apenas autoriza.
-//
-// Se o funcionário não possui nenhum vínculo (nem ativo, nem encerrado), não há
-// contexto de escola/diretoria para autorizar — é reportado como pendência em
-// vez de presumir um fallback.
+// Reativação: escopo via vínculo mais recente (encerrado), pois reativar não reabre vínculo.
 function restringirEscopoFuncionarioReativacao(paramName = "id") {
   return async function (req, _res, next) {
     const escopo = req.escopo || buildEscopo(req.acessos);
@@ -310,8 +261,6 @@ function restringirEscopoFuncionarioReativacao(paramName = "id") {
       return next(new ForbiddenError("Identificador de funcionario invalido"));
     }
 
-    // Resolve o vínculo mais recente (ativo ou encerrado) com unidade +
-    // diretoria no backend. Não há confiança em valor enviado pelo cliente.
     let vinculo;
     try {
       vinculo = await vinculoModel.findLatestByFuncionarioIdWithDetails(
@@ -323,9 +272,6 @@ function restringirEscopoFuncionarioReativacao(paramName = "id") {
       );
     }
 
-    // Sem nenhum vínculo (sequer histórico): o schema não oferece contexto de
-    // escola/diretoria para autorizar. Não há fallback especificado — vira
-    // pendência para decisão de regra de negócio em vez de presumir acesso.
     if (!vinculo) {
       return next(
         new ForbiddenError(

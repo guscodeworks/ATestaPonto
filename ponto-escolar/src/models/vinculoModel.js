@@ -2,39 +2,16 @@
 
 const database = require("../config/database");
 
-// Permite que a query participe de uma transação (client passado
-// explicitamente) ou use a conexão padrão do módulo, alinhado aos demais
-// models. O cadastro de funcionário sempre executa dentro de transação,
-// mas mantemos o padrão getClient para consistência com o restante da camada.
+// getClient: transação explícita ou conexão padrão (padrão dos models).
 function getClient(client) {
   return client || database;
 }
 
-// NOVO SCHEMA: os horários da jornada vivem em `vinculos_funcionais` (não mais
-// em `cargos`), com nomes horario_entrada/horario_saida_almoco/horario_volta_almoco/
-// horario_saida. `status` é enum('ATIVO','AFASTADO','ENCERRADO'). A jornada do
-// funcionário para bater ponto / dashboard agora se resolve a partir do seu
-// vínculo ativo, que também liga a cargo, unidade escolar e (via unidade) a
-// diretoria de ensino.
+// Jornada em vinculos_funcionais (horario_*, status ATIVO/AFASTADO/ENCERRADO).
 
 /**
- * Cria o vínculo funcional do funcionário, vinculando-o à unidade escolar e
- * ao cargo com os horários definidos no cadastro.
- *
- * Deve ser chamado dentro da transação de cadastro (mesmo `client`) para que o
- * rollback de funcionário/cargo/login também desfaça o vínculo em caso de
- * falha. Os horários são reutilizados do cargo já criado para evitar consultas
- * duplicadas.
- *
- * A assinatura preserva os nomes lógicos (entrada/saidaAlmoco/retornoAlmoco/
- * saida) que o Service já envia; o mapeamento para as colunas reais do novo
- * schema (horario_*) é feito aqui dentro. `status` é fixo ("ATIVO") no
- * cadastro e `data_inicio` usa CURDATE() no banco, conforme regra de negócio
- * do vínculo inicial.
- *
- * OBS.: no novo schema `unidade_escolar_id` é NOT NULL — se o caller enviar
- * null (compatibilidade com o front atual), o INSERT será rejeitado pelo banco.
- * Esse ajuste de caller cabe ao Service, não ao Model.
+ * Cria vínculo no cadastro (mesma transação). Mapeia horários lógicos → horario_*.
+ * unidade_escolar_id é NOT NULL — null será rejeitado pelo banco.
  */
 async function createVinculo(
   client,
@@ -73,9 +50,7 @@ const VINCULO_SELECT = `
   v.data_inicio, v.data_fim, v.status, v.criado_em, v.atualizado_em
 `;
 
-// Dados de cargo + unidade escolar + diretoria de ensino resolvidos via vínculo.
-// cargo e unidade são INNER (NOT NULL no vínculo); diretoria via LEFT por
-// robustez (embora unidade.diretoria_ensino_id também seja NOT NULL).
+// Cargo + unidade + diretoria via JOINs (diretoria LEFT por robustez).
 const VINCULO_WITH_DETAILS_SELECT = `
   ${VINCULO_SELECT},
   c.cargo,
@@ -111,9 +86,7 @@ async function getByIdForUpdate(client, vinculoId) {
   );
 }
 
-// Mapeia campos lógicos (recebidos do service) -> SQL de atualização de uma
-// coluna só, no mesmo estilo da allowlist de employeeModel. Os nomes de coluna
-// nunca são interpolados a partir da requisição (seguro contra SQL injection).
+// Allowlist de campos editáveis (colunas fixas, sem interpolação da requisição).
 const VINCULO_UPDATE_ALLOWLIST = Object.freeze({
   matricula: "UPDATE vinculos_funcionais SET matricula = ? WHERE id = ?",
   entrada: "UPDATE vinculos_funcionais SET horario_entrada = ? WHERE id = ?",
@@ -127,10 +100,7 @@ const VINCULO_UPDATE_ALLOWLIST = Object.freeze({
   cargoId: "UPDATE vinculos_funcionais SET cargo_id = ? WHERE id = ?",
 });
 
-/**
- * Atualiza somente os campos fornecidos, preservando os demais. Espera ser
- * chamado dentro de uma transação, preferencialmente após getByIdForUpdate.
- */
+// Atualiza campos informados (usar dentro de transação, após getByIdForUpdate).
 async function update(client, vinculoId, fields = {}) {
   let lastResult = { affectedRows: 0 };
   let totalAffectedRows = 0;
@@ -154,12 +124,7 @@ async function update(client, vinculoId, fields = {}) {
 }
 
 /**
- * Encerra o vínculo no desligamento do funcionário usando data_fim calculada
- * no servidor (CURRENT_DATE, consistente com CURDATE() usado no cadastro) —
- * evita divergência de fuso do processo Node e mantém o histórico de pontos
- * intacto (não há DELETE em registro_de_pontos). status passa a ENCERRADO.
- * Espera ser chamado dentro da transação de desativação após travar o vínculo
- * ativo via findActiveByFuncionarioIdForUpdate.
+ * Encerra vínculo (status ENCERRADO, data_fim CURRENT_DATE). Histórico de pontos intacto.
  */
 async function encerrarVinculo(client, vinculoId) {
   return getClient(client).execute(
@@ -178,10 +143,7 @@ async function findByFuncionarioId(funcionarioId, client) {
   );
 }
 
-/**
- * Vínculo ATIVO do funcionário (um único, o mais recente). É a fonte da
- * jornada/cargo/escola atuais para bater ponto e dashboard.
- */
+// Vínculo ATIVO mais recente (jornada/cargo/escola para ponto e dashboard).
 async function findActiveByFuncionarioId(funcionarioId, client) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_SELECT} FROM vinculos_funcionais v WHERE v.funcionario_id = ? AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1`,
@@ -189,10 +151,7 @@ async function findActiveByFuncionarioId(funcionarioId, client) {
   );
 }
 
-/**
- * Trava o vínculo ativo do funcionário durante o registro de ponto, evitando
- * batidas concorrentes.
- */
+// Trava vínculo ativo no registro de ponto (evita batidas concorrentes).
 async function findActiveByFuncionarioIdForUpdate(client, funcionarioId) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_SELECT} FROM vinculos_funcionais v WHERE v.funcionario_id = ? AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1 FOR UPDATE`,
@@ -200,11 +159,7 @@ async function findActiveByFuncionarioIdForUpdate(client, funcionarioId) {
   );
 }
 
-/**
- * Vínculo ativo com cargo + unidade escolar + diretoria de ensino resolvidos,
- * a partir do id do funcionário. Usado para obter, de uma só vez, jornada,
- * cargo, escola (nome/inep/ativa) e diretoria no fluxo de ponto/dashboard.
- */
+// Vínculo ativo + cargo + unidade + diretoria (fluxo de ponto/dashboard).
 async function findActiveByFuncionarioIdWithDetails(funcionarioId, client) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_WITH_DETAILS_SELECT} ${VINCULO_WITH_DETAILS_JOINS} WHERE v.funcionario_id = ? AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1`,
@@ -212,12 +167,7 @@ async function findActiveByFuncionarioIdWithDetails(funcionarioId, client) {
   );
 }
 
-/**
- * Dado o id de um vínculo, resolve o próprio vínculo + cargo + escola +
- * diretoria (e o funcionario_id). Útil a partir de chave estrangeira
- * `vinculo_funcional_id` (ex.: registro_de_pontos) para localizar o
- * funcionário e a unidade de geolocalização.
- */
+// Vínculo + detalhes por id (ex.: a partir de vinculo_funcional_id em pontos).
 async function findByIdWithDetails(vinculoId, client) {
   return getClient(client).executeOne(
     `SELECT ${VINCULO_WITH_DETAILS_SELECT} ${VINCULO_WITH_DETAILS_JOINS} WHERE v.id = ? LIMIT 1`,
@@ -226,18 +176,7 @@ async function findByIdWithDetails(vinculoId, client) {
 }
 
 /**
- * Vínculo MAIS RECENTE do funcionário, independente de status, já resolvendo
- * cargo + unidade escolar + diretoria de ensino.
- *
- * Diferente de findActiveByFuncionarioIdWithDetails (que só retorna ATIVO), este
- * método existe para autorizar operações sobre funcionários desativados, cujo
- * vínculo está ENCERRADO. É o caso da reativação: a regra de negócio diz que
- * reativar NÃO reabre o vínculo, então o escopo precisa ser derivado do vínculo
- * histórico (encerrado) — sem ele, ADMIN_DIRETORIA/DIRETOR/etc. ficariam sem
- * contexto de escola/diretoria e a reativação ficaria restrita ao SEDUC.
- *
- * Uso exclusivo da autorização de reativação; não substitui as buscas por
- * vínculo ativo dos demais fluxos (ponto, dashboard, edição de funcionário).
+ * Vínculo mais recente (qualquer status) com detalhes. Usado na autorização de reativação.
  */
 async function findLatestByFuncionarioIdWithDetails(funcionarioId, client) {
   return getClient(client).executeOne(

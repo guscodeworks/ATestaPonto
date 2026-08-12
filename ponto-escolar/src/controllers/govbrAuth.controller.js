@@ -27,9 +27,7 @@ function getGovbrFakeLogoutUrl() {
   return `${baseUrl}/auth/logout`;
 }
 
-// Comparação em tempo constante para evitar timing attack na validação do state OAuth.
-// O check de tamanho é necessário pois crypto.timingSafeEqual lança erro se os buffers
-// tiverem tamanhos diferentes.
+// timingSafeEqual exige buffers do mesmo tamanho.
 function matchesState(receivedState, storedState) {
   const received = Buffer.from(String(receivedState || ""), "utf8");
   const stored = Buffer.from(String(storedState || ""), "utf8");
@@ -40,7 +38,7 @@ function matchesState(receivedState, storedState) {
   );
 }
 
-// Wrappers em Promise pois a API de sessão do express-session é baseada em callback.
+// Promisifica callbacks do express-session.
 function regenerateSession(req) {
   return new Promise((resolve, reject) => {
     req.session.regenerate((error) => {

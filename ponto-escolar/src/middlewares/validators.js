@@ -9,9 +9,7 @@ const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
 const QR_ACCESS_PATH_REGEX = /^\/?ponto\/acessar\/?$/i;
 const CARGO_TYPES = ["FUNCIONARIO", "INSPETOR", "PROFESSOR"];
 
-// Edição aceita o mesmo conjunto do cadastro: não há motivo para proibir a
-// edição de jornada de um PROFESSOR já cadastrado (pré-existente à migração,
-// o filtro extra bloqueava o endpoint de edição só para esse cargo).
+// Edição aceita os mesmos cargos do cadastro (PROFESSOR incluído).
 const EDITABLE_CARGO_TYPES = CARGO_TYPES;
 const EDITABLE_EMPLOYEE_FIELDS = new Set([
   "nome",
@@ -37,8 +35,7 @@ function timeToSeconds(value) {
   return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
 }
 
-// Encadeia o middleware de validação (validateRequest) após as regras do express-validator,
-// centralizando o tratamento de erros de validação em um único lugar.
+// Regras + validateRequest centralizado.
 function withValidation(rules) {
   return [...rules, validateRequest];
 }
@@ -64,8 +61,7 @@ function cpfRule(field = "cpf", required = true) {
     });
 }
 
-// Aceita o QR code em diferentes nomes de campo (compatibilidade com versões antigas
-// do app/frontend que enviavam qr_code ou qrToken em vez de qrCode).
+// Aceita qrCode, qr_code ou qrToken (compat. com versões antigas).
 function getQrCodeCandidate(value, { req }) {
   return String(
     value || req.body.qr_code || req.body.qrCode || req.body.qrToken || ""

@@ -2,16 +2,12 @@
 
 const database = require("../config/database");
 
-// Permite que as queries participem de uma transação (client passado explicitamente)
-// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
+// getClient: transação explícita ou conexão padrão.
 function getClient(client) {
   return client || database;
 }
 
-// No novo schema, `cargos` representa SOMENTE o cargo (sem horários de jornada).
-// A jornada (entrada/saída de almoço/retorno/saída) migrou para `vinculos_funcionais`.
-// Por isso as queries não selecionam nem filtram por colunas de horário, e o
-// antigo GROUP BY por horário (que "deduplicava" cargos por nome) desaparece.
+// cargos = só nome/ativo; jornada migrou para vinculos_funcionais.
 
 async function listCargos() {
   return database.execute(
@@ -20,9 +16,7 @@ async function listCargos() {
   );
 }
 
-// Aceita o mesmo shape enviado pelo service (com horários) por compatibilidade de
-// assinatura, mas ignora os campos de horário — no novo schema eles pertencem ao
-// vínculo, não ao cargo. Cadastra apenas o nome do cargo (coluna `cargo` é UNIQUE).
+// Ignora horários na assinatura; cadastra só o nome (cargo UNIQUE).
 async function createCargo(client, { cargo } = {}) {
   return getClient(client).execute(
     "INSERT INTO cargos (cargo) VALUES (?)",
@@ -30,13 +24,7 @@ async function createCargo(client, { cargo } = {}) {
   );
 }
 
-/**
- * Busca e trava um cargo pelo nome (cargo é UNIQUE no novo schema). Usado no
- * find-or-create do cadastro/edição: se já existir reutiliza o id, caso
- * contrário cria. O FOR UPDATE evita que duas criações concorrentes de
- * funcionários com o mesmo cargo gerem o mesmo cargo (a UNIQUE previne a
- * duplicata no banco, mas o lock torna o find-or-create determinístico).
- */
+// Find-or-create por nome com FOR UPDATE (evita corrida na UNIQUE).
 async function findByNomeForUpdate(client, cargo) {
   return getClient(client).executeOne(
     "SELECT id, cargo, ativo FROM cargos WHERE cargo = ? LIMIT 1 FOR UPDATE",
