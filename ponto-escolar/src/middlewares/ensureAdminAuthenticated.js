@@ -33,11 +33,11 @@ function ensureAdminAuthenticated(req, res, next) {
       return usuarioAdministrativoModel
         .findAcessosAtivosPorUsuario(adminFromDb.id)
         .then((acessos) => {
-          // Admin válido - define req.user com dados reais do banco
+          // Admin válido - define req.user com dados reais do banco.
+          // usuarios_administrativos não possui funcionario_id nem govbr_sub
+          // (cpf-keyed); apenas campos reais são expostos.
           req.user = {
             id: adminFromDb.id,
-            funcionariosId: adminFromDb.funcionario_id,
-            govbrSub: adminFromDb.govbr_sub,
             email: adminFromDb.email,
             nome: adminFromDb.nome,
             ultimoLoginEm: adminFromDb.ultimo_login_em,

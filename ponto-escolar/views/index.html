@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Acesso do Funcionário | ATestaPonto</title>
+  <title>Acesso do Funcionário</title>
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/img/atestaponto-favicon-96.png" />
   <link rel="apple-touch-icon" href="/assets/img/atestaponto-symbol.png" />
   <link rel="stylesheet" href="/assets/css/tokens.css" />
   <link rel="stylesheet" href="/assets/css/funcionario-login.css?v=20260729-loading-states" />
+  <link rel="preload" as="image" href="/assets/img/background-desktop.webp" media="(min-width: 768px)" />
+  <link rel="preload" as="image" href="/assets/img/background-mobile.webp" media="(max-width: 767px)" />
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
   <script src="/assets/js/funcionario-login.js?v=20260729-identifier-login" defer></script>
 </head>
@@ -38,14 +40,14 @@
 
         <form id="login-form" novalidate>
           <div class="form-field">
-            <label for="identificador">CPF ou e-mail</label>
+            <label for="identificador">CPF / e-mail</label>
             <div class="input-wrap">
               <input
                 type="text"
                 id="identificador"
                 class="field-input no-icon"
                 name="identificador"
-                placeholder="000.000.000-00 ou nome@escola.edu.br"
+                placeholder="Digite seu CPF ou e-mail"
                 maxlength="150"
                 autocomplete="username"
                 inputmode="text"
@@ -53,7 +55,7 @@
               />
             </div>
             <span class="field-error" id="identificador-error" aria-live="polite">
-              Informe um CPF ou e-mail válido.
+              Informe um CPF / e-mail válido.
             </span>
           </div>
 
