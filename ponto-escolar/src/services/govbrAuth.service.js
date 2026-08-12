@@ -12,9 +12,7 @@ function getRequiredParameter(value, name) {
   return normalized;
 }
 
-// Tenta extrair a mensagem de erro do corpo JSON do Gov.br (formatos comuns de
-// erro OAuth) antes de recorrer a uma mensagem genérica, para facilitar o
-// diagnóstico de falhas de integração.
+// Extrai erro OAuth do JSON do Gov.br antes da mensagem genérica.
 async function parseJsonResponse(response, operation) {
   let data;
 
