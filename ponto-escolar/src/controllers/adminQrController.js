@@ -15,9 +15,7 @@ function getBaseUrl(req) {
   return host ? `${protocol}://${host}` : "";
 }
 
-/**
- * Gera o atalho de ponto usado pelo administrador sem transformar o QR em credencial.
- */
+// Atalho de ponto: o QR NÃO vira credencial/token de autorização.
 async function generateQrShortcut(req, res, next) {
   try {
     const qrCode = await createQrCode({
@@ -26,9 +24,7 @@ async function generateQrShortcut(req, res, next) {
       baseUrl: getBaseUrl(req),
     });
 
-    // Toda geração de QR é auditada: identifica qual admin gerou o atalho,
-    // de onde e para qual QR Code específico, já que ele funciona como
-    // porta de entrada para a tela de bater ponto.
+    // Geração auditada: o QR é porta de entrada p/ a tela de ponto.
     await registerAuditLog({
       evento: "qr_code_gerado",
       adminId: req.auth.id,
@@ -46,7 +42,7 @@ async function generateQrShortcut(req, res, next) {
       data: {
         qrCode,
         qrLink: qrCode,
-        // Alias legado: o QR atual e um link de acesso rapido, nao um token de autorizacao.
+        // Alias legado: é link de acesso, não token de autorização.
         qrToken: qrCode,
       },
     });
@@ -102,9 +98,7 @@ async function deactivateQrShortcut(req, res, next) {
 
 async function validateQrShortcut(req, res, next) {
   try {
-    // Aceita múltiplos nomes de campo (qrCode, qr_code, qrToken) para o
-    // mesmo valor, cobrindo diferentes convenções usadas por clientes
-    // atuais e legados que consomem este endpoint.
+    // Aceita múltiplos nomes de campo (qrCode/qr_code/qrToken) p/ clientes atuais e legados.
     const qrCodeValue = String(
       req.body.qrCode || req.body.qr_code || req.body.qrToken || ""
     ).trim();
@@ -112,8 +106,7 @@ async function validateQrShortcut(req, res, next) {
       unidadeCodigo: req.body.unidade_codigo,
     });
 
-    // Tentativas inválidas são auditadas com nível WARN, útil para
-    // detectar uso indevido ou tentativas de acesso com QR forjado/expirado.
+    // Inválidas auditadas em WARN p/ detectar QR forjado/expirado.
     if (!validation.valid) {
       await registerAuditLog({
         evento: "tentativa_link_ponto_invalido",
@@ -132,7 +125,7 @@ async function validateQrShortcut(req, res, next) {
         status: validation.status,
         qrCode: validation.qrCode,
         qrLink: validation.qrCode,
-        // Alias legado: mantido para clientes antigos que ainda leem qrToken.
+        // Alias legado p/ clientes antigos que ainda leem qrToken.
         qrToken: validation.qrCode,
       },
     });

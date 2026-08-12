@@ -16,7 +16,7 @@ const { verificarSeUsuarioGovbrEhAdmin } = require("../services/adminAuthorizati
 const env = require("../config/env");
 const usuarioAdministrativoModel = require("../models/usuarioAdministrativoModel");
 
-// URL do logout do simulador de identidade usado em desenvolvimento/teste.
+// Logout do simulador de identidade (dev/teste).
 function getGovbrFakeLogoutUrl() {
   const baseUrl = String(
     process.env.GOVBR_FAKE_BASE_URL || "http://127.0.0.1:4000"
@@ -78,8 +78,7 @@ function destroySession(req) {
   });
 }
 
-// Remove os dados temporários do fluxo OAuth (state/codeVerifier) da sessão,
-// evitando reuso em tentativas futuras de callback.
+// Descarta state/codeVerifier da sessão p/ impedir reuso em callbacks futuros.
 async function clearOauthSession(req) {
   if (!req.session || !req.session.oauthGovbr) {
     return;
@@ -136,14 +135,13 @@ async function concluirLoginGovbr(req, res, next) {
       );
     }
 
-    // Validação do state contra CSRF: o valor deve corresponder ao gerado no início do fluxo.
+    // State contra CSRF: deve bater com o gerado no início do fluxo.
     if (!matchesState(state, oauthSession.state)) {
       await clearOauthSession(req);
       throw new UnauthorizedError("State Gov.br invalido.");
     }
 
-    // Dados de PKCE já cumpriram seu papel e são descartados antes da troca do code,
-    // impedindo reuso em caso de callback duplicado.
+    // PKCE cumpriu seu papel; descarta antes da troca p/ impedir reuso em callback duplicado.
     await clearOauthSession(req);
 
     const tokenResponse = await trocarCodePorToken({
@@ -162,7 +160,6 @@ async function concluirLoginGovbr(req, res, next) {
 
     const userInfo = await buscarUserInfo(accessToken);
 
-    // Busca o administrativo real no banco pelo CPF do Gov.br
     const admin = await usuarioAdministrativoModel.findByCpf(
       userInfo.cpf
     );
@@ -179,15 +176,15 @@ async function concluirLoginGovbr(req, res, next) {
       );
     }
 
-    // Regra de negocio: autorizacao via banco de dados (admin cadastrado e ativo)
-    // Gov.br apenas confirma a identidade; ATestaPonto confirma a permissao de admin.
+    // Autorização via banco: Gov.br só confirma a identidade; ATestaPonto confirma
+    // o direito de admin (cadastrado e ativo).
 
     const adminSession = {
       authProvider: "govbr",
-      id: admin.id, // ID real do administrativo do banco
+      id: admin.id, // ID do banco, não o sub do Gov.br
       sub: String(userInfo.sub).trim(),
-      name: String(admin.nome || "").trim(), // Nome do banco (pode ser diferente do Gov.br)
-      email: String(admin.email || "").trim(), // Email do banco
+      name: String(admin.nome || "").trim(), // pode divergir do Gov.br
+      email: String(admin.email || "").trim(),
       loginAt: new Date().toISOString(),
     };
 
@@ -196,7 +193,6 @@ async function concluirLoginGovbr(req, res, next) {
     req.session.admin = adminSession;
     await saveSession(req);
 
-    // Atualiza ultimo login do administrativo
     await usuarioAdministrativoModel.updateLastLogin(admin.id);
 
     return res.redirect("/admin/dashboard");
@@ -229,7 +225,7 @@ async function sairGovbr(req, res, next) {
 }
 
 function consultarSessaoAdmin(req, res) {
-  // Exige sessão de admin autenticada especificamente via Gov.br (não aceita outros provedores).
+  // Exige sessão de admin via Gov.br especificamente (não outros provedores).
   if (
     !req.session ||
     !req.session.admin ||

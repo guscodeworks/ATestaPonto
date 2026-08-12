@@ -25,9 +25,7 @@ const {
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
-/**
- * Usa o fuso da escola para separar dias de ponto, independente do fuso do servidor.
- */
+// Fuso da escola p/ separar dias de ponto, independente do fuso do servidor.
 function getSaoPauloDateTime(referenceDate = new Date()) {
   const formatter = new Intl.DateTimeFormat("sv-SE", {
     timeZone: "America/Sao_Paulo",
@@ -53,9 +51,7 @@ function getSaoPauloDateTime(referenceDate = new Date()) {
   };
 }
 
-/**
- * Geolocalização da unidade do vínculo ativo (fail-fast, fora da transação).
- */
+// Geolocalização da unidade do vínculo ativo (fail-fast, fora da transação).
 async function resolveUnidadeGeolocation(funcionarioId) {
   const vinculo = await vinculoModel.findActiveByFuncionarioId(funcionarioId);
   if (!vinculo) {
@@ -173,7 +169,7 @@ function timeToSeconds(value) {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
-// Agrupa batidas do mês por data_referencia → shape diário para o cliente.
+// Agrupa batidas do mês por data_referencia → shape diário p/ o cliente.
 function mapHistoryDay(date, punches) {
   const times = readPunchTimesFromRow(punches);
   const entrada = mapTimeOrNull(times.entrada);
@@ -203,9 +199,7 @@ function mapHistoryDay(date, punches) {
   };
 }
 
-/**
- * Retorna apenas os registros mensais do funcionario identificado pelo JWT.
- */
+// Registros mensais do funcionário identificado pelo JWT.
 async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date()) {
   const safeFuncionarioId = Number(funcionarioId);
   if (!Number.isInteger(safeFuncionarioId) || safeFuncionarioId < 1) {
@@ -220,8 +214,7 @@ async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date
     period.endDate
   );
 
-  // Agrupa as batidas (1 linha por batida) por data_referencia para reconstruir
-  // o dia e entao mapear no formato agregado que o cliente consome.
+  // 1 linha por batida → agrupa por data_referencia p/ reconstruir o dia.
   const byDate = new Map();
   for (const row of rows) {
     const key = mapDateReference(row.data_referencia);
@@ -252,9 +245,7 @@ async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date
   };
 }
 
-/**
- * Retorna o estado autoritativo da jornada do funcionario autenticado no dia atual.
- */
+// Estado autoritativo da jornada do funcionário autenticado no dia atual.
 async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
   const safeFuncionarioId = Number(funcionarioId);
   if (!Number.isInteger(safeFuncionarioId) || safeFuncionarioId < 1) {
@@ -271,10 +262,9 @@ async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
     throw new ForbiddenError("Funcionario inativo");
   }
 
-  // A jornada vem do vinculo ativo (resolvido via LATERAL em
-  // findForPunchDashboardById, agora LEFT JOIN). Sem vinculo ativo o
-  // funcionario existe mas lv.* vem NULL: sinalizamos "sem vinculo ativo"
-  // de forma consistente com registerPunch, em vez de "nao encontrado".
+  // Jornada vem do vínculo ativo (via LATERAL/LEFT JOIN). Sem vínculo ativo o
+  // funcionário existe mas lv.* vem NULL → sinaliza "sem vínculo ativo"
+  // (consistente com registerPunch), não "não encontrado".
   if (
     !funcionario.entrada ||
     !funcionario.saida_almoco ||
@@ -315,12 +305,13 @@ async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Hash fixo p/ comparar même quando o usuário não existe (mesma latência).
 const INVALID_PASSWORD_HASH = bcrypt.hashSync(
   "invalid-login-credential",
   env.BCRYPT_SALT_ROUNDS
 );
 
-// Delay no servidor após login inválido (também afeta scripts/bots).
+// Delay pós-login inválido (também afeta scripts/bots).
 function waitForFailedLoginDelay() {
   return new Promise((resolve) => {
     setTimeout(resolve, env.LOGIN_FAILURE_DELAY_MS);
@@ -345,8 +336,7 @@ function resolveLogin(body = {}) {
     cpf,
     email,
     senha,
-    // CPF mascarado no log de auditoria para nao expor o dado completo,
-    // mesmo em tentativas de login invalidas.
+    // CPF mascarado no log de auditoria, mesmo em tentativas inválidas.
     auditLogin: email || maskCpf(cpf),
   };
 }
@@ -359,9 +349,7 @@ async function findFuncionarioForLogin({ cpf, email }) {
   return employeeModel.findForPunchLoginByCpf(cpf);
 }
 
-/**
- * Autentica funcionario pelo fluxo proprio, separado do login administrativo Gov.br.
- */
+// Autenticação própria do funcionário (separada do login admin Gov.br).
 async function loginFuncionario(body, { ipOrigem } = {}) {
   const login = resolveLogin(body);
   const funcionario = await findFuncionarioForLogin(login);
@@ -370,8 +358,7 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
     String(funcionario?.senha_hash || INVALID_PASSWORD_HASH)
   );
 
-  // Falha de credenciais (usuario inexistente ou senha errada) sempre retorna
-  // a mesma mensagem generica, para nao revelar qual condicao falhou.
+  // Falha de credenciais sempre devolve a mesma msg (não revela o que falhou).
   if (!funcionario || !senhaCorreta) {
     await registerAuditLog({
       evento: "funcionario_login_invalido",
@@ -384,11 +371,10 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
     throw new UnauthorizedError("CPF/email ou senha invalidos");
   }
 
-  // No novo schema a jornada (e a permissao de bater ponto) vem do vínculo
-  // ativo. Funcionario ativo sem vínculo ativo não tem jornada nem unidade de
-  // geolocalização; rejeitamos o login aqui para não emitir um token que só
-  // falharia tardiamente no ponto/dashboard. Validado ANTES de gravar
-  // ultimo_login_em para não marcar sessão inválida como login bem-sucedido.
+  // Jornada/permissão de bater ponto vem do vínculo ativo. Funcionário ativo sem
+  // vínculo não tem jornada nem geolocalização: rejeita aqui p/ não emitir um
+  // token que só falharia tardiamente no ponto/dashboard. ANTES de gravar
+  // ultimo_login_em (não marca sessão inválida como login bem-sucedido).
   const vinculoAtivo = await vinculoModel.findActiveByFuncionarioId(
     funcionario.id
   );
@@ -430,9 +416,7 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   };
 }
 
-/**
- * O service escolhe a proxima batida para manter a sequencia fora do controller.
- */
+// Mantém a sequência de batidas no service (fora do controller).
 async function registerPunch(
   { funcionarioId, latitude, longitude },
   { ipOrigem, userAgent } = {}
@@ -444,8 +428,8 @@ async function registerPunch(
     throw new BadRequestError("Localizacao invalida para registro de ponto");
   }
 
-  // Geolocalizacao agora por unidade (via vinculo), fail-fast antes da
-  // transacao: se o funcionario estiver fora da area, nem abrimos a tx.
+  // Geolocalização por unidade (via vínculo), fail-fast antes da transação:
+  // fora da área nem abre a tx.
   const { vinculoId, geolocation } =
     await resolveUnidadeGeolocation(funcionarioId);
   const distanceCheck = validateDistanceAgainst(
@@ -456,11 +440,9 @@ async function registerPunch(
   const { date, time, dateTime } = getSaoPauloDateTime(new Date());
 
   try {
-    // Toda a leitura+decisao+escrita da batida roda em uma transacao com
-    // FOR UPDATE no vinculo ativo e nas batidas do dia, para evitar que
-    // duas batidas quase simultaneas do mesmo funcionario gerem uma condicao
-    // de corrida (ex: duas "entradas" no mesmo dia). No novo schema a chave de
-    // negocio e `vinculo_funcional_id` (nao mais funcionario_id direto).
+    // Leitura+decisão+escrita da batida numa transação com FOR UPDATE no vínculo
+    // ativo e nas batidas do dia, p/ evitar corrida (ex: duas "entradas" no mesmo
+    // dia). Chave de negócio = `vinculo_funcional_id` (não funcionario_id).
     const punch = await pointModel.withTransaction(async (tx) => {
       const funcionario = await employeeModel.findForPunchRegisterByIdForUpdate(
         tx,
@@ -475,9 +457,8 @@ async function registerPunch(
         throw new ForbiddenError("Funcionario inativo");
       }
 
-      // Reconfirma e trava o vinculo ativo DENTRO da transacao (o FOR UPDATE
-      // aqui e o que evita a corrida entre duas batidas concorrentes do mesmo
-      // funcionario — a leitura fora da tx era so para fail-fast de geolocation).
+      // Reconfirma e trava o vínculo DENTRO da tx (o FOR UPDATE aqui evita a
+      // corrida; a leitura fora da tx era só fail-fast de geolocation).
       const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
         tx,
         funcionarioId
@@ -497,8 +478,8 @@ async function registerPunch(
       let type = PUNCH_TYPES[0];
 
       if (existingPunches.length === 0) {
-        // Primeira batida do dia: cria a linha ENTRADA (1 linha por batida no
-        // novo schema; as demais virao pelas proximas batidas via replacePunchRow).
+        // Primeira batida do dia: cria a linha ENTRADA (1 linha/batida; as
+        // demais virão pelas próximas batidas via replacePunchRow).
         const insertResult = await pointModel.createFirstPunch(tx, {
           vinculoFuncionalId: vinculo.id,
           date,
@@ -510,8 +491,7 @@ async function registerPunch(
         const times = readPunchTimesFromRow(existingPunches);
         const nextPunch = resolveNextPunch(times);
 
-        // resolveNextPunch retorna null quando as 4 batidas do dia ja foram
-        // registradas, impedindo uma quinta batida no mesmo dia.
+        // null = 4 batidas do dia já registradas (impede 5ª batida).
         if (!nextPunch) {
           throw new ConflictError("Funcionario ja realizou 4 batidas hoje");
         }
@@ -520,15 +500,14 @@ async function registerPunch(
         type = nextPunch.type;
         times[nextPunch.field] = time;
 
-        // Persiste a batida como sua propria linha (INSERT ... ON DUPLICATE
-        // KEY UPDATE resolve a idempotencia via UNIQUE(vinculo, data, tipo)).
+        // Persiste como sua própria linha (idempotência via UNIQUE(vinculo, data, tipo)).
         await pointModel.replacePunchRow(tx, {
           vinculoFuncionalId: vinculo.id,
           date,
           times,
         });
 
-        // Localiza o id da linha recem-gravada para a resposta.
+        // Recupera o id da linha recém-gravada p/ a resposta.
         const updated = await pointModel.findByEmployeeAndDateForUpdate(
           tx,
           vinculo.id,
@@ -574,9 +553,8 @@ async function registerPunch(
       funcionario: mapFuncionario(punch.funcionario),
     };
   } catch (error) {
-    // Rede de seguranca contra condicao de corrida que escape do lock FOR UPDATE
-    // (ex: race entre criar a linha do dia pela primeira vez), convertendo o erro
-    // de constraint do banco em uma mensagem de negocio amigavel.
+    // Rede de segurança contra corrida que escape do FOR UPDATE (ex: criar a
+    // linha do dia pela primeira vez) → constraint vira msg de negócio amigável.
     if (error.code === "ER_DUP_ENTRY") {
       throw new ConflictError("Registro duplicado de ponto detectado");
     }

@@ -2,8 +2,7 @@
 
 const cargoModel = require("../models/cargoModel");
 
-// NOVO SCHEMA: `cargos` guarda apenas o nome do cargo e o flag ativo (a jornada
-// migrou para `vinculos_funcionais`). O service expõe exatamente esse recorte.
+// `cargos` guarda só nome/ativo; o service expõe esse recorte.
 async function listCargos() {
   const cargos = await cargoModel.listCargos();
 

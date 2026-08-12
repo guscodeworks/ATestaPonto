@@ -21,8 +21,7 @@ const {
   ForbiddenError,
 } = require("../utils/errors");
 
-// Converte Data/string de validador (isISO8601 → Date) para 'YYYY-MM-DD',
-// alinhado ao timezone 'Z' do pool. null/inválido → null.
+// Converte Date/string p/ 'YYYY-MM-DD' no timezone 'Z' do pool. null/inválido → null.
 function toDateString(value) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(String(value));
@@ -33,7 +32,7 @@ function toDateString(value) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-// Máscara de saída: CPF/email sensível nunca exposto em claro.
+// Saída mascarada: CPF nunca exposto em claro.
 function mapAcesso(acesso, extras = {}) {
   return {
     id: Number(acesso.id),
@@ -68,10 +67,8 @@ function mapAcesso(acesso, extras = {}) {
   };
 }
 
-// Shaping dos acessos do próprio administrador (contexto /meu). Diferente de
-// mapAcesso: a origem é findAcessosAtivosPorUsuario (select básico, sem JOINs
-// de nomes nem dados de terceiros), então não há bloco `usuario` nem nomes de
-// diretoria/unidade — é o contexto do próprio admin. Leitura pura; sem DB extra.
+// /meu: origem é select básico sem JOINs/dados de terceiros → sem bloco `usuario`
+// nem nomes. Leitura pura, sem DB extra.
 function mapMeuAcesso(acesso) {
   return {
     id: Number(acesso.id),
@@ -96,9 +93,8 @@ function mapMeuAcesso(acesso) {
   };
 }
 
-// Serializa escopo para JSON: Sets viram arrays ordenados (ints). Mantém a
-// estrutura { isSeduc, diretoriasPermitidas, unidadesPermitidas, temAcesso }
-// já resolvida pelo escopoMiddleware (buildEscopo).
+// Serializa escopo p/ JSON: Sets → arrays ordenados (ints). Reusa o que o
+// escopoMiddleware já resolveu (buildEscopo).
 function resumirEscopo(escopo) {
   if (!escopo) {
     return {
@@ -121,8 +117,8 @@ function resumirEscopo(escopo) {
   };
 }
 
-// Valida consistência perfil <-> diretoria/unidade (defense-in-depth; o DB
-// enforça via chk_acessos_escopo, mas rejeita cedo com a mensagem de negócio).
+// Defense-in-depth: o DB enforça via chk_acessos_escopo, mas rejeita cedo com
+// a mensagem de negócio.
 function validarConsistenciaPerfil(perfil, diretoriaId, unidadeId) {
   if (perfil === PERFIL_SEDUC) {
     if (diretoriaId || unidadeId) {
@@ -161,10 +157,8 @@ function validarConsistenciaPerfil(perfil, diretoriaId, unidadeId) {
   throw new BadRequestError("perfil invalido");
 }
 
-// Coleta os perfis individuais do concedente a partir de seus acessos ativos.
-// Necessário porque buildEscopo colapsa os perfis escolares em unidadesPermitidas,
-// descartando qual perfil escolar exato o concedente possui — a matriz de
-// delegação precisa dessa distinção (DIRETOR vs SECRETARIA, p.ex.).
+// buildEscopo colapsa perfis escolares em unidadesPermitidas, descartando qual
+// perfil exato o concedente tem — a matriz de delegação precisa dessa distinção.
 function perfisDoConcedente(acessos) {
   const lista = Array.isArray(acessos) ? acessos : [];
   const perfis = new Set();
@@ -177,13 +171,9 @@ function perfisDoConcedente(acessos) {
   return perfis;
 }
 
-// Autoriza concessão combinando duas dimensões independentes:
-//   1) Matriz de delegação (perfil-a-perfil): algum acesso do concedente cobre
-//      o perfil-alvo pela matriz (podeConceder). Anti-escalada é implícita aqui
-//      — ninguém concede perfil igual/acima do próprio nível (ver adminScope).
-//   2) Escopo do recurso (recursoNoEscopo, inalterado): a diretoria/unidade
-//      alvo precisa estar dentro do escopo do concedente.
-// A matriz é pré-filtro; a checagem de escopo existente é preservada.
+// Concessão combina duas dimensões: (1) matriz de delegação (podeConceder —
+// anti-escalada implícita, ninguém concede nível >= ao seu) e (2) escopo do
+// recurso (recursoNoEscopo). Matriz = pré-filtro; escopo é a checagem existente.
 async function autorizarConcessao(perfil, diretoriaId, unidadeId, escopo, acessos) {
   const perfis = perfisDoConcedente(acessos);
   const concedidoPorMatriz = Array.from(perfis).some((p) => podeConceder(p, perfil));
@@ -230,8 +220,8 @@ async function autorizarConcessao(perfil, diretoriaId, unidadeId, escopo, acesso
   }
 }
 
-// O acesso que autoriza a concessão: primeiro acesso do concedente cujo
-// escopo cobre o escopo concedido (self-FK concedido_por_acesso_id).
+// O acesso concedente: primeiro do concedente cujo escopo cobre o concedido
+// (self-FK concedido_por_acesso_id).
 function resolverConcedente(acessos, { diretoriaEnsinoId, unidadeEscolarId }) {
   const lista = Array.isArray(acessos) ? acessos : [];
   for (const acesso of lista) {
@@ -246,10 +236,7 @@ function resolverConcedente(acessos, { diretoriaEnsinoId, unidadeEscolarId }) {
   return null;
 }
 
-/**
- * Concede um acesso administrativo. Cria a identidade admin (find-or-create)
- * e o acesso na mesma transação; audita a concessão.
- */
+// Concessão: find-or-create da identidade admin + acesso na mesma transação.
 async function createAcesso(body, { adminId, ipOrigem, escopo, acessos } = {}) {
   const cpf = normalizeCpf(body && body.cpf);
   if (!cpf) {
@@ -269,12 +256,12 @@ async function createAcesso(body, { adminId, ipOrigem, escopo, acessos } = {}) {
   const dataInicio = toDateString(body && body.data_inicio);
   const dataFim = toDateString(body && body.data_fim);
   if (dataInicio && dataFim && dataFim < dataInicio) {
-    // DB também rejeita via chk_acessos_periodo; rejeita cedo com msg de negócio.
+    // DB rejeita via chk_acessos_periodo; rejeita cedo com a msg de negócio.
     throw new BadRequestError("data_fim deve ser posterior ou igual a data_inicio");
   }
 
-  // O ato de conceder ativa; sem endpoint de flip de status neste escopo, um
-  // grant PENDENTE nunca surtiria efeito (findAcessosAtivosPorUsuario só honra ATIVO).
+  // Conceder já ativa: sem endpoint de flip de status, um PENDENTE nunca surtiria
+  // efeito (findAcessosAtivosPorUsuario só honra ATIVO).
   const status = String((body && body.status) || "ATIVO")
     .trim()
     .toUpperCase();
@@ -300,7 +287,7 @@ async function createAcesso(body, { adminId, ipOrigem, escopo, acessos } = {}) {
       let criouIdentidadeFlag = false;
 
       if (!usuario) {
-        // find-or-create da identidade admin (keyed por cpf próprio).
+        // find-or-create da identidade admin (keyed por CPF próprio).
         if (!nome) {
           throw new BadRequestError(
             "nome e obrigatorio para novo usuario administrativo"
@@ -363,9 +350,6 @@ async function createAcesso(body, { adminId, ipOrigem, escopo, acessos } = {}) {
   };
 }
 
-/**
- * Lista acessos no escopo do administrador, paginado.
- */
 async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
@@ -388,9 +372,6 @@ async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
   };
 }
 
-/**
- * Obtém um acesso por id, respeitando o escopo do administrador.
- */
 async function getAcesso(acessoId, { escopo } = {}) {
   const acesso = await acessoAdministrativoModel.findById(acessoId);
   if (!acesso) {
@@ -408,8 +389,7 @@ async function getAcesso(acessoId, { escopo } = {}) {
   return { acesso: mapAcesso(acesso) };
 }
 
-// Ações de ciclo de vida suportadas: suspender/reativar/revogar. Cada ação mapeia
-// para um status-alvo e um conjunto de status de origem válidos (transições).
+// Ciclo de vida: cada ação mapeia p/ status-alvo + status de origem válidos.
 const ACOES_STATUS = {
   suspender: {
     para: "SUSPENSO",
@@ -425,12 +405,8 @@ const ACOES_STATUS = {
   },
 };
 
-/**
- * Altera o status de um acesso (suspende/reativa/revoga). Reusa a matriz de
- * delegação (podeAlterar → podeConceder + extensão SEDUC) e a checagem de escopo
- * (recursoNoEscopo) existentes; não duplica regras de perfil/escopo.
- * Nunca apaga o acesso nem o usuario_administrativo — só muda status e audita.
- */
+// Reusa a matriz de delegação (podeAlterar) e a checagem de escopo; não duplica
+// regras de perfil/escopo. Nunca apaga — só muda status e audita.
 async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acessos } = {}) {
   const acaoNorm = String(acao || "").trim().toLowerCase();
   const regra = ACOES_STATUS[acaoNorm];
@@ -443,12 +419,12 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acesso
     throw new NotFoundError("Acesso administrativo nao encontrado");
   }
 
-  // Bloqueio: ninguém altera o próprio acesso (auto-suspensão/revogação).
+  // Nunca altera o próprio acesso (auto-suspensão/revogação).
   if (adminId != null && Number(acesso.usuario_administrativo_id) === Number(adminId)) {
     throw new ForbiddenError("Nao e permitido alterar o proprio acesso");
   }
 
-  // Bloqueio: acesso fora do escopo do administrador (diretoria/unidade).
+  // Acesso fora do escopo do administrador (diretoria/unidade).
   if (!recursoNoEscopo(escopo, {
     diretoriaEnsinoId: acesso.diretoria_ensino_id,
     unidadeEscolarId: acesso.unidade_escolar_id,
@@ -458,8 +434,7 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acesso
     );
   }
 
-  // Bloqueio: nível — só pode alterar acesso cujo perfil a matriz permite
-  // (abaixo do próprio nível). Reusa podeAlterar (MESMA matriz de delegação).
+  // Nível: só altera acesso cujo perfil a matriz permite (abaixo do próprio nível).
   const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
   const perfis = perfisDoConcedente(acessos);
   const podeAlterarPerfil = Array.from(perfis).some((p) => podeAlterar(p, perfilAlvo));
@@ -469,8 +444,7 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acesso
     );
   }
 
-  // Bloqueio: REVOGADO é definitivo — nunca volta a ATIVO/SUSPENSO. Reativar um
-  // acesso REVOGADO é rejeitado (transição inválida → ConflictError).
+  // REVOGADO é definitivo: reativar é rejeitado (transição inválida → ConflictError).
   const statusAtual = String(acesso.status || "").trim().toUpperCase();
   if (!regra.de.has(statusAtual)) {
     const definitivo = statusAtual === "REVOGADO" && regra.para !== "REVOGADO";
@@ -491,7 +465,7 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acesso
     await acessoAdministrativoModel.updateStatus(acessoId, paraStatus, tx);
   });
 
-  // Recarrega pós-update para refletir status/atualizado_em no payload de saída.
+  // Recarrega pós-update para refletir status/atualizado_em no payload.
   const atualizado = await acessoAdministrativoModel.findById(acessoId);
 
   await registerAuditLog({
@@ -519,18 +493,13 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acesso
   return { acesso: mapAcesso(atualizado || acesso) };
 }
 
-/**
- * Contexto do administrador autenticado: seus acessos ativos e o escopo efetivo
- * que lhe confere poder de concessão/alteração. Leitura pura — consome apenas o
- * que o middleware já resolveu (req.acessos + req.escopo), sem novo model/DB.
- */
+// /meu: leitura pura, consome só o que o middleware resolveu (req.acessos + req.escopo).
 function getMeusAcessos({ escopo, acessos, escopoUnidades } = {}) {
   const lista = Array.isArray(acessos) ? acessos : [];
   return {
     acessos: lista.map(mapMeuAcesso),
     escopo: resumirEscopo(escopo),
-    // escopoUnidades é null para SEDUC/ausência (sem filtro); preservamos para
-    // indicar o universo de unidades visíveis ao admin (já expandido).
+    // escopoUnidades é null p/ SEDUC/ausência; preservado para indicar o universo visível.
     unidadesVisiveis: escopoUnidades == null ? null : [...escopoUnidades].map(Number).filter((n) => Number.isInteger(n) && n > 0),
   };
 }

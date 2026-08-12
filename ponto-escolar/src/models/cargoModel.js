@@ -2,12 +2,9 @@
 
 const database = require("../config/database");
 
-// getClient: transação explícita ou conexão padrão.
 function getClient(client) {
   return client || database;
 }
-
-// cargos = só nome/ativo; jornada migrou para vinculos_funcionais.
 
 async function listCargos() {
   return database.execute(
@@ -16,7 +13,7 @@ async function listCargos() {
   );
 }
 
-// Ignora horários na assinatura; cadastra só o nome (cargo UNIQUE).
+// cargo é UNIQUE; ignora horários na assinatura.
 async function createCargo(client, { cargo } = {}) {
   return getClient(client).execute(
     "INSERT INTO cargos (cargo) VALUES (?)",

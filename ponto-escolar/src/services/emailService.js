@@ -43,7 +43,7 @@ async function sendEmployeeWelcomeEmail({ nome, email, senhaTemporaria }) {
     });
     return { enviado: true };
   } catch (error) {
-    // A senha nunca e incluida nos logs. O logger tambem mascara o e-mail.
+    // Senha nunca logada; logger já mascara o e-mail.
     logger.error("Falha ao enviar e-mail de acesso ao funcionario", {
       error: { name: error.name, code: error.code },
       email,

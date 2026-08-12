@@ -3,11 +3,9 @@
 const employeeService = require("../services/employeeService");
 const { getClientIp } = require("../utils/request");
 
-// Contexto de auditoria: identifica quem fez a ação (admin autenticado)
-// e de onde (IP), para ser registrado junto às operações que alteram
-// dados de funcionários (criação, edição, mudança de status).
+// Quem (admin) + de onde (IP): registrado junto às operações que alteram dados.
 function getAuditContext(req) {
-  // Centraliza os dados de auditoria para manter as funcoes focadas no HTTP.
+  // Centraliza a auditoria p/ manter os handlers focados no HTTP.
   return {
     adminId: req.auth.id,
     ipOrigem: getClientIp(req),
@@ -21,7 +19,7 @@ async function createEmployee(req, res, next) {
       getAuditContext(req)
     );
 
-    // Impede que navegadores e proxies armazenem dados do novo cadastro.
+    // Cadastro novo não deve ser cacheado por navegador/proxy.
     res.set("Cache-Control", "no-store");
     res.set("Pragma", "no-cache");
     return res.status(201).json({
