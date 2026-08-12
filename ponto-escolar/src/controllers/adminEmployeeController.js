@@ -35,7 +35,7 @@ async function createEmployee(req, res, next) {
 
 async function listEmployees(req, res, next) {
   try {
-    const result = await employeeService.listEmployees(req.query);
+    const result = await employeeService.listEmployees(req.query, req.escopoUnidades);
 
     return res.status(200).json({
       success: true,
