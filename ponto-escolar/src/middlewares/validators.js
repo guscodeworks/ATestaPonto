@@ -1,6 +1,14 @@
 const { body, param, query } = require("express-validator");
 const { isValidCpf, normalizeCpf } = require("../utils/cpf");
 const { validateRequest } = require("./validateRequest");
+const {
+  PERFIL_SEDUC,
+  PERFIL_DIRETORIA,
+  PERFIS_ESCOLARES,
+} = require("./adminScope");
+
+// Perfis administrativos válidos para concessão (espelham o ENUM do banco).
+const PERFIS_ADM = [PERFIL_SEDUC, PERFIL_DIRETORIA, ...PERFIS_ESCOLARES];
 
 // Token de QR Code de ponto: 64 caracteres hexadecimais.
 const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
@@ -383,6 +391,70 @@ const baterPontoValidator = withValidation([
     .toFloat(),
 ]);
 
+// Validação de formato apenas para concessão de acesso administrativo. Regras
+// cross-field (perfil <-> diretoria/unidade, período, escopo do concedente)
+// ficam no service, que as aplica antes de gravar.
+const createAcessoValidator = withValidation([
+  cpfRule("cpf", true),
+  // nome é obrigatório só quando a identidade admin ainda não existe (service checa).
+  body("nome")
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 150 })
+    .withMessage("Nome deve ter entre 3 e 150 caracteres")
+    .matches(/^[^<>]*$/)
+    .withMessage("Nome contem caracteres invalidos")
+    .escape(),
+  body("email")
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 150 })
+    .withMessage("Email muito longo")
+    .isEmail()
+    .withMessage("Email invalido")
+    .normalizeEmail({ gmail_remove_dots: false }),
+  body("perfil")
+    .trim()
+    .notEmpty()
+    .withMessage("perfil e obrigatorio")
+    .toUpperCase()
+    .isIn(PERFIS_ADM)
+    .withMessage("perfil invalido"),
+  body("diretoria_ensino_id")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("diretoria_ensino_id invalido")
+    .toInt(),
+  body("unidade_escolar_id")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("unidade_escolar_id invalido")
+    .toInt(),
+  body("status")
+    .optional()
+    .trim()
+    .toUpperCase()
+    .isIn(["ATIVO", "SUSPENSO"])
+    .withMessage("status invalido"),
+  body("data_inicio")
+    .optional()
+    .isISO8601({ strict: true })
+    .withMessage("data_inicio invalida")
+    .toDate(),
+  body("data_fim")
+    .optional()
+    .isISO8601({ strict: true })
+    .withMessage("data_fim invalida")
+    .toDate(),
+]);
+
+const acessoIdValidator = withValidation([
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID de acesso invalido")
+    .toInt(),
+]);
+
 module.exports = {
   createFuncionarioValidator,
   employeeIdValidator,
@@ -394,4 +466,6 @@ module.exports = {
   validateQrShortcutValidator,
   funcionarioLoginValidator,
   baterPontoValidator,
+  createAcessoValidator,
+  acessoIdValidator,
 };

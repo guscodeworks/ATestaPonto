@@ -40,11 +40,12 @@ function ensureAdminApiAuthenticated(req, _res, next) {
       return usuarioAdministrativoModel
         .findAcessosAtivosPorUsuario(adminFromDb.id)
         .then((acessos) => {
-          // Admin válido - define req.user e req.auth com dados reais do banco
+          // Admin válido - define req.user e req.auth com dados reais do banco.
+          // usuarios_administrativos não possui funcionario_id nem govbr_sub
+          // (cpf-keyed); apenas campos reais são expostos. req.auth.id é
+          // consumido por controllers administrativos e deve ser preservado.
           req.user = {
             id: adminFromDb.id,
-            funcionariosId: adminFromDb.funcionario_id,
-            govbrSub: adminFromDb.govbr_sub,
             email: adminFromDb.email,
             nome: adminFromDb.nome,
             ultimoLoginEm: adminFromDb.ultimo_login_em,
@@ -55,7 +56,6 @@ function ensureAdminApiAuthenticated(req, _res, next) {
 
           req.auth = {
             id: adminFromDb.id,
-            sub: adminFromDb.govbr_sub,
             nome: adminFromDb.nome || "",
             email: adminFromDb.email,
             role: "admin",
