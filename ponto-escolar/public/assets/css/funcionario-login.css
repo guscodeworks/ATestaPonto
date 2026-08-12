@@ -507,106 +507,38 @@ form {
 
 
 @media (min-width: 1025px) {
-  html,
-  body {
-    background: #fff;
+  /* Telas largas: apenas tipografia do wordmark/título e ajustes finos de painel/toast. */
+  .login-form-panel {
+    max-width: 372px;
   }
 
+  .login-brand {
+    font-size: 29px;
+  }
+
+  .login-heading {
+    font-size: 25px;
+  }
+
+  .toast-stack {
+    right: 24px;
+    bottom: 24px;
+    left: auto;
+    width: min(430px, calc(100% - 48px));
+  }
+}
+
+/* Tablet e desktop: card centralizado em tela cheia sobre a imagem estática.
+   Mobile (<768) mantém a onda/blobs e o fluxo original. */
+@media (min-width: 768px) {
   .login-page {
     display: grid;
     place-items: center;
-    padding: clamp(40px, 7vh, 76px) clamp(24px, 5vw, 64px);
-  }
-
-  .login-page::before {
-    top: -24%;
-    left: -25%;
-    width: min(58vw, 920px);
-    height: 148%;
-    background: linear-gradient(145deg, #2d6cff 0%, var(--login-blue) 56%, #063bbb 100%);
-    border-radius: 0 58% 48% 0 / 0 44% 58% 0;
-    box-shadow: 24px 20px 70px rgba(20, 80, 240, 0.14);
-    transform: rotate(-7deg);
-  }
-
-  .login-page::after {
-    top: -21%;
-    right: -25%;
-    bottom: auto;
-    left: auto;
-    width: min(56vw, 880px);
-    height: 143%;
-    background: linear-gradient(215deg, #ff3a36 0%, var(--login-red) 58%, #c90912 100%);
-    border-radius: 55% 0 0 46% / 48% 0 0 60%;
-    box-shadow: -24px 20px 70px rgba(240, 20, 20, 0.12);
-    transform: rotate(8deg);
-  }
-
-  .login-art::before,
-  .login-art::after {
-    position: absolute;
-    content: "";
-    border-radius: 50%;
-  }
-
-  .login-art::before {
-    bottom: -25%;
-    left: -10%;
-    width: 36vw;
-    height: 52vh;
-    background: #fff;
-    transform: rotate(14deg);
-  }
-
-  .login-art::after {
-    top: -22%;
-    right: 3%;
-    width: 24vw;
-    height: 42vh;
-    background: #fff;
-    transform: rotate(-12deg);
-  }
-
-  .art-dot--blue-one {
-    top: 12%;
-    left: 34%;
-    width: clamp(24px, 2.2vw, 42px);
-    background: var(--login-blue);
-  }
-
-  .art-dot--blue-two {
-    top: auto;
-    right: 28%;
-    bottom: 12%;
-    width: clamp(18px, 1.8vw, 34px);
-    background: var(--login-blue);
-    opacity: 1;
-  }
-
-  .art-dot--red-one {
-    top: 17%;
-    right: 35%;
-    width: clamp(22px, 2vw, 38px);
-  }
-
-  .art-dot--red-two {
-    top: auto;
-    bottom: 17%;
-    left: 38%;
-    width: clamp(13px, 1.2vw, 23px);
-  }
-
-  .art-dot--black-one {
-    top: 25%;
-    left: 26%;
-    width: clamp(16px, 1.5vw, 28px);
-  }
-
-  .art-dot--black-two {
-    top: auto;
-    right: 24%;
-    bottom: 24%;
-    width: clamp(20px, 2vw, 38px);
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: clamp(28px, 6vh, 76px) clamp(24px, 5vw, 64px);
+    overflow: visible;
+    background: url("../img/background-desktop.webp") center / cover no-repeat;
   }
 
   .login-panel {
@@ -619,56 +551,113 @@ form {
     box-shadow: 0 12px 32px rgba(20, 20, 20, 0.12);
   }
 
-  .login-form-panel {
-    max-width: 372px;
-  }
-
+  /* Símbolo: sem sombra, compacto no topo. */
   .login-brand-symbol {
-    width: 70px;
-    margin-bottom: 10px;
+    width: 64px;
+    margin-bottom: 6px;
+    box-shadow: none;
   }
 
   .login-form-panel > header {
-    margin-bottom: 24px;
-  }
-
-  .login-brand {
-    font-size: 29px;
+    margin-bottom: 16px;
   }
 
   .login-heading {
-    margin-top: 18px;
-    font-size: 25px;
+    margin-top: 10px;
   }
 
+  .login-sub {
+    margin-top: 4px;
+  }
+
+  /* Campos: borda sutil cinza claro, planos; foco com borda azul fina e anel suave. */
   form {
-    gap: 16px;
+    gap: 14px;
   }
 
-  .field-input,
-  .btn-login {
-    height: 50px;
-    min-height: 50px;
+  .field-input {
+    height: 48px;
+    min-height: 48px;
+    border: 1px solid #dcdfe6;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .field-input:hover {
+    border-color: #c4c7d0;
+  }
+
+  .field-input:focus-visible {
+    border-color: var(--login-blue);
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.12);
+  }
+
+  .field-input.has-error {
+    border-color: var(--login-red);
+  }
+
+  .field-input.has-error:focus-visible {
+    box-shadow: 0 0 0 3px rgba(240, 20, 20, 0.12);
   }
 
   .toggle-pw {
-    top: 1px;
-    width: 48px;
+    top: 2px;
+    width: 44px;
+    height: 44px;
+    border-radius: 9px;
+  }
+
+  /* Linha "Lembrar CPF/e-mail" + "Esqueci minha senha": leves e alinhadas. */
+  .form-meta {
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .form-remember {
+    min-height: 40px;
+    gap: 8px;
+    color: #52525b;
+  }
+
+  .form-remember input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .form-link {
+    min-height: 40px;
+    color: var(--login-black);
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .form-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Botão "Entrar": mantém o preto, cantos alinhados aos campos, hover/transição suaves. */
+  .btn-login {
     height: 48px;
+    min-height: 48px;
+    margin-top: 4px;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
   }
 
-  .toast-stack {
-    right: 24px;
-    bottom: 24px;
-    left: auto;
-    width: min(430px, calc(100% - 48px));
+  .btn-login:hover {
+    background: #292929;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(20, 20, 20, 0.14);
   }
-}
 
-/* Tablets e iPads: imagem estática de fundo a partir do tablet. Mobile mantém a onda/blobs. */
-@media (min-width: 768px) {
-  .login-page {
-    background: url("../img/background-desktop.webp") center / cover no-repeat;
+  .btn-login:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+  }
+
+  .btn-login:focus-visible {
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.3);
   }
 
   /* Remove os gradientes/blobs (onda azul, blob vermelho e pontos) feitos em CSS. */
@@ -676,6 +665,34 @@ form {
   .login-page::after,
   .login-art {
     display: none;
+  }
+}
+
+/* Telas com pouca altura (notebooks ~700–900px): compacta ainda mais o espaçamento
+   vertical do card e do wrapper para caber em 100dvh sem scroll, sem cortar conteúdo. */
+@media (min-width: 768px) and (max-height: 900px) {
+  .login-page {
+    padding-block: clamp(16px, 3vh, 40px);
+  }
+
+  .login-panel {
+    padding-block: clamp(18px, 2.8vh, 34px);
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 12px;
+  }
+
+  .login-heading {
+    margin-top: 8px;
+  }
+
+  .login-sub {
+    margin-top: 3px;
+  }
+
+  form {
+    gap: 12px;
   }
 }
 
