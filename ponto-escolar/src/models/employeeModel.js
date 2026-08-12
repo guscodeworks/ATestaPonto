@@ -2,8 +2,7 @@
 
 const database = require("../config/database");
 
-// Permite que as queries participem de uma transação (client passado explicitamente)
-// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
+// getClient: transação explícita ou conexão padrão.
 function getClient(client) {
   return client || database;
 }
@@ -12,15 +11,8 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-// NOVO SCHEMA: `funcionarios` não tem mais `cargo_id` nem `unidade_escolar_id`.
-// Cargo, unidade escolar e jornada (horários) passaram a residir em
-// `vinculos_funcionais`. Os métodos públicos preservam o shape que os Services
-// já esperam (cargo_id, cargo, entrada, saida_almoco, retorno_almoco, saida),
-// agora resolvidos via JOIN lateral no vínculo ATIVO. Isso evita duplicar linhas
-// quando um funcionário possui múltiplos vínculos (LIMIT 1 dentro do LATERAL).
+// Cargo/jornada/unidade via vínculo ATIVO (LATERAL LIMIT 1 evita duplicar linhas).
 
-// Trecho SQL reutilizável: jornada atual do funcionário (vínculo mais recente,
-// preferindo o ATIVO). Retorna no máximo 1 linha por funcionário (sem multiplicar).
 const ACTIVE_VINCULO_LATERAL = `
   SELECT v.cargo_id, c.cargo, v.unidade_escolar_id,
          TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
@@ -34,10 +26,7 @@ const ACTIVE_VINCULO_LATERAL = `
   LIMIT 1
 `;
 
-// Monta cláusula extra de WHERE + params para filtrar funcionários pelo
-// conjunto de unidades permitidas ao escopo do admin. `unidadesPermitidas`
-// null/undefined/vazio => sem restrição (SEDUC ou serviço fora de escopo).
-// Essa camada não conhece perfis: recebe apenas ids numéricos.
+// Filtro por unidades permitidas ao escopo admin (null/vazio = sem restrição).
 function buildEscopoUnidadeFilter(unidadesPermitidas) {
   if (!Array.isArray(unidadesPermitidas) || unidadesPermitidas.length === 0) {
     return { clause: "", params: [] };
@@ -50,10 +39,7 @@ function buildEscopoUnidadeFilter(unidadesPermitidas) {
   };
 }
 
-// Consultas fixas: filtros opcionais continuam parametrizados e nenhum valor
-// recebido da requisicao e usado para montar SQL dinamicamente. O filtro por cargo
-// agora é satisfeito pelo vínculo ativo (EXISTS), mantendo a contagem sem inflar
-// mesmo se houver mais de um vínculo por funcionário.
+// Filtro por cargo via EXISTS no vínculo ativo (contagem sem inflar linhas).
 const COUNT_EMPLOYEES_QUERY =
   "SELECT COUNT(*) AS total FROM funcionarios f WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR EXISTS (SELECT 1 FROM vinculos_funcionais v INNER JOIN cargos c ON c.id = v.cargo_id WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' AND c.cargo = ?)) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
@@ -62,10 +48,7 @@ const LIST_EMPLOYEES_QUERY =
   ACTIVE_VINCULO_LATERAL +
   ") lv ON TRUE WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
-// Cargo não é mais coluna de funcionarios: a allowlist de campos editáveis do
-// funcionário perdeu a entrada `cargoId` (atualizar cargo/enviarcargo_id direto em
-// `funcionarios` jamais faria sentido no novo schema). A edição de jornada migra
-// para o vínculo (fora deste Model).
+// cargoId saiu de funcionarios; jornada/cargo migram para vinculos_funcionais.
 const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
   cpf: "UPDATE funcionarios SET cpf = ? WHERE id = ?",
   email: "UPDATE funcionarios SET email = ? WHERE id = ?",
@@ -217,10 +200,7 @@ async function listEmployees({ ativo, cargo, q, limit, offset } = {}, escopoUnid
 }
 
 async function listForPointReport(escopoUnidades = null) {
-  // Mesma noção de "cargo atual" das demais leituras admin: somente o vínculo
-  // ATIVO (LEFT JOIN LATERAL com filtro de status). Antes pegava o vínculo mais
-  // recente independente de status, podendo mostrar cargo de vínculo
-  // AFASTADO/ENCERRADO — inconsistente com listEmployees/findAdminEmployeeById.
+  // Só vínculo ATIVO (consistente com listEmployees/findAdminEmployeeById).
   const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.execute(
     "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id, lv.unidade_escolar_id FROM funcionarios f LEFT JOIN LATERAL (" +
@@ -230,8 +210,7 @@ async function listForPointReport(escopoUnidades = null) {
   );
 }
 
-// cargoId aceito por compatibilidade com o Service, mas no novo schema ele não
-// pertence à tabela funcionarios: a associação cargo↔funcionário vive no vínculo.
+// cargoId na assinatura por compat.; associação real fica no vínculo.
 async function createEmployee(
   client,
   { cargoId, cpf, email, nome, telefone = null, ativo }

@@ -1,24 +1,11 @@
 'use strict';
 
-// NOVO SCHEMA: `registro_de_pontos` é 1 LINHA POR BATIDA (coluna `tipo` enum),
-// não mais 1 linha/dia com 4 colunas de horário. As funções abaixo consomem o
-// ARRAY de batidas retornado por pointModel.findByEmployeeAndDate*/listRowsByDate
-// e devolvem o mesmo shape lógico {entrada, saidaAlmoco, voltaAlmoco, saida} que
-// os Services já esperam, preservando os pontos de consumo.
+// 1 linha por batida (tipo enum); utils/punch monta shape {entrada, saidaAlmoco, voltaAlmoco, saida}.
 
-// Valor sentinela que representa ausência de batida no shape lógico de 4 tempos.
-// No novo schema a ausência real é a inexistência da LINHA; mantemos a sentinela
-// só para o objeto que volta aos Services (uma batida ausente vale '00:00:00').
 const EMPTY_PUNCH_TIME = '00:00:00';
-
-// Ordem natural das batidas conforme o enum da coluna `tipo`.
-// O enum do banco é RETORNO_ALMOCO (ver pointModel.replacePunchRow), e este é o
-// único nome usado em todo o sistema (escrita, leitura e respostas da API).
 const PUNCH_TYPES = ['ENTRADA', 'SAIDA_ALMOCO', 'RETORNO_ALMOCO', 'SAIDA'];
 
-// Mapeia o valor do enum `tipo` (lido do banco) -> field lógico do shape de 4
-// batidas. O field interno "voltaAlmoco" é apenas um nome de propriedade JS do
-// shape lógico (não exposto ao cliente); o enum do banco é RETORNO_ALMOCO.
+// Enum RETORNO_ALMOCO → field lógico voltaAlmoco.
 const TIPO_TO_FIELD = {
   ENTRADA: 'entrada',
   SAIDA_ALMOCO: 'saidaAlmoco',
@@ -31,12 +18,7 @@ function pad2(value) {
 }
 
 /**
- * Extrai o horário (HH:mm:ss) de um valor `registrado_em` retornado pelo
- * pointModel. A coluna é DATETIME e o pool usa timezone 'Z' (sem dateStrings),
- * então o mysql2 devolve um Date cujos componentes UTC correspondem ao
- * wall-clock de São Paulo que a aplicação gravou — por isso usamos getters UTC.
- * Aceita também string (ex.: do driver em outros modos) e null/undefined
- * (batida ausente), retornando null neste caso.
+ * Extrai HH:mm:ss de registrado_em (Date UTC ou string). null se ausente.
  */
 function extractTimeFromRegistradoEm(value) {
   if (value === null || value === undefined) {
@@ -93,13 +75,7 @@ function hasPunchTime(value) {
 }
 
 /**
- * Lê as batidas do dia a partir do ARRAY de linhas de registro_de_pontos
- * (1 linha por batida) retornado por pointModel.findByEmployeeAndDate* e
- * devolve o shape normalizado {entrada, saidaAlmoco, voltaAlmoco, saida}.
- * Batidas ausentes ficam como EMPTY_PUNCH_TIME.
- *
- * Aceita null/undefined/[] (nenhuma batida) e, por robustez, um objeto único
- * (shape legado de 1 linha) — embora o novo pointModel sempre retorne um array.
+ * Array de batidas → shape {entrada, saidaAlmoco, voltaAlmoco, saida}. Ausentes = EMPTY_PUNCH_TIME.
  */
 function readPunchTimesFromRow(rows) {
   const times = {

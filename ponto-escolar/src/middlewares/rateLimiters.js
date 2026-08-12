@@ -39,10 +39,7 @@ function createLimiter(options) {
   });
 }
 
-/* Identifica requisições de login/registro de ponto para que fiquem de fora do
- limitador global, já que possuem seu próprio limitador dedicado (pointLimiter/loginLimiter)
- com regras mais adequadas ao volume de uso desses endpoints.
- */
+// Exclui login/ponto do limitador global (têm pointLimiter/loginLimiter próprios).
 function isPunchRegistrationRequest(req) {
   return (
     req.method === "POST" &&
@@ -50,9 +47,7 @@ function isPunchRegistrationRequest(req) {
   );
 }
 
-/* skipSuccessfulRequests garante que apenas tentativas de login mal sucedidas contem
- para o limite, evitando bloquear um funcionário que faz login legitimamente várias vezes.
- */
+// Só logins falhos contam no limite (skipSuccessfulRequests).
 const loginLimiter = createLimiter({
   name: "login",
   windowMs: 15 * 60 * 1000,
@@ -66,9 +61,7 @@ const sensitiveLimiter = createLimiter({
   limit: 40,
 });
 
-/* Limites configuráveis via ambiente pois o volume esperado de registros de ponto
- varia conforme o tamanho da base de funcionários de cada instalação.
- */
+// Limites de ponto configuráveis por instalação (env).
 const pointLimiter = createLimiter({
   name: "point",
   windowMs: env.POINT_RATE_LIMIT_WINDOW_MS,

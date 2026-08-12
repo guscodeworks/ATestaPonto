@@ -54,15 +54,7 @@ function getSaoPauloDateTime(referenceDate = new Date()) {
 }
 
 /**
- * Valida se o funcionario esta dentro do raio permitido da SUA unidade escolar
- * antes de abrir a transacao. No novo schema a geolocalizacao (latitude,
- * longitude, raio_permitido_metros) passou a residir por unidade em
- * `unidades_escolares`, lida a partir do vinculo funcional ativo — antes vinha
- * de variaveis de ambiente globais (env.SCHOOL_*), que foram removidas.
- *
- * Roda fora da transacao (fail-fast): se o funcionario estiver fora da area,
- * nem abrimos a transacao de batida. Ja lanca NotFound/Forbidden quando o
- * funcionario nao tem vinculo/unidade cadastrados.
+ * Geolocalização da unidade do vínculo ativo (fail-fast, fora da transação).
  */
 async function resolveUnidadeGeolocation(funcionarioId) {
   const vinculo = await vinculoModel.findActiveByFuncionarioId(funcionarioId);
@@ -181,10 +173,7 @@ function timeToSeconds(value) {
   return hours * 3600 + minutes * 60 + seconds;
 }
 
-// NOVO SCHEMA: o historico mensal agora e um array de batidas (1 linha por
-// batida, coluna `tipo` + `registrado_em`), ordenadas por data e tipo. Para
-// montar o dia-agregado que o cliente ja consome, agrupamos as batidas por
-// data_referencia e puxamos cada horario pelo seu tipo.
+// Agrupa batidas do mês por data_referencia → shape diário para o cliente.
 function mapHistoryDay(date, punches) {
   const times = readPunchTimesFromRow(punches);
   const entrada = mapTimeOrNull(times.entrada);
@@ -331,8 +320,7 @@ const INVALID_PASSWORD_HASH = bcrypt.hashSync(
   env.BCRYPT_SALT_ROUNDS
 );
 
-// A espera e aplicada no servidor (e nao apenas na tela) para que scripts e
-// bots tambem sejam desacelerados apos uma credencial invalida.
+// Delay no servidor após login inválido (também afeta scripts/bots).
 function waitForFailedLoginDelay() {
   return new Promise((resolve) => {
     setTimeout(resolve, env.LOGIN_FAILURE_DELAY_MS);
