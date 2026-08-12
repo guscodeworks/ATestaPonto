@@ -184,17 +184,22 @@ function buildSummary(summaries) {
 /**
  * A visao diaria nasce em memoria para nao alterar registros durante consultas.
  */
-async function buildDailySnapshot(date) {
-  const employees = await employeeModel.listForPointReport();
+async function buildDailySnapshot(date, escopoUnidades = null) {
+  const employees = await employeeModel.listForPointReport(escopoUnidades);
   const punchRows = await pointModel.listRowsByDate(date);
   const vinculoToFuncionario = await resolveVinculoToFuncionario(
     punchRows.map((row) => row.vinculo_funcional_id)
   );
   const byEmployee = indexPunchesByEmployee(punchRows, vinculoToFuncionario);
+  // Filtra batidas de funcionarios fora do escopo: o snapshot nasce a partir
+  // da lista de funcionarios permitidos, entao so agregamos batidas desses.
+  const permittedIds = new Set(employees.map((e) => Number(e.id)));
   const summaries = employees.map((employee) =>
     summarizeEmployeeDay(
       employee,
-      byEmployee.get(Number(employee.id)) || [],
+      permittedIds.has(Number(employee.id))
+        ? byEmployee.get(Number(employee.id)) || []
+        : [],
       date
     )
   );
@@ -211,9 +216,9 @@ async function buildDailySnapshot(date) {
   };
 }
 
-async function getTodayPoints({ data } = {}) {
+async function getTodayPoints({ data } = {}, escopoUnidades = null) {
   const date = resolveReportDate(data);
-  const snapshot = await buildDailySnapshot(date);
+  const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
   return {
     data_referencia: snapshot.date,
@@ -223,9 +228,9 @@ async function getTodayPoints({ data } = {}) {
   };
 }
 
-async function getDailyReport({ data, adminId, ipOrigem } = {}) {
+async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades = null) {
   const date = resolveReportDate(data);
-  const snapshot = await buildDailySnapshot(date);
+  const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
   await registerAuditLog({
     evento: "relatorio_consultado",
@@ -242,9 +247,9 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}) {
   };
 }
 
-async function getDashboardSummary() {
+async function getDashboardSummary(escopoUnidades = null) {
   const date = getTodayDateInSaoPaulo();
-  const snapshot = await buildDailySnapshot(date);
+  const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
   return {
     data_referencia: snapshot.date,

@@ -22,7 +22,7 @@ async function withTransaction(callback) {
 // Trecho SQL reutilizável: jornada atual do funcionário (vínculo mais recente,
 // preferindo o ATIVO). Retorna no máximo 1 linha por funcionário (sem multiplicar).
 const ACTIVE_VINCULO_LATERAL = `
-  SELECT v.cargo_id, c.cargo,
+  SELECT v.cargo_id, c.cargo, v.unidade_escolar_id,
          TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
          TIME_FORMAT(v.horario_saida_almoco, '%H:%i:%s') AS saida_almoco,
          TIME_FORMAT(v.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco,
@@ -34,6 +34,22 @@ const ACTIVE_VINCULO_LATERAL = `
   LIMIT 1
 `;
 
+// Monta cláusula extra de WHERE + params para filtrar funcionários pelo
+// conjunto de unidades permitidas ao escopo do admin. `unidadesPermitidas`
+// null/undefined/vazio => sem restrição (SEDUC ou serviço fora de escopo).
+// Essa camada não conhece perfis: recebe apenas ids numéricos.
+function buildEscopoUnidadeFilter(unidadesPermitidas) {
+  if (!Array.isArray(unidadesPermitidas) || unidadesPermitidas.length === 0) {
+    return { clause: "", params: [] };
+  }
+
+  const placeholders = unidadesPermitidas.map(() => "?").join(",");
+  return {
+    clause: `AND lv.unidade_escolar_id IN (${placeholders})`,
+    params: unidadesPermitidas.map((id) => Number(id)),
+  };
+}
+
 // Consultas fixas: filtros opcionais continuam parametrizados e nenhum valor
 // recebido da requisicao e usado para montar SQL dinamicamente. O filtro por cargo
 // agora é satisfeito pelo vínculo ativo (EXISTS), mantendo a contagem sem inflar
@@ -42,9 +58,9 @@ const COUNT_EMPLOYEES_QUERY =
   "SELECT COUNT(*) AS total FROM funcionarios f WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR EXISTS (SELECT 1 FROM vinculos_funcionais v INNER JOIN cargos c ON c.id = v.cargo_id WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' AND c.cargo = ?)) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
 const LIST_EMPLOYEES_QUERY =
-  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f INNER JOIN LATERAL (" +
+  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, lv.cargo, lv.unidade_escolar_id, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f INNER JOIN LATERAL (" +
   ACTIVE_VINCULO_LATERAL +
-  ") lv ON TRUE WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%'))) ORDER BY f.id DESC LIMIT ? OFFSET ?";
+  ") lv ON TRUE WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
 // Cargo não é mais coluna de funcionarios: a allowlist de campos editáveis do
 // funcionário perdeu a entrada `cargoId` (atualizar cargo/enviarcargo_id direto em
@@ -127,7 +143,7 @@ async function findForPunchRegisterByIdForUpdate(client, employeeId) {
 
 async function findForPunchDashboardById(employeeId) {
   return database.executeOne(
-    "SELECT f.id, f.nome, f.ativo, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f INNER JOIN LATERAL (" +
+    "SELECT f.id, f.nome, f.ativo, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
       ACTIVE_VINCULO_LATERAL +
       ") lv ON TRUE WHERE f.id = ? LIMIT 1",
     [employeeId]
@@ -182,28 +198,35 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
 /**
  * Reaproveita os filtros de listagem e contagem para manter paginacao coerente.
  */
-async function countEmployees(filters = {}) {
+async function countEmployees(filters = {}, escopoUnidades = null) {
+  const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.executeOne(
-    COUNT_EMPLOYEES_QUERY,
-    resolveEmployeeFilter(filters)
+    COUNT_EMPLOYEES_QUERY + clause,
+    [...resolveEmployeeFilter(filters), ...params]
   );
 }
 
-async function listEmployees({ ativo, cargo, q, limit, offset } = {}) {
+async function listEmployees({ ativo, cargo, q, limit, offset } = {}, escopoUnidades = null) {
   const params = resolveEmployeeFilter({ ativo, cargo, q });
+  const { clause, params: escopoParams } = buildEscopoUnidadeFilter(escopoUnidades);
 
   return database.execute(
-    LIST_EMPLOYEES_QUERY,
-    [...params, String(Number(limit)), String(Number(offset))]
+    LIST_EMPLOYEES_QUERY + clause + " ORDER BY f.id DESC LIMIT ? OFFSET ?",
+    [...params, ...escopoParams, String(Number(limit)), String(Number(offset))]
   );
 }
 
-async function listForPointReport() {
+async function listForPointReport(escopoUnidades = null) {
+  // Mesma noção de "cargo atual" das demais leituras admin: somente o vínculo
+  // ATIVO (LEFT JOIN LATERAL com filtro de status). Antes pegava o vínculo mais
+  // recente independente de status, podendo mostrar cargo de vínculo
+  // AFASTADO/ENCERRADO — inconsistente com listEmployees/findAdminEmployeeById.
+  const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.execute(
-    "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id FROM funcionarios f LEFT JOIN LATERAL (" +
-      "SELECT v.cargo_id FROM vinculos_funcionais v WHERE v.funcionario_id = f.id ORDER BY v.id DESC LIMIT 1" +
-      ") lv ON TRUE ORDER BY f.nome ASC",
-    []
+    "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id, lv.unidade_escolar_id FROM funcionarios f LEFT JOIN LATERAL (" +
+      "SELECT v.cargo_id, v.unidade_escolar_id FROM vinculos_funcionais v WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1" +
+      ") lv ON TRUE WHERE 1=1" + clause + " ORDER BY f.nome ASC",
+    params
   );
 }
 

@@ -112,13 +112,6 @@ function mapFuncionario(funcionario) {
   };
 }
 
-const TODAY_PUNCH_TYPE_MAP = Object.freeze({
-  ENTRADA: "ENTRADA",
-  SAIDA_ALMOCO: "SAIDA_ALMOCO",
-  VOLTA_ALMOCO: "RETORNO_ALMOCO",
-  SAIDA: "SAIDA",
-});
-
 function mapTimeOrNull(value) {
   const normalized = String(value || "").trim().slice(0, 8);
   if (!/^\d{2}:\d{2}:\d{2}$/.test(normalized)) {
@@ -290,15 +283,17 @@ async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
   }
 
   // A jornada vem do vinculo ativo (resolvido via LATERAL em
-  // findForPunchDashboardById). Sem vinculo ativo nao ha jornada nem batida
-  // possivel: sinalizamos de forma amigavel em vez de estourar.
+  // findForPunchDashboardById, agora LEFT JOIN). Sem vinculo ativo o
+  // funcionario existe mas lv.* vem NULL: sinalizamos "sem vinculo ativo"
+  // de forma consistente com registerPunch, em vez de "nao encontrado".
   if (
     !funcionario.entrada ||
     !funcionario.saida_almoco ||
     !funcionario.retorno_almoco ||
-    !funcionario.saida
+    !funcionario.saida ||
+    !funcionario.cargo
   ) {
-    throw new ConflictError("Funcionario sem jornada ativa configurada");
+    throw new NotFoundError("Funcionario sem vinculo ativo");
   }
 
   const { vinculoId } = await resolveUnidadeGeolocation(safeFuncionarioId);
@@ -325,9 +320,7 @@ async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
       retorno_almoco: mapTimeOrNull(punchTimes.voltaAlmoco),
       saida: mapTimeOrNull(punchTimes.saida),
     },
-    proxima_batida: nextPunch
-      ? TODAY_PUNCH_TYPE_MAP[nextPunch.type]
-      : null,
+    proxima_batida: nextPunch ? nextPunch.type : null,
     jornada_concluida: nextPunch === null,
   };
 }
@@ -396,6 +389,26 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
       evento: "funcionario_login_invalido",
       nivel: "WARN",
       mensagem: "Tentativa de login de funcionario invalida",
+      ipOrigem,
+      metadados: { login: login.auditLogin },
+    });
+    await waitForFailedLoginDelay();
+    throw new UnauthorizedError("CPF/email ou senha invalidos");
+  }
+
+  // No novo schema a jornada (e a permissao de bater ponto) vem do vínculo
+  // ativo. Funcionario ativo sem vínculo ativo não tem jornada nem unidade de
+  // geolocalização; rejeitamos o login aqui para não emitir um token que só
+  // falharia tardiamente no ponto/dashboard. Validado ANTES de gravar
+  // ultimo_login_em para não marcar sessão inválida como login bem-sucedido.
+  const vinculoAtivo = await vinculoModel.findActiveByFuncionarioId(
+    funcionario.id
+  );
+  if (!vinculoAtivo) {
+    await registerAuditLog({
+      evento: "funcionario_login_invalido",
+      nivel: "WARN",
+      mensagem: "Tentativa de login de funcionario sem vinculo ativo",
       ipOrigem,
       metadados: { login: login.auditLogin },
     });

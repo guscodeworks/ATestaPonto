@@ -206,7 +206,7 @@ function normalizarResumoPontoApi(item = {}) {
     // busca o horário correspondente na lista de registros brutos.
     entrada: formatarHoraApi(item.entrada) || obterHorarioRegistro(registros, 'ENTRADA'),
     pausa: obterHorarioRegistro(registros, 'SAIDA_ALMOCO'),
-    retorno: obterHorarioRegistro(registros, 'VOLTA_ALMOCO'),
+    retorno: obterHorarioRegistro(registros, 'RETORNO_ALMOCO'),
     saida: formatarHoraApi(item.saida) || obterHorarioRegistro(registros, 'SAIDA'),
     status: normalizarStatusPonto(item.status, totalBatidas),
     totalBatidas,

@@ -154,6 +154,21 @@ async function update(client, vinculoId, fields = {}) {
 }
 
 /**
+ * Encerra o vínculo no desligamento do funcionário usando data_fim calculada
+ * no servidor (CURRENT_DATE, consistente com CURDATE() usado no cadastro) —
+ * evita divergência de fuso do processo Node e mantém o histórico de pontos
+ * intacto (não há DELETE em registro_de_pontos). status passa a ENCERRADO.
+ * Espera ser chamado dentro da transação de desativação após travar o vínculo
+ * ativo via findActiveByFuncionarioIdForUpdate.
+ */
+async function encerrarVinculo(client, vinculoId) {
+  return getClient(client).execute(
+    "UPDATE vinculos_funcionais SET status = 'ENCERRADO', data_fim = CURRENT_DATE WHERE id = ?",
+    [vinculoId]
+  );
+}
+
+/**
  * Todos os vínculos do funcionário (ordenados do mais recente ao mais antigo).
  */
 async function findByFuncionarioId(funcionarioId, client) {
@@ -210,14 +225,37 @@ async function findByIdWithDetails(vinculoId, client) {
   );
 }
 
+/**
+ * Vínculo MAIS RECENTE do funcionário, independente de status, já resolvendo
+ * cargo + unidade escolar + diretoria de ensino.
+ *
+ * Diferente de findActiveByFuncionarioIdWithDetails (que só retorna ATIVO), este
+ * método existe para autorizar operações sobre funcionários desativados, cujo
+ * vínculo está ENCERRADO. É o caso da reativação: a regra de negócio diz que
+ * reativar NÃO reabre o vínculo, então o escopo precisa ser derivado do vínculo
+ * histórico (encerrado) — sem ele, ADMIN_DIRETORIA/DIRETOR/etc. ficariam sem
+ * contexto de escola/diretoria e a reativação ficaria restrita ao SEDUC.
+ *
+ * Uso exclusivo da autorização de reativação; não substitui as buscas por
+ * vínculo ativo dos demais fluxos (ponto, dashboard, edição de funcionário).
+ */
+async function findLatestByFuncionarioIdWithDetails(funcionarioId, client) {
+  return getClient(client).executeOne(
+    `SELECT ${VINCULO_WITH_DETAILS_SELECT} ${VINCULO_WITH_DETAILS_JOINS} WHERE v.funcionario_id = ? ORDER BY v.id DESC LIMIT 1`,
+    [funcionarioId]
+  );
+}
+
 module.exports = {
   createVinculo,
   getById,
   getByIdForUpdate,
   update,
+  encerrarVinculo,
   findByFuncionarioId,
   findActiveByFuncionarioId,
   findActiveByFuncionarioIdForUpdate,
   findActiveByFuncionarioIdWithDetails,
   findByIdWithDetails,
+  findLatestByFuncionarioIdWithDetails,
 };

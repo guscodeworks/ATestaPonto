@@ -1,48 +1,82 @@
 "use strict";
 
 const { ForbiddenError, UnauthorizedError } = require("../utils/errors");
-const {
-  verificarSeUsuarioGovbrEhAdmin,
-} = require("../services/adminAuthorization.service");
+const usuarioAdministrativoModel = require("../models/usuarioAdministrativoModel");
 
 /**
  * Protege APIs administrativas com sessao Gov.br e autorizacao interna.
  */
 function ensureAdminApiAuthenticated(req, _res, next) {
-  const admin = req.session && req.session.admin;
-  const sub = String((admin && admin.sub) || "").trim();
-  const email = String((admin && admin.email) || "").trim();
+  const adminSession = req.session && req.session.admin;
 
-  // Reavalia a autorização de admin a cada requisição (não confia apenas na sessão
-  // já existir), pois o usuário pode ter perdido o privilégio após o login.
+  // Verifica se existe sessao administrativa Gov.br
   if (
-    !admin ||
-    admin.authProvider !== "govbr" ||
-    (!sub && !email)
+    !adminSession ||
+    adminSession.authProvider !== "govbr" ||
+    !adminSession.id
   ) {
     return next(
       new UnauthorizedError("Sessao administrativa Gov.br obrigatoria")
     );
   }
 
-  if (!verificarSeUsuarioGovbrEhAdmin(admin)) {
-    return next(
-      new ForbiddenError("Usuario Gov.br sem autorizacao administrativa")
-    );
-  }
+  // Busca o administrativo real no banco para validar se ainda existe e esta ativo
+  usuarioAdministrativoModel
+    .findById(adminSession.id)
+    .then((adminFromDb) => {
+      if (!adminFromDb) {
+        return next(
+          new UnauthorizedError("Administrativo nao encontrado no sistema")
+        );
+      }
 
-  req.user = admin;
-  // Controladores antigos leem req.user; APIs novas usam req.auth como contrato.
-  req.auth = {
-    id: sub || email.toLowerCase(),
-    sub,
-    nome: admin.name || "",
-    email,
-    role: "admin",
-    authProvider: admin.authProvider,
-  };
+      if (!adminFromDb.ativo) {
+        return next(
+          new ForbiddenError("Administrativo inativo")
+        );
+      }
 
-  return next();
+      // Admin válido - busca seus acessos ativos
+      return usuarioAdministrativoModel
+        .findAcessosAtivosPorUsuario(adminFromDb.id)
+        .then((acessos) => {
+          // Admin válido - define req.user e req.auth com dados reais do banco
+          req.user = {
+            id: adminFromDb.id,
+            funcionariosId: adminFromDb.funcionario_id,
+            govbrSub: adminFromDb.govbr_sub,
+            email: adminFromDb.email,
+            nome: adminFromDb.nome,
+            ultimoLoginEm: adminFromDb.ultimo_login_em,
+            criadoEm: adminFromDb.criado_em,
+            atualizadoEm: adminFromDb.atualizado_em,
+            ativo: adminFromDb.ativo,
+          };
+
+          req.auth = {
+            id: adminFromDb.id,
+            sub: adminFromDb.govbr_sub,
+            nome: adminFromDb.nome || "",
+            email: adminFromDb.email,
+            role: "admin",
+            authProvider: "govbr",
+          };
+
+          // Disponibiliza os acessos ativos no request
+          req.acessos = acessos || [];
+
+          // Determina o contexto/perfil aplicável (primeiro acesso ativo por padrão)
+          // Em uma implementação real, isso poderia ser baseado em seleção do usuário ou outras regras
+          req.contextoAdmin = acessos && acessos.length > 0 ? acessos[0] : null;
+
+          return next();
+        });
+    })
+    .catch((error) => {
+      return next(
+        new UnauthorizedError("Falha ao validar sessao administrativa")
+      );
+    });
 }
 
 module.exports = ensureAdminApiAuthenticated;

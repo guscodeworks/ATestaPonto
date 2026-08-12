@@ -5,7 +5,7 @@ async function getTodayPoints(req, res, next) {
   try {
     const result = await pointReportService.getTodayPoints({
       data: req.query.data,
-    });
+    }, req.escopoUnidades);
 
     return res.status(200).json({
       success: true,
@@ -25,7 +25,7 @@ async function getDailyReport(req, res, next) {
       data: req.query.data,
       adminId: req.auth.id,
       ipOrigem: getClientIp(req),
-    });
+    }, req.escopoUnidades);
 
     return res.status(200).json({
       success: true,
@@ -38,7 +38,7 @@ async function getDailyReport(req, res, next) {
 
 async function getDashboardSummary(req, res, next) {
   try {
-    const result = await pointReportService.getDashboardSummary();
+    const result = await pointReportService.getDashboardSummary(req.escopoUnidades);
 
     return res.status(200).json({
       success: true,

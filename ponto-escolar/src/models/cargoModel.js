@@ -30,30 +30,12 @@ async function createCargo(client, { cargo } = {}) {
   );
 }
 
-// Idem: atualiza somente o nome do cargo. Horários recebidos são ignorados.
-async function updateCargo(client, cargoId, { cargo } = {}) {
-  return getClient(client).execute(
-    "UPDATE cargos SET cargo = ? WHERE id = ?",
-    [cargo, cargoId]
-  );
-}
-
-/**
- * Trava o cargo enquanto o funcionário é salvo.
- */
-async function findByIdForUpdate(client, cargoId) {
-  return getClient(client).executeOne(
-    "SELECT id, cargo, ativo FROM cargos WHERE id = ? LIMIT 1 FOR UPDATE",
-    [cargoId]
-  );
-}
-
 /**
  * Busca e trava um cargo pelo nome (cargo é UNIQUE no novo schema). Usado no
- * find-or-create do cadastro: se já existir reutiliza o id, caso contrário
- * cria. O FOR UPDATE evita que duas criações concorrentes de funcionários
- * com o mesmo cargo gerem o mesmo cargo (a UNIQUE previne a duplicata no
- * banco, mas o lock torna o find-or-create determinístico).
+ * find-or-create do cadastro/edição: se já existir reutiliza o id, caso
+ * contrário cria. O FOR UPDATE evita que duas criações concorrentes de
+ * funcionários com o mesmo cargo gerem o mesmo cargo (a UNIQUE previne a
+ * duplicata no banco, mas o lock torna o find-or-create determinístico).
  */
 async function findByNomeForUpdate(client, cargo) {
   return getClient(client).executeOne(
@@ -65,7 +47,5 @@ async function findByNomeForUpdate(client, cargo) {
 module.exports = {
   listCargos,
   createCargo,
-  updateCargo,
-  findByIdForUpdate,
   findByNomeForUpdate,
 };

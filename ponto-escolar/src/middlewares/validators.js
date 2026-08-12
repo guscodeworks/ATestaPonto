@@ -4,10 +4,15 @@ const { validateRequest } = require("./validateRequest");
 
 // Token de QR Code de ponto: 64 caracteres hexadecimais.
 const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
+
 // Caminho aceito para links de acesso via QR Code (com ou sem barra inicial/final).
 const QR_ACCESS_PATH_REGEX = /^\/?ponto\/acessar\/?$/i;
 const CARGO_TYPES = ["FUNCIONARIO", "INSPETOR", "PROFESSOR"];
-const EDITABLE_CARGO_TYPES = ["FUNCIONARIO", "INSPETOR"];
+
+// Edição aceita o mesmo conjunto do cadastro: não há motivo para proibir a
+// edição de jornada de um PROFESSOR já cadastrado (pré-existente à migração,
+// o filtro extra bloqueava o endpoint de edição só para esse cargo).
+const EDITABLE_CARGO_TYPES = CARGO_TYPES;
 const EDITABLE_EMPLOYEE_FIELDS = new Set([
   "nome",
   "email",
@@ -129,6 +134,7 @@ const createFuncionarioValidator = withValidation([
      }
      return true;
    }),
+   
   // unidade_escolar_id é OBRIGATORIO no novo schema: o vínculo funcional
   // (que carrega a jornada) exige uma unidade, e a geolocalização do ponto
   // passa a vir dessa unidade. Aqui validamos apenas a forma (inteiro > 0);
