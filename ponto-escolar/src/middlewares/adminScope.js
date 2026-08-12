@@ -280,6 +280,75 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
   };
 }
 
+// Autorização de escopo para a REATIVAÇÃO de funcionário. A regra de negócio
+// diz que reativar NÃO reabre o vínculo, então o funcionário pode ter apenas
+// vínculo ENCERRADO. Diferente de restringirEscopoFuncionario (que busca o
+// vínculo ATIVO), esta factory deriva o escopo do vínculo MAIS RECENTE,
+// independente de status, aplicando exatamente as mesmas regras por perfil.
+// Não reabre nem cria vínculo; apenas autoriza.
+//
+// Se o funcionário não possui nenhum vínculo (nem ativo, nem encerrado), não há
+// contexto de escola/diretoria para autorizar — é reportado como pendência em
+// vez de presumir um fallback.
+function restringirEscopoFuncionarioReativacao(paramName = "id") {
+  return async function (req, _res, next) {
+    const escopo = req.escopo || buildEscopo(req.acessos);
+
+    if (!escopo.temAcesso) {
+      return next(
+        new ForbiddenError("Administrador sem acessos administrativos ativos")
+      );
+    }
+
+    // SEDUC opera livremente sobre qualquer funcionário.
+    if (escopo.isSeduc) {
+      return next();
+    }
+
+    const funcionarioId = Number(req.params[paramName]);
+    if (!Number.isInteger(funcionarioId) || funcionarioId <= 0) {
+      return next(new ForbiddenError("Identificador de funcionario invalido"));
+    }
+
+    // Resolve o vínculo mais recente (ativo ou encerrado) com unidade +
+    // diretoria no backend. Não há confiança em valor enviado pelo cliente.
+    let vinculo;
+    try {
+      vinculo = await vinculoModel.findLatestByFuncionarioIdWithDetails(
+        funcionarioId
+      );
+    } catch (error) {
+      return next(
+        new ForbiddenError("Falha ao validar escopo do funcionario")
+      );
+    }
+
+    // Sem nenhum vínculo (sequer histórico): o schema não oferece contexto de
+    // escola/diretoria para autorizar. Não há fallback especificado — vira
+    // pendência para decisão de regra de negócio em vez de presumir acesso.
+    if (!vinculo) {
+      return next(
+        new ForbiddenError(
+          "Funcionario sem vinculo para definir escopo de reativacao (pendencia)"
+        )
+      );
+    }
+
+    const autorizado = recursoNoEscopo(escopo, {
+      unidadeEscolarId: vinculo.unidade_escolar_id,
+      diretoriaEnsinoId: vinculo.diretoria_ensino_id,
+    });
+
+    if (!autorizado) {
+      return next(
+        new ForbiddenError("Funcionario fora do escopo do administrador")
+      );
+    }
+
+    return next();
+  };
+}
+
 module.exports = {
   PERFIL_SEDUC,
   PERFIL_DIRETORIA,
@@ -290,4 +359,5 @@ module.exports = {
   escopoMiddleware,
   restringirEscopoFuncionario,
   restringirEscopoUnidadeDoBody,
+  restringirEscopoFuncionarioReativacao,
 };

@@ -225,6 +225,27 @@ async function findByIdWithDetails(vinculoId, client) {
   );
 }
 
+/**
+ * Vínculo MAIS RECENTE do funcionário, independente de status, já resolvendo
+ * cargo + unidade escolar + diretoria de ensino.
+ *
+ * Diferente de findActiveByFuncionarioIdWithDetails (que só retorna ATIVO), este
+ * método existe para autorizar operações sobre funcionários desativados, cujo
+ * vínculo está ENCERRADO. É o caso da reativação: a regra de negócio diz que
+ * reativar NÃO reabre o vínculo, então o escopo precisa ser derivado do vínculo
+ * histórico (encerrado) — sem ele, ADMIN_DIRETORIA/DIRETOR/etc. ficariam sem
+ * contexto de escola/diretoria e a reativação ficaria restrita ao SEDUC.
+ *
+ * Uso exclusivo da autorização de reativação; não substitui as buscas por
+ * vínculo ativo dos demais fluxos (ponto, dashboard, edição de funcionário).
+ */
+async function findLatestByFuncionarioIdWithDetails(funcionarioId, client) {
+  return getClient(client).executeOne(
+    `SELECT ${VINCULO_WITH_DETAILS_SELECT} ${VINCULO_WITH_DETAILS_JOINS} WHERE v.funcionario_id = ? ORDER BY v.id DESC LIMIT 1`,
+    [funcionarioId]
+  );
+}
+
 module.exports = {
   createVinculo,
   getById,
@@ -236,4 +257,5 @@ module.exports = {
   findActiveByFuncionarioIdForUpdate,
   findActiveByFuncionarioIdWithDetails,
   findByIdWithDetails,
+  findLatestByFuncionarioIdWithDetails,
 };

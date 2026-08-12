@@ -19,6 +19,7 @@ const {
 const {
   escopoMiddleware,
   restringirEscopoFuncionario,
+  restringirEscopoFuncionarioReativacao,
   restringirEscopoUnidadeDoBody,
 } = require("../middlewares/adminScope");
 
@@ -53,7 +54,7 @@ router.patch(
   "/:id/reativar",
   sensitiveLimiter,
   reactivateEmployeeValidator,
-  restringirEscopoFuncionario("id"),
+  restringirEscopoFuncionarioReativacao("id"),
   reactivateEmployee
 );
 
