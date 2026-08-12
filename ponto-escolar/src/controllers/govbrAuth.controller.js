@@ -164,9 +164,9 @@ async function concluirLoginGovbr(req, res, next) {
 
     const userInfo = await buscarUserInfo(accessToken);
 
-    // Busca o administrativo real no banco pelo email do Gov.br
-    const admin = await usuarioAdministrativoModel.findByEmail(
-      userInfo.email
+    // Busca o administrativo real no banco pelo CPF do Gov.br
+    const admin = await usuarioAdministrativoModel.findByCpf(
+      userInfo.cpf
     );
 
     if (!admin) {

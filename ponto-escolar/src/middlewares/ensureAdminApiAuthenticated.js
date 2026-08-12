@@ -36,29 +36,41 @@ function ensureAdminApiAuthenticated(req, _res, next) {
         );
       }
 
-      // Admin válido - define req.user e req.auth com dados reais do banco
-      req.user = {
-        id: adminFromDb.id,
-        funcionariosId: adminFromDb.funcionario_id,
-        govbrSub: adminFromDb.govbr_sub,
-        email: adminFromDb.email,
-        nome: adminFromDb.nome,
-        ultimoLoginEm: adminFromDb.ultimo_login_em,
-        criadoEm: adminFromDb.criado_em,
-        atualizadoEm: adminFromDb.atualizado_em,
-        ativo: adminFromDb.ativo,
-      };
+      // Admin válido - busca seus acessos ativos
+      return usuarioAdministrativoModel
+        .findAcessosAtivosPorUsuario(adminFromDb.id)
+        .then((acessos) => {
+          // Admin válido - define req.user e req.auth com dados reais do banco
+          req.user = {
+            id: adminFromDb.id,
+            funcionariosId: adminFromDb.funcionario_id,
+            govbrSub: adminFromDb.govbr_sub,
+            email: adminFromDb.email,
+            nome: adminFromDb.nome,
+            ultimoLoginEm: adminFromDb.ultimo_login_em,
+            criadoEm: adminFromDb.criado_em,
+            atualizadoEm: adminFromDb.atualizado_em,
+            ativo: adminFromDb.ativo,
+          };
 
-      req.auth = {
-        id: adminFromDb.id,
-        sub: adminFromDb.govbr_sub,
-        nome: adminFromDb.nome || "",
-        email: adminFromDb.email,
-        role: "admin",
-        authProvider: "govbr",
-      };
+          req.auth = {
+            id: adminFromDb.id,
+            sub: adminFromDb.govbr_sub,
+            nome: adminFromDb.nome || "",
+            email: adminFromDb.email,
+            role: "admin",
+            authProvider: "govbr",
+          };
 
-      return next();
+          // Disponibiliza os acessos ativos no request
+          req.acessos = acessos || [];
+
+          // Determina o contexto/perfil aplicável (primeiro acesso ativo por padrão)
+          // Em uma implementação real, isso poderia ser baseado em seleção do usuário ou outras regras
+          req.contextoAdmin = acessos && acessos.length > 0 ? acessos[0] : null;
+
+          return next();
+        });
     })
     .catch((error) => {
       return next(
