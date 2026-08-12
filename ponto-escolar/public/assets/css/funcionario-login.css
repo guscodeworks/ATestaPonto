@@ -58,7 +58,14 @@ label {
   box-sizing: border-box;
   padding-top: clamp(150px, 27vh, 230px);
   overflow: clip;
-  background: #fff;
+  background: url("../img/background-mobile.webp") center / cover no-repeat;
+}
+
+/* Mobile: imagem estática de fundo; gradiente/blobs e bolinhas desligados. */
+.login-page::before,
+.login-page::after,
+.login-art {
+  display: none;
 }
 
 /* Campo de cor e recorte ondulado da arte superior. */
@@ -252,8 +259,8 @@ form {
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-#cpf {
-  background-image: url("../img/icons/user.svg");
+#identificador {
+  background-image: url("../icons/id-card.svg");
 }
 
 #senha {
@@ -409,9 +416,7 @@ form {
   transition: transform 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
 
-.btn-login:hover {
-  background: #292929;
-}
+/* Hover herdado dos blocos responsivos (filter: brightness) — preserva o gradiente. */
 
 .btn-login:active {
   transform: translateY(1px);
@@ -635,24 +640,29 @@ form {
     text-decoration: underline;
   }
 
-  /* Botão "Entrar": mantém o preto, cantos alinhados aos campos, hover/transição suaves. */
+  /* Botão "Entrar": gradiente 3 pontos das cores da marca (azul→preto→vermelho). O preto
+     central (faixa fina via stop duplo 46%/54%) evita a mistura RGB azul+vermelho que gerava
+     roxo/magenta, sem dominar o botão. Texto branco, hover com leve brightness (cores preservadas). */
   .btn-login {
     height: 48px;
     min-height: 48px;
     margin-top: 4px;
+    border: 1px solid transparent;
     border-radius: 10px;
+    background: linear-gradient(135deg, var(--login-blue) 0%, var(--login-black) 46%, var(--login-black) 54%, var(--login-red) 100%);
     box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
-    transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
   }
 
   .btn-login:hover {
-    background: #292929;
     transform: translateY(-1px);
+    filter: brightness(0.92);
     box-shadow: 0 4px 12px rgba(20, 20, 20, 0.14);
   }
 
   .btn-login:active {
     transform: translateY(0);
+    filter: brightness(0.85);
     box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
   }
 
@@ -702,6 +712,141 @@ form {
 
 
 
+
+/* Mobile (<768px): card flutuante centralizado sobre a imagem, clean e compacto
+   para caber em telas de celular (~700–850px) sem scroll excessivo.
+   Mesma linha visual do desktop: borda sutil, sombra leve, espaçamento enxuto. */
+@media (max-width: 767px) {
+  .login-page {
+    display: grid;
+    place-items: center;
+    padding: clamp(16px, 4vh, 28px) clamp(20px, 6vw, 28px);
+    overflow: visible;
+  }
+
+  .login-panel {
+    width: min(100%, 440px);
+    min-height: 0;
+    padding: clamp(22px, 4vh, 32px) clamp(20px, 6vw, 28px);
+    border: 1px solid rgba(20, 20, 20, 0.08);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(20, 20, 20, 0.12);
+  }
+
+  /* Símbolo: sem sombra, levemente menor no topo. */
+  .login-brand-symbol {
+    width: 56px;
+    margin-bottom: 6px;
+    box-shadow: none;
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 14px;
+  }
+
+  .login-heading {
+    margin-top: 8px;
+  }
+
+  .login-sub {
+    margin-top: 3px;
+  }
+
+  /* Campos: borda sutil cinza claro, planos; foco com borda azul fina e anel suave. */
+  form {
+    gap: 13px;
+  }
+
+  .field-input {
+    height: 48px;
+    min-height: 48px;
+    border: 1px solid #dcdfe6;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .field-input:hover {
+    border-color: #c4c7d0;
+  }
+
+  .field-input:focus-visible {
+    border-color: var(--login-blue);
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.12);
+  }
+
+  .field-input.has-error {
+    border-color: var(--login-red);
+  }
+
+  .field-input.has-error:focus-visible {
+    box-shadow: 0 0 0 3px rgba(240, 20, 20, 0.12);
+  }
+
+  .toggle-pw {
+    top: 2px;
+    width: 44px;
+    height: 44px;
+    border-radius: 9px;
+  }
+
+  /* Linha "Lembrar CPF/e-mail" + "Esqueci minha senha": leves e alinhadas. */
+  .form-meta {
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .form-remember {
+    min-height: 40px;
+    gap: 8px;
+    color: #52525b;
+  }
+
+  .form-remember input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .form-link {
+    min-height: 40px;
+    color: var(--login-black);
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .form-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Botão "Entrar": mesmo gradiente 3 pontos do desktop (azul→preto→vermelho), texto
+     branco, cantos alinhados aos campos, hover/toque com leve brightness (sem trocar cores). */
+  .btn-login {
+    height: 48px;
+    min-height: 48px;
+    margin-top: 4px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--login-blue) 0%, var(--login-black) 46%, var(--login-black) 54%, var(--login-red) 100%);
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+  }
+
+  .btn-login:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.92);
+    box-shadow: 0 4px 12px rgba(20, 20, 20, 0.14);
+  }
+
+  .btn-login:active {
+    transform: translateY(0);
+    filter: brightness(0.85);
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+  }
+
+  .btn-login:focus-visible {
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.3);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,
