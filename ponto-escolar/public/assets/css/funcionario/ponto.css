@@ -785,6 +785,422 @@ dialog.ponto-confirm.is-saida {
   padding: 16px 8px;
 }
 
+/* ── Desktop / notebook / tablet (>=768px) ─────────────────────────
+   Sidebar lateral fixa a esquerda (nav do funcionario em lista vertical)
+   + area de conteudo a direita. A nav inferior (.employee-bottom-nav) e
+   escondida neste breakpoint; a sidebar (.employee-sidebar, no HTML) assume
+   a navegacao. Refinamentos de header/circulo/espacamento preservados.
+   Mobile (<768px) nao e tocado. */
+@media (min-width: 768px) {
+  /* Container geral: flex topo->rodape; overflow-x:clip preserva sticky sem
+     criar scroll-container no body (o hidden do base forçaria overflow-y:auto). */
+  body.employee-area {
+    display: flex;
+    /* safe center: centraliza o bloco de conteudo no eixo vertical quando
+       ele e menor que a viewport; cai p/ top (scrollavel) se exceder, sem
+       cortar o topo. A sidebar, com height:100dvh, nao se move. */
+    align-items: safe center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  /* Nav inferior mobile: escondida no desktop (continua no HTML p/ o mobile). */
+  .employee-dashboard .employee-bottom-nav {
+    display: none;
+  }
+
+  /* Sidebar: coluna fixa a esquerda, topo ate o rodape. Fundo levemente
+     distinto do conteudo p/ separar visualmente — sem borda pesada, so um
+     hairline translucido + sombra suave. Surface mais opaca que o shell. */
+  .employee-dashboard .employee-sidebar {
+    position: sticky;
+    top: 0;
+    flex: 0 0 220px;
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    height: 100vh;
+    height: 100dvh;
+    padding: 22px 16px;
+    border-right: 1px solid rgba(20, 20, 20, 0.08);
+    background: rgba(245, 247, 251, 0.96);
+    backdrop-filter: blur(16px);
+    box-shadow: 4px 0 18px rgba(20, 20, 20, 0.08);
+  }
+
+  /* Topo da sidebar: bloco identidade do funcionario (avatar vertical/compacto),
+     mesmo estilo visual do header mobile (.employee-avatar ja herda o avatar).
+     Separado da nav por um divisor sutil. */
+  .employee-dashboard .employee-sidebar-identity {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 18px;
+    border-bottom: 1px solid rgba(20, 80, 240, 0.08);
+    text-align: center;
+  }
+
+  /* Avatar: reaproveita .employee-avatar (46px, circulo, fundo surface). No
+     desktop um pouco maior p/ ancorar a identidade; infla no sentido de heranca. */
+  .employee-dashboard .employee-sidebar-avatar {
+    width: 50px;
+    height: 50px;
+    flex: 0 0 50px;
+    font-size: 16px;
+  }
+
+  .employee-dashboard .employee-sidebar-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .employee-dashboard .employee-sidebar-name {
+    overflow: hidden;
+    max-width: 100%;
+    color: var(--color-text);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .employee-dashboard .employee-sidebar-role {
+    overflow: hidden;
+    max-width: 100%;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Lista vertical abaixo da identidade, com espacamento confortavel. */
+  .employee-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  /* Cada item: linha horizontal (icone a esquerda, label a direita). Reaproveita
+     .employee-bottom-nav-link; aqui refinamos fundo, cor e contraste ativo/inativo. */
+  .employee-dashboard .employee-sidebar .employee-bottom-nav-link {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 12px;
+    min-height: 46px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    color: #5b6473;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background 180ms ease, color 180ms ease;
+  }
+
+  /* Itens inativos em cinza/texto secundario; hover suave p/ indicar tappable. */
+  .employee-dashboard .employee-sidebar .employee-bottom-nav-link:not(.active):hover {
+    background: rgba(20, 80, 240, 0.05);
+    color: #404a59;
+  }
+
+  /* Item ativo: fundo sutil e texto na cor de destaque da marca. */
+  .employee-dashboard .employee-sidebar .employee-bottom-nav-link.active {
+    background: color-mix(in srgb, var(--color-primary) 10%, white);
+    color: var(--color-primary);
+  }
+
+  .employee-dashboard .employee-sidebar .employee-bottom-nav-link.active img {
+    opacity: 1;
+    filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
+  }
+
+  .employee-dashboard .employee-sidebar .employee-bottom-nav-link:not(.active) img {
+    opacity: 0.6;
+  }
+
+  /* Ativo vira barra vertical a esquerda do item (nao mais pastilha superior). */
+  .employee-dashboard .employee-sidebar .employee-bottom-nav-link.active::before {
+    top: 50%;
+    left: -16px;
+    width: 3px;
+    height: 26px;
+    border-radius: 0 3px 3px 0;
+    transform: translateY(-50%);
+  }
+
+  /* Area de conteudo: cresce horizontal ate o max-width (espaco lateral vira
+     background visivel), mas a ALTURA vem do conteudo — min-height:0 quebra o
+     100dvh herdado do mobile, entao o bloco nao estica ate o rodape. margin
+     auto centraliza horizontalmente; o align-items:safe center do body cuida
+     do eixo vertical. max-width ~540 p/ bloco compacto. */
+  /* Container fixo consistente (~580px) centralizado H e V no espaço ao lado
+     da sidebar. flex:0 1 auto = NÃO cresce -> margin:auto absorve o espaço
+     livre e centraliza horizontal. min-height:0 quebra o 100dvh herdado do
+     mobile, então o bloco tem altura de CONTEÚDO e o align-items:safe center
+     do body o centraliza verticalmente (sem isso, o shell preenchia a viewport
+     e safe recua p/ start, colando no topo). overflow:visible deixa rolar se
+     o conteúdo exceder a viewport (safe recua p/ start sem cortar o topo). */
+  .employee-dashboard .employee-shell {
+    flex: 0 1 auto;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    max-width: min(580px, calc(100% - 48px));
+    margin: 0 auto;
+    padding-top: 24px;
+    padding-bottom: 24px;
+    overflow: visible;
+  }
+
+  /* DESKTOP: header mobile com identidade (avatar+nome+cargo+badge) fica
+     OCULTO — a identidade ja vive na sidebar. Substituido por um cabecalho
+     simples (saudacao + data, sem card) com badge da marca reposicionado,
+     mais um hero card unico. Mobile (<768px) mantém o header original. */
+  .employee-dashboard .employee-header {
+    display: none;
+  }
+
+  /* flex:0 0 auto => altura pelo conteudo (era flex:1, esticava ate o rodape).
+     padding-top:8 fecha o bloco no cabecalho desktop; padding-bottom:0 remove
+     os 104px de sobra do mobile (nav inferior oculta no desktop). */
+  .employee-dashboard .employee-main {
+    flex: 0 0 auto;
+    padding-top: 8px;
+    padding-bottom: 0;
+  }
+
+  /* ── Reestruturacao desktop do conteudo ─────────────────────────────
+     .ponto-overview vira grid de 6 tracos / 4 linhas, sem wrapper HTML: reusa
+     os filhos existentes + 2 novos estaticos (.ponto-greeting, badge
+     .ponto-brand-badge-dt). .ponto-now usa display:contents p/ liberar a data
+     viva (#hero-date) e o relogio (#hero-clock) como itens separados do grid —
+     IDs preservados, JS intacto. Linhas:
+       1: saudacao .ponto-greeting (faixa larga 1-7)
+       2: data por extenso (cols 1-5) . badge da marca (col 6)  <- lado a lado
+       3: HERO  -> #hero-clock (cols 1-4) | .ponto-action-area c/ botao (cols 5-7)
+       4: .ponto-next (cols 1-2, ~35%) | .journey-card (cols 3-7, ~65%) <- lado a lado
+     Tudo ocupa 100% da largura do container (max-width 580), sem bordas serrilhadas.
+     gap vertical uniforme: row-gap 12 entre todas as linhas. */
+  .employee-dashboard .ponto-overview {
+    display: grid;
+    flex: 0 0 auto;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-items: start;
+    column-gap: 14px;
+    row-gap: 12px;
+  }
+
+  /* Itens de grade: min-width:0 em TODOS garante que nenhum conteúdo interno
+     (rótulos de jornada, mensagem longa) force um track a crescer e ultrapassar
+     a largura do container — sem isso, conteúdo largo vaza sob a sidebar. */
+  .employee-dashboard .ponto-overview > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Saudação: linha 1, largura TOTAL do container (1-7), dentro do mesmo
+     bloco max-width 580 do hero/cards. min-width:0 + max-width:100% +
+     overflow-wrap evita quebra de layout em português longo / nomes grandes
+     — NUNCA ultrapassa a largura do container (ou vazaria sob a sidebar). */
+  .employee-dashboard .ponto-greeting {
+    display: block;
+    grid-column: 1 / 7;
+    grid-row: 1;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* Badge da marca ("QR"/símbolo): canto superior direito, ao lado da data.
+     display:grid (redeclara p/ vencer o [hidden]) reaproxima o place-items do
+     .employee-brand-frame e mantem a img centralizada no anel. */
+  .employee-dashboard .ponto-brand-badge-dt {
+    display: grid;
+    grid-column: 6 / 7;
+    grid-row: 2;
+    align-self: center;
+    justify-self: end;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border-width: 1.5px;
+  }
+
+  .employee-dashboard .ponto-brand-badge-dt .employee-brand-mark {
+    width: 26px;
+    height: 26px;
+  }
+
+  /* .ponto-now (data + relogio) some como caixa; .ponto-current-date (wrapper
+     da data) ocupa a linha 2 centralizada, e #hero-clock (relogio) vira item
+     do hero na linha 3. IDs preservados — JS segue populando hero-date/clock. */
+  .employee-dashboard .ponto-now {
+    display: contents;
+  }
+
+  /* Data por extenso: linha 2, ocupa cols 1-5 (ate o badge na col 6). Assim
+     data e badge ficam na mesma linha ("ao lado") e juntos somam 1-7 (largura
+     total do container), alinhando as bordas com o hero e a linha de cards. */
+  .employee-dashboard .ponto-now .ponto-current-date {
+    grid-column: 1 / 6;
+    grid-row: 2;
+    align-self: center;
+    margin: 0;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    color: var(--color-text);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-align: center;
+  }
+
+  /* ── HERO (linha 3): card unico azul, hora a esquerda + botao a direita.
+     Fundo dividido nos DOIS filhos diretos do grid (#hero-clock e
+     .ponto-action-area) com o mesmo gradient 180° — a emenda fica invisivel
+     porque o gradiente e continuo atraves das duas celulas adjacentes (o
+     pointerevents do badge fica c/ a feature abaixo). */
+  .employee-dashboard .ponto-now .ponto-time {
+    grid-column: 1 / 5;
+    grid-row: 3;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    margin-right: -7px;
+    padding: 22px 20px 22px 22px;
+    border-radius: 20px 0 0 20px;
+    background: linear-gradient(180deg, #1251a3 0%, #0c2d5f 100%);
+    box-shadow: 0 14px 34px rgba(12, 45, 95, 0.28);
+    color: #fff;
+    font-size: clamp(2.4rem, 5vw, 3rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+  }
+
+  /* Area do botao: metade direita do hero. Mesmo gradient (continua o do
+     relogio), bordas arredondadas a direita. Estica ate a altura do relogio
+     via align-self:stretch e reorganiza o botao circular (#btn-ponto) como
+     RETANGULO grande. margin-left:-7px faz o painel recuar metade do gutter
+     ate encostar no relogio -> o gradient vira um UNICO card (sem emenda). */
+  /* Área do hero (metade direita): o botão flutua DENTRO do card azul, nunca
+     na borda. padding generoso (16px) dos 4 lados garante respiro até o
+     border-radius 20px do card externo; a área estica (align-self:stretch)
+     p/ acompanhar a altura do relógio, mantendo o respiro vertical mesmo em
+     telas baixas. margin-left:-7px funde o painel ao relógio (gradient único). */
+  .employee-dashboard .ponto-action-area {
+    grid-column: 5 / 7;
+    grid-row: 3;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 0;
+    margin-left: -7px;
+    padding: 16px;
+    border-radius: 0 20px 20px 0;
+    background: linear-gradient(180deg, #1251a3 0%, #0c2d5f 100%);
+    box-shadow: 0 14px 34px rgba(12, 45, 95, 0.28);
+  }
+
+  /* Botão "Registrar Entrada": retângulo branco flutuando no hero.
+     max-width 170px (menor que antes) + min-height 86 -> não encosta nas
+     bordas do card 16px de padding. border-radius 12px é visivelmente menor
+     que os 20px do card externo (cantos proporcionais, sem grudar no arredondamento).
+     Mesmo elemento #btn-ponto (JS intacto: estado .is-*, label/ícone). */
+  .employee-dashboard .ponto-action {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 170px;
+    height: auto;
+    min-height: 86px;
+    padding: 16px 18px;
+    gap: 10px;
+    border: 0;
+    border-radius: 12px;
+    background-color: #fff;
+    background-image: none;
+    box-shadow:
+      0 8px 20px rgba(12, 45, 95, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    color: var(--color-primary);
+  }
+
+  /* O blob decorativo ::after (canto inf-direito, -10/-12px) e do circulo;
+     no retangulo vazaria e cortaria o label. Escondido no desktop. */
+  .employee-dashboard .ponto-action::after {
+    display: none;
+  }
+
+  .employee-dashboard .ponto-action .ponto-action-copy {
+    flex-direction: column;
+  }
+
+  .employee-dashboard .ponto-action .ponto-action-visual {
+    margin-bottom: 6px;
+  }
+
+  .employee-dashboard .ponto-action .ponto-btn-label {
+    max-width: 100%;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Recarregar estado: aninhado dentro de .ponto-action-area (nao e' item do
+     grid), entao grid-column/row nao se aplicam. Empilha sob o botao via
+     flex-direction:column acima; so ajusta a margem quando visivel. */
+  .employee-dashboard .ponto-state-retry {
+    margin: 0;
+    padding-inline: 14px;
+  }
+
+  /* "Proximo registro": ~35% (cols 1-2 de 6) lado a lado com a jornada, na
+     MESMA linha do grid (linha 4). align-self:stretch iguala a altura `a da
+     jornada. Juntos somam 1-7 = largura total, alinhando com o hero acima. */
+  .employee-dashboard .ponto-next {
+    grid-column: 1 / 3;
+    grid-row: 4;
+    align-self: stretch;
+    margin-top: 0;
+  }
+
+  /* Jornada de hoje: ~65% (cols 3-6) lado a lado com o "proximo registro",
+     mesma linha (4). stretch iguala alturas; a altura da linha e' definida
+     pelo conteudo da jornada (o maior), nao pela tela. */
+  .employee-dashboard .journey-card {
+    grid-column: 3 / 7;
+    grid-row: 4;
+    align-self: stretch;
+    margin-top: 0;
+    padding: 14px 12px;
+  }
+}
+
 @media (max-width: 350px) {
   .employee-dashboard .employee-main {
     padding-right: 12px;
@@ -837,4 +1253,51 @@ dialog.ponto-confirm.is-saida {
     height: 38px;
   }
 
+}
+
+/* ── Dashboard desktop (>=768px): bloco .ponto-dashboard-dt ──────────────
+   Substitui o .ponto-overview (mobile, ocultado aqui) por um bloco centrado
+   (max-width 560 + padding 2rem; container-pai = .employee-shell). HTML/CSS e
+   valores numéricos do bloco seguem o template repassado, sem alteração — só
+   os ícones "ti-*" viraram <img> dos SVGs do projeto e os tokens nomeados
+   (--fill-accent etc.) estão em tokens.css. Mobile intocável. */
+@media (min-width: 768px) {
+  /* Container-pai: acomoda o bloco de 560 (+ 2*2rem de padding) ao lado da
+     sidebar, centralizado, sem vazar. Padding vertical zerado p/ o min-height
+     100vh do próprio bloco centralizar o conteúdo sem scroll extra.
+     max-width 624 = 560 + 2*32, abrangendo o padding do template. */
+  .employee-dashboard .employee-shell {
+    max-width: min(624px, calc(100% - 48px));
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .employee-dashboard .employee-main { padding-top: 0; }
+
+  /* O conteúdo mobile (.ponto-overview) desaparece neste breakpoint; sobe o
+     bloco desktop. Em <768px o [hidden] volta a valer. */
+  .employee-dashboard .ponto-overview { display: none; }
+  .employee-dashboard .ponto-dashboard-dt { display: block; }
+
+  /* Marcadores de jornada: inativo = muted (opacidade 0.5), ativo/concluído =
+     acento azul (mesmo filtro já usado no projeto p/ tingir SVGs) + opacidade
+     cheia. O template só coloria o ícone; label e horário mantêm as cores
+     inline dele. */
+  .ponto-dashboard-dt .dt-jmarker img { opacity: 0.5; }
+  .ponto-dashboard-dt .dt-jmarker.is-active img {
+    opacity: 1;
+    filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
+  }
+
+  /* Botão do hero: fundo branco constante (template); só refletimos disabled +
+     opacidade no estado de carregamento/registro, e foco visível (qualidade
+     base, sem alterar os valores do template). */
+  .ponto-dashboard-dt #btn-ponto-dt:disabled {
+    opacity: 0.65;
+    cursor: progress;
+  }
+
+  .ponto-dashboard-dt #btn-ponto-dt:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--text-accent) 45%, white);
+    outline-offset: 3px;
+  }
 }

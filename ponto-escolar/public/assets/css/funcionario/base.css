@@ -46,6 +46,21 @@ body.employee-area::before {
   pointer-events: none;
 }
 
+/* Mobile (<768px): fundo estático proprio do funcionario.
+   Desktop (>=768px) preserva a regra acima, sem alteracao. */
+@media (max-width: 767px) {
+  body.employee-area::before {
+    background: url("/assets/img/background-mobile-funcionario.webp") center / cover no-repeat;
+  }
+}
+
+/* Desktop/tablet (>=768px): fundo estático proprio do funcionario. */
+@media (min-width: 768px) {
+  body.employee-area::before {
+    background: url("/assets/img/background-desktop-funcionario.webp") center / cover no-repeat;
+  }
+}
+
 .employee-area [hidden] {
   display: none;
 }
