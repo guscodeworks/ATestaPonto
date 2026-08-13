@@ -2,6 +2,7 @@
 
 const employeeModel = require("../models/employeeModel");
 const pointModel = require("../models/pointModel");
+const vinculoModel = require("../models/vinculoModel");
 const { maskCpf } = require("../utils/cpf");
 const {
   EMPTY_PUNCH_TIME,
@@ -13,7 +14,7 @@ const {
 const { BadRequestError } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 
-// A ordem do relatorio segue a mesma sequencia usada para registrar as batidas.
+// Ordem do relatório = mesma sequência usada para registrar as batidas.
 const PUNCH_STEPS = [
   { key: "entrada", tipo: PUNCH_TYPES[0], sequencia: 1 },
   { key: "saidaAlmoco", tipo: PUNCH_TYPES[1], sequencia: 2 },
@@ -21,9 +22,17 @@ const PUNCH_STEPS = [
   { key: "saida", tipo: PUNCH_TYPES[3], sequencia: 4 },
 ];
 
-// Data "de hoje" calculada no fuso de Sao Paulo, independente do fuso do
-// servidor onde a aplicacao roda, para que o relatorio do dia bata com o
-// horario local dos funcionarios.
+// enum `tipo` → sequência lógica. Banco grava RETORNO_ALMOCO; field lógico é
+// voltaAlmoco (bate com o STEP correspondente p/ somar a batida).
+const TIPO_TO_SEQUENCIA = {
+  ENTRADA: 1,
+  SAIDA_ALMOCO: 2,
+  RETORNO_ALMOCO: 3,
+  SAIDA: 4,
+};
+
+// "Hoje" no fuso de São Paulo (independente do fuso do servidor) p/ que o
+// relatório do dia bata com o horário local dos funcionários.
 function getTodayDateInSaoPaulo() {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Sao_Paulo",
@@ -51,19 +60,17 @@ function toDateTime(date, time) {
   return `${date} ${normalizeTimeValue(time)}`;
 }
 
-// Gera um id sintetico para cada batida (id da linha * 10 + sequencia da etapa),
-// já que a tabela guarda os 4 horarios em colunas de uma unica linha por dia,
-// e nao existe um id individual por batida no banco.
-function buildPunchList(rowId, date, times) {
-  // IDs derivados mantem cada batida enderecavel sem criar novas linhas no banco.
-  return PUNCH_STEPS.filter((step) => hasPunchTime(times[step.key])).map(
-    (step) => ({
-      id: Number(rowId) * 10 + step.sequencia,
-      tipo: step.tipo,
-      sequencia: step.sequencia,
-      registrado_em: toDateTime(date, times[step.key]),
-    })
-  );
+// Cada batida é uma linha própria (id individual); sequência resolve pelo enum `tipo`.
+function buildPunchList(date, punches) {
+  return (Array.isArray(punches) ? punches : [])
+    .filter((row) => row && TIPO_TO_SEQUENCIA[row.tipo])
+    .map((row) => ({
+      id: Number(row.id),
+      tipo: row.tipo,
+      sequencia: TIPO_TO_SEQUENCIA[row.tipo],
+      registrado_em: `${date} ${normalizeTimeValue(row.registrado_em)}`,
+    }))
+    .sort((a, b) => a.sequencia - b.sequencia);
 }
 
 function getEmptyPunchTimes() {
@@ -75,13 +82,14 @@ function getEmptyPunchTimes() {
   };
 }
 
-// Regra de negocio do status do dia: sem nenhuma batida = AUSENTE; com a saida
-// registrada = COMPLETO; com pelo menos uma batida mas sem a saida = EM_ANDAMENTO.
-function summarizeEmployeeDay(employee, punchRow, date) {
-  const times = punchRow
-    ? readPunchTimesFromRow(punchRow)
+// Status do dia: sem batidas = AUSENTE; com saída = COMPLETO; demais = EM_ANDAMENTO.
+function summarizeEmployeeDay(employee, punches, date) {
+  const times = punches && punches.length
+    ? readPunchTimesFromRow(punches)
     : getEmptyPunchTimes();
-  const registros = punchRow ? buildPunchList(punchRow.id, date, times) : [];
+  const registros = punches && punches.length
+    ? buildPunchList(date, punches)
+    : [];
   const totalBatidas = registros.length;
   const status =
     totalBatidas === 0
@@ -107,27 +115,42 @@ function summarizeEmployeeDay(employee, punchRow, date) {
   };
 }
 
-// A query de batidas do dia pode trazer mais de uma linha por funcionario
-// (ex: historico duplicado); mantem apenas a primeira ocorrencia encontrada
-// por funcionario_id, que corresponde a linha mais recente conforme a
-// ordenacao definida em pointModel.listRowsByDate (funcionario_id ASC, id DESC).
-function indexLatestPunchRowsByEmployee(punchRows) {
+// listRowsByDate retorna 1 linha por batida (sem coluna funcionario_id, ordenada
+// por vínculo/tipo). Agrupando por funcionário, resolvemos cada vínculo ao seu
+// funcionário; vínculos repetidos reaproveitam a resolução.
+async function resolveVinculoToFuncionario(vinculoIds) {
+  const uniqueIds = [...new Set(vinculoIds.map(Number).filter(Number.isInteger))];
+  const byVinculo = new Map();
+  for (const vinculoId of uniqueIds) {
+    const vinculo = await vinculoModel.getById(vinculoId);
+    if (vinculo) {
+      byVinculo.set(vinculoId, Number(vinculo.funcionario_id));
+    }
+  }
+  return byVinculo;
+}
+
+// Agrupa batidas do dia por funcionário. Cada vínculo resolve-se em seu
+// funcionário; sem batidas não aparecem (completados pelo cruzamento com ativos).
+function indexPunchesByEmployee(punchRows, vinculoToFuncionario) {
   const byEmployee = new Map();
 
-  punchRows.forEach((row) => {
-    const employeeId = Number(row.funcionario_id);
-
-    if (!byEmployee.has(employeeId)) {
-      byEmployee.set(employeeId, row);
+  for (const row of punchRows) {
+    const vinculoId = Number(row.vinculo_funcional_id);
+    const funcionarioId = vinculoToFuncionario.get(vinculoId);
+    if (!Number.isInteger(funcionarioId)) {
+      continue;
     }
-  });
+    if (!byEmployee.has(funcionarioId)) {
+      byEmployee.set(funcionarioId, []);
+    }
+    byEmployee.get(funcionarioId).push(row);
+  }
 
   return byEmployee;
 }
 
-// Taxa de presenca calculada apenas sobre funcionarios ativos, para nao
-// distorcer o indicador com funcionarios desligados/inativos que nunca
-// vao bater ponto.
+// Taxa de presença só sobre ativos (desligados nunca batem ponto e distorceriam).
 function buildSummary(summaries) {
   const activeSummaries = summaries.filter((item) => item.funcionario.ativo);
   const presentes = activeSummaries.filter((item) => item.total_batidas > 0);
@@ -149,17 +172,22 @@ function buildSummary(summaries) {
   };
 }
 
-/**
- * A visao diaria nasce em memoria para nao alterar registros durante consultas.
- */
-async function buildDailySnapshot(date) {
-  const employees = await employeeModel.listForPointReport();
+// Visão diária nasce em memória (não altera registros durante a consulta).
+async function buildDailySnapshot(date, escopoUnidades = null) {
+  const employees = await employeeModel.listForPointReport(escopoUnidades);
   const punchRows = await pointModel.listRowsByDate(date);
-  const byEmployee = indexLatestPunchRowsByEmployee(punchRows);
+  const vinculoToFuncionario = await resolveVinculoToFuncionario(
+    punchRows.map((row) => row.vinculo_funcional_id)
+  );
+  const byEmployee = indexPunchesByEmployee(punchRows, vinculoToFuncionario);
+  // Filtra batidas de fora do escopo: snapshot nasce da lista de permitidos.
+  const permittedIds = new Set(employees.map((e) => Number(e.id)));
   const summaries = employees.map((employee) =>
     summarizeEmployeeDay(
       employee,
-      byEmployee.get(Number(employee.id)) || {},
+      permittedIds.has(Number(employee.id))
+        ? byEmployee.get(Number(employee.id)) || []
+        : [],
       date
     )
   );
@@ -176,9 +204,9 @@ async function buildDailySnapshot(date) {
   };
 }
 
-async function getTodayPoints({ data } = {}) {
+async function getTodayPoints({ data } = {}, escopoUnidades = null) {
   const date = resolveReportDate(data);
-  const snapshot = await buildDailySnapshot(date);
+  const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
   return {
     data_referencia: snapshot.date,
@@ -188,9 +216,9 @@ async function getTodayPoints({ data } = {}) {
   };
 }
 
-async function getDailyReport({ data, adminId, ipOrigem } = {}) {
+async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades = null) {
   const date = resolveReportDate(data);
-  const snapshot = await buildDailySnapshot(date);
+  const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
   await registerAuditLog({
     evento: "relatorio_consultado",
@@ -207,9 +235,9 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}) {
   };
 }
 
-async function getDashboardSummary() {
+async function getDashboardSummary(escopoUnidades = null) {
   const date = getTodayDateInSaoPaulo();
-  const snapshot = await buildDailySnapshot(date);
+  const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
   return {
     data_referencia: snapshot.date,

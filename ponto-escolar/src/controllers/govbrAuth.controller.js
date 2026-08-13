@@ -12,12 +12,11 @@ const {
   trocarCodePorToken,
   buscarUserInfo,
 } = require("../services/govbrAuth.service");
-const {
-  verificarSeUsuarioGovbrEhAdmin,
-} = require("../services/adminAuthorization.service");
+const { verificarSeUsuarioGovbrEhAdmin } = require("../services/adminAuthorization.service");
 const env = require("../config/env");
+const usuarioAdministrativoModel = require("../models/usuarioAdministrativoModel");
 
-// URL do logout do simulador de identidade usado em desenvolvimento/teste.
+// Logout do simulador de identidade (dev/teste).
 function getGovbrFakeLogoutUrl() {
   const baseUrl = String(
     process.env.GOVBR_FAKE_BASE_URL || "http://127.0.0.1:4000"
@@ -28,9 +27,7 @@ function getGovbrFakeLogoutUrl() {
   return `${baseUrl}/auth/logout`;
 }
 
-// Comparação em tempo constante para evitar timing attack na validação do state OAuth.
-// O check de tamanho é necessário pois crypto.timingSafeEqual lança erro se os buffers
-// tiverem tamanhos diferentes.
+// timingSafeEqual exige buffers do mesmo tamanho.
 function matchesState(receivedState, storedState) {
   const received = Buffer.from(String(receivedState || ""), "utf8");
   const stored = Buffer.from(String(storedState || ""), "utf8");
@@ -41,7 +38,7 @@ function matchesState(receivedState, storedState) {
   );
 }
 
-// Wrappers em Promise pois a API de sessão do express-session é baseada em callback.
+// Promisifica callbacks do express-session.
 function regenerateSession(req) {
   return new Promise((resolve, reject) => {
     req.session.regenerate((error) => {
@@ -81,8 +78,7 @@ function destroySession(req) {
   });
 }
 
-// Remove os dados temporários do fluxo OAuth (state/codeVerifier) da sessão,
-// evitando reuso em tentativas futuras de callback.
+// Descarta state/codeVerifier da sessão p/ impedir reuso em callbacks futuros.
 async function clearOauthSession(req) {
   if (!req.session || !req.session.oauthGovbr) {
     return;
@@ -139,14 +135,13 @@ async function concluirLoginGovbr(req, res, next) {
       );
     }
 
-    // Validação do state contra CSRF: o valor deve corresponder ao gerado no início do fluxo.
+    // State contra CSRF: deve bater com o gerado no início do fluxo.
     if (!matchesState(state, oauthSession.state)) {
       await clearOauthSession(req);
       throw new UnauthorizedError("State Gov.br invalido.");
     }
 
-    // Dados de PKCE já cumpriram seu papel e são descartados antes da troca do code,
-    // impedindo reuso em caso de callback duplicado.
+    // PKCE cumpriu seu papel; descarta antes da troca p/ impedir reuso em callback duplicado.
     await clearOauthSession(req);
 
     const tokenResponse = await trocarCodePorToken({
@@ -165,16 +160,31 @@ async function concluirLoginGovbr(req, res, next) {
 
     const userInfo = await buscarUserInfo(accessToken);
 
-    // Regra de negócio: apenas usuários Gov.br autorizados como admin podem acessar o painel.
-    if (!verificarSeUsuarioGovbrEhAdmin(userInfo)) {
-      throw new ForbiddenError("Acesso negado.");
+    const admin = await usuarioAdministrativoModel.findByCpf(
+      userInfo.cpf
+    );
+
+    if (!admin) {
+      throw new ForbiddenError(
+        "Usuario Gov.br nao cadastrado como administrativo."
+      );
     }
+
+    if (!admin.ativo) {
+      throw new ForbiddenError(
+        "Administrativo inativo."
+      );
+    }
+
+    // Autorização via banco: Gov.br só confirma a identidade; ATestaPonto confirma
+    // o direito de admin (cadastrado e ativo).
 
     const adminSession = {
       authProvider: "govbr",
+      id: admin.id, // ID do banco, não o sub do Gov.br
       sub: String(userInfo.sub).trim(),
-      name: String(userInfo.name || "").trim(),
-      email: String(userInfo.email || "").trim(),
+      name: String(admin.nome || "").trim(), // pode divergir do Gov.br
+      email: String(admin.email || "").trim(),
       loginAt: new Date().toISOString(),
     };
 
@@ -182,6 +192,8 @@ async function concluirLoginGovbr(req, res, next) {
     await regenerateSession(req);
     req.session.admin = adminSession;
     await saveSession(req);
+
+    await usuarioAdministrativoModel.updateLastLogin(admin.id);
 
     return res.redirect("/admin/dashboard");
   } catch (error) {
@@ -213,7 +225,7 @@ async function sairGovbr(req, res, next) {
 }
 
 function consultarSessaoAdmin(req, res) {
-  // Exige sessão de admin autenticada especificamente via Gov.br (não aceita outros provedores).
+  // Exige sessão de admin via Gov.br especificamente (não outros provedores).
   if (
     !req.session ||
     !req.session.admin ||

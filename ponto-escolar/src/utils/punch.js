@@ -1,73 +1,111 @@
 'use strict';
 
-// Valor sentinela que representa ausência de horário no banco de dados.
+// 1 linha por batida (tipo enum); utils/punch monta shape {entrada, saidaAlmoco, voltaAlmoco, saida}.
+
 const EMPTY_PUNCH_TIME = '00:00:00';
+const PUNCH_TYPES = ['ENTRADA', 'SAIDA_ALMOCO', 'RETORNO_ALMOCO', 'SAIDA'];
 
-// Ordem das batidas de ponto durante o dia.
-const PUNCH_TYPES = ['ENTRADA', 'SAIDA_ALMOCO', 'VOLTA_ALMOCO', 'SAIDA'];
-
-// Mapeamento de field lógico → coluna real da tabela registro_de_pontos.
-// Usado por punchController para montar UPDATE dinâmico sem DELETE+INSERT.
-const FIELD_TO_COLUMN = {
-  entrada:     'entrada',
-  saidaAlmoco: 'saida_almoco',
-  voltaAlmoco: 'volta_almoco',
-  saida:       'saida'
+// Enum RETORNO_ALMOCO → field lógico voltaAlmoco.
+const TIPO_TO_FIELD = {
+  ENTRADA: 'entrada',
+  SAIDA_ALMOCO: 'saidaAlmoco',
+  RETORNO_ALMOCO: 'voltaAlmoco',
+  SAIDA: 'saida',
 };
 
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
 /**
- * Normaliza um valor de tempo do banco.
- * Retorna EMPTY_PUNCH_TIME se o valor for nulo, vazio ou mal-formado.
+ * Extrai HH:mm:ss de registrado_em (Date UTC ou string). null se ausente.
+ */
+function extractTimeFromRegistradoEm(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return null;
+    }
+    return `${pad2(value.getUTCHours())}:${pad2(value.getUTCMinutes())}:${pad2(value.getUTCSeconds())}`;
+  }
+
+  const raw = String(value).trim();
+  if (!raw) {
+    return null;
+  }
+  // Captura o trecho de hora em "YYYY-MM-DD HH:mm:ss", "YYYY-MM-DDTHH:mm:ss..."
+  // ou em um "HH:mm:ss" / "HH:mm" isolado.
+  const match = /(\d{2}:\d{2}(?::\d{2})?)/.exec(raw);
+  if (!match) {
+    return null;
+  }
+  return match[1].length === 5 ? `${match[1]}:00` : match[1];
+}
+
+/**
+ * Normaliza um valor de tempo em HH:mm:ss ou EMPTY_PUNCH_TIME.
+ * Tolerante a Date (via extracção UTC), string "HH:mm:ss"/"HH:mm" e nulos.
  */
 function normalizeTimeValue(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return EMPTY_PUNCH_TIME;
-  const candidate = raw.slice(0, 8);
-  if (/^\d{2}:\d{2}:\d{2}$/.test(candidate)) return candidate;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return EMPTY_PUNCH_TIME;
+    }
+    return extractTimeFromRegistradoEm(value) || EMPTY_PUNCH_TIME;
+  }
+
+  const raw = String(value || '').trim().slice(0, 8);
+  if (/^\d{2}:\d{2}:\d{2}$/.test(raw)) {
+    return raw;
+  }
+  if (/^\d{2}:\d{2}$/.test(raw)) {
+    return `${raw}:00`;
+  }
   return EMPTY_PUNCH_TIME;
 }
 
 /**
- * Retorna true se o valor de tempo representa uma batida real
- * (i.e., diferente do valor sentinela).
+ * Retorna true se o valor representa uma batida real (diferente da sentinela).
  */
 function hasPunchTime(value) {
   return normalizeTimeValue(value) !== EMPTY_PUNCH_TIME;
 }
 
 /**
- * Encontra a chave de uma coluna de almoço em uma linha do banco
- * buscando por prefixo (acomoda variações como 'saida_almoco' vs 'saida_almoço').
+ * Array de batidas → shape {entrada, saidaAlmoco, voltaAlmoco, saida}. Ausentes = EMPTY_PUNCH_TIME.
  */
-function findLunchColumnKey(row, prefix) {
-  return (
-    Object.keys(row || {}).find((key) =>
-      String(key || '')
-        .toLowerCase()
-        .startsWith(prefix)
-    ) || {}
-  );
-}
-
-/**
- * Lê as quatro batidas de uma linha do banco e retorna um objeto normalizado.
- * Lida com variações de nome de coluna para saida_almoco / volta_almoco.
- */
-function readPunchTimesFromRow(row) {
-  const saidaAlmocoKey = findLunchColumnKey(row, 'saida_almo');
-  const voltaAlmocoKey = findLunchColumnKey(row, 'volta_almo');
-
-  return {
-    entrada:     normalizeTimeValue(row?.entrada),
-    saidaAlmoco: normalizeTimeValue(saidaAlmocoKey ? row[saidaAlmocoKey] : {}),
-    voltaAlmoco: normalizeTimeValue(voltaAlmocoKey ? row[voltaAlmocoKey] : {}),
-    saida:       normalizeTimeValue(row?.saida)
+function readPunchTimesFromRow(rows) {
+  const times = {
+    entrada: EMPTY_PUNCH_TIME,
+    saidaAlmoco: EMPTY_PUNCH_TIME,
+    voltaAlmoco: EMPTY_PUNCH_TIME,
+    saida: EMPTY_PUNCH_TIME,
   };
+
+  const list = Array.isArray(rows) ? rows : rows ? [rows] : [];
+  for (const row of list) {
+    if (!row || !row.tipo) {
+      continue;
+    }
+    const field = TIPO_TO_FIELD[row.tipo];
+    if (!field) {
+      continue;
+    }
+    const time = extractTimeFromRegistradoEm(row.registrado_em);
+    if (time) {
+      times[field] = time;
+    }
+  }
+
+  return times;
 }
 
 /**
- * Determina qual é a próxima batida a ser registrada com base nos horários atuais.
- * Retorna null se todas as 4 batidas já foram registradas.
+ * Determina a próxima batida a ser registrada com base nos horários atuais.
+ * Retorna null quando as 4 batidas já foram registradas (impede uma 5ª batida).
  */
 function resolveNextPunch(times) {
   if (!hasPunchTime(times.entrada))     return { sequence: 1, type: PUNCH_TYPES[0], field: 'entrada' };
@@ -80,10 +118,10 @@ function resolveNextPunch(times) {
 module.exports = {
   EMPTY_PUNCH_TIME,
   PUNCH_TYPES,
-  FIELD_TO_COLUMN,
+  TIPO_TO_FIELD,
   normalizeTimeValue,
   hasPunchTime,
-  findLunchColumnKey,
+  extractTimeFromRegistradoEm,
   readPunchTimesFromRow,
-  resolveNextPunch
+  resolveNextPunch,
 };

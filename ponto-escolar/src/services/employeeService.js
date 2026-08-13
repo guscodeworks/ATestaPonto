@@ -14,10 +14,14 @@ const { registerAuditLog } = require("./auditLogService");
 const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const cargoModel = require("../models/cargoModel");
+const vinculoModel = require("../models/vinculoModel");
+const unidadeEscolarModel = require("../models/unidadeEscolarModel");
 const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
-const EDITABLE_CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR"]);
+
+// Edição aceita o mesmo conjunto do cadastro.
+const EDITABLE_CARGO_TYPES = CARGO_TYPES;
 const EDITABLE_EMPLOYEE_FIELDS = new Set([
   "nome",
   "email",
@@ -30,8 +34,7 @@ const EDITABLE_EMPLOYEE_FIELDS = new Set([
 ]);
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
-// CPF sempre mascarado ao sair da API, evitando expor o dado completo em
-// respostas/listagens (o valor completo só é usado internamente para lógica).
+// CPF mascarado na saída; só usado internamente para lógica.
 function mapEmployee(employee) {
   return {
     id: employee.id,
@@ -57,12 +60,12 @@ function mapListedEmployee(employee) {
     ativo: Boolean(employee.ativo),
     desativado_em: employee.desativado_em || null,
     criado_em: employee.criado_em,
-    cargo_id: Number(employee.cargo_id),
-    cargo: String(employee.cargo),
-    entrada: String(employee.entrada),
-    saida_almoco: String(employee.saida_almoco),
-    retorno_almoco: String(employee.retorno_almoco),
-    saida: String(employee.saida),
+    cargo_id: employee.cargo_id ? Number(employee.cargo_id) : null,
+    cargo: employee.cargo ? String(employee.cargo) : null,
+    entrada: employee.entrada ? String(employee.entrada) : null,
+    saida_almoco: employee.saida_almoco ? String(employee.saida_almoco) : null,
+    retorno_almoco: employee.retorno_almoco ? String(employee.retorno_almoco) : null,
+    saida: employee.saida ? String(employee.saida) : null,
   };
 }
 
@@ -73,11 +76,11 @@ function mapEditableEmployee(employee) {
     cpf: formatCpf(employee.cpf),
     email: employee.email,
     telefone: employee.telefone || null,
-    cargo: String(employee.cargo),
-    entrada: String(employee.entrada),
-    saida_almoco: String(employee.saida_almoco),
-    retorno_almoco: String(employee.retorno_almoco),
-    saida: String(employee.saida),
+    cargo: employee.cargo ? String(employee.cargo) : null,
+    entrada: employee.entrada ? String(employee.entrada) : null,
+    saida_almoco: employee.saida_almoco ? String(employee.saida_almoco) : null,
+    retorno_almoco: employee.retorno_almoco ? String(employee.retorno_almoco) : null,
+    saida: employee.saida ? String(employee.saida) : null,
   };
 }
 
@@ -160,9 +163,38 @@ function generateTemporaryPassword() {
   return randomBytes(18).toString("base64url");
 }
 
-/**
- * Cria funcionario e login juntos para evitar credencial sem cadastro ativo.
- */
+// Unidade obrigatória (vínculo exige + geolocalização do ponto vem dela).
+// Existência é confirmada na transação, não aqui.
+function normalizeUnidadeEscolarId(value) {
+  if (value === undefined || value === null || value === "") {
+    throw new BadRequestError("unidade_escolar_id e obrigatorio");
+  }
+
+  const id = Number(value);
+  if (!Number.isInteger(id) || id < 1) {
+    throw new BadRequestError("unidade_escolar_id invalido");
+  }
+
+  return id;
+}
+
+// `cargo` é UNIQUE/compartilhada: reutiliza o row existente. Roda na transação
+// com FOR UPDATE p/ que dois cadastros concorrentes do mesmo cargo sejam determinísticos.
+async function findOrCreateCargo(client, cargo) {
+  const existing = await cargoModel.findByNomeForUpdate(client, cargo);
+  if (existing) {
+    return Number(existing.id);
+  }
+
+  const insert = await cargoModel.createCargo(client, { cargo });
+  const cargoId = Number(insert.insertId);
+  if (!Number.isInteger(cargoId) || cargoId < 1) {
+    throw new Error("Falha ao obter o ID do cargo criado");
+  }
+  return cargoId;
+}
+
+// Cria funcionário + login juntos: evita credencial sem cadastro ativo.
 async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const nome = String(body.nome || "").trim();
   const cpf = String(body.cpf || "").trim();
@@ -175,13 +207,14 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   if (Object.prototype.hasOwnProperty.call(body, "cargo_id")) {
     throw new BadRequestError("cargo_id nao e aceito no cadastro de funcionario");
   }
+  const unidadeEscolarId = normalizeUnidadeEscolarId(body.unidade_escolar_id);
   const senhaTemporaria = generateTemporaryPassword();
   const senhaHash = await bcrypt.hash(
     senhaTemporaria,
     env.BCRYPT_SALT_ROUNDS
   );
 
-  // A transacao cobre duplicidade, cargo, login e funcionario como uma unica regra.
+  // Transação cobre duplicidade, cargo, login e funcionário como uma unidade.
   const createdIds = await employeeModel.withTransaction(async (tx) => {
     const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
     if (cpfExists?.id) {
@@ -193,11 +226,18 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    const cargoInsert = await cargoModel.createCargo(tx, cargoSchedule);
-    const cargoId = Number(cargoInsert.insertId);
-    if (!Number.isInteger(cargoId) || cargoId < 1) {
-      throw new Error("Falha ao obter o ID do cargo criado");
+    // unidade obrigatória: confirma existência p/ falhar cedo com msg de negócio
+    // em vez de estourar a FK no INSERT do vínculo.
+    const unidade = await unidadeEscolarModel.findByIdForUpdate(
+      tx,
+      unidadeEscolarId
+    );
+    if (!unidade) {
+      throw new NotFoundError("Unidade escolar nao encontrada");
     }
+
+    // cargo: reutiliza o row existente ou cria um novo (UNIQUE/compartilhada).
+    const cargoId = await findOrCreateCargo(tx, cargoSchedule.cargo);
 
     const result = await employeeModel.createEmployee(tx, {
       cpf,
@@ -213,6 +253,17 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     }
 
     await loginModel.createLogin(tx, { funcionarioId, senhaHash });
+    // Vínculo na mesma transação; rollback desfaz funcionário, login e cargo juntos.
+    await vinculoModel.createVinculo(tx, {
+      funcionarioId,
+      unidadeEscolarId,
+      cargoId,
+      entrada: cargoSchedule.entrada,
+      saidaAlmoco: cargoSchedule.saidaAlmoco,
+      retornoAlmoco: cargoSchedule.retornoAlmoco,
+      saida: cargoSchedule.saida,
+    });
+
     return { funcionarioId, cargoId };
   });
 
@@ -254,8 +305,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     },
   });
 
-  // O envio ocorre apenas apos a transacao. Falhas no SMTP nao desfazem o
-  // cadastro que ja foi confirmado no banco.
+  // E-mail só após a transação; falhas de SMTP não desfazem o cadastro já confirmado.
   const entregaEmail = await sendEmployeeWelcomeEmail({
     nome: created.nome,
     email: created.email,
@@ -268,24 +318,23 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   };
 }
 
-async function listEmployees(query = {}) {
+async function listEmployees(query = {}, escopoUnidades = null) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
   const offset = (page - 1) * limit;
-  // Express 5 expoe req.query por getter; sanitizadores podem validar sem
-  // substituir o valor original. Normaliza novamente na regra de negocio.
+  // Express 5 expõe req.query por getter; normaliza novamente na regra de negócio.
   const ativo = normalizeActiveFilter(query.ativo);
   const cargo = String(query.cargo || "").trim().toUpperCase();
   const q = String(query.q || "").trim();
 
-  const totalRows = await employeeModel.countEmployees({ ativo, cargo, q });
+  const totalRows = await employeeModel.countEmployees({ ativo, cargo, q }, escopoUnidades);
   const employees = await employeeModel.listEmployees({
     ativo,
     cargo,
     q,
     limit,
     offset,
-  });
+  }, escopoUnidades);
 
   return {
     items: employees.map(mapListedEmployee),
@@ -405,44 +454,53 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
       throw new NotFoundError("Funcionario nao encontrado");
     }
 
-    const values = resolveEditableEmployee(body, existing);
+    // Jornada/cargo vivem no vínculo ativo (cargos é UNIQUE/compartilhada, não
+    // por funcionário). Sem vínculo ativo não há onde editar a jornada. Nunca
+    // renomeia o row de cargos (afetaria outros funcionários) — re-aponta o
+    // vínculo p/ o cargo-alvo (find-or-create pelo nome).
+    const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
+      tx,
+      employeeId
+    );
+    if (!vinculo) {
+      throw new ConflictError("Funcionario sem vinculo ativo para editar");
+    }
+
+    const edits = resolveEditableEmployee(body, existing);
     const emailExists = await employeeModel.findEmailConflictForUpdate(
       tx,
-      values.email,
+      edits.email,
       employeeId
     );
     if (emailExists) {
       throw new ConflictError("Email ja cadastrado");
     }
 
-    const employeeResult = await employeeModel.updateAdminEmployee(
-      tx,
-      employeeId,
-      values
-    );
-    if (!employeeResult.affectedRows) {
-      throw new NotFoundError("Funcionario nao encontrado");
-    }
+    // Sem guard em affectedRows: o UPDATE do mysql2 devolve linhas ALTERADAS (não
+    // "matched"), então uma edição no-op (jornada repetida) daria 0 → falso "não encontrado".
+    await employeeModel.updateAdminEmployee(tx, employeeId, edits);
 
-    const cargoResult = await cargoModel.updateCargo(
-      tx,
-      existing.cargo_id,
-      values.cargoSchedule
-    );
-    if (!cargoResult.affectedRows) {
-      throw new Error("Falha ao atualizar o cargo do funcionario");
-    }
+    // Re-aponta o vínculo ao cargo-alvo (find-or-create pelo nome) e sobrescreve a jornada.
+    const cargoId = await findOrCreateCargo(tx, edits.cargoSchedule.cargo);
+    await vinculoModel.update(tx, vinculo.id, {
+      cargoId,
+      entrada: edits.cargoSchedule.entrada,
+      saidaAlmoco: edits.cargoSchedule.saidaAlmoco,
+      retornoAlmoco: edits.cargoSchedule.retornoAlmoco,
+      saida: edits.cargoSchedule.saida,
+    });
 
     return {
       ...existing,
-      nome: values.nome,
-      email: values.email,
-      telefone: values.telefone,
-      cargo: values.cargoSchedule.cargo,
-      entrada: values.cargoSchedule.entrada,
-      saida_almoco: values.cargoSchedule.saidaAlmoco,
-      retorno_almoco: values.cargoSchedule.retornoAlmoco,
-      saida: values.cargoSchedule.saida,
+      cargo_id: cargoId,
+      nome: edits.nome,
+      email: edits.email,
+      telefone: edits.telefone,
+      cargo: edits.cargoSchedule.cargo,
+      entrada: edits.cargoSchedule.entrada,
+      saida_almoco: edits.cargoSchedule.saidaAlmoco,
+      retorno_almoco: edits.cargoSchedule.retornoAlmoco,
+      saida: edits.cargoSchedule.saida,
     };
   });
 
@@ -497,6 +555,19 @@ async function changeEmployeeActivation(
     );
     if (!result.affectedRows) {
       throw new Error("Falha ao atualizar o status do funcionario");
+    }
+
+    // Desativar encerra o vínculo ativo (cargo/escola/jornada vive nele); não
+    // apaga pontos (histórico intacto). Reativar NÃO (re)abre vínculo — isso é
+    // operação de cadastro separada.
+    if (!ativo) {
+      const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
+        tx,
+        employeeId
+      );
+      if (vinculo) {
+        await vinculoModel.encerrarVinculo(tx, vinculo.id);
+      }
     }
 
     const status = await employeeModel.findEmployeeActivationById(

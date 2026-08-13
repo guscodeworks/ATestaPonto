@@ -16,28 +16,45 @@ const {
   reactivateEmployeeValidator,
   paginationValidator,
 } = require("../middlewares/validators");
+const {
+  escopoMiddleware,
+  restringirEscopoFuncionario,
+  restringirEscopoFuncionarioReativacao,
+  restringirEscopoUnidadeDoBody,
+} = require("../middlewares/adminScope");
 
 const router = Router();
 
+router.use(escopoMiddleware);
+
 router.get("/", paginationValidator, listEmployees);
-router.get("/:id", employeeIdValidator, getEmployee);
-router.post("/", sensitiveLimiter, createFuncionarioValidator, createEmployee);
+router.get("/:id", employeeIdValidator, restringirEscopoFuncionario("id"), getEmployee);
+router.post(
+  "/",
+  sensitiveLimiter,
+  createFuncionarioValidator,
+  restringirEscopoUnidadeDoBody("unidade_escolar_id"),
+  createEmployee
+);
 router.patch(
   "/:id",
   sensitiveLimiter,
   updateFuncionarioValidator,
+  restringirEscopoFuncionario("id"),
   updateEmployee
 );
 router.patch(
   "/:id/desativar",
   sensitiveLimiter,
   deactivateEmployeeValidator,
+  restringirEscopoFuncionario("id"),
   deactivateEmployee
 );
 router.patch(
   "/:id/reativar",
   sensitiveLimiter,
   reactivateEmployeeValidator,
+  restringirEscopoFuncionarioReativacao("id"),
   reactivateEmployee
 );
 

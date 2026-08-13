@@ -2,15 +2,11 @@
 
 const database = require("../config/database");
 
-// Permite que as queries participem de uma transação (client passado explicitamente)
-// ou usem a conexão padrão do módulo, quando chamadas fora de uma transação.
 function getClient(client) {
   return client || database;
 }
 
-/**
- * Trava o CPF do login junto com a transacao do funcionario.
- */
+// Trava o login do CPF junto com a transação do funcionário.
 async function findByCpfForUpdate(client, cpf) {
   return getClient(client).executeOne(
     "SELECT lf.funcionario_id FROM login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id WHERE f.cpf = ? LIMIT 1 FOR UPDATE",
@@ -18,9 +14,7 @@ async function findByCpfForUpdate(client, cpf) {
   );
 }
 
-/**
- * Verifica conflito sem acusar o proprio login durante alteracao de CPF.
- */
+// Conflito de CPF excluindo o próprio login (alteração de CPF).
 async function findCpfConflictForUpdate(client, cpf, excludedFuncionarioId) {
   return getClient(client).executeOne(
     "SELECT lf.funcionario_id FROM login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id WHERE f.cpf = ? AND f.id <> ? LIMIT 1 FOR UPDATE",

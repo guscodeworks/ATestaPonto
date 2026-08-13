@@ -1,13 +1,24 @@
 const { body, param, query } = require("express-validator");
 const { isValidCpf, normalizeCpf } = require("../utils/cpf");
 const { validateRequest } = require("./validateRequest");
+const {
+  PERFIL_SEDUC,
+  PERFIL_DIRETORIA,
+  PERFIS_ESCOLARES,
+} = require("./adminScope");
+
+// Perfis administrativos válidos para concessão (espelham o ENUM do banco).
+const PERFIS_ADM = [PERFIL_SEDUC, PERFIL_DIRETORIA, ...PERFIS_ESCOLARES];
 
 // Token de QR Code de ponto: 64 caracteres hexadecimais.
 const QR_TOKEN_REGEX = /^[a-f0-9]{64}$/i;
+
 // Caminho aceito para links de acesso via QR Code (com ou sem barra inicial/final).
 const QR_ACCESS_PATH_REGEX = /^\/?ponto\/acessar\/?$/i;
 const CARGO_TYPES = ["FUNCIONARIO", "INSPETOR", "PROFESSOR"];
-const EDITABLE_CARGO_TYPES = ["FUNCIONARIO", "INSPETOR"];
+
+// Edição aceita os mesmos cargos do cadastro (PROFESSOR incluído).
+const EDITABLE_CARGO_TYPES = CARGO_TYPES;
 const EDITABLE_EMPLOYEE_FIELDS = new Set([
   "nome",
   "email",
@@ -32,8 +43,7 @@ function timeToSeconds(value) {
   return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
 }
 
-// Encadeia o middleware de validação (validateRequest) após as regras do express-validator,
-// centralizando o tratamento de erros de validação em um único lugar.
+// Regras + validateRequest centralizado.
 function withValidation(rules) {
   return [...rules, validateRequest];
 }
@@ -59,8 +69,7 @@ function cpfRule(field = "cpf", required = true) {
     });
 }
 
-// Aceita o QR code em diferentes nomes de campo (compatibilidade com versões antigas
-// do app/frontend que enviavam qr_code ou qrToken em vez de qrCode).
+// Aceita qrCode, qr_code ou qrToken (compat. com versões antigas).
 function getQrCodeCandidate(value, { req }) {
   return String(
     value || req.body.qr_code || req.body.qrCode || req.body.qrToken || ""
@@ -122,10 +131,29 @@ const createFuncionarioValidator = withValidation([
     .isEmail()
     .withMessage("Email invalido")
     .normalizeEmail({ gmail_remove_dots: false }),
-  body("cargo_id")
-    .custom((_value, { req }) => {
-      if (Object.prototype.hasOwnProperty.call(req.body, "cargo_id")) {
-        throw new Error("cargo_id nao e aceito no cadastro de funcionario");
+ body("cargo_id")
+   .custom((_value, { req }) => {
+     if (Object.prototype.hasOwnProperty.call(req.body, "cargo_id")) {
+       throw new Error("cargo_id nao e aceito no cadastro de funcionario");
+     }
+     return true;
+   }),
+   
+  // unidade_escolar_id é OBRIGATORIO no novo schema: o vínculo funcional
+  // (que carrega a jornada) exige uma unidade, e a geolocalização do ponto
+  // passa a vir dessa unidade. Aqui validamos apenas a forma (inteiro > 0);
+  // a existência da unidade é confirmada no service (consulta ao model), que
+  // também recebe essa mesma gestão de transação para o vínculo.
+  body("unidade_escolar_id")
+    .customSanitizer((value) => {
+      if (value === undefined || value === null || value === "") return NaN;
+      return Number(value);
+    })
+    .custom((value) => {
+      if (!Number.isFinite(value) || !Number.isInteger(value) || value < 1) {
+        throw new Error(
+          "unidade_escolar_id e obrigatorio e deve ser um inteiro positivo"
+        );
       }
       return true;
     }),
@@ -363,6 +391,70 @@ const baterPontoValidator = withValidation([
     .toFloat(),
 ]);
 
+// Validação de formato apenas para concessão de acesso administrativo. Regras
+// cross-field (perfil <-> diretoria/unidade, período, escopo do concedente)
+// ficam no service, que as aplica antes de gravar.
+const createAcessoValidator = withValidation([
+  cpfRule("cpf", true),
+  // nome é obrigatório só quando a identidade admin ainda não existe (service checa).
+  body("nome")
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 150 })
+    .withMessage("Nome deve ter entre 3 e 150 caracteres")
+    .matches(/^[^<>]*$/)
+    .withMessage("Nome contem caracteres invalidos")
+    .escape(),
+  body("email")
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 150 })
+    .withMessage("Email muito longo")
+    .isEmail()
+    .withMessage("Email invalido")
+    .normalizeEmail({ gmail_remove_dots: false }),
+  body("perfil")
+    .trim()
+    .notEmpty()
+    .withMessage("perfil e obrigatorio")
+    .toUpperCase()
+    .isIn(PERFIS_ADM)
+    .withMessage("perfil invalido"),
+  body("diretoria_ensino_id")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("diretoria_ensino_id invalido")
+    .toInt(),
+  body("unidade_escolar_id")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("unidade_escolar_id invalido")
+    .toInt(),
+  body("status")
+    .optional()
+    .trim()
+    .toUpperCase()
+    .isIn(["ATIVO", "SUSPENSO"])
+    .withMessage("status invalido"),
+  body("data_inicio")
+    .optional()
+    .isISO8601({ strict: true })
+    .withMessage("data_inicio invalida")
+    .toDate(),
+  body("data_fim")
+    .optional()
+    .isISO8601({ strict: true })
+    .withMessage("data_fim invalida")
+    .toDate(),
+]);
+
+const acessoIdValidator = withValidation([
+  param("id")
+    .isInt({ min: 1 })
+    .withMessage("ID de acesso invalido")
+    .toInt(),
+]);
+
 module.exports = {
   createFuncionarioValidator,
   employeeIdValidator,
@@ -374,4 +466,6 @@ module.exports = {
   validateQrShortcutValidator,
   funcionarioLoginValidator,
   baterPontoValidator,
+  createAcessoValidator,
+  acessoIdValidator,
 };

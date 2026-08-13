@@ -5,7 +5,7 @@ async function getTodayPoints(req, res, next) {
   try {
     const result = await pointReportService.getTodayPoints({
       data: req.query.data,
-    });
+    }, req.escopoUnidades);
 
     return res.status(200).json({
       success: true,
@@ -18,14 +18,12 @@ async function getTodayPoints(req, res, next) {
 
 async function getDailyReport(req, res, next) {
   try {
-    // Diferente de getTodayPoints, o relatório diário registra quem o
-    // gerou e de onde (adminId/ipOrigem), possivelmente para auditoria
-    // de acesso a dados de frequência.
+    // Audita a geração: registra adminId/ipOrigem (diferente de getTodayPoints).
     const result = await pointReportService.getDailyReport({
       data: req.query.data,
       adminId: req.auth.id,
       ipOrigem: getClientIp(req),
-    });
+    }, req.escopoUnidades);
 
     return res.status(200).json({
       success: true,
@@ -38,7 +36,7 @@ async function getDailyReport(req, res, next) {
 
 async function getDashboardSummary(req, res, next) {
   try {
-    const result = await pointReportService.getDashboardSummary();
+    const result = await pointReportService.getDashboardSummary(req.escopoUnidades);
 
     return res.status(200).json({
       success: true,

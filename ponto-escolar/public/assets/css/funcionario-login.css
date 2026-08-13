@@ -58,7 +58,14 @@ label {
   box-sizing: border-box;
   padding-top: clamp(150px, 27vh, 230px);
   overflow: clip;
-  background: #fff;
+  background: url("../img/background-mobile.webp") center / cover no-repeat;
+}
+
+/* Mobile: imagem estática de fundo; gradiente/blobs e bolinhas desligados. */
+.login-page::before,
+.login-page::after,
+.login-art {
+  display: none;
 }
 
 /* Campo de cor e recorte ondulado da arte superior. */
@@ -252,8 +259,8 @@ form {
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-#cpf {
-  background-image: url("../img/icons/user.svg");
+#identificador {
+  background-image: url("../icons/id-card.svg");
 }
 
 #senha {
@@ -409,9 +416,7 @@ form {
   transition: transform 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
 }
 
-.btn-login:hover {
-  background: #292929;
-}
+/* Hover herdado dos blocos responsivos (filter: brightness) — preserva o gradiente. */
 
 .btn-login:active {
   transform: translateY(1px);
@@ -507,133 +512,9 @@ form {
 
 
 @media (min-width: 1025px) {
-  html,
-  body {
-    background: #fff;
-  }
-
-  .login-page {
-    display: grid;
-    place-items: center;
-    padding: clamp(40px, 7vh, 76px) clamp(24px, 5vw, 64px);
-    background:
-      radial-gradient(circle at 50% 48%, rgba(20, 20, 20, 0.035), transparent 34%),
-      #fff;
-  }
-
-  .login-page::before {
-    top: -24%;
-    left: -25%;
-    width: min(58vw, 920px);
-    height: 148%;
-    background: linear-gradient(145deg, #2d6cff 0%, var(--login-blue) 56%, #063bbb 100%);
-    border-radius: 0 58% 48% 0 / 0 44% 58% 0;
-    box-shadow: 24px 20px 70px rgba(20, 80, 240, 0.14);
-    transform: rotate(-7deg);
-  }
-
-  .login-page::after {
-    top: -21%;
-    right: -25%;
-    bottom: auto;
-    left: auto;
-    width: min(56vw, 880px);
-    height: 143%;
-    background: linear-gradient(215deg, #ff3a36 0%, var(--login-red) 58%, #c90912 100%);
-    border-radius: 55% 0 0 46% / 48% 0 0 60%;
-    box-shadow: -24px 20px 70px rgba(240, 20, 20, 0.12);
-    transform: rotate(8deg);
-  }
-
-  .login-art::before,
-  .login-art::after {
-    position: absolute;
-    content: "";
-    border-radius: 50%;
-  }
-
-  .login-art::before {
-    bottom: -25%;
-    left: -10%;
-    width: 36vw;
-    height: 52vh;
-    background: #fff;
-    transform: rotate(14deg);
-  }
-
-  .login-art::after {
-    top: -22%;
-    right: 3%;
-    width: 24vw;
-    height: 42vh;
-    background: #fff;
-    transform: rotate(-12deg);
-  }
-
-  .art-dot--blue-one {
-    top: 12%;
-    left: 34%;
-    width: clamp(24px, 2.2vw, 42px);
-    background: var(--login-blue);
-  }
-
-  .art-dot--blue-two {
-    top: auto;
-    right: 28%;
-    bottom: 12%;
-    width: clamp(18px, 1.8vw, 34px);
-    background: var(--login-blue);
-    opacity: 1;
-  }
-
-  .art-dot--red-one {
-    top: 17%;
-    right: 35%;
-    width: clamp(22px, 2vw, 38px);
-  }
-
-  .art-dot--red-two {
-    top: auto;
-    bottom: 17%;
-    left: 38%;
-    width: clamp(13px, 1.2vw, 23px);
-  }
-
-  .art-dot--black-one {
-    top: 25%;
-    left: 26%;
-    width: clamp(16px, 1.5vw, 28px);
-  }
-
-  .art-dot--black-two {
-    top: auto;
-    right: 24%;
-    bottom: 24%;
-    width: clamp(20px, 2vw, 38px);
-  }
-
-  .login-panel {
-    width: min(100%, 464px);
-    min-height: 0;
-    padding: clamp(32px, 4vw, 44px);
-    border: 2px solid var(--login-black);
-    border-radius: 20px;
-    box-shadow:
-      7px 9px 0 rgba(20, 20, 20, 0.92),
-      0 24px 64px rgba(20, 20, 20, 0.16);
-  }
-
+  /* Telas largas: apenas tipografia do wordmark/título e ajustes finos de painel/toast. */
   .login-form-panel {
     max-width: 372px;
-  }
-
-  .login-brand-symbol {
-    width: 70px;
-    margin-bottom: 10px;
-  }
-
-  .login-form-panel > header {
-    margin-bottom: 24px;
   }
 
   .login-brand {
@@ -641,24 +522,7 @@ form {
   }
 
   .login-heading {
-    margin-top: 18px;
     font-size: 25px;
-  }
-
-  form {
-    gap: 16px;
-  }
-
-  .field-input,
-  .btn-login {
-    height: 50px;
-    min-height: 50px;
-  }
-
-  .toggle-pw {
-    top: 1px;
-    width: 48px;
-    height: 48px;
   }
 
   .toast-stack {
@@ -669,7 +533,178 @@ form {
   }
 }
 
-/* Tablets e iPads: preserva o card completo com uma composicao intermediaria. */
+/* Tablet e desktop: card centralizado em tela cheia sobre a imagem estática.
+   Mobile (<768) mantém a onda/blobs e o fluxo original. */
+@media (min-width: 768px) {
+  .login-page {
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: clamp(28px, 6vh, 76px) clamp(24px, 5vw, 64px);
+    overflow: visible;
+    background: url("../img/background-desktop.webp") center / cover no-repeat;
+  }
+
+  .login-panel {
+    width: min(100%, 464px);
+    min-height: 0;
+    padding: clamp(32px, 4vw, 44px);
+    border: 1px solid rgba(20, 20, 20, 0.08);
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(20, 20, 20, 0.12);
+  }
+
+  /* Símbolo: sem sombra, compacto no topo. */
+  .login-brand-symbol {
+    width: 64px;
+    margin-bottom: 6px;
+    box-shadow: none;
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 16px;
+  }
+
+  .login-heading {
+    margin-top: 10px;
+  }
+
+  .login-sub {
+    margin-top: 4px;
+  }
+
+  /* Campos: borda sutil cinza claro, planos; foco com borda azul fina e anel suave. */
+  form {
+    gap: 14px;
+  }
+
+  .field-input {
+    height: 48px;
+    min-height: 48px;
+    border: 1px solid #dcdfe6;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .field-input:hover {
+    border-color: #c4c7d0;
+  }
+
+  .field-input:focus-visible {
+    border-color: var(--login-blue);
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.12);
+  }
+
+  .field-input.has-error {
+    border-color: var(--login-red);
+  }
+
+  .field-input.has-error:focus-visible {
+    box-shadow: 0 0 0 3px rgba(240, 20, 20, 0.12);
+  }
+
+  .toggle-pw {
+    top: 2px;
+    width: 44px;
+    height: 44px;
+    border-radius: 9px;
+  }
+
+  /* Linha "Lembrar CPF/e-mail" + "Esqueci minha senha": leves e alinhadas. */
+  .form-meta {
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .form-remember {
+    min-height: 40px;
+    gap: 8px;
+    color: #52525b;
+  }
+
+  .form-remember input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .form-link {
+    min-height: 40px;
+    color: var(--login-black);
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .form-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Botão "Entrar": gradiente 3 pontos das cores da marca (azul→preto→vermelho). O preto
+     central (faixa fina via stop duplo 46%/54%) evita a mistura RGB azul+vermelho que gerava
+     roxo/magenta, sem dominar o botão. Texto branco, hover com leve brightness (cores preservadas). */
+  .btn-login {
+    height: 48px;
+    min-height: 48px;
+    margin-top: 4px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--login-blue) 0%, var(--login-black) 46%, var(--login-black) 54%, var(--login-red) 100%);
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+  }
+
+  .btn-login:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.92);
+    box-shadow: 0 4px 12px rgba(20, 20, 20, 0.14);
+  }
+
+  .btn-login:active {
+    transform: translateY(0);
+    filter: brightness(0.85);
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+  }
+
+  .btn-login:focus-visible {
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.3);
+  }
+
+  /* Remove os gradientes/blobs (onda azul, blob vermelho e pontos) feitos em CSS. */
+  .login-page::before,
+  .login-page::after,
+  .login-art {
+    display: none;
+  }
+}
+
+/* Telas com pouca altura (notebooks ~700–900px): compacta ainda mais o espaçamento
+   vertical do card e do wrapper para caber em 100dvh sem scroll, sem cortar conteúdo. */
+@media (min-width: 768px) and (max-height: 900px) {
+  .login-page {
+    padding-block: clamp(16px, 3vh, 40px);
+  }
+
+  .login-panel {
+    padding-block: clamp(18px, 2.8vh, 34px);
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 12px;
+  }
+
+  .login-heading {
+    margin-top: 8px;
+  }
+
+  .login-sub {
+    margin-top: 3px;
+  }
+
+  form {
+    gap: 12px;
+  }
+}
 
 
 
@@ -677,6 +712,141 @@ form {
 
 
 
+
+/* Mobile (<768px): card flutuante centralizado sobre a imagem, clean e compacto
+   para caber em telas de celular (~700–850px) sem scroll excessivo.
+   Mesma linha visual do desktop: borda sutil, sombra leve, espaçamento enxuto. */
+@media (max-width: 767px) {
+  .login-page {
+    display: grid;
+    place-items: center;
+    padding: clamp(16px, 4vh, 28px) clamp(20px, 6vw, 28px);
+    overflow: visible;
+  }
+
+  .login-panel {
+    width: min(100%, 440px);
+    min-height: 0;
+    padding: clamp(22px, 4vh, 32px) clamp(20px, 6vw, 28px);
+    border: 1px solid rgba(20, 20, 20, 0.08);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(20, 20, 20, 0.12);
+  }
+
+  /* Símbolo: sem sombra, levemente menor no topo. */
+  .login-brand-symbol {
+    width: 56px;
+    margin-bottom: 6px;
+    box-shadow: none;
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 14px;
+  }
+
+  .login-heading {
+    margin-top: 8px;
+  }
+
+  .login-sub {
+    margin-top: 3px;
+  }
+
+  /* Campos: borda sutil cinza claro, planos; foco com borda azul fina e anel suave. */
+  form {
+    gap: 13px;
+  }
+
+  .field-input {
+    height: 48px;
+    min-height: 48px;
+    border: 1px solid #dcdfe6;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .field-input:hover {
+    border-color: #c4c7d0;
+  }
+
+  .field-input:focus-visible {
+    border-color: var(--login-blue);
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.12);
+  }
+
+  .field-input.has-error {
+    border-color: var(--login-red);
+  }
+
+  .field-input.has-error:focus-visible {
+    box-shadow: 0 0 0 3px rgba(240, 20, 20, 0.12);
+  }
+
+  .toggle-pw {
+    top: 2px;
+    width: 44px;
+    height: 44px;
+    border-radius: 9px;
+  }
+
+  /* Linha "Lembrar CPF/e-mail" + "Esqueci minha senha": leves e alinhadas. */
+  .form-meta {
+    margin-top: 0;
+    font-size: 13px;
+  }
+
+  .form-remember {
+    min-height: 40px;
+    gap: 8px;
+    color: #52525b;
+  }
+
+  .form-remember input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .form-link {
+    min-height: 40px;
+    color: var(--login-black);
+    font-weight: 550;
+    text-decoration: none;
+  }
+
+  .form-link:hover {
+    text-decoration: underline;
+  }
+
+  /* Botão "Entrar": mesmo gradiente 3 pontos do desktop (azul→preto→vermelho), texto
+     branco, cantos alinhados aos campos, hover/toque com leve brightness (sem trocar cores). */
+  .btn-login {
+    height: 48px;
+    min-height: 48px;
+    margin-top: 4px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--login-blue) 0%, var(--login-black) 46%, var(--login-black) 54%, var(--login-red) 100%);
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+  }
+
+  .btn-login:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.92);
+    box-shadow: 0 4px 12px rgba(20, 20, 20, 0.14);
+  }
+
+  .btn-login:active {
+    transform: translateY(0);
+    filter: brightness(0.85);
+    box-shadow: 0 1px 2px rgba(20, 20, 20, 0.08);
+  }
+
+  .btn-login:focus-visible {
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.3);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *,
