@@ -823,10 +823,10 @@ dialog.ponto-confirm.is-saida {
     height: 100vh;
     height: 100dvh;
     padding: 22px 16px;
-    border-right: 1px solid rgba(20, 20, 20, 0.08);
-    background: rgba(245, 247, 251, 0.96);
-    backdrop-filter: blur(16px);
-    box-shadow: 4px 0 18px rgba(20, 20, 20, 0.08);
+    border-right: 1px solid color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+    background: var(--color-surface);
+    backdrop-filter: none;
+    box-shadow: 2px 0 18px rgba(20, 20, 20, 0.04);
   }
 
   /* Topo da sidebar: bloco identidade do funcionario (avatar vertical/compacto),
@@ -1278,15 +1278,78 @@ dialog.ponto-confirm.is-saida {
   .employee-dashboard .ponto-overview { display: none; }
   .employee-dashboard .ponto-dashboard-dt { display: block; }
 
-  /* Marcadores de jornada: inativo = muted (opacidade 0.5), ativo/concluído =
-     acento azul (mesmo filtro já usado no projeto p/ tingir SVGs) + opacidade
-     cheia. O template só coloria o ícone; label e horário mantêm as cores
-     inline dele. */
-  .ponto-dashboard-dt .dt-jmarker img { opacity: 0.5; }
-  .ponto-dashboard-dt .dt-jmarker.is-active img {
-    opacity: 1;
-    filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
+  /* ── Reskin admin: cards/icon-badges/onda/sidebar-tag/breadcrumb ─────────
+     REUSO do design system do dashboard ADMIN (admin/identidade-visual.css +
+     admin/dashboard.css), reescrito no escopo .ponto-dashboard-dt p/ não
+     importar admin.css (que traria o layout fixed .app-sidebar/topbar). Mesmas
+     cores/tamanhos/filtros do admin. Mobile intocável. */
+
+  /* Cards brancos do bloco (.dt-card reúne o visual de .ui-panel/.card do admin):
+     surface sólida, hairline --admin-border (#E4E9F3), radius --radius-card (10px)
+     e a sombra BEM SUTIL do admin (--admin-shadow: 0 8px 24px rgba(32,57,104,.06)). */
+  .ponto-dashboard-dt .dt-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-surface);
+    border: 1px solid var(--admin-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--admin-shadow);
   }
+
+  /* Badge circular do ícone (.stat-icon do admin), redimensionada p/ a linha de
+     4 marcadores: 28×28, radius --radius-btn (8px), fundo azul 8% sobre surface
+     (mesmo color-mix do admin); SVG tingido de azul com o MESMO filter do admin. */
+  .ponto-dashboard-dt .stat-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-btn);
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--bg-surface));
+  }
+  .ponto-dashboard-dt .stat-icon img {
+    width: 16px;
+    height: 16px;
+    display: block;
+    object-fit: contain;
+    filter: brightness(0) saturate(100%) invert(25%) sepia(95%) saturate(3218%) hue-rotate(219deg) brightness(97%) contrast(98%);
+  }
+  /* Marcador ativo/concluído = opacidade cheia; inativo = muted (0.5), como no admin. */
+  .ponto-dashboard-dt .dt-jmarker.is-active .stat-icon img { opacity: 1; }
+  .ponto-dashboard-dt .dt-jmarker:not(.is-active) .stat-icon img { opacity: 0.5; }
+
+  /* Onda + círculo gloss (.stat-card::before/::after do admin) só na "Jornada de
+     hoje" (pergunta confirmada: o análogo ao painel de registros do admin, que é
+     o único a ter onda). Onda azul canto inferior direito, círculo radial gloss. */
+  .ponto-dashboard-dt .dt-jornada::before {
+    content: '';
+    position: absolute;
+    right: -16px;
+    bottom: -20px;
+    width: 76px;
+    height: 52px;
+    border-radius: 62% 0 0 0 / 78% 0 0 0;
+    background: color-mix(in srgb, #1450F0 78%, #FFFFFF);
+    transform: rotate(-8deg);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .ponto-dashboard-dt .dt-jornada::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    bottom: 18px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 26%, #AFC5FF 0, #4C80FA 34%, #1450F0 65%, #082A7C 100%);
+    box-shadow: 0 5px 8px rgba(20, 20, 20, 0.2);
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Conteúdo da jornada acima da onda. */
+  .ponto-dashboard-dt .dt-jornada > * { position: relative; z-index: 1; }
 
   /* Botão do hero: fundo branco constante (template); só refletimos disabled +
      opacidade no estado de carregamento/registro, e foco visível (qualidade
@@ -1299,5 +1362,48 @@ dialog.ponto-confirm.is-saida {
   .ponto-dashboard-dt #btn-ponto-dt:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--text-accent) 45%, white);
     outline-offset: 3px;
+  }
+
+  /* Breadcrumb "ATestaPonto › Meu ponto" (mesma classe do topbar admin, vals do
+     admin/base.css): 13px, --text-300, separador --border-medium, item atual
+     --text-700/600; "Ponto" vermelho via .brand-accent. */
+  .ponto-dashboard-dt .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-300);
+  }
+  .ponto-dashboard-dt .breadcrumb-sep { color: var(--border-medium); }
+  .ponto-dashboard-dt .breadcrumb-current { color: var(--text-700); font-weight: 600; }
+  .ponto-dashboard-dt .brand-accent { color: var(--color-accent); }
+
+  /* Etiqueta de cargo ao lado do nome na sidebar (mesma .sidebar-admin-badge do
+     admin: pílula --r-full, primary 10% bg, primary 18% border, 9px/700/uppercase).
+     Linha do nome em flex p/ sentar a tag ao lado; o cargo vivo é espelhado pelo
+     JS em #sb-cargo-tag (display, mesma categoria do #sb-role já existente). */
+  .employee-sidebar .employee-sidebar-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+  }
+  /* Nome encolhe/trunca em nomes longos; a etiqueta de cargo nunca é cortada. */
+  .employee-sidebar .employee-sidebar-name-row .employee-sidebar-name {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .employee-sidebar .sidebar-admin-badge {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    border: 1px solid color-mix(in srgb, var(--color-primary) 18%, var(--color-surface));
+    border-radius: 9999px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-primary);
+    padding: 2px 8px;
+    line-height: 1.4;
+    flex-shrink: 0;
   }
 }

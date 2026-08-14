@@ -347,6 +347,10 @@ function renderFuncionario(funcionario) {
     sbAvatar.textContent = iniciais;
     getElement('sb-name').textContent = nome;
     getElement('sb-role').textContent = cargo;
+    // Etiqueta de cargo ao lado do nome (mesma tag "ADMIN" do dashboard admin,
+    // reusando .sidebar-admin-badge). Espelho do cargo já computado — só display.
+    const sbCargoTag = getElement('sb-cargo-tag');
+    if (sbCargoTag) sbCargoTag.textContent = cargo;
   }
 }
 

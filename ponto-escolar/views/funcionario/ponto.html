@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Meu ponto</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-scoped"/>
+  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-admin-alias"/>
   <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260813-dt-loginref"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260813-dt-admin-reskin"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
-  <script src="/assets/js/funcionario/ponto.js?v=20260813-dt-dashboard" defer></script>
+  <script src="/assets/js/funcionario/ponto.js?v=20260813-dt-admin-cargotag" defer></script>
 </head>
 <body class="employee-area employee-dashboard">
 
@@ -21,7 +21,10 @@
   <div class="employee-sidebar-identity">
     <span class="employee-sidebar-avatar employee-avatar" id="sb-avatar" aria-hidden="true">—</span>
     <span class="employee-sidebar-copy">
-      <strong class="employee-sidebar-name" id="sb-name">—</strong>
+      <span class="employee-sidebar-name-row">
+        <strong class="employee-sidebar-name" id="sb-name">—</strong>
+        <span class="sidebar-admin-badge" id="sb-cargo-tag" aria-hidden="true">—</span>
+      </span>
       <span class="employee-sidebar-role" id="sb-role">—</span>
     </span>
   </div>
@@ -118,17 +121,24 @@
       <div style="display:flex;justify-content:center;align-items:center;min-height:100vh;padding:2rem">
         <div style="max-width:560px;width:100%;display:flex;flex-direction:column;gap:14px">
 
-          <div style="display:flex;justify-content:space-between;align-items:flex-end">
-            <div>
-              <p style="font-size:13px;color:var(--text-secondary);margin:0 0 2px" id="dt-date">—</p>
-              <p style="font-size:12px;color:var(--text-muted);margin:0">Bem-vindo de volta</p>
+          <div class="dt-cabecalho" style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-end">
+              <div>
+                <p style="font-size:13px;color:var(--text-secondary);margin:0 0 2px" id="dt-date">—</p>
+                <p style="font-size:12px;color:var(--text-muted);margin:0">Bem-vindo de volta</p>
+              </div>
+              <span class="employee-brand-frame" aria-hidden="true" style="width:28px;height:28px;flex:0 0 28px;border-width:1.5px">
+                <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" style="width:22px;height:22px">
+              </span>
             </div>
-            <span class="employee-brand-frame" aria-hidden="true" style="width:28px;height:28px;flex:0 0 28px;border-width:1.5px">
-              <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" style="width:22px;height:22px">
-            </span>
+            <div class="breadcrumb" aria-hidden="true">
+              <span>ATesta<span class="brand-accent">Ponto</span></span>
+              <span class="breadcrumb-sep">›</span>
+              <span class="breadcrumb-current">Meu ponto</span>
+            </div>
           </div>
 
-          <div style="background:var(--fill-accent);border-radius:16px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 12px 32px rgba(20,20,20,0.12)">
+          <div style="background:var(--fill-accent);border-radius:16px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 24px rgba(32,57,104,0.06)">
             <div>
               <p style="font-size:12px;color:var(--on-accent);opacity:0.8;margin:0 0 4px">agora são</p>
               <p style="font-size:44px;font-weight:500;color:var(--on-accent);margin:0;line-height:1;font-variant-numeric:tabular-nums" id="dt-clock">--:--</p>
@@ -139,31 +149,31 @@
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:12px">
-            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:0 12px 32px rgba(20,20,20,0.12)">
+            <div class="ui-panel dt-card" style="padding:14px 16px">
               <p style="font-size:10px;color:var(--text-muted);margin:0 0 4px">próximo registro</p>
               <p style="font-size:14px;font-weight:500;margin:0" id="dt-tipo-proximo">Carregando jornada</p>
               <p style="font-size:13px;color:var(--text-accent);margin:0" id="dt-horario-proximo"></p>
             </div>
-            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:0 12px 32px rgba(20,20,20,0.12)">
+            <div class="ui-panel dt-card dt-jornada" style="padding:14px 16px">
               <p style="font-size:10px;color:var(--text-muted);margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em">Jornada de hoje</p>
               <div style="display:flex;justify-content:space-between">
                 <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/clock.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="ENTRADA">
+                  <span class="stat-icon"><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" data-step="ENTRADA"></span>
                   <p style="font-size:11px;font-weight:500;margin:4px 0 0">Entrada</p>
                   <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="ENTRADA">--:--</p>
                 </div>
                 <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/timer.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="SAIDA_ALMOCO">
+                  <span class="stat-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" data-step="SAIDA_ALMOCO"></span>
                   <p style="font-size:11px;font-weight:500;margin:4px 0 0">Almoço</p>
                   <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="SAIDA_ALMOCO">--:--</p>
                 </div>
                 <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="RETORNO_ALMOCO">
+                  <span class="stat-icon"><img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" data-step="RETORNO_ALMOCO"></span>
                   <p style="font-size:11px;font-weight:500;margin:4px 0 0">Retorno</p>
                   <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="RETORNO_ALMOCO">--:--</p>
                 </div>
                 <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="SAIDA">
+                  <span class="stat-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" data-step="SAIDA"></span>
                   <p style="font-size:11px;font-weight:500;margin:4px 0 0">Saída</p>
                   <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="SAIDA">--:--</p>
                 </div>
