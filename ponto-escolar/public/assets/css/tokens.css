@@ -30,3 +30,19 @@
   /* Transição padrão */
   --transition:    0.18s ease;
 }
+
+/* Dashboard desktop do funcionário (.ponto-dashboard-dt): tokens do template
+   repassado, resolvidos na paleta do projeto. Escopo LOCAL (não global) — há
+   um sistema de --text-* legado em css/style/* (admin) que não devemos afetar;
+   estes só existem dentro do bloco desktop da área do funcionário. Valores
+   visuais idênticos ao template; --fill-accent repete o gradiente do botão
+   "Entrar" do login (azul→preto→vermelho) no lugar do azul chapado. */
+.ponto-dashboard-dt {
+  --fill-accent:     linear-gradient(135deg, var(--color-primary) 0%, var(--color-text) 46%, var(--color-text) 54%, var(--color-accent) 100%);
+  --on-accent:        #ffffff;
+  --text-accent:      var(--color-info);
+  --surface-2:        #ffffff;
+  --border:           rgba(20, 20, 20, 0.08);
+  --text-secondary:   #5b6473;
+  --text-muted:       var(--color-text-muted);
+}
