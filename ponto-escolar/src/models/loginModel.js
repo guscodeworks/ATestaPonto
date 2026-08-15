@@ -44,6 +44,14 @@ async function updateSenha(client, funcionarioId, senhaHash) {
 }
 
 async function updateLastLogin(funcionarioId) {
+  const modernLogin = await database.executeOne(
+    "SELECT 1 AS found FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'login_funcionario' LIMIT 1"
+  );
+  if (!modernLogin) {
+    // O schema legado não possui coluna de último acesso.
+    return { affectedRows: 0 };
+  }
+
   return database.execute(
     "UPDATE login_funcionario SET ultimo_login_em = CURRENT_TIMESTAMP WHERE funcionario_id = ?",
     [funcionarioId]
