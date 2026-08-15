@@ -962,6 +962,10 @@ function inicializarEventosPonto() {
   // (oculto via CSS no desktop, mas ainda é a fonte do estado espelhado para o dt).
   const btnPontoDt = getElement('btn-ponto-dt');
   if (btnPontoDt) btnPontoDt.addEventListener('click', baterPonto);
+
+  const sbLogoutDt = getElement('sb-logout-dt');
+  if (sbLogoutDt) sbLogoutDt.addEventListener('click', sair);
+
   getElement('retry-ponto-state').addEventListener('click', () => {
     recarregarEstadoAposRegistro();
   });
