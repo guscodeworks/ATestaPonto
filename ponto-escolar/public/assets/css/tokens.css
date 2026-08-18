@@ -70,6 +70,15 @@
      --admin-shadow; --fill-accent conserva o gradiente do botão Entrar do login
      (azul→preto→vermelho) herdado do passo anterior — não é estilo novo. */
   --fill-accent:     linear-gradient(135deg, var(--color-primary) 0%, var(--color-text) 46%, var(--color-text) 54%, var(--color-accent) 100%);
+  /* --fill-accent segue como REFERÊNCIA documentada do tricolor da marca
+     (azul→preto→vermelho), caso o hero retorne a ele ou outro uso queira o
+     acento tricolor. O hero usa agora --hero-bg (abaixo): azul da marca em
+     matiz único → sua variação mais escura (--color-primary-hover), sutil e
+     sóbrio p/ uso diário, sem preto/faixa vermelha no fill. O vermelho volta
+     como ACENTO pontual (10% da regra 60/30/10) só na borda inferior do card
+     — mesma assinatura já usada no badge .dt-dashboard-brand (anel azul +
+     border-bottom vermelha). Fundo sóbrio, não tricolor. */
+  --hero-bg:         linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
   --on-accent:       #ffffff;
   --text-accent:     var(--color-primary);
   --surface-2:       var(--bg-surface);

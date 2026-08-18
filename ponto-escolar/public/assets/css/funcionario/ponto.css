@@ -111,11 +111,10 @@
 .ponto-now {
   width: 100%;
   padding: 8px 12px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.64);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: 0 8px 22px rgba(20, 80, 240, 0.07);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(20, 80, 240, 0.1);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
@@ -141,11 +140,10 @@
   width: 100%;
   margin-top: 8px;
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: 0 6px 18px rgba(20, 80, 240, 0.06);
-  backdrop-filter: blur(8px);
+  border: 1px solid rgba(20, 80, 240, 0.1);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
   text-align: center;
 }
 
@@ -174,14 +172,13 @@
 
 .journey-card {
   position: relative;
-  margin-top: 20px;
+  margin-top: 10px;
   padding: 14px 10px 16px;
   overflow: hidden;
-  border-color: rgba(255, 255, 255, 0.8);
-  border-radius: 16px;
-  box-shadow:
-    0 12px 28px rgba(20, 80, 240, 0.1),
-    0 2px 6px rgba(20, 20, 20, 0.035);
+  border-color: rgba(20, 80, 240, 0.1);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 .journey-title {
@@ -207,28 +204,49 @@
 
 .journey-card-accent {
   position: absolute;
-  bottom: -46px;
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
+  top: 0;
+  bottom: auto;
+  height: 2px;
+  border-radius: 0;
   pointer-events: none;
 }
 
 .journey-card-accent-blue {
-  left: -32px;
+  left: 0;
+  width: 72%;
   background: var(--color-primary);
 }
 
 .journey-card-accent-red {
-  right: -32px;
+  right: 22%;
+  width: 6%;
   background: var(--color-accent);
 }
 
 .journey-steps {
+  --journey-progress-stop: 0%;
+  --journey-line-color: #e5e8ee;
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   width: 100%;
   list-style: none;
+}
+
+.journey-steps::before {
+  content: "";
+  position: absolute;
+  top: 19px;
+  right: 12.5%;
+  left: 12.5%;
+  z-index: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-primary) 0 var(--journey-progress-stop),
+    var(--journey-line-color) var(--journey-progress-stop) 100%
+  );
 }
 
 .journey-step {
@@ -240,22 +258,6 @@
   text-align: center;
 }
 
-.journey-step:not(:last-child)::after {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: 19px;
-  left: calc(50% + 21px);
-  width: calc(100% - 42px);
-  height: 3px;
-  border-radius: 2px;
-  background: #e5e8ee;
-}
-
-.journey-step.is-complete:not(:last-child)::after {
-  background: linear-gradient(90deg, var(--color-primary), rgba(20, 80, 240, 0.5));
-}
-
 .journey-step-marker {
   position: relative;
   z-index: 1;
@@ -263,9 +265,9 @@
   place-items: center;
   width: 40px;
   height: 40px;
-  border: 1px solid #d9dde5;
+  border: 3px solid var(--border, #d9dde5);
   border-radius: 50%;
-  background: #f7f8fb;
+  background: var(--color-surface);
 }
 
 .journey-step-marker img {
@@ -274,26 +276,31 @@
   opacity: 0.56;
 }
 
-.journey-step.is-current .journey-step-marker {
-  border: 2px solid var(--color-primary);
-  background: var(--color-surface);
-  box-shadow: 0 0 0 4px rgba(20, 80, 240, 0.08);
-}
-
-.journey-step.is-current .journey-step-marker img {
-  opacity: 1;
-  filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
-}
-
-.journey-step.is-complete .journey-step-marker {
-  border-color: var(--color-primary);
+.journey-step.jmarker--done .journey-step-marker,
+.journey-step.jmarker--current .journey-step-marker {
+  border: 3px solid var(--color-surface);
   background: var(--color-primary);
-  box-shadow: 0 3px 9px rgba(20, 80, 240, 0.2);
+  box-shadow: 0 0 0 1px var(--color-primary);
 }
 
-.journey-step.is-complete .journey-step-marker img {
+.journey-step.jmarker--current .journey-step-marker {
+  box-shadow: 0 0 0 1px var(--color-primary), 0 0 0 5px rgba(20, 80, 240, 0.15);
+}
+
+.journey-step.jmarker--pending .journey-step-marker {
+  border-color: var(--border, #d9dde5);
+  background: var(--color-surface);
+}
+
+.journey-step.jmarker--done .journey-step-marker img,
+.journey-step.jmarker--current .journey-step-marker img {
   opacity: 1;
   filter: brightness(0) invert(1);
+}
+
+.journey-step.jmarker--pending .journey-step-marker img {
+  opacity: 0.5;
+  filter: grayscale(1);
 }
 
 .journey-step-label {
@@ -307,8 +314,9 @@
   white-space: nowrap;
 }
 
-.journey-step.is-current .journey-step-label {
+.journey-step.jmarker--current .journey-step-label {
   color: var(--color-primary);
+  font-weight: 800;
 }
 
 .journey-step-state,
@@ -326,9 +334,20 @@
   font-variant-numeric: tabular-nums;
 }
 
-.journey-step.is-complete .journey-step-time {
+.journey-step.jmarker--done .journey-step-time {
   color: var(--color-primary);
   font-weight: 700;
+}
+
+.journey-step.jmarker--current .journey-step-time {
+  color: var(--color-primary);
+  font-weight: 800;
+}
+
+.journey-step.jmarker--pending .journey-step-label,
+.journey-step.jmarker--pending .journey-step-state,
+.journey-step.jmarker--pending .journey-step-time {
+  color: var(--text-muted, var(--color-text-muted));
 }
 
 .journey-summary {
@@ -1243,11 +1262,6 @@ dialog.ponto-confirm.is-saida {
     margin-left: 7px;
   }
 
-  .journey-step:not(:last-child)::after {
-    left: calc(50% + 19px);
-    width: calc(100% - 38px);
-  }
-
   .journey-step-marker {
     width: 38px;
     height: 38px;
@@ -1260,94 +1274,247 @@ dialog.ponto-confirm.is-saida {
    concentra data, relógio e ação sem alterar os cards auxiliares ou o fluxo
    que o JavaScript espelha entre os dois blocos. */
 @media (min-width: 768px) {
-  /* Container-pai: acomoda o bloco de 560 (+ 2*2rem de padding) ao lado da
-     sidebar, centralizado, sem vazar. Padding vertical zerado p/ o min-height
-     100vh do próprio bloco centralizar o conteúdo sem scroll extra.
-     max-width 624 = 560 + 2*32, abrangendo o padding do template. */
+  /* Container-pai: transmite a largura disponível ao bloco desktop, que faz
+     seu próprio limite responsivo abaixo. */
   .employee-dashboard .employee-shell {
     max-width: min(624px, calc(100% - 48px));
     padding-top: 0;
     padding-bottom: 0;
   }
-  .employee-dashboard .employee-main { padding-top: 0; }
+  .employee-dashboard .employee-main {
+    /* ÚNICO container responsável por centralizar o bloco desktop (passo 1-2 da
+       correção). min-height:100dvh — NÃO height fixo — permite que o main CRESÇA
+       além da viewport quando o conteúdo é maior (notebook baixo): aí o
+       justify-content/align-items não tem espaço p/ deslocar e o bloco ancora no
+       topo naturalmente, sem clipping e sem recuo forçado; a página rola. Em
+       telas altas (1080p+) o conteúdo é menor ⇒ sobra excedente ⇒ centraliza
+       de fato em ambos os eixos. SEM "safe": o safe era o que recuava p/ o
+       topo mesmo quando havia espaço; com min-height (não height) o recuo é
+       desnecessário — o overflow nunca acontece porque o container cede.
+       width:100% enxerga toda a largura à direita da sidebar (o shell já
+       transmite 100%, sem max-width); o bloco interno .ponto-dashboard-dt é
+       quem se limita a 700px, centralizado por align-items:center aqui. */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    width: 100%;
+    padding: 0;
+  }
 
   /* O conteúdo mobile (.ponto-overview) desaparece neste breakpoint; sobe o
      bloco desktop. Em <768px o [hidden] volta a valer. */
   .employee-dashboard .ponto-overview { display: none; }
-  .employee-dashboard .ponto-dashboard-dt { display: block; }
+  .employee-dashboard .ponto-dashboard-dt {
+    /* Bloco de conteúdo interno — o ÚNICO que carrega max-width (700px)
+       p/ não esticar demais em monitores grandes. margin:0 auto removido: o
+       alinhamento horizontal agora vem do align-items:center do .employee-main
+       (únicas fontes de centralização); margin:auto aqui competiria e/o seria
+       redundante. display:block mantém o frame em fluxo normal dentro do main. */
+    display: block;
+    width: 100%;
+    max-width: min(700px, calc(100% - 40px));
+  }
 
   /* ── Reskin admin: cards/icon-badges/onda/sidebar-tag/breadcrumb ─────────
      REUSO do design system do dashboard ADMIN (admin/identidade-visual.css +
      admin/dashboard.css), reescrito no escopo .ponto-dashboard-dt p/ não
      importar admin.css (que traria o layout fixed .app-sidebar/topbar). Mesmas
-     cores/tamanhos/filtros do admin. Mobile intocável. */
+     cores/tamanhos/filtros do admin. */
 
-  /* Cards brancos do bloco (.dt-card reúne o visual de .ui-panel/.card do admin):
-     surface sólida, hairline --admin-border (#E4E9F3), radius --radius-card (10px)
-     e a sombra BEM SUTIL do admin (--admin-shadow: 0 8px 24px rgba(32,57,104,.06)). */
+  /* Profundidade desktop: reutiliza a sombra do card branco do login
+     (0 12px 32px rgba(20,20,20,.12)) com uma camada curta de contato. */
+  .ponto-dashboard-dt {
+    --dt-card-shadow: 0 2px 6px rgba(20, 20, 20, 0.08), 0 12px 32px rgba(20, 20, 20, 0.12);
+  }
+
+  .ponto-dashboard-dt .dt-hero,
   .ponto-dashboard-dt .dt-card {
     position: relative;
     overflow: hidden;
-    background: var(--bg-surface);
-    border: 1px solid var(--admin-border);
-    border-radius: var(--radius-card);
-    box-shadow: var(--admin-shadow);
+    background: var(--color-surface);
+    border: 0.5px solid var(--admin-border);
+    box-shadow: var(--dt-card-shadow);
   }
 
-  /* Badge circular do ícone (.stat-icon do admin), redimensionada p/ a linha de
-     4 marcadores: 28×28, radius --radius-btn (8px), fundo azul 8% sobre surface
-     (mesmo color-mix do admin); SVG tingido de azul com o MESMO filter do admin. */
+  /* Cards brancos do bloco (.dt-card reúne o visual de .ui-panel/.card do admin):
+     surface sólida, hairline --admin-border, radius --radius-card preservado. */
+  .ponto-dashboard-dt .dt-card {
+    padding: 14px 16px;
+    border-radius: var(--radius-card);
+  }
+
+  .ponto-dashboard-dt .dt-jornada {
+    --journey-progress-stop: 0%;
+    --journey-line-color: color-mix(in srgb, var(--border) 82%, white);
+  }
+
+  .ponto-dashboard-dt .dt-jornada-track {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+    width: 100%;
+    max-width: 460px;
+    gap: 8px;
+    margin: 0 auto;
+  }
+
+  .ponto-dashboard-dt .dt-jornada-track::before {
+    content: "";
+    position: absolute;
+    top: 13px;
+    right: 12.5%;
+    left: 12.5%;
+    z-index: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      var(--color-primary) 0 var(--journey-progress-stop),
+      var(--journey-line-color) var(--journey-progress-stop) 100%
+    );
+  }
+
+  .ponto-dashboard-dt .dt-jmarker {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* Badge circular do ícone: cada marco corta a linha com uma borda branca,
+     deixando a jornada ler como trilho contínuo sem perder os quatro pontos. */
   .ponto-dashboard-dt .stat-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--radius-btn);
-    background: color-mix(in srgb, var(--color-primary) 8%, var(--bg-surface));
+    box-sizing: border-box;
+    width: 26px;
+    height: 26px;
+    border: 3px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg-surface);
   }
   .ponto-dashboard-dt .stat-icon img {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     display: block;
     object-fit: contain;
-    filter: brightness(0) saturate(100%) invert(25%) sepia(95%) saturate(3218%) hue-rotate(219deg) brightness(97%) contrast(98%);
+    opacity: 0.5;
+    filter: grayscale(1);
   }
-  /* Marcador ativo/concluído = opacidade cheia; inativo = muted (0.5), como no admin. */
-  .ponto-dashboard-dt .dt-jmarker.is-active .stat-icon img { opacity: 1; }
-  .ponto-dashboard-dt .dt-jmarker:not(.is-active) .stat-icon img { opacity: 0.5; }
+  .ponto-dashboard-dt .dt-jmarker.jmarker--done .stat-icon,
+  .ponto-dashboard-dt .dt-jmarker.jmarker--current .stat-icon {
+    border-color: var(--bg-surface);
+    background: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+  .ponto-dashboard-dt .dt-jmarker.jmarker--current .stat-icon {
+    box-shadow: 0 0 0 1px var(--color-primary), 0 0 0 5px rgba(20, 80, 240, 0.15);
+  }
+  .ponto-dashboard-dt .dt-jmarker.jmarker--done .stat-icon img,
+  .ponto-dashboard-dt .dt-jmarker.jmarker--current .stat-icon img {
+    opacity: 1;
+    filter: brightness(0) invert(1);
+  }
+  .ponto-dashboard-dt .dt-jmarker.jmarker--current p:first-of-type {
+    color: var(--color-primary);
+    font-weight: 800 !important;
+  }
+  .ponto-dashboard-dt .dt-jmarker.jmarker--done [data-time],
+  .ponto-dashboard-dt .dt-jmarker.jmarker--current [data-time] {
+    color: var(--color-primary) !important;
+    font-weight: 700;
+  }
+  .ponto-dashboard-dt .dt-jmarker.jmarker--pending p,
+  .ponto-dashboard-dt .dt-jmarker.jmarker--pending [data-time] {
+    color: var(--text-muted) !important;
+  }
 
-  /* Onda + círculo gloss (.stat-card::before/::after do admin) só na "Jornada de
-     hoje" (pergunta confirmada: o análogo ao painel de registros do admin, que é
-     o único a ter onda). Onda azul canto inferior direito, círculo radial gloss. */
-  .ponto-dashboard-dt .dt-jornada::before {
-    content: '';
+  /* Acento linear discreto: mantém a assinatura azul/vermelho sem competir
+     com os dados da jornada. */
+  .ponto-dashboard-dt .dt-card::before {
+    content: "";
     position: absolute;
-    right: -16px;
-    bottom: -20px;
-    width: 76px;
-    height: 52px;
-    border-radius: 62% 0 0 0 / 78% 0 0 0;
-    background: color-mix(in srgb, #1450F0 78%, #FFFFFF);
-    transform: rotate(-8deg);
+    inset: 0 0 auto;
+    height: 2px;
+    background: linear-gradient(
+      90deg,
+      var(--color-primary) 0 72%,
+      var(--color-accent) 72% 78%,
+      transparent 78% 100%
+    );
+    opacity: 0.72;
     pointer-events: none;
-    z-index: 0;
   }
-  .ponto-dashboard-dt .dt-jornada::after {
-    content: '';
-    position: absolute;
-    right: 10px;
-    bottom: 18px;
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 26%, #AFC5FF 0, #4C80FA 34%, #1450F0 65%, #082A7C 100%);
-    box-shadow: 0 5px 8px rgba(20, 20, 20, 0.2);
-    pointer-events: none;
-    z-index: 0;
+
+  .ponto-dashboard-dt .dt-card > * {
+    position: relative;
+    z-index: 1;
   }
-  /* Conteúdo da jornada acima da onda. */
-  .ponto-dashboard-dt .dt-jornada > * { position: relative; z-index: 1; }
+
+  .ponto-dashboard-dt .dt-card-eyebrow {
+    margin: 0 0 8px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .ponto-dashboard-dt .dt-next-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 96px;
+  }
+
+  .ponto-dashboard-dt .dt-next-label {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.35;
+  }
+
+  .ponto-dashboard-dt .dt-next-time {
+    margin: 5px 0 0;
+    color: var(--color-primary);
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  .ponto-dashboard-dt .dt-jornada {
+    min-height: 124px;
+    padding: 16px 18px;
+  }
+
+  .ponto-dashboard-dt .dt-jmarker-label {
+    margin: 6px 0 0;
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ponto-dashboard-dt .dt-jmarker-time {
+    margin: 1px 0 0;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+  }
 
   /* Botão do hero: fundo branco constante (template); só refletimos disabled +
      opacidade no estado de carregamento/registro, e foco visível (qualidade
@@ -1462,11 +1629,11 @@ dialog.ponto-confirm.is-saida {
     line-height: 1.3;
   }
 
+  /* Cargo duplicado: #sb-role repete o cargo já exibido pela pílula
+     #sb-cargo-tag (mesma string — JS escreve em ambos). Ocultamos o texto
+     solto e mantemos só a pílula; os dois IDs seguem no DOM. */
   .employee-dashboard .employee-sidebar-role {
-    display: block;
-    max-width: 100%;
-    font-size: 12px;
-    line-height: 1.35;
+    display: none;
   }
 
   .employee-dashboard .employee-sidebar-cargo-row {
@@ -1571,31 +1738,40 @@ dialog.ponto-confirm.is-saida {
     outline-offset: 2px;
   }
 
+  /* .employee-shell DESONFLICTADO da centralização: vira puramente estrutural.
+     Sem max-width (o bloco .ponto-dashboard-dt limita-se sozinho em 700px), sem
+     margin:auto, sem height:100dvh do patch anterior — esse height fixo era o
+     que disparava o recuo "safe" do main p/ o topo quando o conteudo excedia a
+     viewport. Agora o shell apenas TRANSMITE a largura toda (100% do body area
+     à direita da sidebar) e a altura cresce com o filho que carrega a altura
+     real. ÚNICO responsável por centralizar passa a ser o .employee-main. */
   .employee-dashboard .employee-shell {
     width: 100%;
-    max-width: min(624px, calc(100% - 48px));
-    margin: 0 auto;
+    max-width: none;
+    margin: 0;
+    min-height: 0;
   }
 
   .ponto-dashboard-dt .dt-dashboard-frame {
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    width: min(100%, 560px);
-    min-height: 100vh;
-    min-height: 100dvh;
+    width: 100%;
     margin: 0 auto;
-    padding: clamp(32px, 7vh, 72px) 0;
-    gap: 14px;
+    padding: clamp(16px, 3vh, 28px) 0;
+    gap: 10px;
   }
 
   .ponto-dashboard-dt .dt-dashboard-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    min-height: 46px;
-    padding: 0 2px 12px;
-    border-bottom: 1px solid var(--admin-border);
+    min-height: 40px;
+    gap: 12px;
+    padding: 0 2px 4px;
+    background: transparent;
+    border: 0;
+    border-bottom: 0;
+    box-shadow: none;
   }
 
   .ponto-dashboard-dt .dt-dashboard-heading {
@@ -1617,7 +1793,7 @@ dialog.ponto-confirm.is-saida {
   }
 
   .ponto-dashboard-dt .dt-dashboard-date {
-    margin-top: 3px;
+    margin-top: 2px;
     overflow: hidden;
     color: var(--text-secondary);
     font-size: 13px;
@@ -1626,18 +1802,26 @@ dialog.ponto-confirm.is-saida {
     white-space: nowrap;
   }
 
+  /* Badge integrado ao cabeçalho: anel da marca, surface sólida e a mesma
+     profundidade dos cards, em escala compacta para acompanhar título e data. */
   .ponto-dashboard-dt .dt-dashboard-brand {
-    width: 34px;
-    height: 34px;
-    flex: 0 0 34px;
-    border-color: color-mix(in srgb, var(--color-primary) 18%, var(--color-surface));
-    border-width: 1px;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    border: 2px solid var(--color-primary);
+    border-bottom-color: var(--color-accent);
+    border-radius: 50%;
     background: var(--color-surface);
+    box-shadow: var(--dt-card-shadow);
   }
 
+  /* O PNG permanece contido no anel e usa a renderização nítida já adotada. */
   .ponto-dashboard-dt .dt-dashboard-brand .employee-brand-mark {
-    width: 25px;
-    height: 25px;
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
   }
 
   .ponto-dashboard-dt .dt-hero {
@@ -1646,30 +1830,32 @@ dialog.ponto-confirm.is-saida {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: stretch;
     overflow: hidden;
-    min-height: 148px;
-    border-radius: 16px;
-    background: linear-gradient(135deg, var(--color-info) 0%, var(--color-primary) 100%);
-    box-shadow: 0 14px 30px rgba(18, 81, 163, 0.18);
+    min-height: 116px;
+    border-radius: var(--radius-card);
+    /* Fundo sóbrio p/ uso diário (regra 60/30/10): --hero-bg é o azul da marca
+       em matiz único — --color-primary → --color-primary-hover, gradiente
+       sutil do MESMO azul, sem preto nem faixa vermelha no fill (ao contrário
+       do tricolor --fill-accent que vigorava antes). O vermelho da marca volta
+       como ACENTO pontual: borda inferior de 3px (--color-accent), que segue a
+       curva inferior do border-radius. Mesma assinatura já usada no badge
+       .dt-dashboard-brand do cabeçalho (anel azul + border-bottom vermelha) —
+       coeso com a marca, não invenção. box-sizing:border-box global ⇒ o
+       border-bottom NÃO desloca o padding/struct original. */
+    background: var(--hero-bg);
+    border-bottom: 2px solid var(--color-accent);
   }
 
-  .ponto-dashboard-dt .dt-hero::after {
-    content: '';
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 92px;
-    height: 4px;
-    border-radius: 4px 0 0;
-    background: var(--color-accent);
-    pointer-events: none;
-  }
+  /* Faixa vermelha decorativa (::after) removida do hero: pinada em
+     right:0/bottom:0, vazava o border-radius inferior direito do card azul.
+     Cantos arredondados limpos, sem resquício decorativo. */
+  .ponto-dashboard-dt .dt-hero::after { content: none; }
 
   .ponto-dashboard-dt .dt-hero-time {
     display: flex;
     flex-direction: column;
     justify-content: center;
     min-width: 0;
-    padding: 26px 28px;
+    padding: 18px 22px;
   }
 
   .ponto-dashboard-dt .dt-hero-kicker {
@@ -1681,29 +1867,30 @@ dialog.ponto-confirm.is-saida {
   }
 
   .ponto-dashboard-dt .dt-hero-clock {
-    margin-top: 5px;
+    margin-top: 4px;
     color: #fff;
-    font-size: clamp(2.75rem, 6vw, 3.5rem);
+    font-family: var(--font-mono);
+    font-size: clamp(2.35rem, 5vw, 2.9rem);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -0.055em;
+    letter-spacing: 0;
     line-height: 0.95;
   }
 
   .ponto-dashboard-dt .dt-hero-action {
     display: flex;
     align-items: center;
-    padding: 20px 22px 20px 0;
+    padding: 16px 18px 16px 0;
   }
 
   .ponto-dashboard-dt .dt-ponto-action {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 48px;
-    max-width: 190px;
+    min-height: 44px;
+    max-width: 176px;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border: 1px solid rgba(255, 255, 255, 0.72);
     border-radius: 10px;
     background: #fff;
@@ -1746,7 +1933,13 @@ dialog.ponto-confirm.is-saida {
 
   .ponto-dashboard-dt .dt-support-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
-    gap: 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .ponto-dashboard-dt .dt-support-grid {
+    grid-template-columns: minmax(180px, 0.72fr) minmax(0, 1.55fr);
   }
 }

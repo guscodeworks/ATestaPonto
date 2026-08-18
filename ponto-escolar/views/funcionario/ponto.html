@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Meu ponto</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-admin-alias"/>
+  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260816-dt-hero-bg-token"/>
   <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260814-employee-desktop-refresh"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260818-ponto-section"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
   <script src="/assets/js/funcionario/ponto.js?v=20260814-desktop-logout" defer></script>
 </head>
@@ -128,7 +128,7 @@
             <p class="dt-dashboard-date" id="dt-date">—</p>
           </div>
           <span class="employee-brand-frame dt-dashboard-brand" aria-hidden="true">
-            <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" width="42" height="42"/>
+            <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" width="36" height="36"/>
           </span>
         </header>
 
@@ -146,33 +146,33 @@
         </section>
 
         <div class="dt-support-grid">
-          <div class="ui-panel dt-card" style="padding:14px 16px">
-            <p style="font-size:10px;color:var(--text-muted);margin:0 0 4px">próximo registro</p>
-            <p style="font-size:14px;font-weight:500;margin:0" id="dt-tipo-proximo">Carregando jornada</p>
-            <p style="font-size:13px;color:var(--text-accent);margin:0" id="dt-horario-proximo"></p>
+          <div class="ui-panel dt-card dt-next-card">
+            <p class="dt-card-eyebrow">Próximo registro</p>
+            <p class="dt-next-label" id="dt-tipo-proximo">Carregando jornada</p>
+            <p class="dt-next-time" id="dt-horario-proximo"></p>
           </div>
-          <div class="ui-panel dt-card dt-jornada" style="padding:14px 16px">
-            <p style="font-size:10px;color:var(--text-muted);margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em">Jornada de hoje</p>
-            <div style="display:flex;justify-content:space-between">
-              <div class="dt-jmarker" style="text-align:center">
+          <div class="ui-panel dt-card dt-jornada">
+            <p class="dt-card-eyebrow">Jornada de hoje</p>
+            <div class="dt-jornada-track">
+              <div class="dt-jmarker">
                 <span class="stat-icon"><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" data-step="ENTRADA"></span>
-                <p style="font-size:11px;font-weight:500;margin:4px 0 0">Entrada</p>
-                <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="ENTRADA">--:--</p>
+                <p class="dt-jmarker-label">Entrada</p>
+                <p class="dt-jmarker-time" data-time="ENTRADA">--:--</p>
               </div>
-              <div class="dt-jmarker" style="text-align:center">
+              <div class="dt-jmarker">
                 <span class="stat-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" data-step="SAIDA_ALMOCO"></span>
-                <p style="font-size:11px;font-weight:500;margin:4px 0 0">Almoço</p>
-                <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="SAIDA_ALMOCO">--:--</p>
+                <p class="dt-jmarker-label">Almoço</p>
+                <p class="dt-jmarker-time" data-time="SAIDA_ALMOCO">--:--</p>
               </div>
-              <div class="dt-jmarker" style="text-align:center">
+              <div class="dt-jmarker">
                 <span class="stat-icon"><img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" data-step="RETORNO_ALMOCO"></span>
-                <p style="font-size:11px;font-weight:500;margin:4px 0 0">Retorno</p>
-                <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="RETORNO_ALMOCO">--:--</p>
+                <p class="dt-jmarker-label">Retorno</p>
+                <p class="dt-jmarker-time" data-time="RETORNO_ALMOCO">--:--</p>
               </div>
-              <div class="dt-jmarker" style="text-align:center">
+              <div class="dt-jmarker">
                 <span class="stat-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" data-step="SAIDA"></span>
-                <p style="font-size:11px;font-weight:500;margin:4px 0 0">Saída</p>
-                <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="SAIDA">--:--</p>
+                <p class="dt-jmarker-label">Saída</p>
+                <p class="dt-jmarker-time" data-time="SAIDA">--:--</p>
               </div>
             </div>
           </div>

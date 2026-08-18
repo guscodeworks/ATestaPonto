@@ -354,18 +354,33 @@ function renderFuncionario(funcionario) {
   }
 }
 
+function getPercentualProgressoJornada(ponto) {
+  const ultimoIndiceConcluido = ETAPAS.reduce(
+    (ultimoIndice, etapa, indice) => (ponto[etapa.campo] ? indice : ultimoIndice),
+    -1
+  );
+
+  if (ultimoIndiceConcluido < 0) return '0%';
+  return `${(ultimoIndiceConcluido / (ETAPAS.length - 1)) * 100}%`;
+}
+
 function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
   const horarioRegistrado = ponto[etapa.campo];
+  const concluida = Boolean(horarioRegistrado);
+  const atual = !concluida && proximaBatida === etapa.tipo;
   const item = document.createElement('li');
   item.className = 'journey-step';
-  if (horarioRegistrado) item.classList.add('is-complete');
-  if (proximaBatida === etapa.tipo) item.classList.add('is-current');
+  item.classList.add(
+    concluida ? 'jmarker--done' : atual ? 'jmarker--current' : 'jmarker--pending'
+  );
+  if (concluida) item.classList.add('is-complete');
+  if (atual) item.classList.add('is-current');
 
   const marker = document.createElement('span');
   marker.className = 'journey-step-marker';
 
   const icon = document.createElement('img');
-  icon.src = etapa.asset;
+  icon.src = concluida ? '/assets/icons/check.svg' : etapa.asset;
   icon.alt = '';
   icon.setAttribute('aria-hidden', 'true');
   marker.appendChild(icon);
@@ -376,11 +391,11 @@ function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
 
   const state = document.createElement('span');
   state.className = 'journey-step-state';
-  state.textContent = horarioRegistrado ? 'Registrada' : 'Prevista';
+  state.textContent = concluida ? 'Registrada' : atual ? 'Atual' : 'Prevista';
 
   const time = document.createElement('time');
   time.className = 'journey-step-time';
-  time.textContent = formatarHorario(horarioRegistrado || jornada[etapa.campo]);
+  time.textContent = atual ? 'agora' : formatarHorario(horarioRegistrado || jornada[etapa.campo]);
 
   item.append(marker, label, state, time);
   return item;
@@ -388,6 +403,7 @@ function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
 
 function renderTimeline(ponto, jornada, proximaBatida) {
   const timeline = getElement('timeline');
+  timeline.style.setProperty('--journey-progress-stop', getPercentualProgressoJornada(ponto));
   timeline.replaceChildren(
     ...ETAPAS.map((etapa) => criarEtapaJornada(etapa, jornada, ponto, proximaBatida))
   );
@@ -539,10 +555,15 @@ function atualizarPainelDesktop() {
     // espelha o estado do painel mobile (skeleton/erro já escrito em #next-*)
     const nextLabel = getElement('next-label');
     const nextTime = getElement('next-time');
+    const jornadaDesktop = document.querySelector('.ponto-dashboard-dt .dt-jornada');
+    if (jornadaDesktop) jornadaDesktop.style.setProperty('--journey-progress-stop', '0%');
     if (dtTipo) dtTipo.textContent = nextLabel ? nextLabel.textContent : '';
     if (dtHora) dtHora.textContent = nextTime ? nextTime.textContent : '';
     markers.forEach((marker) => {
-      marker.classList.remove('is-active');
+      marker.classList.remove('is-active', 'jmarker--done', 'jmarker--current', 'jmarker--pending');
+      const icon = marker.querySelector('img');
+      const etapa = icon ? ETAPAS_POR_TIPO.get(icon.dataset.step) : null;
+      if (icon && etapa) icon.src = etapa.asset;
       const cell = marker.querySelector('[data-time]');
       if (cell) cell.textContent = '--:--';
     });
@@ -550,6 +571,10 @@ function atualizarPainelDesktop() {
   }
 
   const { jornada, ponto, proxima_batida } = estadoHoje;
+  const jornadaDesktop = document.querySelector('.ponto-dashboard-dt .dt-jornada');
+  if (jornadaDesktop) {
+    jornadaDesktop.style.setProperty('--journey-progress-stop', getPercentualProgressoJornada(ponto));
+  }
   const concluida =
     estadoHoje.jornada_concluida || proxima_batida === null || proxima_batida === 'CONCLUIDO';
 
@@ -570,9 +595,15 @@ function atualizarPainelDesktop() {
     if (!etapa) return;
     const registrado = Boolean(ponto[etapa.campo]);
     const ehAtual = !concluida && proxima_batida === tipo;
+    const icon = marker.querySelector('img');
+    marker.classList.remove('jmarker--done', 'jmarker--current', 'jmarker--pending');
+    marker.classList.add(
+      registrado ? 'jmarker--done' : ehAtual ? 'jmarker--current' : 'jmarker--pending'
+    );
     marker.classList.toggle('is-active', registrado || ehAtual);
+    if (icon) icon.src = registrado ? '/assets/icons/check.svg' : etapa.asset;
     const cell = marker.querySelector('[data-time]');
-    if (cell) cell.textContent = formatarHorario(jornada[etapa.campo]);
+    if (cell) cell.textContent = ehAtual ? 'agora' : formatarHorario(ponto[etapa.campo] || jornada[etapa.campo]);
   });
 }
 
