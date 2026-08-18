@@ -1,0 +1,307 @@
+/* =========================================================
+   ATesta Ponto — Página de erro 404
+   Mesmo sistema de tamanhos, breakpoints e identidade visual
+   usados na tela de Recuperar senha (senha.css):
+   - phone-frame 460px (mobile) / 620px (desktop) / 700px (>=1440px)
+   - breakpoints 767.98 / 991.98 / 992 / 1440
+   - mesmas classes de conteúdo: .brand, .title, .subtitle,
+     .btn-primary, .back-link, .logo-desktop
+   Paleta: branco / preto / azul (#2F66F2) / vermelho (#FF2D2D)
+========================================================= */
+
+:root {
+  --blue: #2F66F2;
+  --red: #7A1518;
+  --black: #111111;
+  --white: #ffffff;
+  --gray-500: #8b8f98;
+  --gray-300: #d9dce1;
+  --ease: cubic-bezier(.4,0,.2,1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--white);
+  font-family: 'Nunito', 'Segoe UI Rounded', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+html {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- Moldura central — mesmas medidas do card de recuperação de senha ---------- */
+
+.phone-frame {
+  position: relative;
+  width: min(100%, 460px);
+  max-width: 460px;
+  height: auto;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 24px 60px -18px rgba(17,17,17,0.30), 0 8px 20px -8px rgba(17,17,17,0.14);
+  animation: fadeIn .5s var(--ease) both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.logo-desktop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: clamp(18px, 3.5vw, 26px) auto 0;
+}
+
+.logo-desktop img {
+  width: clamp(52px, 14vw, 64px);
+  height: clamp(52px, 14vw, 64px);
+  border-radius: 50%;
+  box-shadow: 0 6px 18px -4px rgba(17,17,17,0.25);
+  object-fit: contain;
+}
+
+/* ---------- Tablet ---------- */
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+  body { padding: 24px; }
+
+  .phone-frame {
+    border-radius: 28px;
+    box-shadow: 0 30px 70px -20px rgba(17,17,17,0.28), 0 8px 24px -8px rgba(17,17,17,0.12);
+  }
+}
+
+/* ---------- Mobile / Tablet: imagem como fundo da página inteira ---------- */
+
+@media (max-width: 991.98px) {
+  html,
+  body {
+    min-height: 100vh;
+    background:
+      url("background-mobile.png")
+      center center / cover
+      no-repeat fixed;
+  }
+}
+
+/* ---------- Desktop ---------- */
+
+@media (min-width: 992px) {
+  body {
+    align-items: center;
+    padding: 40px 20px;
+    background: url("background-desktop.png") center center / cover no-repeat fixed;
+  }
+
+  .logo-desktop {
+    margin-top: 24px;
+  }
+
+  .logo-desktop img {
+    width: 64px;
+    height: 64px;
+  }
+
+  .phone-frame {
+    width: min(100%, 500px);
+    max-width: 500px;
+    min-width: 0;
+    border-radius: 24px;
+    box-shadow:
+      0 24px 55px -18px rgba(17,17,17,0.30),
+      0 8px 24px -8px rgba(17,17,17,0.15);
+  }
+
+  .content {
+    padding: 16px 38px 28px;
+  }
+}
+
+/* ---------- Telas grandes ---------- */
+
+@media (min-width: 1440px) {
+  .phone-frame {
+    width: 500px;
+    max-width: 500px;
+  }
+}
+
+/* ---------- Conteúdo ---------- */
+
+.content {
+  position: relative;
+  z-index: 2;
+  padding: clamp(12px, 2.5vw, 18px) clamp(20px, 5vw, 32px) clamp(22px, 4vw, 30px);
+  text-align: center;
+}
+
+.brand {
+  text-align: center;
+  font-size: clamp(28px, 5.9vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0 0 clamp(12px, 2.5vw, 18px);
+  color: var(--black);
+}
+
+.brand-p { color: var(--red); }
+
+/* ---------- Bloco de erro (exclusivo desta página) ---------- */
+
+.error-block {
+  animation: stepIn .4s var(--ease) both;
+}
+
+@keyframes stepIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.error-code {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2px, 1vw, 6px);
+  line-height: 1;
+  margin: 0 0 clamp(2px, 1vw, 6px);
+  user-select: none;
+}
+
+.digit {
+  font-size: clamp(64px, 16vw, 104px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-shadow: 0 12px 30px rgba(17,17,17,0.12);
+}
+
+.digit--dark { color: var(--black); }
+.digit--blue { color: var(--blue); }
+.digit--red  { color: var(--red); }
+
+.title {
+  text-align: center;
+  font-size: clamp(19px, 4.2vw, 21px);
+  font-weight: 700;
+  color: var(--black);
+  margin: 0 0 8px;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: clamp(13px, 3.4vw, 14px);
+  line-height: 1.5;
+  color: var(--gray-500);
+  margin: 0 auto 18px;
+  max-width: 380px;
+  overflow-wrap: break-word;
+}
+
+/* ---------- Botão (idêntico ao da recuperação de senha) ---------- */
+
+.btn-primary {
+  width: 100%;
+  height: 54px;
+  border: none;
+  border-radius: 14px;
+  background: var(--black);
+  color: var(--white);
+  font-size: 15.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background-color .3s var(--ease), transform .15s var(--ease), box-shadow .3s var(--ease);
+  text-decoration: none;
+  margin-top: 6px;
+}
+
+.btn-primary:hover {
+  background: #2a2a2a;
+  box-shadow: 0 10px 24px -8px rgba(0,0,0,.35);
+}
+
+.btn-primary:active { transform: scale(0.99); }
+
+/* ---------- Responsivo ---------- */
+
+
+@media (max-width: 600px) {
+  .content { padding: 10px 20px 22px; }
+  .brand { margin-bottom: 12px; }
+  .digit { font-size: clamp(60px, 18vw, 84px); }
+  .title { font-size: 19px; }
+  .subtitle { font-size: 13px; margin-bottom: 16px; }
+  .btn-primary { height: 50px; font-size: 14.5px; }
+}
+
+@media (max-width: 420px) {
+  .content { padding: 8px 16px 20px; }
+  .brand { font-size: 26px; }
+  .digit { font-size: clamp(52px, 17vw, 72px); }
+  .title { font-size: 18px; }
+  .subtitle { font-size: 12.5px; }
+  .btn-primary { height: 48px; }
+}
+
+@media (max-width: 360px) {
+  .logo-desktop img {
+    width: clamp(48px, 15vw, 64px);
+    height: clamp(48px, 15vw, 64px);
+  }
+  .digit { font-size: clamp(46px, 16vw, 64px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+/* ---------- Mobile ---------- */
+
+@media (max-width: 767.98px) {
+  body {
+    padding: 12px;
+  }
+
+  .phone-frame {
+    width: min(92%, 400px);
+    max-width: 400px;
+    border-radius: 22px;
+  }
+
+  .logo-desktop {
+    margin-top: 18px;
+  }
+
+  .logo-desktop img {
+    width: 58px;
+    height: 58px;
+  }
+
+  .content {
+    padding: 8px 22px 20px;
+  }
+}
