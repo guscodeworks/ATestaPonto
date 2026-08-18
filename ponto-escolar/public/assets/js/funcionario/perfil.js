@@ -132,6 +132,7 @@ function renderizarPerfil(data) {
   definirTexto('header-avatar', iniciais);
   definirTexto('header-name', nome);
   definirTexto('header-cargo', cargo);
+  definirTexto('sidebar-welcome-name', nome);
   definirTexto('profile-avatar', iniciais);
   definirTexto('profile-name', nome);
   definirTexto('profile-cargo', cargo);
@@ -152,6 +153,7 @@ function renderizarIndisponivel() {
   const ids = [
     'header-name',
     'header-cargo',
+    'sidebar-welcome-name',
     'profile-name',
     'profile-cargo',
     'profile-status',
@@ -212,6 +214,7 @@ async function iniciarPerfil() {
 }
 
 getElement('profile-logout').addEventListener('click', sair);
+getElement('employee-logout').addEventListener('click', sair);
 
 if (funcionarioToken) {
   iniciarPerfil();

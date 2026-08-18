@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Histórico de ponto</title>
   <link rel="icon" href="/assets/img/favicon.svg"/>
-  <link rel="stylesheet" href="/assets/css/tokens.css"/>
+  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-admin-alias"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/relatorio.css?v=20260804-history-api"/>
-  <script src="/assets/js/funcionario/relatorio.js?v=20260804-history-api" defer></script>
+  <link rel="stylesheet" href="/assets/css/funcionario/relatorio.css?v=20260818-history-content"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260818-balanced-hero" media="(min-width: 768px)"/>
+  <script src="/assets/js/funcionario/relatorio.js?v=20260818-desktop-shell" defer></script>
 </head>
-<body class="employee-area employee-report">
+<body class="employee-area employee-dashboard employee-report">
 
 <div class="employee-shell">
   <header class="employee-header">
@@ -21,63 +22,83 @@
         <span class="employee-role" id="header-cargo">Carregando...</span>
       </span>
     </a>
-    <span class="employee-brand-frame" aria-hidden="true">
-      <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" width="42" height="42"/>
-    </span>
+    <div class="employee-brand-frame">
+      <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="42" height="42"/>
+      <span class="employee-brand-copy">
+        <span class="employee-brand-name">ATesta<span class="employee-brand-accent">Ponto</span></span>
+        <span class="employee-brand-subtitle">FUNCIONÁRIOS</span>
+      </span>
+    </div>
+  </header>
+
+  <header class="employee-topbar">
+    <div class="employee-topbar-breadcrumb" aria-label="Localização atual">
+      <span>ATesta<span class="employee-brand-accent">Ponto</span></span>
+      <span class="employee-topbar-separator" aria-hidden="true">›</span>
+      <strong>Histórico</strong>
+    </div>
+    <div class="employee-topbar-context">
+      <img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"/>
+      <span>Área do funcionário</span>
+    </div>
   </header>
 
   <main class="employee-main report-main" id="report-content" aria-busy="true">
-    <header class="report-page-heading">
-      <h1>Histórico</h1>
-    </header>
-
-    <label class="report-month-field" for="report-month">
-      <span>Mês</span>
-      <input id="report-month" name="mes" type="month" autocomplete="off"/>
-    </label>
-
-    <section class="employee-card report-summary" aria-labelledby="summary-title">
-      <h2 class="report-summary-title" id="summary-title">Resumo</h2>
-      <dl class="report-summary-grid">
-        <div>
-          <dt>Dias registrados</dt>
-          <dd id="summary-records">—</dd>
-        </div>
-        <div>
-          <dt>Total trabalhado</dt>
-          <dd id="summary-worked">—</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section class="report-history" aria-labelledby="history-title">
-      <header class="report-history-header">
-        <h2 id="history-title">Registros</h2>
+    <div class="report-overview">
+      <header class="report-page-heading">
+        <h1 id="report-title">Histórico</h1>
+        <p class="report-page-description">Consulte seus registros e acompanhe sua jornada.</p>
       </header>
 
-      <div class="report-state report-state-loading" id="report-loading" role="status" aria-live="polite">
-        <span class="report-state-spinner" aria-hidden="true"></span>
-        <strong>Carregando histórico</strong>
-      </div>
+      <label class="report-month-field" for="report-month">
+        <span>Mês</span>
+        <input id="report-month" name="mes" type="month" autocomplete="off"/>
+      </label>
 
-      <div class="report-state" id="report-empty" hidden>
-        <img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="28" height="28"/>
-        <strong>Nenhum registro neste mês</strong>
-      </div>
+      <section class="employee-card report-summary" aria-labelledby="summary-title">
+        <h2 class="report-summary-title" id="summary-title">Resumo</h2>
+        <dl class="report-summary-grid">
+          <div>
+            <dt>Dias registrados</dt>
+            <dd id="summary-records">—</dd>
+          </div>
+          <div>
+            <dt>Total trabalhado</dt>
+            <dd id="summary-worked">—</dd>
+          </div>
+        </dl>
+      </section>
 
-      <div class="report-state report-state-error" id="report-error" role="alert" hidden>
-        <img src="/assets/icons/circle-x.svg" alt="" aria-hidden="true" width="28" height="28"/>
-        <strong>Não foi possível carregar</strong>
-        <button class="report-retry" id="report-retry" type="button">Tentar novamente</button>
-      </div>
+      <section class="report-history" aria-labelledby="history-title">
+        <header class="report-history-header">
+          <h2 id="history-title">Registros</h2>
+        </header>
 
-      <div class="report-day-list" id="report-day-list" aria-live="polite" hidden></div>
-    </section>
+        <div class="report-state report-state-loading" id="report-loading" role="status" aria-live="polite">
+          <span class="report-state-spinner" aria-hidden="true"></span>
+          <strong>Carregando histórico</strong>
+        </div>
+
+        <div class="report-state" id="report-empty" hidden>
+          <img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="28" height="28"/>
+          <strong>Nenhum registro neste mês</strong>
+        </div>
+
+        <div class="report-state report-state-error" id="report-error" role="alert" hidden>
+          <img src="/assets/icons/circle-x.svg" alt="" aria-hidden="true" width="28" height="28"/>
+          <strong>Não foi possível carregar</strong>
+          <button class="report-retry" id="report-retry" type="button">Tentar novamente</button>
+        </div>
+
+        <div class="report-day-list" id="report-day-list" aria-live="polite" hidden></div>
+      </section>
+    </div>
   </main>
 </div>
 
 <nav class="employee-bottom-nav" aria-label="Navegação do funcionário">
   <div class="employee-bottom-nav-inner">
+    <span class="employee-nav-label">Navegação</span>
     <a href="/funcionario" class="employee-bottom-nav-link">
       <span class="employee-bottom-nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true"/></span>
       <span>Início</span>
@@ -90,6 +111,16 @@
       <span class="employee-bottom-nav-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true"/></span>
       <span>Perfil</span>
     </a>
+    <aside class="employee-sidebar-welcome" aria-label="Boas-vindas">
+      <strong class="employee-sidebar-welcome-title">
+        Bem-vindo, <span id="sidebar-welcome-name">—</span>
+      </strong>
+      <p>Acompanhe sua jornada e registre seus pontos do dia.</p>
+    </aside>
+    <button class="employee-sidebar-logout" id="employee-logout" type="button">
+      <span class="employee-bottom-nav-icon" aria-hidden="true"><img src="/assets/icons/log-out.svg" alt=""/></span>
+      <span>Sair da conta</span>
+    </button>
   </div>
 </nav>
 
