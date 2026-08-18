@@ -18,6 +18,23 @@ async function loginFuncionario(req, res, next) {
   }
 }
 
+async function changeFirstAccessPassword(req, res, next) {
+  try {
+    const result = await punchService.changeFirstAccessPassword(
+      req.auth.id,
+      req.body.nova_senha,
+      { ipOrigem: getClientIp(req) }
+    );
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getTodayPunch(req, res, next) {
   try {
     const result = await punchService.getTodayPunch(req.auth.id);
@@ -71,5 +88,6 @@ module.exports = {
   getPunchHistory,
   getTodayPunch,
   loginFuncionario,
+  changeFirstAccessPassword,
   registerPunch,
 };

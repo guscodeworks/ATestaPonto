@@ -374,6 +374,26 @@ const funcionarioLoginValidator = withValidation([
     .withMessage("Senha deve ter entre 8 e 72 caracteres"),
 ]);
 
+// O indicador de primeiro acesso nunca e aceito do cliente: a autorizacao
+// vem exclusivamente da credencial temporaria e do estado no banco.
+const firstAccessPasswordChangeValidator = withValidation([
+  body().custom((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error("Corpo da requisicao invalido");
+    }
+    const fields = Object.keys(value);
+    if (fields.length !== 1 || fields[0] !== "nova_senha") {
+      throw new Error("Envie somente o campo nova_senha");
+    }
+    return true;
+  }),
+  body("nova_senha")
+    .isString()
+    .withMessage("Nova senha deve ser texto")
+    .isLength({ min: 8, max: 72 })
+    .withMessage("Nova senha deve ter entre 8 e 72 caracteres"),
+]);
+
 const baterPontoValidator = withValidation([
   body("latitude")
     .notEmpty()
@@ -465,6 +485,7 @@ module.exports = {
   qrShortcutIdParamValidator,
   validateQrShortcutValidator,
   funcionarioLoginValidator,
+  firstAccessPasswordChangeValidator,
   baterPontoValidator,
   createAcessoValidator,
   acessoIdValidator,

@@ -43,6 +43,15 @@ async function updateSenha(client, funcionarioId, senhaHash) {
   );
 }
 
+// A troca obrigatoria consulta e trava o estado persistido no banco para que
+// duas requisicoes concorrentes nao consigam concluir o primeiro acesso.
+async function findFirstAccessByFuncionarioIdForUpdate(client, funcionarioId) {
+  return getClient(client).executeOne(
+    "SELECT lf.funcionario_id, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id WHERE lf.funcionario_id = ? LIMIT 1 FOR UPDATE",
+    [funcionarioId]
+  );
+}
+
 async function updateLastLogin(funcionarioId) {
   return database.execute(
     "UPDATE login_funcionario SET ultimo_login_em = CURRENT_TIMESTAMP WHERE funcionario_id = ?",
@@ -56,5 +65,6 @@ module.exports = {
   createLogin,
   updateCpf,
   updateSenha,
+  findFirstAccessByFuncionarioIdForUpdate,
   updateLastLogin,
 };

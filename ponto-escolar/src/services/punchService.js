@@ -371,6 +371,36 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
     throw new UnauthorizedError("CPF/email ou senha invalidos");
   }
 
+  // A senha foi comprovada, mas primeiro_acesso permanece uma decisao do
+  // banco. Neste caso nao emitimos JWT de funcionario; apenas uma credencial
+  // curta, com escopo exclusivo para a troca obrigatoria de senha.
+  if (funcionario.primeiro_acesso) {
+    const tokenTrocaSenha = jwt.sign(
+      {
+        sub: String(funcionario.id),
+        role: "funcionario",
+        purpose: "troca_senha_primeiro_acesso",
+      },
+      env.JWT_SECRET,
+      { expiresIn: env.FUNCIONARIO_JWT_EXPIRES_IN }
+    );
+
+    await registerAuditLog({
+      evento: "funcionario_troca_senha_obrigatoria",
+      funcionarioId: funcionario.id,
+      mensagem: "Login inicial requer troca obrigatoria de senha",
+      ipOrigem,
+      metadados: { login: login.auditLogin },
+    });
+
+    return {
+      troca_senha_obrigatoria: true,
+      token_troca_senha: tokenTrocaSenha,
+      expiresIn: env.FUNCIONARIO_JWT_EXPIRES_IN,
+      funcionario: mapFuncionario(funcionario),
+    };
+  }
+
   // Jornada/permissão de bater ponto vem do vínculo ativo. Funcionário ativo sem
   // vínculo não tem jornada nem geolocalização: rejeita aqui p/ não emitir um
   // token que só falharia tardiamente no ponto/dashboard. ANTES de gravar
@@ -411,8 +441,53 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   return {
     token,
     expiresIn: env.FUNCIONARIO_JWT_EXPIRES_IN,
-    primeiro_acesso: Boolean(funcionario.primeiro_acesso),
+    primeiro_acesso: false,
     funcionario: mapFuncionario(funcionario),
+  };
+}
+
+async function changeFirstAccessPassword(funcionarioId, novaSenha, { ipOrigem } = {}) {
+  const safeFuncionarioId = Number(funcionarioId);
+  const senha = String(novaSenha || "");
+  if (!Number.isInteger(safeFuncionarioId) || safeFuncionarioId < 1) {
+    throw new UnauthorizedError("Credencial para troca de senha invalida");
+  }
+  if (senha.length < 8 || senha.length > 72) {
+    throw new BadRequestError("Nova senha deve ter entre 8 e 72 caracteres");
+  }
+
+  await employeeModel.withTransaction(async (tx) => {
+    const login = await loginModel.findFirstAccessByFuncionarioIdForUpdate(
+      tx,
+      safeFuncionarioId
+    );
+    if (!login || !login.ativo) {
+      throw new UnauthorizedError("Funcionario inexistente ou inativo");
+    }
+    if (!login.primeiro_acesso) {
+      throw new ForbiddenError("Troca obrigatoria de senha nao esta pendente");
+    }
+    if (await bcrypt.compare(senha, String(login.senha_hash))) {
+      throw new BadRequestError("A nova senha deve ser diferente da senha temporaria");
+    }
+
+    const senhaHash = await bcrypt.hash(senha, env.BCRYPT_SALT_ROUNDS);
+    const result = await loginModel.updateSenha(tx, safeFuncionarioId, senhaHash);
+    if (!result.affectedRows) {
+      throw new Error("Falha ao atualizar senha do funcionario");
+    }
+  });
+
+  await registerAuditLog({
+    evento: "funcionario_senha_inicial_alterada",
+    funcionarioId: safeFuncionarioId,
+    mensagem: "Senha temporaria de funcionario substituida",
+    ipOrigem,
+  });
+
+  return {
+    senha_alterada: true,
+    primeiro_acesso: false,
   };
 }
 
@@ -566,5 +641,6 @@ module.exports = {
   getPunchHistory,
   getTodayPunch,
   loginFuncionario,
+  changeFirstAccessPassword,
   registerPunch,
 };

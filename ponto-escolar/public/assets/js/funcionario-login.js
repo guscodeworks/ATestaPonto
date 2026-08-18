@@ -212,6 +212,21 @@
         }
       });
 
+      if (data.troca_senha_obrigatoria === true && data.token_troca_senha) {
+        sessionStorage.removeItem('funcionario_token');
+        sessionStorage.removeItem('funcionario_data');
+        sessionStorage.setItem(
+          'funcionario_token_troca_senha',
+          data.token_troca_senha
+        );
+        window.location.href = '/senha';
+        return;
+      }
+
+      if (!data.token) {
+        throw new Error('O servidor nao retornou uma sessao valida.');
+      }
+
       sessionStorage.setItem('funcionario_token', data.token);
       sessionStorage.setItem('funcionario_data', JSON.stringify(data.funcionario));
       sessionStorage.setItem('func_nome', data.funcionario?.nome || '');
