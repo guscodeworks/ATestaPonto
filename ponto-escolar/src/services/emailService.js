@@ -52,4 +52,30 @@ async function sendEmployeeWelcomeEmail({ nome, email, senhaTemporaria }) {
   }
 }
 
-module.exports = { sendEmployeeWelcomeEmail };
+async function sendPasswordRecoveryCode({ nome, email, codigo }) {
+  if (!env.MAIL_ENABLED) return { enviado: false, motivo: "desativado" };
+
+  try {
+    await getTransport().sendMail({
+      from: env.MAIL_FROM,
+      to: email,
+      subject: "Código para redefinir sua senha - ATesta Ponto",
+      text: [
+        `Olá, ${nome}!`,
+        "",
+        `Seu código para redefinir a senha é: ${codigo}`,
+        "",
+        "Ele vence em 15 minutos. Se você não solicitou esta alteração, ignore este e-mail.",
+      ].join("\n"),
+    });
+    return { enviado: true };
+  } catch (error) {
+    logger.error("Falha ao enviar código de recuperação de senha", {
+      error: { name: error.name, code: error.code },
+      email,
+    });
+    return { enviado: false, motivo: "falha_no_envio" };
+  }
+}
+
+module.exports = { sendEmployeeWelcomeEmail, sendPasswordRecoveryCode };

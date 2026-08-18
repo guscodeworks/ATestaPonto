@@ -61,6 +61,12 @@ const sensitiveLimiter = createLimiter({
   limit: 40,
 });
 
+const passwordRecoveryLimiter = createLimiter({
+  name: "password-recovery",
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+});
+
 // Limites de ponto configuráveis por instalação (env).
 const pointLimiter = createLimiter({
   name: "point",
@@ -72,5 +78,6 @@ module.exports = {
   createLimiter,
   loginLimiter,
   sensitiveLimiter,
+  passwordRecoveryLimiter,
   pointLimiter,
 };

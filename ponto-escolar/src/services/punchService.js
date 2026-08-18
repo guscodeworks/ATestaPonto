@@ -375,19 +375,23 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   // vínculo não tem jornada nem geolocalização: rejeita aqui p/ não emitir um
   // token que só falharia tardiamente no ponto/dashboard. ANTES de gravar
   // ultimo_login_em (não marca sessão inválida como login bem-sucedido).
-  const vinculoAtivo = await vinculoModel.findActiveByFuncionarioId(
-    funcionario.id
-  );
-  if (!vinculoAtivo) {
-    await registerAuditLog({
-      evento: "funcionario_login_invalido",
-      nivel: "WARN",
-      mensagem: "Tentativa de login de funcionario sem vinculo ativo",
-      ipOrigem,
-      metadados: { login: login.auditLogin },
-    });
-    await waitForFailedLoginDelay();
-    throw new UnauthorizedError("CPF/email ou senha invalidos");
+  // O banco legado não possui vínculos funcionais. Nele, a flag ativo do
+  // funcionário já é a regra disponível para autorizar o acesso.
+  if (await employeeModel.hasModernLoginTable()) {
+    const vinculoAtivo = await vinculoModel.findActiveByFuncionarioId(
+      funcionario.id
+    );
+    if (!vinculoAtivo) {
+      await registerAuditLog({
+        evento: "funcionario_login_invalido",
+        nivel: "WARN",
+        mensagem: "Tentativa de login de funcionario sem vinculo ativo",
+        ipOrigem,
+        metadados: { login: login.auditLogin },
+      });
+      await waitForFailedLoginDelay();
+      throw new UnauthorizedError("CPF/email ou senha invalidos");
+    }
   }
 
   await loginModel.updateLastLogin(funcionario.id);
