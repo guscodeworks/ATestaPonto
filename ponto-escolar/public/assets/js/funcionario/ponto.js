@@ -542,7 +542,10 @@ function atualizarBotaoDesktop() {
   getElement('btn-label-dt').textContent = label ? label.textContent : '';
   if (icon) getElement('btn-icon-dt').src = icon.src;
   btn.disabled = ref ? ref.disabled : false;
-  btn.classList.toggle('is-loading', Boolean(ref && ref.classList.contains('is-loading')));
+  definirEstadoBotao(
+    btn,
+    ...CLASSES_ESTADO_BOTAO.filter((classe) => ref && ref.classList.contains(classe))
+  );
 }
 
 function atualizarPainelDesktop() {
@@ -564,6 +567,8 @@ function atualizarPainelDesktop() {
       const icon = marker.querySelector('img');
       const etapa = icon ? ETAPAS_POR_TIPO.get(icon.dataset.step) : null;
       if (icon && etapa) icon.src = etapa.asset;
+      const state = marker.querySelector('[data-state]');
+      if (state) state.textContent = '—';
       const cell = marker.querySelector('[data-time]');
       if (cell) cell.textContent = '--:--';
     });
@@ -602,6 +607,8 @@ function atualizarPainelDesktop() {
     );
     marker.classList.toggle('is-active', registrado || ehAtual);
     if (icon) icon.src = registrado ? '/assets/icons/check.svg' : etapa.asset;
+    const state = marker.querySelector('[data-state]');
+    if (state) state.textContent = registrado ? 'Registrada' : ehAtual ? 'Atual' : 'Prevista';
     const cell = marker.querySelector('[data-time]');
     if (cell) cell.textContent = ehAtual ? 'agora' : formatarHorario(ponto[etapa.campo] || jornada[etapa.campo]);
   });
