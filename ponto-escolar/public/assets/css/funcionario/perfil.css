@@ -511,11 +511,12 @@
 @media (min-width: 1024px) {
   .employee-profile .profile-overview {
     display: grid;
-    grid-template-columns: minmax(240px, 0.9fr) minmax(360px, 1.6fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       "heading heading"
-      "summary personal"
-      "security schedule";
+      "summary summary"
+      "personal schedule"
+      "security security";
     align-items: stretch;
     gap: 18px 20px;
   }
@@ -537,58 +538,79 @@
 
   .employee-profile .profile-summary {
     grid-area: summary;
-    gap: 13px;
-    padding: 20px;
+    gap: 12px;
+    min-height: 80px;
+    padding: 13px 18px;
     border-color: var(--employee-shell-border);
   }
 
   .employee-profile .profile-summary::before {
-    top: -48px;
-    right: -34px;
-    width: 112px;
-    height: 92px;
+    top: -42px;
+    right: -30px;
+    width: 96px;
+    height: 76px;
     border-radius: 38% 0 58% 64% / 46% 0 62% 52%;
     background: var(--color-primary);
-    opacity: 0.09;
+    opacity: 0.07;
     transform: rotate(8deg);
   }
 
   .employee-profile .profile-summary::after {
-    right: 17px;
-    bottom: 15px;
-    width: 7px;
-    height: 7px;
+    right: 15px;
+    bottom: 13px;
+    width: 6px;
+    height: 6px;
     background: var(--color-accent);
     box-shadow: 0 3px 7px rgba(240, 20, 20, 0.18);
   }
 
   .employee-profile .profile-summary-avatar {
-    width: 52px;
-    height: 52px;
-    flex: 0 0 52px;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
     border-width: 2px;
     box-shadow: 0 5px 14px rgba(20, 80, 240, 0.1);
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .employee-profile .profile-summary-copy {
-    padding-right: 16px;
+    display: grid;
+    flex: 1;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-items: center;
+    column-gap: 8px;
+    padding-right: 32px;
   }
 
   .employee-profile .profile-summary-copy h2 {
+    grid-column: 1 / -1;
+    grid-row: 1;
     font-size: 17px;
     letter-spacing: -0.02em;
   }
 
   .employee-profile .profile-summary-copy p {
+    grid-column: 1;
+    grid-row: 2;
     margin-top: 3px;
     color: #7181a1;
   }
 
   .employee-profile .profile-status {
-    margin-top: 8px;
-    padding: 3px 8px;
-    font-size: 11px;
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    justify-self: start;
+    margin-top: 0;
+    padding: 2px 7px;
+    background: color-mix(in srgb, var(--color-success) 8%, var(--color-surface));
+    font-size: 10px;
+  }
+
+  .employee-profile .profile-status::before {
+    width: 4px;
+    height: 4px;
   }
 
   .employee-profile .profile-personal {
@@ -634,7 +656,8 @@
   .employee-profile .profile-data-list {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    padding: 4px 18px 6px;
+    column-gap: 28px;
+    padding: 6px 18px 8px;
   }
 
   .employee-profile .profile-data-row {
@@ -642,15 +665,15 @@
     flex-direction: column;
     justify-content: center;
     min-height: 58px;
-    gap: 3px;
-    padding: 10px 14px 10px 0;
+    gap: 4px;
+    padding: 10px 0;
     border-bottom: 1px solid var(--employee-shell-border);
   }
 
   .employee-profile .profile-data-row:nth-child(even) {
     padding-right: 0;
-    padding-left: 18px;
-    border-left: 1px solid var(--employee-shell-border);
+    padding-left: 0;
+    border-left: 0;
   }
 
   .employee-profile .profile-data-row:nth-last-child(-n + 2) {
@@ -667,16 +690,21 @@
 
   .employee-profile .profile-data-row dd {
     color: var(--color-text);
-    font-size: 13px;
+    font-size: 13.5px;
     font-weight: 700;
     line-height: 1.35;
     text-align: left;
   }
 
+  .employee-profile .profile-personal .profile-data-row dt {
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+  }
+
   .employee-profile .profile-schedule-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
-    padding: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 28px;
+    padding: 6px 18px 8px;
     background: var(--color-surface);
   }
 
@@ -684,45 +712,89 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
-    min-height: 92px;
-    padding: 16px;
-    border-right: 1px solid var(--employee-shell-border);
+    min-height: 58px;
+    padding: 10px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--employee-shell-border);
     background: var(--color-surface);
   }
 
-  .employee-profile .profile-schedule-item:last-child {
-    border-right: 0;
+  .employee-profile .profile-schedule-item:nth-last-child(-n + 2) {
+    border-bottom: 0;
   }
 
   .employee-profile .profile-schedule-item dd {
-    margin-top: 7px;
+    margin-top: 5px;
     color: var(--color-text);
-    font-size: 18px;
+    font-size: 17px;
     letter-spacing: -0.02em;
     line-height: 1.1;
+  }
+
+  .employee-profile .profile-schedule-item dt {
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
   }
 
   .employee-profile .profile-security::after {
     content: "";
     position: absolute;
-    right: 16px;
-    bottom: 14px;
-    width: 6px;
-    height: 6px;
+    right: 14px;
+    bottom: 11px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: var(--color-accent);
     box-shadow: 0 3px 7px rgba(240, 20, 20, 0.16);
   }
 
+  .employee-profile .profile-security {
+    display: grid;
+    grid-template-columns: minmax(185px, 210px) minmax(0, 1fr);
+    min-height: 60px;
+    box-shadow: 0 1px 6px rgba(20, 20, 20, 0.04);
+  }
+
+  .employee-profile .profile-security .profile-card-header {
+    min-height: 60px;
+    gap: 10px;
+    padding: 9px 14px;
+    border-right: 1px solid var(--employee-shell-border);
+    border-bottom: 0;
+  }
+
+  .employee-profile .profile-security .profile-card-header p {
+    display: none;
+  }
+
+  .employee-profile .profile-security .profile-card-header h2 {
+    margin-top: 0;
+    font-size: 15px;
+  }
+
+  .employee-profile .profile-security .profile-card-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    padding: 8px;
+  }
+
   .employee-profile .profile-security-message {
     align-items: center;
-    min-height: 92px;
+    min-height: 60px;
     margin: 0;
-    padding: 16px 30px 16px 18px;
+    padding: 10px 32px 10px 16px;
     border-radius: 0;
-    background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-primary) 2%, var(--color-surface));
     color: #5e6c85;
-    font-size: 12px;
-    line-height: 1.5;
+    font-size: 11.5px;
+    line-height: 1.4;
+  }
+
+  .employee-profile .profile-security-message img {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+    margin-top: 0;
   }
 }
