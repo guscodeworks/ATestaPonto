@@ -8,9 +8,9 @@
   <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-admin-alias"/>
   <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260818-decoration-cleanup"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260818-technical-cleanup"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
-  <script src="/assets/js/funcionario/ponto.js?v=20260818-sidebar-welcome" defer></script>
+  <script src="/assets/js/funcionario/ponto.js?v=20260818-technical-cleanup" defer></script>
 </head>
 <body class="employee-area employee-dashboard">
 
@@ -62,7 +62,6 @@
           </div>
 
           <div class="ponto-action-area">
-            <p class="ponto-action-kicker">Registro de ponto</p>
             <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" aria-label="Carregando estado do ponto" aria-busy="true" disabled>
               <span class="ponto-action-copy">
                 <span class="ponto-action-visual" aria-hidden="true">
@@ -82,7 +81,7 @@
         <div class="ponto-support-grid">
           <div class="ponto-next" aria-live="polite">
             <h2>Próximo registro</h2>
-            <p class="ponto-next-message" id="status-text">
+            <p class="ponto-next-message">
               <span id="next-label">Carregando jornada</span>
               <strong id="next-time"></strong>
             </p>
@@ -93,7 +92,6 @@
             <div class="journey-card-accent journey-card-accent-red" aria-hidden="true"></div>
             <h2 class="journey-title" id="journey-title">Jornada de hoje</h2>
             <ol class="journey-steps" id="timeline" aria-live="polite"></ol>
-            <p class="journey-summary" id="last-action">Carregando registros...</p>
           </section>
         </div>
       </div>

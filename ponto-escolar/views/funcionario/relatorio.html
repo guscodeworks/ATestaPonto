@@ -80,8 +80,13 @@
         </div>
 
         <div class="report-state" id="report-empty" hidden>
-          <img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="28" height="28"/>
-          <strong>Nenhum registro neste mês</strong>
+          <span class="report-empty-icon" aria-hidden="true">
+            <img src="/assets/icons/clipboard-list.svg" alt="" width="20" height="20"/>
+          </span>
+          <div class="report-empty-copy">
+            <strong>Nenhum registro neste mês</strong>
+            <p class="report-empty-description">Seus registros aparecerão aqui.</p>
+          </div>
         </div>
 
         <div class="report-state report-state-error" id="report-error" role="alert" hidden>

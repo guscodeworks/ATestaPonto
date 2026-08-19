@@ -307,7 +307,6 @@ function mostrarSkeleton() {
     timeline.appendChild(step);
   }
 
-  getElement('last-action').textContent = 'Carregando registros...';
   getElement('next-label').textContent = 'Carregando jornada';
   getElement('next-time').textContent = '';
 
@@ -384,14 +383,6 @@ function renderTimeline(ponto, jornada, proximaBatida) {
   timeline.replaceChildren(
     ...ETAPAS.map((etapa) => criarEtapaJornada(etapa, jornada, ponto, proximaBatida))
   );
-
-  const ultimaBatida = [...ETAPAS]
-    .reverse()
-    .find((etapa) => Boolean(ponto[etapa.campo]));
-
-  getElement('last-action').textContent = ultimaBatida
-    ? `Último registro: ${ultimaBatida.label} às ${formatarHorario(ponto[ultimaBatida.campo])}`
-    : 'Nenhum registro hoje';
 }
 
 function mostrarEstadoRegistrando(etapa) {
@@ -551,7 +542,6 @@ function tratarErroCarregamento(error, { notificar = true } = {}) {
   getElement('sidebar-welcome-name').textContent = '—';
   const timeline = getElement('timeline');
   timeline.replaceChildren(criarEstadoErro(mensagem, !isUnauthorized && !isForbidden));
-  getElement('last-action').textContent = mensagem;
   getElement('next-label').textContent = mensagem;
   getElement('next-time').textContent = '';
 

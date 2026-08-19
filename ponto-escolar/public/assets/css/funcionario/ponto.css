@@ -116,8 +116,7 @@
   display: contents;
 }
 
-.ponto-page-description,
-.ponto-action-kicker {
+.ponto-page-description {
   display: none;
 }
 
@@ -383,10 +382,6 @@
 .journey-step.jmarker--pending .journey-step-state,
 .journey-step.jmarker--pending .journey-step-time {
   color: var(--text-muted, var(--color-text-muted));
-}
-
-.journey-summary {
-  display: none;
 }
 
 .employee-dashboard .employee-bottom-nav {
@@ -1682,10 +1677,6 @@ dialog.ponto-confirm.is-saida {
   .employee-dashboard .journey-card-accent {
     display: none;
   }
-
-  .employee-dashboard .journey-summary {
-    display: none;
-  }
 }
 
 @media (min-width: 1200px) {
@@ -1744,6 +1735,7 @@ dialog.ponto-confirm.is-saida {
 
   .employee-dashboard .ponto-primary-card {
     position: relative;
+    isolation: isolate;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(220px, 260px);
     width: min(100%, 860px);
@@ -1755,15 +1747,35 @@ dialog.ponto-confirm.is-saida {
     background: var(--color-surface);
     box-shadow:
       0 2px 10px rgba(20, 20, 20, 0.05),
-      0 12px 28px rgba(32, 57, 104, 0.06);
+      0 12px 28px rgba(32, 57, 104, 0.08);
   }
 
   .employee-dashboard .ponto-primary-card::before {
-    content: none;
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: -30px;
+    right: 34px;
+    width: 112px;
+    height: 44px;
+    border-radius: 28% 0 58% 46% / 44% 0 70% 48%;
+    background: var(--color-primary);
+    transform: rotate(-5deg);
+    pointer-events: none;
   }
 
   .employee-dashboard .ponto-primary-card::after {
-    content: none;
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 18px;
+    right: 20px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 26%, #ffb3b3 0, #ff5656 34%, #f01414 65%, #790000 100%);
+    box-shadow: 0 4px 7px rgba(20, 20, 20, 0.18);
+    pointer-events: none;
   }
 
   .employee-dashboard .ponto-now {
@@ -1787,9 +1799,9 @@ dialog.ponto-confirm.is-saida {
 
   .employee-dashboard .ponto-current-date {
     margin: 0;
-    color: #7181a1;
+    color: #596b8e;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 650;
     letter-spacing: 0;
     text-align: left;
   }
@@ -1809,18 +1821,19 @@ dialog.ponto-confirm.is-saida {
     border: 0;
     background: transparent;
     box-shadow: none;
-    color: var(--color-text);
+    color: #17233d;
     font-size: clamp(2.65rem, 3.8vw, 3.2rem);
     font-variant-numeric: tabular-nums;
     font-weight: 700;
     letter-spacing: -0.055em;
     line-height: 0.88;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.88);
   }
 
   .employee-dashboard .ponto-time::before {
     content: "Agora são";
     margin-bottom: 5px;
-    color: var(--color-primary);
+    color: #0f4bdc;
     font-family: var(--font-main);
     font-size: 9px;
     font-weight: 700;
@@ -1850,10 +1863,6 @@ dialog.ponto-confirm.is-saida {
     box-shadow: none;
   }
 
-  .employee-dashboard .ponto-action-kicker {
-    display: none;
-  }
-
   .employee-dashboard .ponto-action {
     display: inline-flex;
     flex-direction: row;
@@ -1864,24 +1873,31 @@ dialog.ponto-confirm.is-saida {
     gap: 10px;
     padding: 10px 16px;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.34);
-    border-radius: 14px;
+    border: 1px solid var(--desktop-action-color);
+    border-radius: var(--radius-card);
     background: var(--desktop-action-color);
     box-shadow:
-      0 9px 20px color-mix(in srgb, var(--desktop-action-color) 26%, transparent),
-      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 8px 18px color-mix(in srgb, var(--desktop-action-color) 24%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
       inset 0 -1px 0 rgba(0, 36, 142, 0.12);
+    transition:
+      background var(--transition),
+      border-color var(--transition),
+      box-shadow var(--transition),
+      transform var(--transition);
   }
 
   .employee-dashboard .ponto-action::after {
-    right: -9px;
-    bottom: -12px;
-    width: 46px;
-    height: 30px;
-    border-radius: 58% 0 0 0;
-    background: linear-gradient(145deg, #ff5656 0%, var(--color-accent) 58%, #a30000 100%);
-    box-shadow: -9px -7px 0 -5px rgba(255, 255, 255, 0.3);
-    transform: rotate(-10deg);
+    content: "";
+    right: -12px;
+    bottom: -14px;
+    width: 38px;
+    height: 28px;
+    border-radius: 68% 0 0 0;
+    background: linear-gradient(145deg, #ff6666 0%, var(--color-accent) 62%, #b60000 100%);
+    box-shadow: -8px -6px 0 -5px rgba(255, 255, 255, 0.32);
+    opacity: 0.92;
+    transform: rotate(-12deg);
   }
 
   .employee-dashboard .ponto-action-copy {
@@ -1893,14 +1909,58 @@ dialog.ponto-confirm.is-saida {
   .employee-dashboard .ponto-action-visual {
     width: 20px;
     height: 20px;
+    flex: 0 0 20px;
     margin: 0;
+  }
+
+  .employee-dashboard .ponto-action-spinner {
+    width: 20px;
+    height: 20px;
   }
 
   .employee-dashboard .ponto-btn-label {
     max-width: none;
     font-size: 13px;
     font-weight: 700;
-    letter-spacing: 0;
+    letter-spacing: 0.01em;
+  }
+
+  .employee-dashboard .ponto-action:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.72);
+    background: var(--desktop-action-hover);
+    box-shadow:
+      0 11px 24px color-mix(in srgb, var(--desktop-action-color) 30%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      inset 0 -1px 0 rgba(0, 36, 142, 0.12);
+    transform: translateY(-1px);
+  }
+
+  .employee-dashboard .ponto-action:active:not(:disabled) {
+    box-shadow:
+      0 6px 14px color-mix(in srgb, var(--desktop-action-color) 24%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    transform: translateY(0);
+  }
+
+  .employee-dashboard .ponto-action:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 55%, var(--color-surface));
+    outline-offset: 2px;
+    box-shadow:
+      0 0 0 4px rgba(20, 80, 240, 0.1),
+      0 9px 20px color-mix(in srgb, var(--desktop-action-color) 26%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+
+  .employee-dashboard .ponto-action:is(
+    .is-loading,
+    .is-success,
+    .is-sync-pending,
+    .is-concluido,
+    .is-unavailable
+  ):disabled {
+    box-shadow:
+      0 7px 16px color-mix(in srgb, var(--desktop-action-color) 22%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24);
   }
 
   .employee-dashboard .ponto-state-retry {
@@ -1932,6 +1992,7 @@ dialog.ponto-confirm.is-saida {
 
   .employee-dashboard .ponto-next {
     position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1944,18 +2005,29 @@ dialog.ponto-confirm.is-saida {
   .employee-dashboard .ponto-next::before {
     content: "";
     position: absolute;
-    right: -18px;
-    bottom: -24px;
-    width: 88px;
-    height: 62px;
-    border-radius: 70% 0 0 0 / 78% 0 0 0;
-    background: var(--color-accent);
+    right: -16px;
+    bottom: -20px;
+    z-index: -1;
+    width: 76px;
+    height: 52px;
+    border-radius: 62% 0 0 0 / 78% 0 0 0;
+    background: color-mix(in srgb, var(--color-accent) 84%, var(--color-surface));
     transform: rotate(-8deg);
     pointer-events: none;
   }
 
   .employee-dashboard .ponto-next::after {
-    content: none;
+    content: "";
+    position: absolute;
+    right: 10px;
+    bottom: 18px;
+    z-index: 0;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 26%, #ffb3b3 0, #ff5656 34%, #f01414 65%, #790000 100%);
+    box-shadow: 0 4px 7px rgba(20, 20, 20, 0.18);
+    pointer-events: none;
   }
 
   .employee-dashboard .ponto-next h2,
@@ -1969,7 +2041,9 @@ dialog.ponto-confirm.is-saida {
   }
 
   .employee-dashboard .ponto-next h2 {
-    margin: 0 0 14px;
+    position: relative;
+    z-index: 1;
+    margin: 0 0 16px;
   }
 
   .employee-dashboard .ponto-next-message {
@@ -1978,25 +2052,33 @@ dialog.ponto-confirm.is-saida {
     flex-direction: column;
     flex-wrap: nowrap;
     align-items: flex-start;
-    gap: 9px;
+    gap: 8px;
     margin: 0;
-    color: #7181a1;
-    font-size: 14px;
-    line-height: 1.45;
+    color: var(--color-primary);
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: 0.035em;
+    line-height: 1.35;
+    text-transform: uppercase;
   }
 
   .employee-dashboard .ponto-next-message strong {
-    color: var(--color-primary);
-    font-size: 30px;
+    color: var(--color-text);
+    font-size: 31px;
     font-variant-numeric: tabular-nums;
-    font-weight: 700;
+    font-weight: 750;
+    letter-spacing: -0.025em;
     line-height: 1;
+    text-transform: none;
   }
 
   .employee-dashboard .journey-card {
     position: relative;
     padding: 26px 28px 24px;
     overflow: hidden;
+    box-shadow:
+      0 2px 10px rgba(20, 20, 20, 0.05),
+      0 8px 24px rgba(32, 57, 104, 0.06);
   }
 
   .employee-dashboard .journey-title {
@@ -2010,6 +2092,7 @@ dialog.ponto-confirm.is-saida {
   }
 
   .employee-dashboard .journey-steps {
+    --journey-line-color: var(--employee-shell-border);
     position: relative;
     z-index: 2;
     margin-top: 0;
@@ -2017,11 +2100,15 @@ dialog.ponto-confirm.is-saida {
 
   .employee-dashboard .journey-steps::before {
     top: 21px;
+    height: 2px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
   }
 
   .employee-dashboard .journey-step-marker {
     width: 42px;
     height: 42px;
+    border-width: 2px;
+    transition: none;
   }
 
   .employee-dashboard .journey-step-marker img {
@@ -2029,15 +2116,88 @@ dialog.ponto-confirm.is-saida {
     height: 19px;
   }
 
+  .employee-dashboard .journey-step.jmarker--done .journey-step-marker {
+    border: 1px solid rgba(20, 80, 240, 0.24);
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+    box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.045);
+  }
+
+  .employee-dashboard .journey-step.jmarker--done .journey-step-marker img {
+    opacity: 0.88;
+    filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
+  }
+
+  .employee-dashboard .journey-step.jmarker--current .journey-step-marker {
+    border: 3px solid var(--color-surface);
+    background: var(--color-primary);
+    box-shadow:
+      0 0 0 1px var(--color-primary),
+      0 0 0 5px rgba(20, 80, 240, 0.13),
+      0 8px 16px rgba(20, 80, 240, 0.2);
+  }
+
+  .employee-dashboard .journey-step.jmarker--current .journey-step-marker img {
+    opacity: 1;
+    filter: brightness(0) invert(1);
+  }
+
+  .employee-dashboard .journey-step.jmarker--pending .journey-step-marker {
+    border: 1px solid var(--employee-shell-border);
+    background: color-mix(in srgb, var(--color-bg) 60%, var(--color-surface));
+    box-shadow: none;
+  }
+
+  .employee-dashboard .journey-step.jmarker--pending .journey-step-marker img {
+    opacity: 0.38;
+    filter: grayscale(1);
+  }
+
   .employee-dashboard .journey-step-label {
     margin-top: 10px;
     font-size: 12px;
     font-weight: 700;
+    line-height: 1.25;
   }
 
   .employee-dashboard .journey-step-state,
   .employee-dashboard .journey-step-time {
     font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .employee-dashboard .journey-step-state {
+    margin-top: 5px;
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+  }
+
+  .employee-dashboard .journey-step-time {
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+  }
+
+  .employee-dashboard .journey-step.jmarker--current .journey-step-label,
+  .employee-dashboard .journey-step.jmarker--current .journey-step-state,
+  .employee-dashboard .journey-step.jmarker--current .journey-step-time {
+    color: var(--color-primary);
+  }
+
+  .employee-dashboard .journey-step.jmarker--current .journey-step-state,
+  .employee-dashboard .journey-step.jmarker--current .journey-step-time {
+    font-weight: 750;
+  }
+
+  .employee-dashboard .journey-step.jmarker--pending .journey-step-label {
+    color: var(--admin-muted, #7181a1);
+    font-weight: 650;
+  }
+
+  .employee-dashboard .journey-step.jmarker--pending .journey-step-state,
+  .employee-dashboard .journey-step.jmarker--pending .journey-step-time {
+    color: color-mix(in srgb, var(--color-text) 42%, var(--color-bg));
   }
 
   .employee-dashboard .journey-card-accent {
@@ -2058,6 +2218,14 @@ dialog.ponto-confirm.is-saida {
   }
 
   .employee-dashboard .journey-card-accent-red {
-    display: none;
+    display: block;
+    top: 18px;
+    right: 20px;
+    bottom: auto;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 26%, #ffb3b3 0, #ff5656 34%, #f01414 65%, #790000 100%);
+    box-shadow: 0 4px 7px rgba(20, 20, 20, 0.18);
   }
 }
