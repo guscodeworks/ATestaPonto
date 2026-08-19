@@ -110,6 +110,7 @@
 }
 
 .ponto-page-heading,
+.ponto-dashboard-stack,
 .ponto-primary-card,
 .ponto-support-grid {
   display: contents;
@@ -1701,6 +1702,12 @@ dialog.ponto-confirm.is-saida {
     margin-inline: auto;
   }
 
+  .employee-dashboard .ponto-dashboard-stack {
+    display: block;
+    width: min(100%, 700px);
+    margin-inline: auto;
+  }
+
   .employee-dashboard .ponto-overview::before {
     content: none;
   }
@@ -1948,16 +1955,7 @@ dialog.ponto-confirm.is-saida {
   }
 
   .employee-dashboard .ponto-next::after {
-    content: "";
-    position: absolute;
-    right: 36px;
-    bottom: 48px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 30% 26%, #ffb3b3 0, #ff5656 34%, #f01414 65%, #790000 100%);
-    box-shadow: 0 5px 8px rgba(20, 20, 20, 0.2);
-    pointer-events: none;
+    content: none;
   }
 
   .employee-dashboard .ponto-next h2,
@@ -2049,22 +2047,17 @@ dialog.ponto-confirm.is-saida {
   }
 
   .employee-dashboard .journey-card-accent-blue {
-    top: -28px;
-    right: 34px;
+    top: -30px;
+    right: -12px;
     bottom: auto;
     left: auto;
-    width: 170px;
-    height: 62px;
+    width: 112px;
+    height: 44px;
     border-radius: 28% 0 58% 46% / 44% 0 70% 48%;
     transform: rotate(-5deg);
   }
 
   .employee-dashboard .journey-card-accent-red {
-    right: 26px;
-    bottom: 24px;
-    width: 12px;
-    height: 12px;
-    background: radial-gradient(circle at 30% 26%, #ffb3b3 0, #ff5656 34%, #f01414 65%, #790000 100%);
-    box-shadow: 0 5px 8px rgba(20, 20, 20, 0.2);
+    display: none;
   }
 }

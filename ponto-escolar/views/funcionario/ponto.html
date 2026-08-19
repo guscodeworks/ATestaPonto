@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-admin-alias"/>
   <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260818-centered-hero"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260818-decoration-cleanup"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
   <script src="/assets/js/funcionario/ponto.js?v=20260818-sidebar-welcome" defer></script>
 </head>
@@ -51,49 +51,51 @@
         <p class="ponto-page-description">Registre e acompanhe sua jornada de hoje.</p>
       </header>
 
-      <section class="ponto-primary-card" aria-label="Horário e registro de ponto">
-        <div class="ponto-now" aria-label="Data e horário atuais">
-          <p class="ponto-current-date">
-            <span id="hero-weekday">--</span>,
-            <span id="hero-date">-- de -- de ----</span>
-          </p>
-          <time class="ponto-time" id="hero-clock">--:--</time>
-        </div>
+      <div class="ponto-dashboard-stack">
+        <section class="ponto-primary-card" aria-label="Horário e registro de ponto">
+          <div class="ponto-now" aria-label="Data e horário atuais">
+            <p class="ponto-current-date">
+              <span id="hero-weekday">--</span>,
+              <span id="hero-date">-- de -- de ----</span>
+            </p>
+            <time class="ponto-time" id="hero-clock">--:--</time>
+          </div>
 
-        <div class="ponto-action-area">
-          <p class="ponto-action-kicker">Registro de ponto</p>
-          <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" aria-label="Carregando estado do ponto" aria-busy="true" disabled>
-            <span class="ponto-action-copy">
-              <span class="ponto-action-visual" aria-hidden="true">
-                <img class="ponto-action-icon" id="btn-icon" src="/assets/icons/clock.svg" alt="" width="22" height="22"/>
-                <span class="ponto-action-spinner"></span>
+          <div class="ponto-action-area">
+            <p class="ponto-action-kicker">Registro de ponto</p>
+            <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" aria-label="Carregando estado do ponto" aria-busy="true" disabled>
+              <span class="ponto-action-copy">
+                <span class="ponto-action-visual" aria-hidden="true">
+                  <img class="ponto-action-icon" id="btn-icon" src="/assets/icons/clock.svg" alt="" width="22" height="22"/>
+                  <span class="ponto-action-spinner"></span>
+                </span>
+                <span class="ponto-btn-label" id="btn-label">Carregando</span>
               </span>
-              <span class="ponto-btn-label" id="btn-label">Carregando</span>
-            </span>
-          </button>
-          <button class="ponto-state-retry" id="retry-ponto-state" type="button" hidden>
-            Recarregar estado
-          </button>
-          <span class="ponto-action-announcer" id="ponto-action-announcer" aria-live="polite" aria-atomic="true"></span>
-        </div>
-      </section>
-
-      <div class="ponto-support-grid">
-        <div class="ponto-next" aria-live="polite">
-          <h2>Próximo registro</h2>
-          <p class="ponto-next-message" id="status-text">
-            <span id="next-label">Carregando jornada</span>
-            <strong id="next-time"></strong>
-          </p>
-        </div>
-
-        <section class="employee-card journey-card" aria-labelledby="journey-title" aria-busy="true">
-          <div class="journey-card-accent journey-card-accent-blue" aria-hidden="true"></div>
-          <div class="journey-card-accent journey-card-accent-red" aria-hidden="true"></div>
-          <h2 class="journey-title" id="journey-title">Jornada de hoje</h2>
-          <ol class="journey-steps" id="timeline" aria-live="polite"></ol>
-          <p class="journey-summary" id="last-action">Carregando registros...</p>
+            </button>
+            <button class="ponto-state-retry" id="retry-ponto-state" type="button" hidden>
+              Recarregar estado
+            </button>
+            <span class="ponto-action-announcer" id="ponto-action-announcer" aria-live="polite" aria-atomic="true"></span>
+          </div>
         </section>
+
+        <div class="ponto-support-grid">
+          <div class="ponto-next" aria-live="polite">
+            <h2>Próximo registro</h2>
+            <p class="ponto-next-message" id="status-text">
+              <span id="next-label">Carregando jornada</span>
+              <strong id="next-time"></strong>
+            </p>
+          </div>
+
+          <section class="employee-card journey-card" aria-labelledby="journey-title" aria-busy="true">
+            <div class="journey-card-accent journey-card-accent-blue" aria-hidden="true"></div>
+            <div class="journey-card-accent journey-card-accent-red" aria-hidden="true"></div>
+            <h2 class="journey-title" id="journey-title">Jornada de hoje</h2>
+            <ol class="journey-steps" id="timeline" aria-live="polite"></ol>
+            <p class="journey-summary" id="last-action">Carregando registros...</p>
+          </section>
+        </div>
       </div>
     </section>
 
