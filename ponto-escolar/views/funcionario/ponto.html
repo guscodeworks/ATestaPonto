@@ -3,43 +3,16 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>Meu ponto — ATestaPonto</title>
+  <title>Meu ponto</title>
   <link rel="icon" type="image/png" sizes="96x96" href="/assets/img/favicon.ico" />
-  <link rel="stylesheet" href="/assets/css/tokens.css"/>
+  <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-admin-alias"/>
   <link rel="stylesheet" href="/assets/css/loading.css?v=20260729-loading-states"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260804-mobile-legibility"/>
-  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260813-dt-loginref"/>
+  <link rel="stylesheet" href="/assets/css/funcionario/ponto.css?v=20260818-technical-cleanup"/>
   <script src="/assets/js/loading.js?v=20260729-loading-states" defer></script>
-  <script src="/assets/js/funcionario/ponto.js?v=20260813-dt-dashboard" defer></script>
+  <script src="/assets/js/funcionario/ponto.js?v=20260818-technical-cleanup" defer></script>
 </head>
 <body class="employee-area employee-dashboard">
-
-<!-- Sidebar desktop (>=768px). Hidden no mobile via [hidden]; exibida via
-     CSS no breakpoint desktop. Nav espelho da .employee-bottom-nav abaixo,
-     com o mesmo item ativo (Início) hardcoded — mesma logica, sem JS. -->
-<aside class="employee-sidebar" hidden aria-label="Navegação do funcionário">
-  <div class="employee-sidebar-identity">
-    <span class="employee-sidebar-avatar employee-avatar" id="sb-avatar" aria-hidden="true">—</span>
-    <span class="employee-sidebar-copy">
-      <strong class="employee-sidebar-name" id="sb-name">—</strong>
-      <span class="employee-sidebar-role" id="sb-role">—</span>
-    </span>
-  </div>
-  <nav class="employee-sidebar-nav">
-    <a href="/funcionario" class="employee-bottom-nav-link active" aria-current="page">
-      <span class="employee-bottom-nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true"/></span>
-      <span>Início</span>
-    </a>
-    <a href="/funcionario/relatorio" class="employee-bottom-nav-link">
-      <span class="employee-bottom-nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true"/></span>
-      <span>Histórico</span>
-    </a>
-    <a href="/funcionario/perfil" class="employee-bottom-nav-link">
-      <span class="employee-bottom-nav-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true"/></span>
-      <span>Perfil</span>
-    </a>
-  </nav>
-</aside>
 
 <div class="employee-shell">
   <header class="employee-header">
@@ -50,135 +23,86 @@
         <span class="employee-role" id="hero-cargo">—</span>
       </span>
     </a>
-    <span class="employee-brand-frame" aria-hidden="true">
-      <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" width="42" height="42"/>
-    </span>
+    <div class="employee-brand-frame">
+      <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="42" height="42"/>
+      <span class="employee-brand-copy">
+        <span class="employee-brand-name">ATesta<span class="employee-brand-accent">Ponto</span></span>
+        <span class="employee-brand-subtitle">FUNCIONÁRIOS</span>
+      </span>
+    </div>
+  </header>
+
+  <header class="employee-topbar">
+    <div class="employee-topbar-breadcrumb" aria-label="Localização atual">
+      <span>ATesta<span class="employee-brand-accent">Ponto</span></span>
+      <span class="employee-topbar-separator" aria-hidden="true">›</span>
+      <strong>Início</strong>
+    </div>
+    <div class="employee-topbar-context">
+      <img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"/>
+      <span>Área do funcionário</span>
+    </div>
   </header>
 
   <main class="employee-main">
     <section class="ponto-overview" aria-labelledby="dashboard-title">
-      <h1 class="ponto-sr-title" id="dashboard-title">Registro de ponto</h1>
+      <header class="ponto-page-heading">
+        <h1 class="ponto-sr-title" id="dashboard-title">Meu Ponto</h1>
+        <p class="ponto-page-description">Registre e acompanhe sua jornada de hoje.</p>
+      </header>
 
-      <!-- Cabeçalho desktop (>=768px): saudação + badge da marca, sem card.
-           hidden no mobile; exibido via CSS no breakpoint desktop. -->
-      <p class="ponto-greeting" hidden>Bem-vindo de volta</p>
-      <span class="employee-brand-frame ponto-brand-badge-dt" hidden aria-hidden="true">
-        <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" width="42" height="42"/>
-      </span>
-
-      <div class="ponto-now" aria-label="Data e horário atuais">
-        <p class="ponto-current-date">
-          <span id="hero-weekday">--</span>,
-          <span id="hero-date">-- de -- de ----</span>
-        </p>
-        <time class="ponto-time" id="hero-clock">--:--</time>
-      </div>
-
-      <div class="ponto-next" aria-live="polite">
-        <h2>Próximo registro</h2>
-        <p class="ponto-next-message" id="status-text">
-          <span id="next-label">Carregando jornada</span>
-          <strong id="next-time"></strong>
-        </p>
-      </div>
-
-      <section class="employee-card journey-card" aria-labelledby="journey-title" aria-busy="true">
-        <div class="journey-card-accent journey-card-accent-blue" aria-hidden="true"></div>
-        <div class="journey-card-accent journey-card-accent-red" aria-hidden="true"></div>
-        <h2 class="journey-title" id="journey-title">Jornada de hoje</h2>
-        <ol class="journey-steps" id="timeline" aria-live="polite"></ol>
-        <p class="journey-summary" id="last-action">Carregando registros...</p>
-      </section>
-
-      <div class="ponto-action-area">
-        <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" aria-label="Carregando estado do ponto" aria-busy="true" disabled>
-          <span class="ponto-action-copy">
-            <span class="ponto-action-visual" aria-hidden="true">
-              <img class="ponto-action-icon" id="btn-icon" src="/assets/icons/clock.svg" alt="" width="22" height="22"/>
-              <span class="ponto-action-spinner"></span>
-            </span>
-            <span class="ponto-btn-label" id="btn-label">Carregando</span>
-          </span>
-        </button>
-        <button class="ponto-state-retry" id="retry-ponto-state" type="button" hidden>
-          Recarregar estado
-        </button>
-        <span class="ponto-action-announcer" id="ponto-action-announcer" aria-live="polite" aria-atomic="true"></span>
-      </div>
-    </section>
-
-    <!-- Dashboard desktop (>=768px): substitui .ponto-overview neste breakpoint.
-         Abaixo (<768px) fica oculto via [hidden]; o .ponto-overview (mobile) reina.
-         HTML/CSS segue o template repassado verbatim — somente os ícones Tabler
-         "ti-*" viraram <img> dos SVGs do projeto e há IDs para os dados dinâmicos.
-         Tokens --fill-accent/--on-accent/--text-accent/--surface-2/--border/
-         --text-secondary/--text-muted definidos em tokens.css. -->
-    <section class="ponto-dashboard-dt" aria-labelledby="dt-dashboard-title" hidden>
-      <h1 class="ponto-sr-title" id="dt-dashboard-title">Registro de ponto</h1>
-      <div style="display:flex;justify-content:center;align-items:center;min-height:100vh;padding:2rem">
-        <div style="max-width:560px;width:100%;display:flex;flex-direction:column;gap:14px">
-
-          <div style="display:flex;justify-content:space-between;align-items:flex-end">
-            <div>
-              <p style="font-size:13px;color:var(--text-secondary);margin:0 0 2px" id="dt-date">—</p>
-              <p style="font-size:12px;color:var(--text-muted);margin:0">Bem-vindo de volta</p>
-            </div>
-            <span class="employee-brand-frame" aria-hidden="true" style="width:28px;height:28px;flex:0 0 28px;border-width:1.5px">
-              <img class="employee-brand-mark" src="/assets/img/atestaponto-symbol.png" alt="" style="width:22px;height:22px">
-            </span>
+      <div class="ponto-dashboard-stack">
+        <section class="ponto-primary-card" aria-label="Horário e registro de ponto">
+          <div class="ponto-now" aria-label="Data e horário atuais">
+            <p class="ponto-current-date">
+              <span id="hero-weekday">--</span>,
+              <span id="hero-date">-- de -- de ----</span>
+            </p>
+            <time class="ponto-time" id="hero-clock">--:--</time>
           </div>
 
-          <div style="background:var(--fill-accent);border-radius:16px;padding:28px 32px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 12px 32px rgba(20,20,20,0.12)">
-            <div>
-              <p style="font-size:12px;color:var(--on-accent);opacity:0.8;margin:0 0 4px">agora são</p>
-              <p style="font-size:44px;font-weight:500;color:var(--on-accent);margin:0;line-height:1;font-variant-numeric:tabular-nums" id="dt-clock">--:--</p>
-            </div>
-            <button type="button" id="btn-ponto-dt" style="background:var(--on-accent);color:var(--text-accent);border:none;border-radius:12px;padding:16px 28px;font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer">
-              <img id="btn-icon-dt" src="/assets/icons/clock.svg" alt="" aria-hidden="true" style="width:18px;height:18px"><span id="btn-label-dt">Carregando</span>
+          <div class="ponto-action-area">
+            <button class="ponto-action is-loading" id="btn-ponto" type="button" data-state="LOADING" aria-label="Carregando estado do ponto" aria-busy="true" disabled>
+              <span class="ponto-action-copy">
+                <span class="ponto-action-visual" aria-hidden="true">
+                  <img class="ponto-action-icon" id="btn-icon" src="/assets/icons/clock.svg" alt="" width="22" height="22"/>
+                  <span class="ponto-action-spinner"></span>
+                </span>
+                <span class="ponto-btn-label" id="btn-label">Carregando</span>
+              </span>
             </button>
+            <button class="ponto-state-retry" id="retry-ponto-state" type="button" hidden>
+              Recarregar estado
+            </button>
+            <span class="ponto-action-announcer" id="ponto-action-announcer" aria-live="polite" aria-atomic="true"></span>
+          </div>
+        </section>
+
+        <div class="ponto-support-grid">
+          <div class="ponto-next" aria-live="polite">
+            <h2>Próximo registro</h2>
+            <p class="ponto-next-message">
+              <span id="next-label">Carregando jornada</span>
+              <strong id="next-time"></strong>
+            </p>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:12px">
-            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:0 12px 32px rgba(20,20,20,0.12)">
-              <p style="font-size:10px;color:var(--text-muted);margin:0 0 4px">próximo registro</p>
-              <p style="font-size:14px;font-weight:500;margin:0" id="dt-tipo-proximo">Carregando jornada</p>
-              <p style="font-size:13px;color:var(--text-accent);margin:0" id="dt-horario-proximo"></p>
-            </div>
-            <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:16px;padding:14px 16px;box-shadow:0 12px 32px rgba(20,20,20,0.12)">
-              <p style="font-size:10px;color:var(--text-muted);margin:0 0 10px;text-transform:uppercase;letter-spacing:0.05em">Jornada de hoje</p>
-              <div style="display:flex;justify-content:space-between">
-                <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/clock.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="ENTRADA">
-                  <p style="font-size:11px;font-weight:500;margin:4px 0 0">Entrada</p>
-                  <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="ENTRADA">--:--</p>
-                </div>
-                <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/timer.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="SAIDA_ALMOCO">
-                  <p style="font-size:11px;font-weight:500;margin:4px 0 0">Almoço</p>
-                  <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="SAIDA_ALMOCO">--:--</p>
-                </div>
-                <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="RETORNO_ALMOCO">
-                  <p style="font-size:11px;font-weight:500;margin:4px 0 0">Retorno</p>
-                  <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="RETORNO_ALMOCO">--:--</p>
-                </div>
-                <div class="dt-jmarker" style="text-align:center">
-                  <img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" style="width:16px;height:16px" data-step="SAIDA">
-                  <p style="font-size:11px;font-weight:500;margin:4px 0 0">Saída</p>
-                  <p style="font-size:10px;color:var(--text-muted);margin:0" data-time="SAIDA">--:--</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
+          <section class="employee-card journey-card" aria-labelledby="journey-title" aria-busy="true">
+            <div class="journey-card-accent journey-card-accent-blue" aria-hidden="true"></div>
+            <div class="journey-card-accent journey-card-accent-red" aria-hidden="true"></div>
+            <h2 class="journey-title" id="journey-title">Jornada de hoje</h2>
+            <ol class="journey-steps" id="timeline" aria-live="polite"></ol>
+          </section>
         </div>
       </div>
     </section>
+
   </main>
 </div>
 
 <nav class="employee-bottom-nav" aria-label="Navegação do funcionário">
   <div class="employee-bottom-nav-inner">
+    <span class="employee-nav-label">Navegação</span>
     <a href="/funcionario" class="employee-bottom-nav-link active" aria-current="page">
       <span class="employee-bottom-nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true"/></span>
       <span>Início</span>
@@ -191,6 +115,16 @@
       <span class="employee-bottom-nav-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true"/></span>
       <span>Perfil</span>
     </a>
+    <aside class="employee-sidebar-welcome" aria-label="Boas-vindas">
+      <strong class="employee-sidebar-welcome-title">
+        Bem-vindo, <span id="sidebar-welcome-name">—</span>
+      </strong>
+      <p>Acompanhe sua jornada e registre seus pontos do dia.</p>
+    </aside>
+    <button class="employee-sidebar-logout" id="employee-logout" type="button">
+      <span class="employee-bottom-nav-icon" aria-hidden="true"><img src="/assets/icons/log-out.svg" alt=""/></span>
+      <span>Sair da conta</span>
+    </button>
   </div>
 </nav>
 

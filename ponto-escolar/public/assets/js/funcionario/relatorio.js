@@ -174,6 +174,7 @@ function renderizarIdentidade(funcionario) {
   definirTexto('header-avatar', obterIniciais(nome));
   definirTexto('header-name', nome);
   definirTexto('header-cargo', formatarCargo(funcionario.cargo));
+  definirTexto('sidebar-welcome-name', nome);
 }
 
 function criarHorario(label, horario) {
@@ -297,6 +298,7 @@ async function carregarIdentidade() {
     definirTexto('header-avatar', '—');
     definirTexto('header-name', 'Não informado');
     definirTexto('header-cargo', 'Não informado');
+    definirTexto('sidebar-welcome-name', 'Não informado');
   }
 }
 
@@ -309,6 +311,7 @@ monthField.addEventListener('change', () => {
 getElement('report-retry').addEventListener('click', () => {
   carregarHistorico(normalizarMesSelecionado());
 });
+getElement('employee-logout').addEventListener('click', sair);
 
 if (funcionarioToken) {
   carregarIdentidade();

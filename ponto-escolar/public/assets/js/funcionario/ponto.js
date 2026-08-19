@@ -235,13 +235,6 @@ function atualizarRelogio() {
   getElement('hero-clock').textContent = time;
   getElement('hero-weekday').textContent = DIAS_SEMANA[now.getDay()];
   getElement('hero-date').textContent = `${String(now.getDate()).padStart(2, '0')} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`;
-
-  // Painel desktop: espelha hora/data do mesmo `now` no bloco .ponto-dashboard-dt
-  // (no-op se o bloco não existir — mobile/outras telas). Não recalcula nada.
-  const dtClock = getElement('dt-clock');
-  const dtDate = getElement('dt-date');
-  if (dtClock) dtClock.textContent = time;
-  if (dtDate) dtDate.textContent = `${DIAS_SEMANA[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`;
 }
 
 function criarSkeleton(variante) {
@@ -287,10 +280,6 @@ function aplicarEstadoBotao({
     anunciarEstadoBotao(anuncio);
   }
 
-  // Espelha o estado recém-aplicado no botão e no painel desktop (no-op fora do
-  // breakpoint). Lê os valores que acabamos de gravar — não duplica lógica.
-  atualizarBotaoDesktop();
-  atualizarPainelDesktop();
 }
 
 function definirBusy(valor) {
@@ -305,6 +294,7 @@ function mostrarSkeleton() {
   const heroCargo = getElement('hero-cargo');
   heroName.replaceChildren(criarSkeleton('name'));
   heroCargo.replaceChildren(criarSkeleton('role'));
+  getElement('sidebar-welcome-name').textContent = '—';
 
   getElement('tp-avatar').textContent = '—';
 
@@ -317,7 +307,6 @@ function mostrarSkeleton() {
     timeline.appendChild(step);
   }
 
-  getElement('last-action').textContent = 'Carregando registros...';
   getElement('next-label').textContent = 'Carregando jornada';
   getElement('next-time').textContent = '';
 
@@ -338,30 +327,36 @@ function renderFuncionario(funcionario) {
   getElement('tp-avatar').textContent = iniciais;
   getElement('hero-name').textContent = nome;
   getElement('hero-cargo').textContent = cargo;
+  getElement('sidebar-welcome-name').textContent = nome;
+}
 
-  // Sidebar desktop: espelha a identidade do header (IDs proprios — o do header
-  // continua populando o mobile/desktop-header; este so existe na sidebar >=768px).
-  // getElement devolve null se a sidebar nao estiver no DOM (outras telas).
-  const sbAvatar = getElement('sb-avatar');
-  if (sbAvatar) {
-    sbAvatar.textContent = iniciais;
-    getElement('sb-name').textContent = nome;
-    getElement('sb-role').textContent = cargo;
-  }
+function getPercentualProgressoJornada(ponto) {
+  const ultimoIndiceConcluido = ETAPAS.reduce(
+    (ultimoIndice, etapa, indice) => (ponto[etapa.campo] ? indice : ultimoIndice),
+    -1
+  );
+
+  if (ultimoIndiceConcluido < 0) return '0%';
+  return `${(ultimoIndiceConcluido / (ETAPAS.length - 1)) * 100}%`;
 }
 
 function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
   const horarioRegistrado = ponto[etapa.campo];
+  const concluida = Boolean(horarioRegistrado);
+  const atual = !concluida && proximaBatida === etapa.tipo;
   const item = document.createElement('li');
   item.className = 'journey-step';
-  if (horarioRegistrado) item.classList.add('is-complete');
-  if (proximaBatida === etapa.tipo) item.classList.add('is-current');
+  item.classList.add(
+    concluida ? 'jmarker--done' : atual ? 'jmarker--current' : 'jmarker--pending'
+  );
+  if (concluida) item.classList.add('is-complete');
+  if (atual) item.classList.add('is-current');
 
   const marker = document.createElement('span');
   marker.className = 'journey-step-marker';
 
   const icon = document.createElement('img');
-  icon.src = etapa.asset;
+  icon.src = concluida ? '/assets/icons/check.svg' : etapa.asset;
   icon.alt = '';
   icon.setAttribute('aria-hidden', 'true');
   marker.appendChild(icon);
@@ -372,11 +367,11 @@ function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
 
   const state = document.createElement('span');
   state.className = 'journey-step-state';
-  state.textContent = horarioRegistrado ? 'Registrada' : 'Prevista';
+  state.textContent = concluida ? 'Registrada' : atual ? 'Atual' : 'Prevista';
 
   const time = document.createElement('time');
   time.className = 'journey-step-time';
-  time.textContent = formatarHorario(horarioRegistrado || jornada[etapa.campo]);
+  time.textContent = atual ? 'agora' : formatarHorario(horarioRegistrado || jornada[etapa.campo]);
 
   item.append(marker, label, state, time);
   return item;
@@ -384,17 +379,10 @@ function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
 
 function renderTimeline(ponto, jornada, proximaBatida) {
   const timeline = getElement('timeline');
+  timeline.style.setProperty('--journey-progress-stop', getPercentualProgressoJornada(ponto));
   timeline.replaceChildren(
     ...ETAPAS.map((etapa) => criarEtapaJornada(etapa, jornada, ponto, proximaBatida))
   );
-
-  const ultimaBatida = [...ETAPAS]
-    .reverse()
-    .find((etapa) => Boolean(ponto[etapa.campo]));
-
-  getElement('last-action').textContent = ultimaBatida
-    ? `Último registro: ${ultimaBatida.label} às ${formatarHorario(ponto[ultimaBatida.campo])}`
-    : 'Nenhum registro hoje';
 }
 
 function mostrarEstadoRegistrando(etapa) {
@@ -508,70 +496,6 @@ function renderEstado() {
   nextTime.textContent = formatarHorario(estadoHoje.jornada[etapa.campo]);
 }
 
-/* Painel desktop (>=768px): espelha valores já computados pelo fluxo normal
-   nos elementos do bloco .ponto-dashboard-dt. Não altera cálculo de horário
-   nem registro de ponto — só LÊ estado existente (#btn-ponto, #next-*, estadoHoje)
-   e replica nos IDs *_dt/dt-*. getElement devolve null fora do bloco (mobile/outras
-   telas) e os espelhos viram no-op. */
-function atualizarBotaoDesktop() {
-  const btn = getElement('btn-ponto-dt');
-  if (!btn) return;
-  const ref = getElement('btn-ponto');
-  const label = getElement('btn-label');
-  const icon = getElement('btn-icon');
-  getElement('btn-label-dt').textContent = label ? label.textContent : '';
-  if (icon) getElement('btn-icon-dt').src = icon.src;
-  btn.disabled = ref ? ref.disabled : false;
-  btn.classList.toggle('is-loading', Boolean(ref && ref.classList.contains('is-loading')));
-}
-
-function atualizarPainelDesktop() {
-  const dtTipo = getElement('dt-tipo-proximo');
-  const dtHora = getElement('dt-horario-proximo');
-  const markers = document.querySelectorAll('.ponto-dashboard-dt .dt-jmarker');
-  if (markers.length === 0) return;
-
-  if (!estadoHoje) {
-    // espelha o estado do painel mobile (skeleton/erro já escrito em #next-*)
-    const nextLabel = getElement('next-label');
-    const nextTime = getElement('next-time');
-    if (dtTipo) dtTipo.textContent = nextLabel ? nextLabel.textContent : '';
-    if (dtHora) dtHora.textContent = nextTime ? nextTime.textContent : '';
-    markers.forEach((marker) => {
-      marker.classList.remove('is-active');
-      const cell = marker.querySelector('[data-time]');
-      if (cell) cell.textContent = '--:--';
-    });
-    return;
-  }
-
-  const { jornada, ponto, proxima_batida } = estadoHoje;
-  const concluida =
-    estadoHoje.jornada_concluida || proxima_batida === null || proxima_batida === 'CONCLUIDO';
-
-  if (concluida) {
-    if (dtTipo) dtTipo.textContent = 'Jornada concluída';
-    if (dtHora) dtHora.textContent = '';
-  } else {
-    const etapa = ETAPAS_POR_TIPO.get(proxima_batida);
-    if (etapa) {
-      if (dtTipo) dtTipo.textContent = etapa.rotuloCard;
-      if (dtHora) dtHora.textContent = formatarHorario(jornada[etapa.campo]);
-    }
-  }
-
-  markers.forEach((marker) => {
-    const tipo = marker.querySelector('img').dataset.step;
-    const etapa = ETAPAS_POR_TIPO.get(tipo);
-    if (!etapa) return;
-    const registrado = Boolean(ponto[etapa.campo]);
-    const ehAtual = !concluida && proxima_batida === tipo;
-    marker.classList.toggle('is-active', registrado || ehAtual);
-    const cell = marker.querySelector('[data-time]');
-    if (cell) cell.textContent = formatarHorario(jornada[etapa.campo]);
-  });
-}
-
 function renderHoje(data) {
   renderFuncionario(data.funcionario);
   renderTimeline(data.ponto, data.jornada, data.proxima_batida);
@@ -615,9 +539,9 @@ function tratarErroCarregamento(error, { notificar = true } = {}) {
   getElement('hero-name').textContent = '—';
   getElement('hero-cargo').textContent = '—';
   getElement('tp-avatar').textContent = '—';
+  getElement('sidebar-welcome-name').textContent = '—';
   const timeline = getElement('timeline');
   timeline.replaceChildren(criarEstadoErro(mensagem, !isUnauthorized && !isForbidden));
-  getElement('last-action').textContent = mensagem;
   getElement('next-label').textContent = mensagem;
   getElement('next-time').textContent = '';
 
@@ -954,10 +878,8 @@ function inicializarEventosPonto() {
   eventosPontoInicializados = true;
 
   getElement('btn-ponto').addEventListener('click', baterPonto);
-  // Botão desktop (visível >=768px): mesma ação do botão mobile, que segue no DOM
-  // (oculto via CSS no desktop, mas ainda é a fonte do estado espelhado para o dt).
-  const btnPontoDt = getElement('btn-ponto-dt');
-  if (btnPontoDt) btnPontoDt.addEventListener('click', baterPonto);
+  getElement('employee-logout').addEventListener('click', sair);
+
   getElement('retry-ponto-state').addEventListener('click', () => {
     recarregarEstadoAposRegistro();
   });
