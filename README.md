@@ -25,7 +25,6 @@ O sistema possui dois perfis de uso:
 - Gustavo Nascimento da Silva Braga (Líder/backend)
 - Isaque de Deus Quadros (frontend)
 - Guilherme Daniel Souza (backend)
-- Eduardo Galvão Pereira (frontend)
 - João Victor da Silvas Alves (frontend)
 
 ## Requisitos para Instalação

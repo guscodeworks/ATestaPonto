@@ -391,6 +391,25 @@ const baterPontoValidator = withValidation([
     .toFloat(),
 ]);
 
+const passwordRecoveryRequestValidator = withValidation([
+  cpfRule("cpf", true),
+]);
+
+const passwordRecoveryCodeValidator = withValidation([
+  body("codigo")
+    .trim()
+    .matches(/^\d{6}$/)
+    .withMessage("Codigo deve ter 6 digitos"),
+]);
+
+const passwordRecoveryResetValidator = withValidation([
+  body("novaSenha")
+    .isString()
+    .withMessage("Senha deve ser texto")
+    .isLength({ min: 8, max: 72 })
+    .withMessage("A senha deve ter entre 8 e 72 caracteres"),
+]);
+
 // Validação de formato apenas para concessão de acesso administrativo. Regras
 // cross-field (perfil <-> diretoria/unidade, período, escopo do concedente)
 // ficam no service, que as aplica antes de gravar.
@@ -466,6 +485,9 @@ module.exports = {
   validateQrShortcutValidator,
   funcionarioLoginValidator,
   baterPontoValidator,
+  passwordRecoveryRequestValidator,
+  passwordRecoveryCodeValidator,
+  passwordRecoveryResetValidator,
   createAcessoValidator,
   acessoIdValidator,
 };
