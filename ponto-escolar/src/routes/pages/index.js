@@ -3,7 +3,7 @@
 const { Router } = require("express");
 const { createAuthPagesRouter } = require("./auth.routes");
 const { createAdminPagesRouter } = require("./admin.routes");
-const { createFuncionarioPagesRouter } = require("./funcionario.routes");
+const { createFuncionarioPagesRouter } = require("./employee.routes");
 const { createLegacyPagesRouter } = require("./legacy.routes");
 
 function createPagesRouter({ sendView }) {

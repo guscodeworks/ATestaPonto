@@ -38,7 +38,7 @@
    aqui a CAMADA DE ALIASES de tokens que os componentes admin consomem, na
    MESMA paleta --color-* do projeto — escopo LOCAL p/ não vazar no sistema
    --text-* legado de css/style/*.
-   Fontes: admin/base.css :root (alias layer) + admin/identidade-visual.css
+   Fontes: admin/base.css :root (alias layer) + admin/visual-identity.css
    (--admin-border/--admin-shadow). Os 7 tokens visuais do bloco (--fill-accent
    etc., usados inline no HTML) são re-resolvidos p/ essas alias admin. */
 .ponto-dashboard-dt {
@@ -60,7 +60,7 @@
   --font-mono:      'Consolas', 'Courier New', monospace;
   --ease-fast:      120ms cubic-bezier(.4,0,.2,1);
   --ease-default:   220ms cubic-bezier(.4,0,.2,1);
-  /* identidade-visual.css (admin) */
+  /* visual-identity.css (admin) */
   --admin-border:   #E4E9F3;
   --admin-muted:    #7181A1;
   --admin-shadow:   0 8px 24px rgba(32, 57, 104, 0.06);

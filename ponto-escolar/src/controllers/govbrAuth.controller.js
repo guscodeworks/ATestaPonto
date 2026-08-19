@@ -14,7 +14,7 @@ const {
 } = require("../services/govbrAuth.service");
 const { verificarSeUsuarioGovbrEhAdmin } = require("../services/adminAuthorization.service");
 const env = require("../config/env");
-const usuarioAdministrativoModel = require("../models/usuarioAdministrativoModel");
+const adminUserModel = require("../models/adminUserModel");
 
 // Logout do simulador de identidade (dev/teste).
 function getGovbrFakeLogoutUrl() {
@@ -160,7 +160,7 @@ async function concluirLoginGovbr(req, res, next) {
 
     const userInfo = await buscarUserInfo(accessToken);
 
-    const admin = await usuarioAdministrativoModel.findByCpf(
+    const admin = await adminUserModel.findByCpf(
       userInfo.cpf
     );
 
@@ -193,7 +193,7 @@ async function concluirLoginGovbr(req, res, next) {
     req.session.admin = adminSession;
     await saveSession(req);
 
-    await usuarioAdministrativoModel.updateLastLogin(admin.id);
+    await adminUserModel.updateLastLogin(admin.id);
 
     return res.redirect("/admin/dashboard");
   } catch (error) {

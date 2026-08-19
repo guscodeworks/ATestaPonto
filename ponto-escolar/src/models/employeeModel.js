@@ -255,7 +255,7 @@ async function createEmployee(
   client,
   { cargoId, cpf, email, nome, telefone = null, ativo }
 ) {
-  void cargoId; // cargo_id migrou para vinculos_funcionais (ver vinculoModel).
+  void cargoId; // cargo_id migrou para vinculos_funcionais (ver employmentLinkModel).
   return getClient(client).execute(
     "INSERT INTO funcionarios (cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?)",
     [cpf, email, nome, telefone, ativo ? 1 : 0]
