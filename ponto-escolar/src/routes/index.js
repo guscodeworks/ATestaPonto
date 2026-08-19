@@ -3,9 +3,9 @@
 const { Router } = require('express');
 
 const adminAuthRoutes = require('./adminAuthRoutes');
-const adminCargoRoutes = require('./adminCargoRoutes');
+const adminRoleRoutes = require('./adminRoleRoutes');
 const adminEmployeeRoutes = require('./adminEmployeeRoutes');
-const adminAcessoRoutes = require('./adminAcessoRoutes');
+const adminAccessRoutes = require('./adminAccessRoutes');
 const adminQrRoutes = require('./adminQrRoutes');
 const adminPointRoutes = require('./adminPointRoutes');
 const punchRoutes = require('./punchRoutes');
@@ -16,9 +16,9 @@ const ensureAdminApiAuthenticated = require('../middlewares/ensureAdminApiAuthen
 const router = Router();
 
 router.use('/admin/auth', ensureAdminApiAuthenticated, adminAuthRoutes);
-router.use('/admin/cargos', ensureAdminApiAuthenticated, adminCargoRoutes);
+router.use('/admin/cargos', ensureAdminApiAuthenticated, adminRoleRoutes);
 router.use('/admin/funcionarios', ensureAdminApiAuthenticated, adminEmployeeRoutes);
-router.use('/admin/acessos', ensureAdminApiAuthenticated, adminAcessoRoutes);
+router.use('/admin/acessos', ensureAdminApiAuthenticated, adminAccessRoutes);
 router.use('/admin/qr-tokens', ensureAdminApiAuthenticated, adminQrRoutes);
 router.use('/admin/pontos', ensureAdminApiAuthenticated, adminPointRoutes);
 router.get('/pontos/historico', authenticateFuncionario, getPunchHistory);

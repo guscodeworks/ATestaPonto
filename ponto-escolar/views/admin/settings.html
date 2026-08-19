@@ -1,0 +1,294 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR" data-admin-session="pending">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	  <title>Configurações</title>
+    <link rel="icon" type="image/png" sizes="96x96" href="/assets/img/favicon.ico" />
+  <script src="/assets/js/admin/admin.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/bundles/admin.css">
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<div class="app-wrap">
+
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
+        <span class="sidebar-brand-sub">Administração</span>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">--</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Administrador</div>
+        <div class="sidebar-user-role" id="sb-role">Administrador</div>
+      </div>
+      <div class="sidebar-admin-badge">ADMIN</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
+      <div class="sidebar-section-label">Funcionários</div>
+      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
+      <div class="sidebar-section-label">Ponto</div>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/admin/configuracoes" class="nav-link active"><span class="nav-icon"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'">
+        <span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <div class="breadcrumb">
+          <span>ATesta<span class="brand-accent">Ponto</span></span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Configurações</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="topbar-user">
+          <div class="topbar-avatar" id="admin-avatar">--</div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name" id="admin-firstname">Administrador</span>
+            <span class="topbar-user-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content settings-page">
+
+      <div class="page-header fade-in">
+        <h1 class="page-title">Configurações</h1>
+        <p class="page-subtitle">Gerencie suas preferências e configurações do sistema</p>
+      </div>
+
+      <div class="settings-layout fade-in">
+
+        <!-- Nav de configurações -->
+        <div class="settings-nav">
+          <div class="settings-nav-item active" data-panel="panel-perfil" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+            <span><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span> Meu perfil
+          </div>
+          <div class="settings-nav-item" data-panel="panel-horarios" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+            <span><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"></span> Horários padrão
+          </div>
+          <div class="settings-nav-item" data-panel="panel-sistema" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+            <span><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sistema
+          </div>
+          <div class="settings-nav-item" data-panel="panel-permissoes" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+            <span><img src="/assets/icons/shield.svg" alt="" aria-hidden="true" width="18" height="18"></span> Permissões
+          </div>
+        </div>
+
+        <!-- Painéis -->
+        <div class="settings-content">
+
+          <!-- Perfil do admin -->
+          <div class="settings-panel" id="panel-perfil">
+            <div class="card settings-card">
+              <div class="card-header">
+                <div class="card-title"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"> Identidade Gov.br</div>
+              </div>
+              <div class="settings-panel-body">
+
+                <!-- Avatar -->
+                <div class="admin-profile-summary">
+                  <div class="config-profile-avatar" id="config-avatar">--</div>
+                  <div class="config-profile-info">
+                    <div class="config-profile-name" id="config-nome">Administrador</div>
+                    <div class="config-profile-role">Administrador do sistema</div>
+                    <div class="config-profile-badges">
+                      <span class="badge badge-admin">ADMIN</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label>Nome completo</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="text" class="field-input" value="" id="cfg-nome" readonly/>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <label>E-mail</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/mail.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="email" class="field-input" value="" id="cfg-email" readonly/>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Horários -->
+          <div class="settings-panel" id="panel-horarios" style="display:none;">
+            <div class="card settings-card">
+              <div class="card-header">
+                <div class="card-title"><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"> Horários Padrão do Sistema</div>
+              </div>
+              <div class="settings-panel-body">
+                <div class="form-grid-2">
+                  <div class="form-field">
+                    <label>Horário de entrada</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="time" class="field-input" value="08:00"/>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <label>Horário de saída</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="time" class="field-input" value="17:00"/>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <label>Início do almoço</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="time" class="field-input" value="12:00"/>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <label>Fim do almoço</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="time" class="field-input" value="13:00"/>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <label>Tolerância de atraso (min)</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="number" class="field-input" value="10" min="0" max="60"/>
+                    </div>
+                  </div>
+                  <div class="form-field">
+                    <label>Carga horária diária (h)</label>
+                    <div class="input-wrap">
+                      <span class="field-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <input type="number" class="field-input" value="8" min="1" max="12"/>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-actions settings-form-actions">
+                  <button class="ui-btn ui-btn-primary" onclick="toast('Horários salvos!','success')"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar horários</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sistema -->
+          <div class="settings-panel" id="panel-sistema" style="display:none;">
+            <div class="card settings-card">
+              <div class="card-header">
+                <div class="card-title"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"> Configurações do Sistema</div>
+              </div>
+              <div class="settings-panel-body settings-options-list">
+
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Notificações de ausência</div>
+                    <div class="settings-option-description">Alertar quando funcionário não bater ponto até às 09:00</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" aria-label="Ativar notificações de ausência" checked/>
+                    <span class="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Relatório diário automático</div>
+                    <div class="settings-option-description">Gerar e enviar relatório por e-mail ao fim do expediente</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" aria-label="Ativar relatório diário automático"/>
+                    <span class="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Validação por geolocalização</div>
+                    <div class="settings-option-description">Exigir que o ponto seja batido dentro do raio permitido</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" aria-label="Ativar validação por geolocalização"/>
+                    <span class="toggle-track"></span>
+                  </label>
+                </div>
+
+                <div class="settings-option-row">
+                  <div class="settings-option-copy">
+                    <div class="settings-option-title">Modo manutenção</div>
+                    <div class="settings-option-description">Desabilita o acesso de funcionários temporariamente</div>
+                  </div>
+                  <label class="toggle-switch">
+                    <input type="checkbox" aria-label="Ativar modo manutenção"/>
+                    <span class="toggle-track"></span>
+                  </label>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- Permissões -->
+          <div class="settings-panel" id="panel-permissoes" style="display:none;">
+            <div class="card settings-card">
+              <div class="card-header">
+                <div class="card-title"><img src="/assets/icons/shield.svg" alt="" aria-hidden="true" width="18" height="18"> Permissões e Acesso</div>
+              </div>
+              <div class="settings-panel-body">
+                <div class="alert-item blue settings-permissions-alert">
+                  <div class="alert-icon"><img src="/assets/icons/info.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+                  <div class="alert-content">
+                    <div class="alert-title">Gerenciamento de permissões</div>
+                    <div class="alert-desc">Defina o que cada nível de acesso pode visualizar e modificar no sistema.</div>
+                  </div>
+                </div>
+
+                <div class="settings-permissions-table">
+                  <div class="settings-permissions-header">
+                    <span>Recurso</span>
+                    <span>Admin</span>
+                    <span>Funcionário</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+</body>
+</html>

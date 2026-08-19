@@ -13,9 +13,9 @@ const {
 const { registerAuditLog } = require("./auditLogService");
 const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
-const cargoModel = require("../models/cargoModel");
-const vinculoModel = require("../models/vinculoModel");
-const unidadeEscolarModel = require("../models/unidadeEscolarModel");
+const roleModel = require("../models/roleModel");
+const employmentLinkModel = require("../models/employmentLinkModel");
+const schoolUnitModel = require("../models/schoolUnitModel");
 const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
@@ -181,12 +181,12 @@ function normalizeUnidadeEscolarId(value) {
 // `cargo` é UNIQUE/compartilhada: reutiliza o row existente. Roda na transação
 // com FOR UPDATE p/ que dois cadastros concorrentes do mesmo cargo sejam determinísticos.
 async function findOrCreateCargo(client, cargo) {
-  const existing = await cargoModel.findByNomeForUpdate(client, cargo);
+  const existing = await roleModel.findByNomeForUpdate(client, cargo);
   if (existing) {
     return Number(existing.id);
   }
 
-  const insert = await cargoModel.createCargo(client, { cargo });
+  const insert = await roleModel.createCargo(client, { cargo });
   const cargoId = Number(insert.insertId);
   if (!Number.isInteger(cargoId) || cargoId < 1) {
     throw new Error("Falha ao obter o ID do cargo criado");
@@ -207,7 +207,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
   if (Object.prototype.hasOwnProperty.call(body, "cargo_id")) {
     throw new BadRequestError("cargo_id nao e aceito no cadastro de funcionario");
   }
-  const unidadeEscolarId = normalizeUnidadeEscolarId(body.unidade_escolar_id);
+  const schoolUnitId = normalizeUnidadeEscolarId(body.unidade_escolar_id);
   const senhaTemporaria = generateTemporaryPassword();
   const senhaHash = await bcrypt.hash(
     senhaTemporaria,
@@ -228,9 +228,9 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
 
     // unidade obrigatória: confirma existência p/ falhar cedo com msg de negócio
     // em vez de estourar a FK no INSERT do vínculo.
-    const unidade = await unidadeEscolarModel.findByIdForUpdate(
+    const unidade = await schoolUnitModel.findByIdForUpdate(
       tx,
-      unidadeEscolarId
+      schoolUnitId
     );
     if (!unidade) {
       throw new NotFoundError("Unidade escolar nao encontrada");
@@ -254,9 +254,9 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
 
     await loginModel.createLogin(tx, { funcionarioId, senhaHash });
     // Vínculo na mesma transação; rollback desfaz funcionário, login e cargo juntos.
-    await vinculoModel.createVinculo(tx, {
+    await employmentLinkModel.createVinculo(tx, {
       funcionarioId,
-      unidadeEscolarId,
+      schoolUnitId,
       cargoId,
       entrada: cargoSchedule.entrada,
       saidaAlmoco: cargoSchedule.saidaAlmoco,
@@ -458,7 +458,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
     // por funcionário). Sem vínculo ativo não há onde editar a jornada. Nunca
     // renomeia o row de cargos (afetaria outros funcionários) — re-aponta o
     // vínculo p/ o cargo-alvo (find-or-create pelo nome).
-    const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
+    const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
       tx,
       employeeId
     );
@@ -482,7 +482,7 @@ async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
 
     // Re-aponta o vínculo ao cargo-alvo (find-or-create pelo nome) e sobrescreve a jornada.
     const cargoId = await findOrCreateCargo(tx, edits.cargoSchedule.cargo);
-    await vinculoModel.update(tx, vinculo.id, {
+    await employmentLinkModel.update(tx, vinculo.id, {
       cargoId,
       entrada: edits.cargoSchedule.entrada,
       saidaAlmoco: edits.cargoSchedule.saidaAlmoco,
@@ -561,12 +561,12 @@ async function changeEmployeeActivation(
     // apaga pontos (histórico intacto). Reativar NÃO (re)abre vínculo — isso é
     // operação de cadastro separada.
     if (!ativo) {
-      const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
+      const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
         tx,
         employeeId
       );
       if (vinculo) {
-        await vinculoModel.encerrarVinculo(tx, vinculo.id);
+        await employmentLinkModel.encerrarVinculo(tx, vinculo.id);
       }
     }
 
