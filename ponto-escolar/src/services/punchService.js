@@ -10,6 +10,7 @@ const vinculoModel = require("../models/vinculoModel");
 const unidadeEscolarModel = require("../models/unidadeEscolarModel");
 const { isWithinRadius } = require("../utils/location");
 const { isValidCpf, maskCpf, normalizeCpf } = require("../utils/cpf");
+const { isFirstAccess } = require("../utils/firstAccess");
 const {
   EMPTY_PUNCH_TIME,
   PUNCH_TYPES,
@@ -374,7 +375,7 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   // A senha foi comprovada, mas primeiro_acesso permanece uma decisao do
   // banco. Neste caso nao emitimos JWT de funcionario; apenas uma credencial
   // curta, com escopo exclusivo para a troca obrigatoria de senha.
-  if (funcionario.primeiro_acesso) {
+  if (isFirstAccess(funcionario.primeiro_acesso)) {
     const tokenTrocaSenha = jwt.sign(
       {
         sub: String(funcionario.id),
@@ -464,7 +465,7 @@ async function changeFirstAccessPassword(funcionarioId, novaSenha, { ipOrigem } 
     if (!login || !login.ativo) {
       throw new UnauthorizedError("Funcionario inexistente ou inativo");
     }
-    if (!login.primeiro_acesso) {
+    if (!isFirstAccess(login.primeiro_acesso)) {
       throw new ForbiddenError("Troca obrigatoria de senha nao esta pendente");
     }
     if (await bcrypt.compare(senha, String(login.senha_hash))) {

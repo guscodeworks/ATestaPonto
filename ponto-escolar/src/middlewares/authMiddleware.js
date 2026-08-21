@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const authService = require("../services/authService");
 const { ForbiddenError, UnauthorizedError } = require("../utils/errors");
+const { isFirstAccess } = require("../utils/firstAccess");
 
 function extractBearerToken(req) {
   const authHeader = req.headers.authorization;
@@ -104,7 +105,7 @@ async function authenticateFirstAccessPasswordChange(req, _res, next) {
     if (!funcionario || !funcionario.ativo) {
       throw new UnauthorizedError("Funcionario inexistente ou inativo");
     }
-    if (!funcionario.primeiro_acesso) {
+    if (!isFirstAccess(funcionario.primeiro_acesso)) {
       throw new ForbiddenError("Troca obrigatoria de senha nao esta pendente");
     }
 
