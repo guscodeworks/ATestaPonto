@@ -8,7 +8,8 @@
   <link rel="stylesheet" href="/assets/css/tokens.css?v=20260813-dt-admin-alias"/>
   <link rel="stylesheet" href="/assets/css/funcionario/base.css?v=20260825-desktop-shell"/>
   <link rel="stylesheet" href="/assets/css/funcionario/relatorio.css?v=20260818-final-polish"/>
-  <script src="/assets/js/funcionario/relatorio.js?v=20260818-desktop-shell" defer></script>
+  <script src="/assets/js/funcionario/shared.js?v=20260825-shared-utils" defer></script>
+  <script src="/assets/js/funcionario/relatorio.js?v=20260825-shared-utils" defer></script>
 </head>
 <body class="employee-area employee-dashboard employee-report">
 
@@ -78,7 +79,7 @@
           <strong>Carregando histórico</strong>
         </div>
 
-        <div class="report-state" id="report-empty" hidden>
+        <div class="report-state" id="report-empty" role="status" hidden>
           <span class="report-empty-icon" aria-hidden="true">
             <img src="/assets/icons/clipboard-list.svg" alt="" width="20" height="20"/>
           </span>

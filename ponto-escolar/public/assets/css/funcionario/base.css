@@ -92,7 +92,7 @@ body.employee-area::before {
 .employee-area input:focus-visible,
 .employee-area select:focus-visible,
 .employee-area textarea:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-primary) 38%, white);
+  outline: 3px solid var(--color-primary);
   outline-offset: 3px;
 }
 
@@ -267,7 +267,7 @@ body.employee-area::before {
 .employee-button-primary {
   border-color: var(--color-primary);
   background: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-surface);
 }
 
 .employee-button:hover:not(:disabled) {
@@ -568,6 +568,7 @@ dialog.employee-modal.show {
    ===================================================================== */
 
 /* Mobile (<768): header sticky com decoracao primaria + acento vermelho. */
+@media (max-width: 767px) {
 .employee-dashboard .employee-header {
   position: relative;
   min-height: 72px;
@@ -658,10 +659,6 @@ dialog.employee-modal.show {
   display: none;
 }
 
-.employee-brand-accent {
-  color: var(--color-accent);
-}
-
 .employee-dashboard .employee-main {
   justify-content: flex-start;
   padding-top: 18px;
@@ -672,6 +669,11 @@ dialog.employee-modal.show {
 .employee-dashboard .employee-sidebar-welcome,
 .employee-dashboard .employee-sidebar-logout {
   display: none;
+}
+}
+
+.employee-brand-accent {
+  color: var(--color-accent);
 }
 
 /* Mobile muito estreito (<350): avatar e moldura colapsam um pouco mais. */
@@ -711,7 +713,7 @@ dialog.employee-modal.show {
     --employee-sidebar-width: clamp(300px, 19.5vw, 340px);
     --employee-sidebar-header-height: 204px;
     --employee-topbar-height: 88px;
-    --employee-shell-border: #e4e9f3;
+    --employee-content-max-width: 920px;
     --desktop-panel-border: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
     --desktop-panel-radius: 14px;
     --desktop-panel-shadow:
@@ -784,7 +786,7 @@ dialog.employee-modal.show {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 26%, #ffb3b3 0, #ff5656 34%, #f01414 65%, #790000 100%);
+    background: var(--employee-accent-dot);
     box-shadow: 0 3px 6px rgba(20, 20, 20, 0.18);
   }
 
@@ -878,14 +880,14 @@ dialog.employee-modal.show {
 
   .employee-dashboard .employee-brand-subtitle {
     margin-top: 4px;
-    color: #7181a1;
+    color: var(--color-text-muted);
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
-  .employee-dashboard .employee-bottom-nav {
+  body.employee-area.employee-dashboard .employee-bottom-nav {
     position: fixed;
     inset: 0 auto 0 0;
     z-index: 52;
@@ -901,7 +903,7 @@ dialog.employee-modal.show {
     backdrop-filter: none;
   }
 
-  .employee-dashboard .employee-bottom-nav-inner {
+  body.employee-area.employee-dashboard .employee-bottom-nav-inner {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -914,18 +916,18 @@ dialog.employee-modal.show {
     border-top: 0;
   }
 
-  .employee-dashboard .employee-nav-label {
+  body.employee-area.employee-dashboard .employee-nav-label {
     display: block;
     margin-bottom: 8px;
     padding-inline: 6px;
-    color: #7181a1;
+    color: var(--color-text-muted);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
   }
 
-  .employee-dashboard .employee-bottom-nav-link {
+  body.employee-area.employee-dashboard .employee-bottom-nav-link {
     position: relative;
     flex: 0 0 auto;
     flex-direction: row;
@@ -943,12 +945,12 @@ dialog.employee-modal.show {
     transition: background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
   }
 
-  .employee-dashboard .employee-bottom-nav-link:hover:not(.active) {
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:hover:not(.active) {
     background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
     color: var(--color-text);
   }
 
-  .employee-dashboard .employee-bottom-nav-link.active {
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active {
     border-left: 3px solid var(--color-primary);
     border-top-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
     border-right-color: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
@@ -958,11 +960,11 @@ dialog.employee-modal.show {
     color: var(--color-primary);
   }
 
-  .employee-dashboard .employee-bottom-nav-link.active::before {
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active::before {
     content: none;
   }
 
-  .employee-dashboard .employee-bottom-nav-link.active::after {
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active::after {
     content: "";
     position: absolute;
     right: -14px;
@@ -975,13 +977,13 @@ dialog.employee-modal.show {
     pointer-events: none;
   }
 
-  .employee-dashboard .employee-bottom-nav-icon,
-  .employee-dashboard .employee-bottom-nav-icon img {
+  body.employee-area.employee-dashboard .employee-bottom-nav-icon,
+  body.employee-area.employee-dashboard .employee-bottom-nav-icon img {
     width: 18px;
     height: 18px;
   }
 
-  .employee-dashboard .employee-bottom-nav-link:not(.active) img {
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:not(.active) img {
     filter: brightness(0) saturate(100%);
     opacity: 0.68;
   }
@@ -1038,7 +1040,7 @@ dialog.employee-modal.show {
   .employee-dashboard .employee-sidebar-welcome p {
     max-width: 230px;
     margin: 5px 10px 0 0;
-    color: #7181a1;
+    color: var(--color-text-muted);
     font-size: 11.5px;
     line-height: 1.45;
   }
@@ -1113,7 +1115,7 @@ dialog.employee-modal.show {
     width: 14px;
     height: 14px;
     border-radius: 50%;
-    background: radial-gradient(circle at 32% 28%, #b6caff 0, #4f83fa 38%, #1450f0 68%, #0a2b7a 100%);
+    background: radial-gradient(circle at 32% 28%, #b6caff 0, #4f83fa 38%, var(--color-primary) 68%, #0a2b7a 100%);
     box-shadow: 0 5px 9px rgba(20, 20, 20, 0.22);
     pointer-events: none;
   }
@@ -1123,7 +1125,7 @@ dialog.employee-modal.show {
     align-items: center;
     gap: 10px;
     padding-left: 0;
-    color: #7181a1;
+    color: var(--color-text-muted);
     font-size: 13px;
   }
 
@@ -1144,7 +1146,7 @@ dialog.employee-modal.show {
     padding: 8px 12px;
     border: 1px solid var(--employee-shell-border);
     border-radius: var(--radius-card);
-    color: #7181a1;
+    color: var(--color-text-muted);
     font-size: 12px;
     font-weight: 600;
   }
