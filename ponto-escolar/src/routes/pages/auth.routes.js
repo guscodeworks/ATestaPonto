@@ -9,7 +9,7 @@ function createAuthPagesRouter({ sendView }) {
   router.get("/home", (_req, res) => res.redirect("/"));
   router.get("/login", (_req, res) => sendView(res, "index.html"));
   router.get("/recuperar-senha", (_req, res) => sendView(res, "password/password.html"));
-  router.get("/views/senha/senha.html", (_req, res) => sendView(res, "password/password.html"));
+  router.get("/views/password/password.html", (_req, res) => sendView(res, "password/password.html"));
 
   return router;
 }

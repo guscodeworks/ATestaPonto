@@ -48,7 +48,21 @@
         <p class="profile-page-description">Consulte seus dados, jornada e informações da conta.</p>
       </header>
 
-      <section class="employee-card profile-summary" aria-labelledby="profile-name">
+      <div class="employee-card profile-state" id="profile-loading" role="status" aria-live="polite">
+        <span class="profile-state-spinner" aria-hidden="true"></span>
+        <strong>Carregando perfil</strong>
+      </div>
+
+      <div class="employee-card profile-state profile-state-error" id="profile-error" role="alert" hidden>
+        <img src="/assets/icons/circle-x.svg" alt="" aria-hidden="true" width="28" height="28"/>
+        <strong>Não foi possível carregar seu perfil</strong>
+        <p>Verifique sua conexão e tente novamente.</p>
+        <button class="employee-button employee-button-primary profile-retry" id="profile-retry" type="button">
+          Tentar novamente
+        </button>
+      </div>
+
+      <section class="employee-card profile-summary" id="profile-summary" aria-labelledby="profile-name" hidden>
         <div class="profile-summary-avatar" id="profile-avatar" aria-hidden="true">—</div>
         <div class="profile-summary-copy">
           <h2 id="profile-name">Carregando...</h2>
@@ -57,7 +71,7 @@
         </div>
       </section>
 
-      <section class="employee-card profile-card profile-personal" aria-labelledby="personal-title">
+      <section class="employee-card profile-card profile-personal" id="profile-personal" aria-labelledby="personal-title" hidden>
         <header class="profile-card-header">
           <span class="profile-card-icon" aria-hidden="true">
             <img src="/assets/icons/user.svg" alt="" width="20" height="20"/>
@@ -87,7 +101,7 @@
         </dl>
       </section>
 
-      <section class="employee-card profile-card profile-schedule" aria-labelledby="schedule-title">
+      <section class="employee-card profile-card profile-schedule" id="profile-schedule" aria-labelledby="schedule-title" hidden>
         <header class="profile-card-header">
           <span class="profile-card-icon" aria-hidden="true">
             <img src="/assets/icons/clock.svg" alt="" width="20" height="20"/>
@@ -117,7 +131,7 @@
         </dl>
       </section>
 
-      <section class="employee-card profile-card profile-security" aria-labelledby="security-title">
+      <section class="employee-card profile-card profile-security" id="profile-security" aria-labelledby="security-title" hidden>
         <header class="profile-card-header">
           <span class="profile-card-icon" aria-hidden="true">
             <img src="/assets/icons/shield.svg" alt="" width="20" height="20"/>

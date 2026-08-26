@@ -99,6 +99,7 @@ writeBundle("admin/admin.js", ["shared/loading.js", ...adminModules]);
 for (const page of ["profile", "punch", "report"]) {
   writeBundle(`employee/${page}.js`, [
     "shared/loading.js",
+    "employee/modules/shared.js",
     `employee/modules/${page}.js`,
   ]);
 }
@@ -112,7 +113,6 @@ writeCssBundle("bundles/employee-profile.css", [
   "tokens.css",
   "employee/base.css",
   "employee/profile.css",
-  "employee/punch.css",
 ]);
 writeCssBundle("bundles/employee-punch.css", [
   "tokens.css",
@@ -124,7 +124,6 @@ writeCssBundle("bundles/employee-report.css", [
   "tokens.css",
   "employee/base.css",
   "employee/report.css",
-  "employee/punch.css",
 ]);
 writeCssBundle("bundles/login.css", ["tokens.css", "employee-login.css"]);
 writeCssBundle("bundles/password.css", ["password/password.css"]);

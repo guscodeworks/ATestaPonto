@@ -1,14 +1,24 @@
 'use strict';
 
 const funcionarioToken = sessionStorage.getItem('funcionario_token');
+const {
+  getElement,
+  definirTexto,
+  obterIniciais,
+  formatarCargo,
+  formatarHorario,
+  limparSessaoFuncionario
+} = window.FuncionarioShared;
 const TEXTO_INDISPONIVEL = 'Não informado';
+const PROFILE_DATA_SECTION_IDS = [
+  'profile-summary',
+  'profile-personal',
+  'profile-schedule',
+  'profile-security'
+];
 
 if (!funcionarioToken) {
   window.location.replace('/login');
-}
-
-function getElement(id) {
-  return document.getElementById(id);
 }
 
 function lerFuncionarioDoLogin() {
@@ -23,31 +33,6 @@ function lerFuncionarioDoLogin() {
 function textoReal(value) {
   const text = String(value || '').trim();
   return text || TEXTO_INDISPONIVEL;
-}
-
-function obterIniciais(nome) {
-  const partes = String(nome || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (!partes.length) return '—';
-
-  return partes
-    .slice(0, 2)
-    .map((parte) => parte.charAt(0))
-    .join('')
-    .toUpperCase();
-}
-
-function formatarCargo(cargo) {
-  const cargos = {
-    FUNCIONARIO: 'Funcionário(a)',
-    INSPETOR: 'Inspetor(a)',
-    PROFESSOR: 'Professor(a)'
-  };
-  const valor = String(cargo || '').trim().toUpperCase();
-  return cargos[valor] || textoReal(valor);
 }
 
 function formatarCpfMascarado(cpf) {
@@ -77,13 +62,6 @@ function formatarTelefone(telefone) {
   }
 
   return TEXTO_INDISPONIVEL;
-}
-
-function formatarHorario(horario) {
-  const valor = String(horario || '').trim();
-  return /^\d{2}:\d{2}(?::\d{2})?$/.test(valor)
-    ? valor.slice(0, 5)
-    : TEXTO_INDISPONIVEL;
 }
 
 function validarRespostaHoje(data) {
@@ -118,9 +96,12 @@ async function buscarPerfilAtual() {
   return validarRespostaHoje(payload.data);
 }
 
-function definirTexto(id, value) {
-  const element = getElement(id);
-  if (element) element.textContent = value;
+function mostrarEstadoPerfil(estado) {
+  getElement('profile-loading').hidden = estado !== 'loading';
+  getElement('profile-error').hidden = estado !== 'error';
+  PROFILE_DATA_SECTION_IDS.forEach((id) => {
+    getElement(id).hidden = estado !== 'ready';
+  });
 }
 
 function renderizarPerfil(data) {
@@ -142,79 +123,40 @@ function renderizarPerfil(data) {
   definirTexto('profile-email', textoReal(dadosLogin.email));
   definirTexto('profile-cpf', formatarCpfMascarado(dadosLogin.cpf));
   definirTexto('profile-phone', formatarTelefone(dadosLogin.telefone));
-  definirTexto('schedule-entry', formatarHorario(data.jornada.entrada));
-  definirTexto('schedule-lunch-out', formatarHorario(data.jornada.saida_almoco));
-  definirTexto('schedule-lunch-return', formatarHorario(data.jornada.retorno_almoco));
-  definirTexto('schedule-exit', formatarHorario(data.jornada.saida));
-  getElement('profile-content').setAttribute('aria-busy', 'false');
-}
-
-function renderizarIndisponivel() {
-  const ids = [
-    'header-name',
-    'header-cargo',
-    'sidebar-welcome-name',
-    'profile-name',
-    'profile-cargo',
-    'profile-status',
-    'profile-personal-name',
-    'profile-email',
-    'profile-cpf',
-    'profile-phone',
-    'schedule-entry',
-    'schedule-lunch-out',
-    'schedule-lunch-return',
-    'schedule-exit'
-  ];
-
-  ids.forEach((id) => definirTexto(id, TEXTO_INDISPONIVEL));
-  definirTexto('header-avatar', '—');
-  definirTexto('profile-avatar', '—');
-  getElement('profile-status').classList.add('is-unavailable');
-  getElement('profile-content').setAttribute('aria-busy', 'false');
-}
-
-function toast(message, type = 'error') {
-  const stack = getElement('toast-stack');
-  const element = document.createElement('div');
-  const icon = document.createElement('span');
-  const text = document.createElement('span');
-
-  element.className = `toast toast-${type}`;
-  icon.className = 'toast-icon';
-  icon.setAttribute('aria-hidden', 'true');
-  text.className = 'toast-msg';
-  text.textContent = message;
-  element.append(icon, text);
-  stack.replaceChildren(element);
-  window.setTimeout(() => element.remove(), 3500);
+  definirTexto('schedule-entry', formatarHorario(data.jornada.entrada, TEXTO_INDISPONIVEL));
+  definirTexto('schedule-lunch-out', formatarHorario(data.jornada.saida_almoco, TEXTO_INDISPONIVEL));
+  definirTexto('schedule-lunch-return', formatarHorario(data.jornada.retorno_almoco, TEXTO_INDISPONIVEL));
+  definirTexto('schedule-exit', formatarHorario(data.jornada.saida, TEXTO_INDISPONIVEL));
 }
 
 function sair() {
-  sessionStorage.removeItem('funcionario_token');
-  sessionStorage.removeItem('funcionario_data');
-  sessionStorage.removeItem('func_nome');
-  sessionStorage.removeItem('func_cpf');
+  limparSessaoFuncionario();
   window.location.replace('/login');
 }
 
 async function iniciarPerfil() {
+  mostrarEstadoPerfil('loading');
+  getElement('profile-content').setAttribute('aria-busy', 'true');
+
   try {
     const data = await buscarPerfilAtual();
     renderizarPerfil(data);
+    mostrarEstadoPerfil('ready');
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
       sair();
       return;
     }
 
-    renderizarIndisponivel();
-    toast('Não foi possível carregar seu perfil. Tente novamente mais tarde.');
+    mostrarEstadoPerfil('error');
+  } finally {
+    getElement('profile-content').setAttribute('aria-busy', 'false');
   }
 }
 
 getElement('profile-logout').addEventListener('click', sair);
 getElement('employee-logout').addEventListener('click', sair);
+getElement('profile-retry').addEventListener('click', iniciarPerfil);
 
 if (funcionarioToken) {
   iniciarPerfil();
