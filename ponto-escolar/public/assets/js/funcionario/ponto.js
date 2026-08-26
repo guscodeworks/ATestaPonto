@@ -464,10 +464,10 @@ function renderEstado() {
   });
 
   const descricaoPorTipo = {
-    ENTRADA: 'Entrada prevista para',
-    SAIDA_ALMOCO: 'Almoço previsto para',
-    RETORNO_ALMOCO: 'Retorno previsto para',
-    SAIDA: 'Saída prevista para'
+    ENTRADA: 'Entrada prevista',
+    SAIDA_ALMOCO: 'Almoço previsto',
+    RETORNO_ALMOCO: 'Retorno previsto',
+    SAIDA: 'Saída prevista'
   };
   nextLabel.textContent = descricaoPorTipo[proximaBatida];
   nextTime.textContent = formatarHorario(estadoHoje.jornada[etapa.campo], '--:--');
