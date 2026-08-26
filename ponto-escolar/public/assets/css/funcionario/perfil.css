@@ -455,9 +455,9 @@
   .employee-profile .profile-state {
     grid-area: summary;
     min-height: 150px;
-    border: 1px solid var(--employee-shell-border);
-    border-radius: var(--radius-card);
-    background: var(--color-surface);
+    border: 1px solid var(--employee-card-border);
+    border-radius: var(--employee-content-card-radius);
+    background: var(--employee-card-surface);
     box-shadow: var(--employee-card-shadow);
     backdrop-filter: none;
   }
@@ -465,41 +465,44 @@
   .employee-profile .profile-summary,
   .employee-profile .profile-card {
     min-height: 0;
-    border: 1px solid var(--employee-shell-border);
-    border-radius: var(--radius-card);
+    border: 1px solid var(--employee-card-border);
+    border-radius: var(--employee-content-card-radius);
     background: var(--color-surface);
     box-shadow: var(--employee-card-shadow);
     backdrop-filter: none;
+  }
+
+  .employee-profile .profile-card {
+    border-top-color: var(--employee-card-accent-border);
+    box-shadow:
+      0 1px 2px rgba(20, 20, 20, 0.035),
+      0 10px 24px rgba(32, 57, 104, 0.08);
   }
 
   .employee-profile .profile-summary {
     grid-area: summary;
     gap: 12px;
     min-height: 88px;
-    padding: 16px 20px;
-    border-color: var(--employee-shell-border);
+    padding: 18px 22px;
+    border-color: var(--employee-card-border-strong);
+    background: var(--color-surface);
     box-shadow: var(--employee-card-shadow-raised);
   }
 
   .employee-profile .profile-summary::before {
-    top: -30px;
-    right: -12px;
-    width: 112px;
-    height: 44px;
-    border-radius: 28% 0 58% 46% / 44% 0 70% 48%;
-    background: var(--color-primary);
-    opacity: 1;
-    transform: rotate(-5deg);
+    top: auto;
+    right: -16px;
+    bottom: -20px;
+    width: 72px;
+    height: 48px;
+    border-radius: 62% 0 0 0 / 78% 0 0 0;
+    background: color-mix(in srgb, var(--color-primary) 72%, var(--color-surface));
+    opacity: 0.86;
+    transform: rotate(-8deg);
   }
 
   .employee-profile .profile-summary::after {
-    top: 18px;
-    right: 20px;
-    bottom: auto;
-    width: 10px;
-    height: 10px;
-    background: var(--employee-accent-dot);
-    box-shadow: var(--employee-accent-dot-shadow);
+    content: none;
   }
 
   .employee-profile .profile-summary-avatar {
@@ -524,7 +527,7 @@
   .employee-profile .profile-summary-copy h2 {
     grid-column: 1 / -1;
     grid-row: 1;
-    font-size: 17px;
+    font-size: 18px;
     letter-spacing: -0.02em;
   }
 
@@ -583,10 +586,37 @@
   .employee-profile .profile-card-header {
     position: relative;
     z-index: 1;
-    min-height: 64px;
+    min-height: 68px;
     gap: 12px;
-    padding: 13px 20px;
-    border-bottom-color: var(--employee-shell-border);
+    padding: 14px 22px;
+    border-bottom-color: var(--employee-card-border);
+    background: var(--employee-card-header-surface);
+  }
+
+  .employee-profile .profile-personal .profile-card-header {
+    background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+  }
+
+  .employee-profile .profile-schedule {
+    border-top-color: var(--employee-card-accent-border);
+  }
+
+  .employee-profile .profile-schedule .profile-card-header {
+    background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+  }
+
+  .employee-profile .profile-schedule .profile-card-header p,
+  .employee-profile .profile-schedule .profile-card-header h2 {
+    color: color-mix(in srgb, var(--color-primary) 76%, var(--color-text));
+  }
+
+  .employee-profile .profile-schedule .profile-card-icon {
+    border-color: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+  }
+
+  .employee-profile .profile-schedule .profile-card-icon img {
+    filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
   }
 
   .employee-profile .profile-card-header p {
@@ -597,7 +627,8 @@
 
   .employee-profile .profile-card-header h2 {
     margin-top: 2px;
-    font-size: 17px;
+    color: color-mix(in srgb, var(--color-text) 92%, var(--color-primary));
+    font-size: 18px;
     letter-spacing: -0.015em;
   }
 
@@ -608,6 +639,7 @@
     border-color: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
     border-radius: var(--radius-btn);
     background: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
+    box-shadow: 0 3px 10px rgba(20, 80, 240, 0.07);
   }
 
   .employee-profile .profile-data-list {
@@ -616,7 +648,8 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 28px;
-    padding: 6px 20px 8px;
+    padding: 8px 22px 10px;
+    background: color-mix(in srgb, var(--color-primary) 1%, var(--color-surface));
   }
 
   .employee-profile .profile-data-row {
@@ -626,7 +659,7 @@
     min-height: 58px;
     gap: 4px;
     padding: 10px 0;
-    border-bottom: 1px solid var(--employee-shell-border);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
   }
 
   .employee-profile .profile-data-row:nth-child(even) {
@@ -656,6 +689,7 @@
   }
 
   .employee-profile .profile-personal .profile-data-row dt {
+    color: color-mix(in srgb, var(--color-primary) 44%, var(--color-text-muted));
     font-size: 10.5px;
     letter-spacing: 0.02em;
   }
@@ -665,8 +699,8 @@
     z-index: 1;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 28px;
-    padding: 6px 20px 8px;
-    background: var(--color-surface);
+    padding: 8px 22px 10px;
+    background: color-mix(in srgb, var(--color-primary) 1%, var(--color-surface));
   }
 
   .employee-profile .profile-schedule-item {
@@ -676,8 +710,8 @@
     min-height: 58px;
     padding: 10px 0;
     border-right: 0;
-    border-bottom: 1px solid var(--employee-shell-border);
-    background: var(--color-surface);
+    border-bottom: 1px solid color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+    background: transparent;
   }
 
   .employee-profile .profile-schedule-item:nth-last-child(-n + 2) {
@@ -686,8 +720,9 @@
 
   .employee-profile .profile-schedule-item dd {
     margin-top: 5px;
-    color: var(--color-text);
+    color: var(--color-primary);
     font-size: 17px;
+    font-weight: 750;
     letter-spacing: -0.02em;
     line-height: 1.1;
   }
@@ -704,16 +739,20 @@
   .employee-profile .profile-security {
     display: grid;
     grid-template-columns: minmax(185px, 210px) minmax(0, 1fr);
-    min-height: 60px;
-    box-shadow: var(--employee-card-shadow);
+    min-height: 64px;
+    border-top-color: color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
+    box-shadow:
+      0 1px 2px rgba(20, 20, 20, 0.03),
+      0 5px 14px rgba(32, 57, 104, 0.05);
   }
 
   .employee-profile .profile-security .profile-card-header {
-    min-height: 60px;
+    min-height: 64px;
     gap: 10px;
     padding: 9px 14px;
-    border-right: 1px solid var(--employee-shell-border);
+    border-right: 1px solid var(--employee-card-border);
     border-bottom: 0;
+    background: color-mix(in srgb, var(--color-primary) 2.5%, var(--color-surface));
   }
 
   .employee-profile .profile-security .profile-card-header p {
@@ -722,7 +761,7 @@
 
   .employee-profile .profile-security .profile-card-header h2 {
     margin-top: 0;
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .employee-profile .profile-security .profile-card-icon {
@@ -730,15 +769,18 @@
     height: 34px;
     flex-basis: 34px;
     padding: 8px;
+    border-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+    box-shadow: 0 2px 8px rgba(20, 80, 240, 0.05);
   }
 
   .employee-profile .profile-security-message {
     align-items: center;
-    min-height: 60px;
+    min-height: 64px;
     margin: 0;
     padding: 10px 32px 10px 16px;
     border-radius: 0;
-    background: color-mix(in srgb, var(--color-primary) 2%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-primary) 1%, var(--color-surface));
     color: #5e6c85;
     font-size: 11.5px;
     line-height: 1.4;

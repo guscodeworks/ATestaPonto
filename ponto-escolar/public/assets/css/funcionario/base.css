@@ -714,6 +714,30 @@ dialog.employee-modal.show {
     --employee-sidebar-header-height: 204px;
     --employee-topbar-height: 88px;
     --employee-content-max-width: 920px;
+    --employee-shell-border: color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+    --employee-card-surface:
+      linear-gradient(
+        145deg,
+        var(--color-surface) 0%,
+        color-mix(in srgb, var(--color-primary) 2.5%, var(--color-surface)) 100%
+      );
+    --employee-card-surface-raised:
+      linear-gradient(
+        145deg,
+        var(--color-surface) 0%,
+        color-mix(in srgb, var(--color-primary) 4%, var(--color-surface)) 100%
+      );
+    --employee-card-header-surface: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
+    --employee-card-border: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+    --employee-card-border-strong: color-mix(in srgb, var(--color-primary) 13%, var(--color-surface));
+    --employee-card-accent-border: color-mix(in srgb, var(--color-primary) 28%, var(--color-surface));
+    --employee-content-card-radius: 12px;
+    --employee-card-shadow:
+      0 1px 2px rgba(20, 20, 20, 0.04),
+      0 9px 24px rgba(32, 57, 104, 0.075);
+    --employee-card-shadow-raised:
+      0 2px 5px rgba(20, 20, 20, 0.045),
+      0 16px 34px rgba(32, 57, 104, 0.095);
     --desktop-panel-border: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
     --desktop-panel-radius: 14px;
     --desktop-panel-shadow:
@@ -723,12 +747,12 @@ dialog.employee-modal.show {
     min-height: 100vh;
     min-height: 100dvh;
     overflow-x: clip;
+    background: color-mix(in srgb, var(--color-primary) 4%, var(--color-bg));
   }
 
   body.employee-area::before {
-    background-position: center top;
-    background-size: cover;
-    opacity: 0.26;
+    background: url("/assets/img/background-desktop-funcionario.webp") center top / cover no-repeat;
+    opacity: 0.9;
   }
 
   .employee-dashboard .employee-shell {
@@ -740,6 +764,8 @@ dialog.employee-modal.show {
     margin: 0 0 0 var(--employee-sidebar-width);
     padding: 0;
     overflow: visible;
+    background: linear-gradient(180deg, rgba(20, 80, 240, 0.012), rgba(32, 57, 104, 0.035));
+    box-shadow: inset 1px 0 0 rgba(32, 57, 104, 0.055);
   }
 
   .employee-dashboard .employee-header {
@@ -792,14 +818,18 @@ dialog.employee-modal.show {
 
   .employee-dashboard .employee-identity {
     order: 2;
-    flex: 0 0 98px;
+    flex: 0 0 76px;
     flex-direction: row;
     align-items: center;
-    gap: 14px;
-    width: 100%;
-    min-height: 98px;
-    padding: 20px 28px;
-    border-radius: 0;
+    gap: 12px;
+    width: auto;
+    min-height: 76px;
+    margin: 10px 18px 12px;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-primary) 2.5%, var(--color-surface));
+    box-shadow: 0 6px 16px rgba(32, 57, 104, 0.055);
     text-align: left;
   }
 
@@ -809,13 +839,13 @@ dialog.employee-modal.show {
   }
 
   .employee-dashboard .employee-avatar {
-    width: 50px;
-    height: 50px;
-    flex: 0 0 50px;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
     border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-surface));
     outline: 0;
     background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
-    box-shadow: 0 6px 16px rgba(20, 80, 240, 0.08);
+    box-shadow: 0 5px 14px rgba(20, 80, 240, 0.075);
     font-size: 16px;
   }
 
@@ -826,16 +856,16 @@ dialog.employee-modal.show {
   }
 
   .employee-dashboard .employee-role {
-    width: fit-content;
-    margin-top: 5px;
-    padding: 4px 9px;
+    width: auto;
+    margin-top: 3px;
+    padding: 0;
     border: 0;
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
-    color: var(--color-primary);
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
   }
 
   .employee-dashboard .employee-brand-frame {
@@ -847,13 +877,13 @@ dialog.employee-modal.show {
     width: 100%;
     height: 106px;
     flex: 0 0 106px;
-    gap: 14px;
-    padding: 22px 26px;
+    gap: 13px;
+    padding: 20px 24px;
     overflow: hidden;
     border: 0;
     border-bottom: 1px solid var(--employee-shell-border);
     border-radius: 0;
-    background: transparent;
+    background: var(--color-surface);
     box-shadow: none;
   }
 
@@ -861,6 +891,11 @@ dialog.employee-modal.show {
     width: 58px;
     height: 58px;
     flex: 0 0 58px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .employee-dashboard .employee-brand-copy {
@@ -873,7 +908,8 @@ dialog.employee-modal.show {
   .employee-dashboard .employee-brand-name {
     color: var(--color-text);
     font-size: 21px;
-    font-weight: 500;
+    font-weight: 650;
+    letter-spacing: -0.015em;
     line-height: 1.05;
     white-space: nowrap;
   }
@@ -899,7 +935,7 @@ dialog.employee-modal.show {
     border: 0;
     border-right: 1px solid var(--employee-shell-border);
     background: var(--color-surface);
-    box-shadow: 4px 0 22px rgba(32, 57, 104, 0.045);
+    box-shadow: 5px 0 24px rgba(32, 57, 104, 0.055);
     backdrop-filter: none;
   }
 
@@ -912,19 +948,28 @@ dialog.employee-modal.show {
     max-width: none;
     height: 100%;
     gap: 2px;
-    padding: 20px 0 0;
+    padding: 18px 0 0;
     border-top: 0;
   }
 
   body.employee-area.employee-dashboard .employee-nav-label {
     display: block;
     margin-bottom: 8px;
-    padding-inline: 6px;
+    padding: 0 6px;
+    border-bottom: 0;
     color: var(--color-text-muted);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+  }
+
+  body.employee-area.employee-dashboard .employee-nav-label::before {
+    content: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-nav-label::after {
+    content: none;
   }
 
   body.employee-area.employee-dashboard .employee-bottom-nav-link {
@@ -939,29 +984,54 @@ dialog.employee-modal.show {
     overflow: hidden;
     border: 1px solid transparent;
     border-radius: 10px;
-    color: color-mix(in srgb, var(--color-text) 82%, var(--color-bg));
+    background: transparent;
+    box-shadow: none;
+    color: color-mix(in srgb, var(--color-text) 78%, var(--color-surface));
     font-size: 14px;
     font-weight: 500;
-    transition: background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
+    transition:
+      background var(--transition),
+      border-color var(--transition),
+      color var(--transition),
+      box-shadow var(--transition);
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link > span {
+    position: relative;
+    z-index: 1;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link > span:last-child {
+    letter-spacing: -0.005em;
   }
 
   body.employee-area.employee-dashboard .employee-bottom-nav-link:hover:not(.active) {
     background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+    border-color: transparent;
+    box-shadow: none;
     color: var(--color-text);
   }
 
   body.employee-area.employee-dashboard .employee-bottom-nav-link.active {
-    border-left: 3px solid var(--color-primary);
-    border-top-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
     border-right-color: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
     border-bottom-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
     background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
     box-shadow: 0 7px 18px rgba(20, 80, 240, 0.06);
     color: var(--color-primary);
+    font-weight: 600;
   }
 
   body.employee-area.employee-dashboard .employee-bottom-nav-link.active::before {
-    content: none;
+    content: "";
+    position: absolute;
+    top: 9px;
+    bottom: 9px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: var(--color-primary);
+    box-shadow: 2px 0 7px rgba(20, 80, 240, 0.18);
   }
 
   body.employee-area.employee-dashboard .employee-bottom-nav-link.active::after {
@@ -983,9 +1053,50 @@ dialog.employee-modal.show {
     height: 18px;
   }
 
+  body.employee-area.employee-dashboard .employee-bottom-nav-icon {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:hover:not(.active) .employee-bottom-nav-icon {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active .employee-bottom-nav-icon {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
   body.employee-area.employee-dashboard .employee-bottom-nav-link:not(.active) img {
     filter: brightness(0) saturate(100%);
-    opacity: 0.68;
+    opacity: 0.72;
+    transition: filter var(--transition), opacity var(--transition);
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:hover:not(.active) img {
+    opacity: 0.9;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:active:not(.active) {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    box-shadow: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:focus-visible {
+    outline-offset: 2px;
+    border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-surface));
+    box-shadow: none;
   }
 
   .employee-dashboard .employee-sidebar-welcome {
@@ -993,38 +1104,50 @@ dialog.employee-modal.show {
     display: block;
     flex: 0 0 auto;
     margin-top: auto;
-    padding: 14px 15px 13px 17px;
+    margin-right: 0;
+    margin-left: 0;
+    padding: 15px 16px 14px;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+    isolation: isolate;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+    border-right-color: color-mix(in srgb, var(--color-accent) 11%, var(--color-surface));
+    border-bottom-color: color-mix(in srgb, var(--color-accent) 13%, var(--color-surface));
     border-radius: 12px;
-    background: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
-    box-shadow: 0 8px 20px rgba(32, 57, 104, 0.045);
+    background: color-mix(in srgb, var(--color-primary) 3.5%, var(--color-surface));
+    box-shadow: 0 9px 22px rgba(32, 57, 104, 0.065);
   }
 
   .employee-dashboard .employee-sidebar-welcome::before {
     content: "";
     position: absolute;
-    top: 14px;
-    bottom: 14px;
-    left: 0;
-    width: 3px;
-    border-radius: 0 999px 999px 0;
+    z-index: 0;
+    top: 12px;
+    right: 13px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
     background: var(--color-primary);
+    box-shadow:
+      0 0 0 4px rgba(20, 80, 240, 0.06),
+      0 3px 6px rgba(32, 57, 104, 0.14);
   }
 
   .employee-dashboard .employee-sidebar-welcome::after {
     content: "";
     position: absolute;
-    right: 12px;
-    bottom: 10px;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--color-accent);
-    box-shadow: 0 3px 7px rgba(240, 20, 20, 0.18);
+    z-index: 0;
+    right: -14px;
+    bottom: -17px;
+    width: 38px;
+    height: 26px;
+    border-radius: 62% 0 0 0 / 72% 0 0 0;
+    background: color-mix(in srgb, var(--color-accent) 86%, var(--color-surface));
+    transform: rotate(-10deg);
   }
 
   .employee-dashboard .employee-sidebar-welcome-title {
+    position: relative;
+    z-index: 1;
     display: block;
     padding-right: 4px;
     color: var(--color-text);
@@ -1038,40 +1161,97 @@ dialog.employee-modal.show {
   }
 
   .employee-dashboard .employee-sidebar-welcome p {
+    position: relative;
+    z-index: 1;
     max-width: 230px;
-    margin: 5px 10px 0 0;
+    margin: 4px 10px 0 0;
     color: var(--color-text-muted);
     font-size: 11.5px;
     line-height: 1.45;
   }
 
   .employee-dashboard .employee-sidebar-logout {
+    position: relative;
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     width: 100%;
-    min-height: 58px;
-    gap: 12px;
-    margin-top: 10px;
-    padding: 12px 8px;
-    border: 0;
+    min-height: 52px;
+    gap: 11px;
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
     border-radius: 10px;
-    background: transparent;
-    color: var(--color-text-muted);
+    background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
+    box-shadow: 0 5px 14px rgba(32, 57, 104, 0.045);
+    color: color-mix(in srgb, var(--color-text) 78%, var(--color-surface));
     font: inherit;
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     text-align: left;
     cursor: pointer;
+    transition:
+      background var(--transition),
+      border-color var(--transition),
+      color var(--transition),
+      box-shadow var(--transition);
   }
 
   .employee-dashboard .employee-sidebar-logout:hover {
-    background: var(--color-bg);
-    color: var(--color-text);
+    border-color: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+    box-shadow:
+      inset 3px 0 0 color-mix(in srgb, var(--color-accent) 68%, var(--color-surface)),
+      0 6px 16px rgba(32, 57, 104, 0.055);
+    color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
+  }
+
+  .employee-dashboard .employee-sidebar-logout:hover .employee-bottom-nav-icon {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--color-accent) 11%, var(--color-surface));
+    box-shadow: none;
+  }
+
+  .employee-dashboard .employee-sidebar-logout .employee-bottom-nav-icon {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-color: transparent;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+    box-shadow: none;
+    opacity: 1;
+    transition: background var(--transition);
+  }
+
+  .employee-dashboard .employee-sidebar-logout .employee-bottom-nav-icon img {
+    opacity: 0.66;
+    transition: opacity var(--transition);
+  }
+
+  .employee-dashboard .employee-sidebar-logout:hover .employee-bottom-nav-icon img {
+    opacity: 0.9;
+  }
+
+  .employee-dashboard .employee-sidebar-logout:active {
+    border-color: color-mix(in srgb, var(--color-accent) 20%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+    box-shadow: inset 3px 0 0 var(--color-accent);
   }
 
   .employee-dashboard .employee-sidebar-logout:focus-visible {
     outline: 2px solid color-mix(in srgb, var(--color-primary) 58%, var(--color-surface));
     outline-offset: 2px;
+    border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+    box-shadow:
+      inset 3px 0 0 var(--color-primary),
+      0 5px 14px rgba(32, 57, 104, 0.055);
+  }
+
+  .employee-dashboard .employee-sidebar-logout:focus-visible .employee-bottom-nav-icon {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
   }
 
   .employee-dashboard .employee-topbar {
@@ -1087,8 +1267,11 @@ dialog.employee-modal.show {
     overflow: hidden;
     isolation: isolate;
     border-bottom: 1px solid var(--employee-shell-border);
-    background: var(--color-surface);
-    box-shadow: 0 3px 14px rgba(32, 57, 104, 0.025);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.82),
+      0 5px 22px rgba(32, 57, 104, 0.065);
+    backdrop-filter: blur(16px) saturate(1.08);
   }
 
   .employee-dashboard .employee-topbar::before {
@@ -1146,6 +1329,8 @@ dialog.employee-modal.show {
     padding: 8px 12px;
     border: 1px solid var(--employee-shell-border);
     border-radius: var(--radius-card);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 3px 10px rgba(32, 57, 104, 0.045);
     color: var(--color-text-muted);
     font-size: 12px;
     font-weight: 600;
@@ -1159,12 +1344,19 @@ dialog.employee-modal.show {
   }
 
   .employee-dashboard .employee-main {
+    position: relative;
     display: flex;
     align-items: stretch;
     justify-content: flex-start;
     min-height: calc(100vh - var(--employee-topbar-height));
     min-height: calc(100dvh - var(--employee-topbar-height));
     padding: 30px 38px 42px;
+    background:
+      radial-gradient(ellipse at 50% 16%, rgba(255, 255, 255, 0.14), transparent 62%),
+      linear-gradient(180deg, rgba(20, 80, 240, 0.01), rgba(32, 57, 104, 0.035));
+    box-shadow:
+      inset 12px 0 28px rgba(32, 57, 104, 0.035),
+      inset 0 1px 0 rgba(255, 255, 255, 0.52);
   }
 
 }
