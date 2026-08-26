@@ -27,7 +27,7 @@ body.employee-area {
   position: relative;
   isolation: isolate;
   min-width: 320px;
-  min-height: 100dvh;
+  min-height: 100svh;
   overflow-x: hidden;
   background: transparent;
   color: var(--color-text);
@@ -92,7 +92,7 @@ body.employee-area::before {
 .employee-area input:focus-visible,
 .employee-area select:focus-visible,
 .employee-area textarea:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--color-primary) 38%, white);
+  outline: 3px solid var(--color-primary);
   outline-offset: 3px;
 }
 
@@ -104,7 +104,7 @@ body.employee-area::before {
   width: 100%;
   max-width: 430px;
   overflow-x: clip;
-  min-height: 100dvh;
+  min-height: 100svh;
   margin: 0 auto;
 }
 
@@ -267,7 +267,7 @@ body.employee-area::before {
 .employee-button-primary {
   border-color: var(--color-primary);
   background: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-surface);
 }
 
 .employee-button:hover:not(:disabled) {
@@ -341,6 +341,55 @@ body.employee-area::before {
 .employee-bottom-nav-link.active img {
   opacity: 1;
   filter: brightness(0) saturate(100%) invert(27%) sepia(97%) saturate(4217%) hue-rotate(226deg) brightness(94%) contrast(100%);
+}
+
+/* Mobile: dashboard bottom-nav ganha safe-area + acento topo + sombra azul
+   sobre o glass do default. Mesma especificidade das regras base anteriores;
+   para garantir prevalência, são declaradas depois. */
+.employee-dashboard .employee-bottom-nav {
+  min-height: calc(70px + env(safe-area-inset-bottom));
+  border-top-color: rgba(20, 80, 240, 0.08);
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -7px 22px rgba(20, 80, 240, 0.085);
+}
+
+.employee-dashboard .employee-bottom-nav-inner {
+  min-height: calc(70px + env(safe-area-inset-bottom));
+  padding: 5px 10px max(5px, env(safe-area-inset-bottom));
+}
+
+.employee-dashboard .employee-bottom-nav-link {
+  position: relative;
+  gap: 4px;
+  min-height: 54px;
+  padding: 7px 8px 4px;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.employee-dashboard .employee-bottom-nav-link.active {
+  background: transparent;
+  color: var(--color-primary);
+}
+
+.employee-dashboard .employee-bottom-nav-link.active::before {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 50%;
+  width: 28px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  transform: translateX(-50%);
+}
+
+.employee-dashboard .employee-bottom-nav-icon,
+.employee-dashboard .employee-bottom-nav-icon img {
+  width: 21px;
+  height: 21px;
 }
 
 dialog.employee-modal {
@@ -507,5 +556,814 @@ dialog.employee-modal.show {
     animation-duration: 0.01ms;
     animation-iteration-count: 1;
     transition-duration: 0.01ms;
+  }
+}
+
+/* =====================================================================
+   Shell compartilhado da area do funcionario.
+   Antes vivia em ponto.css (gated .employee-dashboard) e aplicava
+   tambem a Perfil/Historico porque as tres paginas carregam essa classe
+   no body. Movido aqui para desacoplar o shell do dashboard e permitir
+   que Perfil/Historico parem de importar ponto.css sem perder o shell.
+   ===================================================================== */
+
+/* Mobile (<768): header sticky com decoracao primaria + acento vermelho. */
+@media (max-width: 767px) {
+.employee-dashboard .employee-header {
+  position: relative;
+  min-height: 72px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  overflow: hidden;
+  border: 0;
+  border-top: 0;
+  border-bottom: 1px solid rgba(20, 80, 240, 0.09);
+  border-radius: 0 0 12px 12px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 5px 16px rgba(20, 80, 240, 0.075);
+}
+
+.employee-dashboard .employee-header::before {
+  content: "";
+  position: absolute;
+  top: -45px;
+  right: -18px;
+  width: 104px;
+  height: 62px;
+  border-radius: 0 0 0 54px;
+  background: var(--color-primary);
+  pointer-events: none;
+}
+
+.employee-dashboard .employee-header::after {
+  content: "";
+  position: absolute;
+  right: 17px;
+  bottom: 0;
+  width: 36px;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+.employee-dashboard .employee-identity,
+.employee-dashboard .employee-brand-frame {
+  position: relative;
+  z-index: 1;
+}
+
+.employee-dashboard .employee-avatar {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+  border: 2px solid var(--color-surface);
+  outline: 1px solid rgba(20, 80, 240, 0.14);
+  background: color-mix(in srgb, var(--color-primary) 7%, white);
+  box-shadow: 0 4px 12px rgba(20, 80, 240, 0.11);
+  font-size: 14px;
+}
+
+.employee-dashboard .employee-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.employee-dashboard .employee-role {
+  color: #737985;
+  font-size: 12px;
+}
+
+.employee-brand-frame {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  overflow: hidden;
+  border: 2px solid var(--color-primary);
+  border-bottom-color: var(--color-accent);
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 3px 10px rgba(20, 80, 240, 0.11);
+}
+
+.employee-dashboard .employee-brand-mark {
+  width: 36px;
+  height: 36px;
+}
+
+.employee-brand-copy,
+.employee-topbar,
+.employee-nav-label {
+  display: none;
+}
+
+.employee-dashboard .employee-main {
+  justify-content: flex-start;
+  padding-top: 18px;
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+}
+
+/* Os complementos da sidebar permanecem fora da navegação mobile. */
+.employee-dashboard .employee-sidebar-welcome,
+.employee-dashboard .employee-sidebar-logout {
+  display: none;
+}
+}
+
+.employee-brand-accent {
+  color: var(--color-accent);
+}
+
+/* Mobile muito estreito (<350): avatar e moldura colapsam um pouco mais. */
+@media (max-width: 350px) {
+  .employee-dashboard .employee-main {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .employee-dashboard .employee-header {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .employee-dashboard .employee-avatar {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .employee-brand-frame {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+
+  .employee-dashboard .employee-brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* Desktop/tablet (>=768): mesma arvore mobile assume a composicao
+   de sidebar + dashboard compartilhada entre Início, Perfil e Histórico. */
+@media (min-width: 768px) {
+  body.employee-area {
+    --employee-sidebar-width: clamp(300px, 19.5vw, 340px);
+    --employee-sidebar-header-height: 204px;
+    --employee-topbar-height: 88px;
+    --employee-content-max-width: 920px;
+    --employee-shell-border: color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+    --employee-card-surface:
+      linear-gradient(
+        145deg,
+        var(--color-surface) 0%,
+        color-mix(in srgb, var(--color-primary) 2.5%, var(--color-surface)) 100%
+      );
+    --employee-card-surface-raised:
+      linear-gradient(
+        145deg,
+        var(--color-surface) 0%,
+        color-mix(in srgb, var(--color-primary) 4%, var(--color-surface)) 100%
+      );
+    --employee-card-header-surface: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
+    --employee-card-border: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+    --employee-card-border-strong: color-mix(in srgb, var(--color-primary) 13%, var(--color-surface));
+    --employee-card-accent-border: color-mix(in srgb, var(--color-primary) 28%, var(--color-surface));
+    --employee-content-card-radius: 12px;
+    --employee-card-shadow:
+      0 1px 2px rgba(20, 20, 20, 0.04),
+      0 9px 24px rgba(32, 57, 104, 0.075);
+    --employee-card-shadow-raised:
+      0 2px 5px rgba(20, 20, 20, 0.045),
+      0 16px 34px rgba(32, 57, 104, 0.095);
+    --desktop-panel-border: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    --desktop-panel-radius: 14px;
+    --desktop-panel-shadow:
+      0 1px 2px rgba(20, 20, 20, 0.04),
+      0 12px 30px rgba(32, 57, 104, 0.08);
+    display: block;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: clip;
+    background: color-mix(in srgb, var(--color-primary) 4%, var(--color-bg));
+  }
+
+  body.employee-area::before {
+    background: url("/assets/img/background-desktop-employee.webp") center top / cover no-repeat;
+    opacity: 0.9;
+  }
+
+  .employee-dashboard .employee-shell {
+    z-index: 53;
+    width: calc(100% - var(--employee-sidebar-width));
+    max-width: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin: 0 0 0 var(--employee-sidebar-width);
+    padding: 0;
+    overflow: visible;
+    background: linear-gradient(180deg, rgba(20, 80, 240, 0.012), rgba(32, 57, 104, 0.035));
+    box-shadow: inset 1px 0 0 rgba(32, 57, 104, 0.055);
+  }
+
+  .employee-dashboard .employee-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 53;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: var(--employee-sidebar-width);
+    height: var(--employee-sidebar-header-height);
+    min-height: var(--employee-sidebar-header-height);
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-right: 1px solid var(--employee-shell-border);
+    border-radius: 0;
+    background: var(--color-surface);
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .employee-dashboard .employee-header::before {
+    content: "";
+    top: -45px;
+    right: -30px;
+    width: 116px;
+    height: 92px;
+    border-radius: 34% 0 52% 62% / 42% 0 58% 48%;
+    background: var(--color-primary);
+    box-shadow: inset -14px -12px 24px rgba(0, 42, 210, 0.18);
+    transform: rotate(9deg);
+  }
+
+  .employee-dashboard .employee-header::after {
+    content: "";
+    top: 25px;
+    right: auto;
+    bottom: auto;
+    left: 17px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--employee-accent-dot);
+    box-shadow: 0 3px 6px rgba(20, 20, 20, 0.18);
+  }
+
+  .employee-dashboard .employee-identity {
+    order: 2;
+    flex: 0 0 76px;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    width: auto;
+    min-height: 76px;
+    margin: 10px 18px 12px;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 11%, var(--color-surface));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-primary) 2.5%, var(--color-surface));
+    box-shadow: 0 6px 16px rgba(32, 57, 104, 0.055);
+    text-align: left;
+  }
+
+  .employee-dashboard .employee-identity-copy {
+    align-items: flex-start;
+    width: auto;
+  }
+
+  .employee-dashboard .employee-avatar {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-surface));
+    outline: 0;
+    background: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+    box-shadow: 0 5px 14px rgba(20, 80, 240, 0.075);
+    font-size: 16px;
+  }
+
+  .employee-dashboard .employee-name {
+    max-width: calc(var(--employee-sidebar-width) - 126px);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .employee-dashboard .employee-role {
+    width: auto;
+    margin-top: 3px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+  }
+
+  .employee-dashboard .employee-brand-frame {
+    order: 1;
+    display: flex;
+    place-items: initial;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    height: 106px;
+    flex: 0 0 106px;
+    gap: 13px;
+    padding: 20px 24px;
+    overflow: hidden;
+    border: 0;
+    border-bottom: 1px solid var(--employee-shell-border);
+    border-radius: 0;
+    background: var(--color-surface);
+    box-shadow: none;
+  }
+
+  .employee-dashboard .employee-brand-mark {
+    width: 58px;
+    height: 58px;
+    flex: 0 0 58px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .employee-dashboard .employee-brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .employee-dashboard .employee-brand-name {
+    color: var(--color-text);
+    font-size: 21px;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .employee-dashboard .employee-brand-subtitle {
+    margin-top: 4px;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 52;
+    display: block;
+    width: var(--employee-sidebar-width);
+    height: 100vh;
+    height: 100dvh;
+    padding: var(--employee-sidebar-header-height) 20px 16px;
+    border: 0;
+    border-right: 1px solid var(--employee-shell-border);
+    background: var(--color-surface);
+    box-shadow: 5px 0 24px rgba(32, 57, 104, 0.055);
+    backdrop-filter: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    gap: 2px;
+    padding: 18px 0 0;
+    border-top: 0;
+  }
+
+  body.employee-area.employee-dashboard .employee-nav-label {
+    display: block;
+    margin-bottom: 8px;
+    padding: 0 6px;
+    border-bottom: 0;
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  body.employee-area.employee-dashboard .employee-nav-label::before {
+    content: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-nav-label::after {
+    content: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link {
+    position: relative;
+    flex: 0 0 auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    min-height: 48px;
+    margin-bottom: 2px;
+    padding: 12px 14px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+    color: color-mix(in srgb, var(--color-text) 78%, var(--color-surface));
+    font-size: 14px;
+    font-weight: 500;
+    transition:
+      background var(--transition),
+      border-color var(--transition),
+      color var(--transition),
+      box-shadow var(--transition);
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link > span {
+    position: relative;
+    z-index: 1;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link > span:last-child {
+    letter-spacing: -0.005em;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:hover:not(.active) {
+    background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface));
+    border-color: transparent;
+    box-shadow: none;
+    color: var(--color-text);
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active {
+    border-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+    border-right-color: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+    border-bottom-color: color-mix(in srgb, var(--color-accent) 18%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-primary) 6%, var(--color-surface));
+    box-shadow: 0 7px 18px rgba(20, 80, 240, 0.06);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active::before {
+    content: "";
+    position: absolute;
+    top: 9px;
+    bottom: 9px;
+    left: 0;
+    width: 3px;
+    border-radius: 0 999px 999px 0;
+    background: var(--color-primary);
+    box-shadow: 2px 0 7px rgba(20, 80, 240, 0.18);
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active::after {
+    content: "";
+    position: absolute;
+    right: -14px;
+    bottom: -17px;
+    width: 52px;
+    height: 34px;
+    border-radius: 62% 0 0 0 / 72% 0 0 0;
+    background: var(--color-accent);
+    transform: rotate(-10deg);
+    pointer-events: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-icon,
+  body.employee-area.employee-dashboard .employee-bottom-nav-icon img {
+    width: 18px;
+    height: 18px;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-icon {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:hover:not(.active) .employee-bottom-nav-icon {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link.active .employee-bottom-nav-icon {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:not(.active) img {
+    filter: brightness(0) saturate(100%);
+    opacity: 0.72;
+    transition: filter var(--transition), opacity var(--transition);
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:hover:not(.active) img {
+    opacity: 0.9;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:active:not(.active) {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    box-shadow: none;
+  }
+
+  body.employee-area.employee-dashboard .employee-bottom-nav-link:focus-visible {
+    outline-offset: 2px;
+    border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-surface));
+    box-shadow: none;
+  }
+
+  .employee-dashboard .employee-sidebar-welcome {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    margin-top: auto;
+    margin-right: 0;
+    margin-left: 0;
+    padding: 15px 16px 14px;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+    border-right-color: color-mix(in srgb, var(--color-accent) 11%, var(--color-surface));
+    border-bottom-color: color-mix(in srgb, var(--color-accent) 13%, var(--color-surface));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--color-primary) 3.5%, var(--color-surface));
+    box-shadow: 0 9px 22px rgba(32, 57, 104, 0.065);
+  }
+
+  .employee-dashboard .employee-sidebar-welcome::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 12px;
+    right: 13px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow:
+      0 0 0 4px rgba(20, 80, 240, 0.06),
+      0 3px 6px rgba(32, 57, 104, 0.14);
+  }
+
+  .employee-dashboard .employee-sidebar-welcome::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    right: -14px;
+    bottom: -17px;
+    width: 38px;
+    height: 26px;
+    border-radius: 62% 0 0 0 / 72% 0 0 0;
+    background: color-mix(in srgb, var(--color-accent) 86%, var(--color-surface));
+    transform: rotate(-10deg);
+  }
+
+  .employee-dashboard .employee-sidebar-welcome-title {
+    position: relative;
+    z-index: 1;
+    display: block;
+    padding-right: 4px;
+    color: var(--color-text);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .employee-dashboard .employee-sidebar-welcome-title span {
+    color: var(--color-primary);
+  }
+
+  .employee-dashboard .employee-sidebar-welcome p {
+    position: relative;
+    z-index: 1;
+    max-width: 230px;
+    margin: 4px 10px 0 0;
+    color: var(--color-text-muted);
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+
+  .employee-dashboard .employee-sidebar-logout {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 52px;
+    gap: 11px;
+    margin: 8px 0 0;
+    padding: 10px 12px;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--color-primary) 3%, var(--color-surface));
+    box-shadow: 0 5px 14px rgba(32, 57, 104, 0.045);
+    color: color-mix(in srgb, var(--color-text) 78%, var(--color-surface));
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background var(--transition),
+      border-color var(--transition),
+      color var(--transition),
+      box-shadow var(--transition);
+  }
+
+  .employee-dashboard .employee-sidebar-logout:hover {
+    border-color: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+    box-shadow:
+      inset 3px 0 0 color-mix(in srgb, var(--color-accent) 68%, var(--color-surface)),
+      0 6px 16px rgba(32, 57, 104, 0.055);
+    color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
+  }
+
+  .employee-dashboard .employee-sidebar-logout:hover .employee-bottom-nav-icon {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--color-accent) 11%, var(--color-surface));
+    box-shadow: none;
+  }
+
+  .employee-dashboard .employee-sidebar-logout .employee-bottom-nav-icon {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-color: transparent;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+    box-shadow: none;
+    opacity: 1;
+    transition: background var(--transition);
+  }
+
+  .employee-dashboard .employee-sidebar-logout .employee-bottom-nav-icon img {
+    opacity: 0.66;
+    transition: opacity var(--transition);
+  }
+
+  .employee-dashboard .employee-sidebar-logout:hover .employee-bottom-nav-icon img {
+    opacity: 0.9;
+  }
+
+  .employee-dashboard .employee-sidebar-logout:active {
+    border-color: color-mix(in srgb, var(--color-accent) 20%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+    box-shadow: inset 3px 0 0 var(--color-accent);
+  }
+
+  .employee-dashboard .employee-sidebar-logout:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-primary) 58%, var(--color-surface));
+    outline-offset: 2px;
+    border-color: color-mix(in srgb, var(--color-primary) 22%, var(--color-surface));
+    background: color-mix(in srgb, var(--color-primary) 5%, var(--color-surface));
+    box-shadow:
+      inset 3px 0 0 var(--color-primary),
+      0 5px 14px rgba(32, 57, 104, 0.055);
+  }
+
+  .employee-dashboard .employee-sidebar-logout:focus-visible .employee-bottom-nav-icon {
+    background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface));
+  }
+
+  .employee-dashboard .employee-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: var(--employee-topbar-height);
+    padding-inline: 38px;
+    overflow: hidden;
+    isolation: isolate;
+    border-bottom: 1px solid var(--employee-shell-border);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.82),
+      0 5px 22px rgba(32, 57, 104, 0.065);
+    backdrop-filter: blur(16px) saturate(1.08);
+  }
+
+  .employee-dashboard .employee-topbar::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: -55px;
+    right: -28px;
+    width: 170px;
+    height: 118px;
+    border-radius: 34% 0 42% 58% / 48% 0 60% 46%;
+    background: var(--color-accent);
+    box-shadow: inset 15px -12px 28px rgba(167, 0, 0, 0.13);
+    transform: rotate(7deg);
+    pointer-events: none;
+  }
+
+  .employee-dashboard .employee-topbar::after {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    bottom: 21px;
+    left: 24px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 28%, #b6caff 0, #4f83fa 38%, var(--color-primary) 68%, #0a2b7a 100%);
+    box-shadow: 0 5px 9px rgba(20, 20, 20, 0.22);
+    pointer-events: none;
+  }
+
+  .employee-dashboard .employee-topbar-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 0;
+    color: var(--color-text-muted);
+    font-size: 13px;
+  }
+
+  .employee-dashboard .employee-topbar-breadcrumb strong {
+    color: var(--color-text);
+    font-weight: 700;
+  }
+
+  .employee-dashboard .employee-topbar-separator {
+    color: color-mix(in srgb, var(--color-text) 18%, var(--color-bg));
+  }
+
+  .employee-dashboard .employee-topbar-context {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid var(--employee-shell-border);
+    border-radius: var(--radius-card);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 3px 10px rgba(32, 57, 104, 0.045);
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .employee-dashboard .employee-topbar-context img {
+    width: 18px;
+    height: 18px;
+    filter: brightness(0) saturate(100%);
+    opacity: 0.62;
+  }
+
+  .employee-dashboard .employee-main {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: calc(100vh - var(--employee-topbar-height));
+    min-height: calc(100dvh - var(--employee-topbar-height));
+    padding: 30px 38px 42px;
+    background:
+      radial-gradient(ellipse at 50% 16%, rgba(255, 255, 255, 0.14), transparent 62%),
+      linear-gradient(180deg, rgba(20, 80, 240, 0.01), rgba(32, 57, 104, 0.035));
+    box-shadow:
+      inset 12px 0 28px rgba(32, 57, 104, 0.035),
+      inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  }
+
+}
+
+/* Topbar desktop ganha respiro lateral em telas muito largas (>=1200). */
+@media (min-width: 1200px) {
+  .employee-dashboard .employee-topbar {
+    padding-right: 148px;
   }
 }

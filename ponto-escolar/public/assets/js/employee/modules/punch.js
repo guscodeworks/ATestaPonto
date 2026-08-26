@@ -1,6 +1,13 @@
 'use strict';
 
 const funcionarioToken = sessionStorage.getItem('funcionario_token');
+const {
+  getElement,
+  obterIniciais,
+  formatarCargo,
+  formatarHorario,
+  limparSessaoFuncionario
+} = window.FuncionarioShared;
 
 if (!funcionarioToken) {
   window.location.href = '/login';
@@ -118,38 +125,8 @@ class ApiError extends Error {
   }
 }
 
-function getElement(id) {
-  return document.getElementById(id);
-}
-
 function aguardar(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function getInitials(nome) {
-  return String(nome || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((parte) => parte[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase() || 'FN';
-}
-
-function formatarCargo(cargo) {
-  const cargos = {
-    FUNCIONARIO: 'Funcionário(a)',
-    INSPETOR: 'Inspetor(a)',
-    PROFESSOR: 'Professor(a)'
-  };
-  const normalizado = String(cargo || '').trim().toUpperCase();
-  return cargos[normalizado] || normalizado || '—';
-}
-
-function formatarHorario(horario) {
-  const valor = String(horario || '').trim();
-  return /^\d{2}:\d{2}(?::\d{2})?$/.test(valor) ? valor.slice(0, 5) : '--:--';
 }
 
 function validarContratoHoje(data) {
@@ -321,8 +298,8 @@ function mostrarSkeleton() {
 
 function renderFuncionario(funcionario) {
   const nome = funcionario.nome.trim();
-  const cargo = formatarCargo(funcionario.cargo);
-  const iniciais = getInitials(nome);
+  const cargo = formatarCargo(funcionario.cargo, '—');
+  const iniciais = obterIniciais(nome, 'FN');
 
   getElement('tp-avatar').textContent = iniciais;
   getElement('hero-name').textContent = nome;
@@ -371,7 +348,7 @@ function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
 
   const time = document.createElement('time');
   time.className = 'journey-step-time';
-  time.textContent = atual ? 'agora' : formatarHorario(horarioRegistrado || jornada[etapa.campo]);
+  time.textContent = atual ? 'agora' : formatarHorario(horarioRegistrado || jornada[etapa.campo], '--:--');
 
   item.append(marker, label, state, time);
   return item;
@@ -487,13 +464,13 @@ function renderEstado() {
   });
 
   const descricaoPorTipo = {
-    ENTRADA: 'Entrada prevista para',
-    SAIDA_ALMOCO: 'Almoço previsto para',
-    RETORNO_ALMOCO: 'Retorno previsto para',
-    SAIDA: 'Saída prevista para'
+    ENTRADA: 'Entrada prevista',
+    SAIDA_ALMOCO: 'Almoço previsto',
+    RETORNO_ALMOCO: 'Retorno previsto',
+    SAIDA: 'Saída prevista'
   };
   nextLabel.textContent = descricaoPorTipo[proximaBatida];
-  nextTime.textContent = formatarHorario(estadoHoje.jornada[etapa.campo]);
+  nextTime.textContent = formatarHorario(estadoHoje.jornada[etapa.campo], '--:--');
 }
 
 function renderHoje(data) {
@@ -628,7 +605,7 @@ function mostrarConfirmacaoRegistro() {
 
   aplicarEstadoConfirmacao(etapa.tipo);
   getElement('confirm-title').textContent = etapa.confirmacao;
-  getElement('confirm-time').textContent = formatarHorario(estadoHoje.jornada[etapa.campo]);
+  getElement('confirm-time').textContent = formatarHorario(estadoHoje.jornada[etapa.campo], '--:--');
   getElement('confirm-sub').textContent = 'Sua localização será verificada.';
   getElement('confirm-icon').src = etapa.asset;
   definirDialogOcupado(false);
@@ -866,10 +843,7 @@ function toast(msg, tipo = 'info') {
 }
 
 function sair() {
-  sessionStorage.removeItem('funcionario_token');
-  sessionStorage.removeItem('funcionario_data');
-  sessionStorage.removeItem('func_nome');
-  sessionStorage.removeItem('func_cpf');
+  limparSessaoFuncionario();
   window.location.href = '/login';
 }
 
