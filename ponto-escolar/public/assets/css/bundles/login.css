@@ -354,13 +354,12 @@ body {
 }
 
 html {
-  min-width: 280px;
   scroll-padding-bottom: 120px;
   background: #fff;
 }
 
 body {
-  overflow-x: clip;
+  overflow-x: hidden;
   color: var(--login-black);
   background: #fff;
   font-family: var(--font-main), Arial, sans-serif;
@@ -1048,15 +1047,31 @@ form {
    para caber em telas de celular (~700–850px) sem scroll excessivo.
    Mesma linha visual do desktop: borda sutil, sombra leve, espaçamento enxuto. */
 @media (max-width: 767px) {
+  html,
+  body {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   .login-page {
     display: grid;
     place-items: center;
+    height: 100vh;
+    height: 100svh;
+    min-height: 0;
+    max-height: 100svh;
+    max-width: 100%;
     padding: clamp(16px, 4vh, 28px) clamp(20px, 6vw, 28px);
-    overflow: visible;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .login-panel {
     width: min(100%, 440px);
+    max-width: 100%;
+    min-width: 0;
     min-height: 0;
     padding: clamp(22px, 4vh, 32px) clamp(20px, 6vw, 28px);
     border: 1px solid rgba(20, 20, 20, 0.08);
@@ -1176,6 +1191,107 @@ form {
 
   .btn-login:focus-visible {
     box-shadow: 0 0 0 3px rgba(20, 80, 240, 0.3);
+  }
+}
+
+/* Evita que as ações do formulário excedam a largura em celulares compactos. */
+@media (max-width: 360px) {
+  .login-page {
+    padding-inline: 12px;
+  }
+
+  .login-panel {
+    padding-inline: 16px;
+  }
+
+  .login-form-panel,
+  form,
+  .form-field,
+  .input-wrap,
+  .form-meta,
+  .field-input {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .form-meta {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .form-link {
+    justify-content: center;
+  }
+}
+
+/* Mantém todo o formulário visível em aparelhos compactos, como 320 × 568. */
+@media (max-width: 767px) and (max-height: 600px) {
+  .login-page {
+    height: 100dvh;
+    min-height: 100dvh;
+    padding-block: 8px;
+    overflow: hidden;
+  }
+
+  .login-panel {
+    padding-block: 12px;
+    transform: scale(0.88);
+    transform-origin: center;
+  }
+
+  .login-brand-symbol {
+    width: 46px;
+    margin-bottom: 2px;
+  }
+
+  .login-form-panel > header {
+    margin-bottom: 8px;
+  }
+
+  .login-heading {
+    margin-top: 4px;
+    font-size: 23px;
+  }
+
+  .login-sub {
+    margin-top: 2px;
+  }
+
+  form {
+    gap: 8px;
+  }
+
+  .form-field {
+    gap: 4px;
+  }
+
+  .field-input {
+    height: 44px;
+    min-height: 44px;
+  }
+
+  .toggle-pw {
+    height: 40px;
+  }
+
+  .field-error {
+    display: none;
+    min-height: 0;
+  }
+
+  .field-error.visible {
+    display: block;
+  }
+
+  .form-remember,
+  .form-link {
+    min-height: 36px;
+  }
+
+  .btn-login {
+    height: 44px;
+    min-height: 44px;
   }
 }
 
