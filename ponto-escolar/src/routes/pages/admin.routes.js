@@ -14,16 +14,16 @@ function redirectTo(path) {
 function createAdminPagesRouter({ sendView }) {
   const router = Router();
   const dashboardPage = renderAdminView(sendView, "admin/dashboard.html");
-  const funcionariosPage = renderAdminView(sendView, "admin/funcionarios.html");
+  const funcionariosPage = renderAdminView(sendView, "admin/employees.html");
   const registrarFuncionarioPage = renderAdminView(
     sendView,
-    "admin/registrar-funcionario.html"
+    "admin/register-employee.html"
   );
-  const pontosPage = renderAdminView(sendView, "admin/pontos-do-dia.html");
-  const relatoriosPage = renderAdminView(sendView, "admin/relatorios.html");
+  const pontosPage = renderAdminView(sendView, "admin/daily-points.html");
+  const relatoriosPage = renderAdminView(sendView, "admin/reports.html");
   const configuracoesPage = renderAdminView(
     sendView,
-    "admin/configuracoes.html"
+    "admin/settings.html"
   );
 
   // Login/logout de admin não têm view própria: o fluxo real é delegado ao

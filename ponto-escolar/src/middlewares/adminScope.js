@@ -1,8 +1,8 @@
 "use strict";
 
 const { ForbiddenError } = require("../utils/errors");
-const vinculoModel = require("../models/vinculoModel");
-const unidadeEscolarModel = require("../models/unidadeEscolarModel");
+const employmentLinkModel = require("../models/employmentLinkModel");
+const schoolUnitModel = require("../models/schoolUnitModel");
 
 // Escopo por perfil: só este módulo interpreta perfis; demais camadas recebem ids ou null (SEDUC).
 
@@ -125,7 +125,7 @@ function buildEscopo(acessos) {
 }
 
 // Checagem pura de escopo por diretoria/unidade. SEDUC sempre passa; só-unidade exige expandirUnidadesPermitidas.
-function recursoNoEscopo(escopo, { diretoriaEnsinoId, unidadeEscolarId } = {}) {
+function recursoNoEscopo(escopo, { educationDepartmentId, schoolUnitId } = {}) {
   if (!escopo || !escopo.temAcesso) {
     return false;
   }
@@ -133,14 +133,14 @@ function recursoNoEscopo(escopo, { diretoriaEnsinoId, unidadeEscolarId } = {}) {
     return true;
   }
 
-  const unidadeId = Number(unidadeEscolarId);
+  const unidadeId = Number(schoolUnitId);
   if (Number.isInteger(unidadeId) && unidadeId > 0) {
     if (escopo.unidadesPermitidas.has(unidadeId)) {
       return true;
     }
   }
 
-  const diretoriaId = Number(diretoriaEnsinoId);
+  const diretoriaId = Number(educationDepartmentId);
   if (Number.isInteger(diretoriaId) && diretoriaId > 0) {
     if (escopo.diretoriasPermitidas.has(diretoriaId)) {
       return true;
@@ -163,7 +163,7 @@ async function expandirUnidadesPermitidas(escopo) {
 
   for (const diretoriaId of escopo.diretoriasPermitidas) {
     try {
-      const unidades = await unidadeEscolarModel.findByDiretoriaId(diretoriaId);
+      const unidades = await schoolUnitModel.findByDiretoriaId(diretoriaId);
       for (const unidade of unidades || []) {
         if (unidade && Number.isInteger(Number(unidade.id))) {
           permitidas.add(Number(unidade.id));
@@ -224,7 +224,7 @@ function restringirEscopoFuncionario(paramName = "id") {
 
     let vinculo;
     try {
-      vinculo = await vinculoModel.findActiveByFuncionarioIdWithDetails(
+      vinculo = await employmentLinkModel.findActiveByFuncionarioIdWithDetails(
         funcionarioId
       );
     } catch (error) {
@@ -242,8 +242,8 @@ function restringirEscopoFuncionario(paramName = "id") {
     }
 
     const autorizado = recursoNoEscopo(escopo, {
-      unidadeEscolarId: vinculo.unidade_escolar_id,
-      diretoriaEnsinoId: vinculo.diretoria_ensino_id,
+      schoolUnitId: vinculo.unidade_escolar_id,
+      educationDepartmentId: vinculo.diretoria_ensino_id,
     });
 
     if (!autorizado) {
@@ -278,7 +278,7 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
 
     let unidade;
     try {
-      unidade = await unidadeEscolarModel.findById(unidadeId);
+      unidade = await schoolUnitModel.findById(unidadeId);
     } catch (error) {
       return next(
         new ForbiddenError("Falha ao validar escopo da unidade escolar")
@@ -290,8 +290,8 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
     }
 
     const autorizado = recursoNoEscopo(escopo, {
-      unidadeEscolarId: unidade.id,
-      diretoriaEnsinoId: unidade.diretoria_ensino_id,
+      schoolUnitId: unidade.id,
+      educationDepartmentId: unidade.diretoria_ensino_id,
     });
 
     if (!autorizado) {
@@ -327,7 +327,7 @@ function restringirEscopoFuncionarioReativacao(paramName = "id") {
 
     let vinculo;
     try {
-      vinculo = await vinculoModel.findLatestByFuncionarioIdWithDetails(
+      vinculo = await employmentLinkModel.findLatestByFuncionarioIdWithDetails(
         funcionarioId
       );
     } catch (error) {
@@ -345,8 +345,8 @@ function restringirEscopoFuncionarioReativacao(paramName = "id") {
     }
 
     const autorizado = recursoNoEscopo(escopo, {
-      unidadeEscolarId: vinculo.unidade_escolar_id,
-      diretoriaEnsinoId: vinculo.diretoria_ensino_id,
+      schoolUnitId: vinculo.unidade_escolar_id,
+      educationDepartmentId: vinculo.diretoria_ensino_id,
     });
 
     if (!autorizado) {

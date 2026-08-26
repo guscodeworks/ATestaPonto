@@ -126,6 +126,15 @@ async function findForPunchDashboardById(employeeId) {
 }
 
 async function findForPunchLoginByCpf(cpf) {
+  // A base antiga guarda o hash em funcionarios/login. Mantemos a leitura
+  // enquanto a migração completa para login_funcionario não foi executada.
+  if (!(await hasModernLoginTable())) {
+    return database.executeOne(
+      "SELECT f.id, f.cpf, f.nome, f.email, COALESCE(l.senha, f.senha) AS senha_hash, f.primeiro_acesso, f.ativo FROM funcionarios f LEFT JOIN login l ON l.id = f.login_id WHERE f.cpf = ? AND f.ativo = 1 LIMIT 1",
+      [cpf]
+    );
+  }
+
   return database.executeOne(
     "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
     [cpf]
@@ -133,9 +142,53 @@ async function findForPunchLoginByCpf(cpf) {
 }
 
 async function findForPunchLoginByEmail(email) {
+  if (!(await hasModernLoginTable())) {
+    return database.executeOne(
+      "SELECT f.id, f.cpf, f.nome, f.email, COALESCE(l.senha, f.senha) AS senha_hash, f.primeiro_acesso, f.ativo FROM funcionarios f LEFT JOIN login l ON l.id = f.login_id WHERE f.email = ? AND f.ativo = 1 LIMIT 1",
+      [email]
+    );
+  }
+
   return database.executeOne(
     "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.email = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
     [email]
+  );
+}
+
+async function hasModernLoginTable() {
+  const table = await database.executeOne(
+    "SELECT 1 AS found FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'login_funcionario' LIMIT 1"
+  );
+  return Boolean(table);
+}
+
+// Dados mínimos para recuperação de senha. Aceita o schema atual e o schema
+// local legado, para não bloquear quem ainda está usando a base anterior.
+async function findForPasswordRecoveryByCpf(cpf) {
+  if (!(await hasModernLoginTable())) {
+    return database.executeOne(
+      "SELECT id, nome, email, senha AS senha_hash FROM funcionarios WHERE cpf = ? AND ativo = 1 LIMIT 1",
+      [cpf]
+    );
+  }
+
+  return database.executeOne(
+    "SELECT f.id, f.nome, f.email, lf.senha_hash FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 LIMIT 1",
+    [cpf]
+  );
+}
+
+async function updatePasswordForRecovery(funcionarioId, senhaHash) {
+  if (!(await hasModernLoginTable())) {
+    return database.execute(
+      "UPDATE funcionarios f LEFT JOIN login l ON l.id = f.login_id SET f.senha = ?, l.senha = ?, f.primeiro_acesso = 0, f.atualizado_em = CURRENT_TIMESTAMP WHERE f.id = ? AND f.ativo = 1",
+      [senhaHash, senhaHash, funcionarioId]
+    );
+  }
+
+  return database.execute(
+    "UPDATE login_funcionario SET senha_hash = ?, senha_alterada_em = CURRENT_TIMESTAMP, senha_temporaria_expira_em = NULL, primeiro_acesso = FALSE WHERE funcionario_id = ?",
+    [senhaHash, funcionarioId]
   );
 }
 
@@ -202,7 +255,7 @@ async function createEmployee(
   client,
   { cargoId, cpf, email, nome, telefone = null, ativo }
 ) {
-  void cargoId; // cargo_id migrou para vinculos_funcionais (ver vinculoModel).
+  void cargoId; // cargo_id migrou para vinculos_funcionais (ver employmentLinkModel).
   return getClient(client).execute(
     "INSERT INTO funcionarios (cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?)",
     [cpf, email, nome, telefone, ativo ? 1 : 0]
@@ -280,6 +333,9 @@ module.exports = {
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
   findForPunchLoginByEmail,
+  hasModernLoginTable,
+  findForPasswordRecoveryByCpf,
+  updatePasswordForRecovery,
   findByCpfForUpdate,
   findByEmailForUpdate,
   findCpfConflictForUpdate,

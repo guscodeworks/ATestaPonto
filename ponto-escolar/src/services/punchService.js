@@ -6,8 +6,8 @@ const env = require("../config/env");
 const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
 const pointModel = require("../models/pointModel");
-const vinculoModel = require("../models/vinculoModel");
-const unidadeEscolarModel = require("../models/unidadeEscolarModel");
+const employmentLinkModel = require("../models/employmentLinkModel");
+const schoolUnitModel = require("../models/schoolUnitModel");
 const { isWithinRadius } = require("../utils/location");
 const { isValidCpf, maskCpf, normalizeCpf } = require("../utils/cpf");
 const {
@@ -53,12 +53,12 @@ function getSaoPauloDateTime(referenceDate = new Date()) {
 
 // Geolocalização da unidade do vínculo ativo (fail-fast, fora da transação).
 async function resolveUnidadeGeolocation(funcionarioId) {
-  const vinculo = await vinculoModel.findActiveByFuncionarioId(funcionarioId);
+  const vinculo = await employmentLinkModel.findActiveByFuncionarioId(funcionarioId);
   if (!vinculo) {
     throw new NotFoundError("Funcionario sem vinculo ativo");
   }
 
-  const geolocation = await unidadeEscolarModel.findGeolocationByVinculo(
+  const geolocation = await schoolUnitModel.findGeolocationByVinculo(
     vinculo.id
   );
   if (!geolocation) {
@@ -375,19 +375,23 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
   // vínculo não tem jornada nem geolocalização: rejeita aqui p/ não emitir um
   // token que só falharia tardiamente no ponto/dashboard. ANTES de gravar
   // ultimo_login_em (não marca sessão inválida como login bem-sucedido).
-  const vinculoAtivo = await vinculoModel.findActiveByFuncionarioId(
-    funcionario.id
-  );
-  if (!vinculoAtivo) {
-    await registerAuditLog({
-      evento: "funcionario_login_invalido",
-      nivel: "WARN",
-      mensagem: "Tentativa de login de funcionario sem vinculo ativo",
-      ipOrigem,
-      metadados: { login: login.auditLogin },
-    });
-    await waitForFailedLoginDelay();
-    throw new UnauthorizedError("CPF/email ou senha invalidos");
+  // O banco legado não possui vínculos funcionais. Nele, a flag ativo do
+  // funcionário já é a regra disponível para autorizar o acesso.
+  if (await employeeModel.hasModernLoginTable()) {
+    const vinculoAtivo = await employmentLinkModel.findActiveByFuncionarioId(
+      funcionario.id
+    );
+    if (!vinculoAtivo) {
+      await registerAuditLog({
+        evento: "funcionario_login_invalido",
+        nivel: "WARN",
+        mensagem: "Tentativa de login de funcionario sem vinculo ativo",
+        ipOrigem,
+        metadados: { login: login.auditLogin },
+      });
+      await waitForFailedLoginDelay();
+      throw new UnauthorizedError("CPF/email ou senha invalidos");
+    }
   }
 
   await loginModel.updateLastLogin(funcionario.id);
@@ -459,7 +463,7 @@ async function registerPunch(
 
       // Reconfirma e trava o vínculo DENTRO da tx (o FOR UPDATE aqui evita a
       // corrida; a leitura fora da tx era só fail-fast de geolocation).
-      const vinculo = await vinculoModel.findActiveByFuncionarioIdForUpdate(
+      const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
         tx,
         funcionarioId
       );

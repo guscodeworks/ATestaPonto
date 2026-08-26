@@ -30,3 +30,51 @@
   /* Transição padrão */
   --transition:    0.18s ease;
 }
+
+/* Dashboard desktop do funcionário (.ponto-dashboard-dt): REUSO do design
+   system do dashboard ADMIN (mesmo design system da área do funcionário, per
+   admin/base.css). Não importamos admin.css (arrastaria o layout fixed .app-
+   sidebar/topbar e brigaria com o .employee-shell); em vez disso, reproduzimos
+   aqui a CAMADA DE ALIASES de tokens que os componentes admin consomem, na
+   MESMA paleta --color-* do projeto — escopo LOCAL p/ não vazar no sistema
+   --text-* legado de css/style/*.
+   Fontes: admin/base.css :root (alias layer) + admin/visual-identity.css
+   (--admin-border/--admin-shadow). Os 7 tokens visuais do bloco (--fill-accent
+   etc., usados inline no HTML) são re-resolvidos p/ essas alias admin. */
+.ponto-dashboard-dt {
+  /* alias admin (admin/base.css) — resolvidos na paleta --color-* */
+  --bg-base:        var(--color-bg);
+  --bg-surface:     var(--color-surface);
+  --text-900:       var(--color-text);
+  --text-700:       color-mix(in srgb, var(--color-text) 82%, var(--color-bg));
+  --text-500:       color-mix(in srgb, var(--color-text) 62%, var(--color-bg));
+  --text-300:       color-mix(in srgb, var(--color-text) 42%, var(--color-bg));
+  --border-light:   color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+  --border-medium:  color-mix(in srgb, var(--color-text) 18%, var(--color-bg));
+  --r-lg:           16px;
+  --r-full:         9999px;
+  --radius-card:    10px;            /* admin override do card (admin.css general) */
+  --radius-btn:     8px;
+  --shadow-sm:      0 1px 3px rgba(20,20,20,0.08), 0 1px 2px rgba(20,20,20,0.04);
+  --shadow-md:      0 4px 12px rgba(20,20,20,0.1), 0 2px 4px rgba(20,20,20,0.05);
+  --font-mono:      'Consolas', 'Courier New', monospace;
+  --ease-fast:      120ms cubic-bezier(.4,0,.2,1);
+  --ease-default:   220ms cubic-bezier(.4,0,.2,1);
+  /* visual-identity.css (admin) */
+  --admin-border:   #E4E9F3;
+  --admin-muted:    #7181A1;
+  --admin-shadow:   0 8px 24px rgba(32, 57, 104, 0.06);
+
+  /* tokens visuais do bloco (inline no HTML) re-resolvidos p/ a alias admin:
+     --surface-2 vira surface admin, --border vira --admin-border, sombras via
+     --admin-shadow; --fill-accent conserva o gradiente do botão Entrar do login
+     (azul→preto→vermelho) herdado do passo anterior — não é estilo novo. */
+  --fill-accent:     linear-gradient(135deg, var(--color-primary) 0%, var(--color-text) 46%, var(--color-text) 54%, var(--color-accent) 100%);
+  --on-accent:       #ffffff;
+  --text-accent:     var(--color-primary);
+  --surface-2:       var(--bg-surface);
+  --border:          var(--admin-border);
+  --text-secondary:  var(--text-700);
+  --text-muted:      var(--text-500);
+}
+

@@ -221,7 +221,7 @@ app.use(createPagesRouter({ sendView }));
 app.use("/ponto", punchRoutes);
 app.use("/api/admin", adminSessionMiddleware);
 app.use("/api", apiRoutes);
-app.use(notFoundMiddleware);
+app.use(notFoundMiddleware({ viewsRoot, noCacheHtmlHeaders }));
 app.use(errorMiddleware);
 
 module.exports = app;

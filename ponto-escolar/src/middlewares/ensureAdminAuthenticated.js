@@ -1,6 +1,6 @@
 "use strict";
 
-const usuarioAdministrativoModel = require("../models/usuarioAdministrativoModel");
+const adminUserModel = require("../models/adminUserModel");
 
 /**
  * Protege paginas admin: Gov.br autentica, ATestaPonto autoriza.
@@ -18,7 +18,7 @@ function ensureAdminAuthenticated(req, res, next) {
   }
 
   // Busca o administrativo real no banco para validar se ainda existe e esta ativo
-  usuarioAdministrativoModel
+  adminUserModel
     .findById(adminSession.id)
     .then((adminFromDb) => {
       if (!adminFromDb) {
@@ -30,7 +30,7 @@ function ensureAdminAuthenticated(req, res, next) {
       }
 
       // Admin válido - busca seus acessos ativos
-      return usuarioAdministrativoModel
+      return adminUserModel
         .findAcessosAtivosPorUsuario(adminFromDb.id)
         .then((acessos) => {
           // Admin válido - define req.user com dados reais do banco.

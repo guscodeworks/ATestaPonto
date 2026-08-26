@@ -2,7 +2,7 @@
 
 const employeeModel = require("../models/employeeModel");
 const pointModel = require("../models/pointModel");
-const vinculoModel = require("../models/vinculoModel");
+const employmentLinkModel = require("../models/employmentLinkModel");
 const { maskCpf } = require("../utils/cpf");
 const {
   EMPTY_PUNCH_TIME,
@@ -122,7 +122,7 @@ async function resolveVinculoToFuncionario(vinculoIds) {
   const uniqueIds = [...new Set(vinculoIds.map(Number).filter(Number.isInteger))];
   const byVinculo = new Map();
   for (const vinculoId of uniqueIds) {
-    const vinculo = await vinculoModel.getById(vinculoId);
+    const vinculo = await employmentLinkModel.getById(vinculoId);
     if (vinculo) {
       byVinculo.set(vinculoId, Number(vinculo.funcionario_id));
     }

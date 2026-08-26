@@ -1,7 +1,7 @@
 "use strict";
 
 const { ForbiddenError, UnauthorizedError } = require("../utils/errors");
-const usuarioAdministrativoModel = require("../models/usuarioAdministrativoModel");
+const adminUserModel = require("../models/adminUserModel");
 
 /**
  * Protege APIs administrativas com sessao Gov.br e autorizacao interna.
@@ -21,7 +21,7 @@ function ensureAdminApiAuthenticated(req, _res, next) {
   }
 
   // Busca o administrativo real no banco para validar se ainda existe e esta ativo
-  usuarioAdministrativoModel
+  adminUserModel
     .findById(adminSession.id)
     .then((adminFromDb) => {
       if (!adminFromDb) {
@@ -37,7 +37,7 @@ function ensureAdminApiAuthenticated(req, _res, next) {
       }
 
       // Admin válido - busca seus acessos ativos
-      return usuarioAdministrativoModel
+      return adminUserModel
         .findAcessosAtivosPorUsuario(adminFromDb.id)
         .then((acessos) => {
           // Admin válido - define req.user e req.auth com dados reais do banco.
