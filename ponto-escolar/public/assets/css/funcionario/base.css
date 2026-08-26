@@ -27,7 +27,7 @@ body.employee-area {
   position: relative;
   isolation: isolate;
   min-width: 320px;
-  min-height: 100dvh;
+  min-height: 100svh;
   overflow-x: hidden;
   background: transparent;
   color: var(--color-text);
@@ -104,7 +104,7 @@ body.employee-area::before {
   width: 100%;
   max-width: 430px;
   overflow-x: clip;
-  min-height: 100dvh;
+  min-height: 100svh;
   margin: 0 auto;
 }
 

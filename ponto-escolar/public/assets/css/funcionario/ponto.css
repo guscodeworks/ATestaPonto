@@ -291,8 +291,8 @@
   flex: 0 0 auto;
   place-items: center;
   width: 100%;
-  min-height: clamp(168px, 27dvh, 220px);
-  padding: clamp(22px, 4dvh, 32px) 0 clamp(26px, 4dvh, 36px);
+  min-height: clamp(168px, 56vw, 220px);
+  padding: clamp(22px, 8.2vw, 32px) 0 clamp(26px, 8.5vw, 36px);
 }
 
 .ponto-action {
@@ -379,6 +379,13 @@
     0 0 0 clamp(5px, 1.5vw, 7px) var(--ponto-action-ring),
     0 12px 24px var(--ponto-action-shadow);
   transform: translateY(1px) scale(0.97);
+}
+
+@media (max-width: 767px) and (hover: none) and (pointer: coarse) {
+  .ponto-action:hover:not(:disabled),
+  .ponto-action:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .ponto-action:focus-visible {
