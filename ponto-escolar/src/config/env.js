@@ -146,6 +146,21 @@ function validateExpiresIn(value, name) {
   return normalized;
 }
 
+function validateShortExpiresIn(value, name) {
+  const normalized = validateExpiresIn(value, name);
+  const match = /^(\d+)([smhd]?)$/.exec(normalized);
+  const multiplier = { "": 1, s: 1, m: 60, h: 60 * 60, d: 24 * 60 * 60 }[
+    match[2]
+  ];
+  const seconds = Number(match[1]) * multiplier;
+
+  if (seconds < 60 || seconds > 15 * 60) {
+    throwEnvError(`"${name}" must be between 60 seconds and 15 minutes`);
+  }
+
+  return normalized;
+}
+
 function validateUrl(name, value) {
   let url;
 
@@ -428,6 +443,11 @@ const env = {
   FUNCIONARIO_JWT_EXPIRES_IN: validateExpiresIn(
     getOptionalVar("FUNCIONARIO_JWT_EXPIRES_IN", "20m"),
     "FUNCIONARIO_JWT_EXPIRES_IN"
+  ),
+  // Comprovante restrito à primeira troca de senha; não é uma sessão de funcionário.
+  FIRST_ACCESS_TOKEN_EXPIRES_IN: validateShortExpiresIn(
+    getOptionalVar("FIRST_ACCESS_TOKEN_EXPIRES_IN", "10m"),
+    "FIRST_ACCESS_TOKEN_EXPIRES_IN"
   ),
   // Atrasa respostas de login invalido no servidor. Em conjunto com o
   // loginLimiter, reduz tentativas automatizadas de forca bruta.

@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const { loginFuncionario, registerPunch } = require('../controllers/punchController');
 const { requestRecovery, verifyRecoveryCode, resetPassword } = require('../controllers/passwordRecoveryController');
+const { changeFirstAccessPassword } = require('../controllers/firstAccessPasswordController');
 const { authenticateFuncionario } = require('../middlewares/authMiddleware');
 const { loginLimiter, pointLimiter, sensitiveLimiter, passwordRecoveryLimiter } = require('../middlewares/rateLimiters');
 const { baterPontoValidator, funcionarioLoginValidator, passwordRecoveryRequestValidator, passwordRecoveryCodeValidator, passwordRecoveryResetValidator } = require('../middlewares/validators');
@@ -13,6 +14,7 @@ const router = Router();
 // as rotas de registro de ponto neste nível, garantindo req.auth.id disponível
 // nos controllers.
 router.post('/login', loginLimiter, funcionarioLoginValidator, loginFuncionario);
+router.post('/primeiro-acesso/trocar-senha', sensitiveLimiter, passwordRecoveryResetValidator, changeFirstAccessPassword);
 router.use('/recuperar-senha', passwordRecoverySession);
 router.post('/recuperar-senha/solicitar', passwordRecoveryLimiter, passwordRecoveryRequestValidator, requestRecovery);
 router.post('/recuperar-senha/validar', sensitiveLimiter, passwordRecoveryCodeValidator, verifyRecoveryCode);

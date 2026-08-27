@@ -167,13 +167,13 @@ async function hasModernLoginTable() {
 async function findForPasswordRecoveryByCpf(cpf) {
   if (!(await hasModernLoginTable())) {
     return database.executeOne(
-      "SELECT id, nome, email, senha AS senha_hash FROM funcionarios WHERE cpf = ? AND ativo = 1 LIMIT 1",
+      "SELECT id, nome, email, senha AS senha_hash, primeiro_acesso FROM funcionarios WHERE cpf = ? AND ativo = 1 LIMIT 1",
       [cpf]
     );
   }
 
   return database.executeOne(
-    "SELECT f.id, f.nome, f.email, lf.senha_hash FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 LIMIT 1",
+    "SELECT f.id, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 LIMIT 1",
     [cpf]
   );
 }
@@ -181,13 +181,13 @@ async function findForPasswordRecoveryByCpf(cpf) {
 async function updatePasswordForRecovery(funcionarioId, senhaHash) {
   if (!(await hasModernLoginTable())) {
     return database.execute(
-      "UPDATE funcionarios f LEFT JOIN login l ON l.id = f.login_id SET f.senha = ?, l.senha = ?, f.primeiro_acesso = 0, f.atualizado_em = CURRENT_TIMESTAMP WHERE f.id = ? AND f.ativo = 1",
+      "UPDATE funcionarios f LEFT JOIN login l ON l.id = f.login_id SET f.senha = ?, l.senha = ?, f.primeiro_acesso = 0, f.atualizado_em = CURRENT_TIMESTAMP WHERE f.id = ? AND f.ativo = 1 AND f.primeiro_acesso = 0",
       [senhaHash, senhaHash, funcionarioId]
     );
   }
 
   return database.execute(
-    "UPDATE login_funcionario SET senha_hash = ?, senha_alterada_em = CURRENT_TIMESTAMP, senha_temporaria_expira_em = NULL, primeiro_acesso = FALSE WHERE funcionario_id = ?",
+    "UPDATE login_funcionario SET senha_hash = ?, senha_alterada_em = CURRENT_TIMESTAMP, senha_temporaria_expira_em = NULL, primeiro_acesso = FALSE WHERE funcionario_id = ? AND primeiro_acesso = FALSE",
     [senhaHash, funcionarioId]
   );
 }
