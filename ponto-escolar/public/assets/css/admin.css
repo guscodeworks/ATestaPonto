@@ -2,7 +2,11 @@
 @import url("./admin/base.css");
 @import url("./loading.css?v=20260729-loading-review");
 @import url("./admin/dashboard.css");
-@import url("./admin/data-and-forms.css");
+@import url("./admin/tables-and-filters.css");
+@import url("./admin/employees.css");
+@import url("./admin/register.css");
+@import url("./admin/points-and-reports.css");
+@import url("./admin/settings.css");
 @import url("./admin/components.css");
 @import url("./admin/visual-identity.css");
 @import url("./admin/responsive.css");
