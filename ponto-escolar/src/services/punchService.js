@@ -350,8 +350,21 @@ async function findFuncionarioForLogin({ cpf, email }) {
 }
 
 // Autenticação própria do funcionário (separada do login admin Gov.br).
-async function loginFuncionario(body, { ipOrigem } = {}) {
+async function loginFuncionario(
+  body,
+  { ipOrigem, unidadeEscolarIdQr } = {}
+) {
   const login = resolveLogin(body);
+  const qrSchoolUnitId =
+    unidadeEscolarIdQr === undefined ? null : Number(unidadeEscolarIdQr);
+
+  if (
+    qrSchoolUnitId !== null &&
+    (!Number.isInteger(qrSchoolUnitId) || qrSchoolUnitId <= 0)
+  ) {
+    throw new ForbiddenError("Contexto de QR Code invalido");
+  }
+
   const funcionario = await findFuncionarioForLogin(login);
   const senhaCorreta = await bcrypt.compare(
     login.senha,
@@ -392,6 +405,25 @@ async function loginFuncionario(body, { ipOrigem } = {}) {
       await waitForFailedLoginDelay();
       throw new UnauthorizedError("CPF/email ou senha invalidos");
     }
+
+    if (
+      qrSchoolUnitId !== null &&
+      Number(vinculoAtivo.unidade_escolar_id) !== qrSchoolUnitId
+    ) {
+      await registerAuditLog({
+        evento: "funcionario_login_qr_unidade_incompativel",
+        nivel: "WARN",
+        funcionarioId: funcionario.id,
+        mensagem: "Tentativa de login com QR Code de outra unidade escolar",
+        ipOrigem,
+      });
+      throw new ForbiddenError(
+        "QR Code nao corresponde a unidade escolar do funcionario"
+      );
+    }
+  } else if (qrSchoolUnitId !== null) {
+    // Sem vínculo funcional não há como provar a unidade do funcionário.
+    throw new ForbiddenError("Contexto de QR Code indisponivel");
   }
 
   await loginModel.updateLastLogin(funcionario.id);
