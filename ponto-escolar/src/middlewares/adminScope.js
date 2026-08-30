@@ -1,6 +1,6 @@
 "use strict";
 
-const { ForbiddenError } = require("../utils/errors");
+const { ConflictError, ForbiddenError } = require("../utils/errors");
 const employmentLinkModel = require("../models/employmentLinkModel");
 const schoolUnitModel = require("../models/schoolUnitModel");
 const {
@@ -225,6 +225,73 @@ function escopoPorCapacidade(capacidade) {
 
     req.acessosAutorizadores = acessosAutorizadores;
     req.escopo = escopo;
+    return next();
+  };
+}
+
+// Exige somente a capacidade; útil para recursos sem escopo territorial.
+function exigirCapacidade(capacidade) {
+  return function (req, _res, next) {
+    const acessosAutorizadores = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    );
+
+    if (acessosAutorizadores.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    req.acessosAutorizadores = acessosAutorizadores;
+    return next();
+  };
+}
+
+// QR sempre pertence à unidade do mesmo acesso que oferece a capacidade.
+// Várias unidades elegíveis não são escolhidas implicitamente: o cliente deve
+// resolver a ambiguidade em um fluxo posterior.
+function restringirCapacidadeQrUnidade(capacidade) {
+  return function (req, _res, next) {
+    const candidatos = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    )
+      .map((acesso) => {
+        const unidadeEscolarId = Number(acesso.unidade_escolar_id);
+        const escopoDoAcesso = buildEscopo([acesso]);
+        if (
+          !Number.isInteger(unidadeEscolarId) ||
+          unidadeEscolarId < 1 ||
+          !escopoDoAcesso.temAcesso ||
+          !escopoDoAcesso.unidadesPermitidas.has(unidadeEscolarId)
+        ) {
+          return null;
+        }
+
+        return { acesso, unidadeEscolarId };
+      })
+      .filter(Boolean);
+
+    if (candidatos.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    const unidadesElegiveis = [
+      ...new Set(candidatos.map(({ unidadeEscolarId }) => unidadeEscolarId)),
+    ].sort((a, b) => a - b);
+    if (unidadesElegiveis.length !== 1) {
+      return next(
+        new ConflictError(
+          "Operacao de QR ambigua: mais de uma unidade escolar elegivel",
+          { unidades_escolares_ids: unidadesElegiveis }
+        )
+      );
+    }
+
+    candidatos.sort(
+      (a, b) => Number(a.acesso.id) - Number(b.acesso.id)
+    );
+    req.acessoAutorizador = candidatos[0].acesso;
+    req.unidadeEscolarId = unidadesElegiveis[0];
     return next();
   };
 }
@@ -539,6 +606,8 @@ module.exports = {
   expandirUnidadesPermitidas,
   escopoMiddleware,
   escopoPorCapacidade,
+  exigirCapacidade,
+  restringirCapacidadeQrUnidade,
   restringirCapacidadeFuncionario,
   restringirCapacidadeFuncionarioReativacao,
   restringirCapacidadeUnidadeDoBody,

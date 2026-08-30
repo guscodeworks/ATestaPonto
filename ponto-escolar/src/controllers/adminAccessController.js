@@ -71,7 +71,7 @@ async function getAcesso(req, res, next) {
   try {
     const result = await adminAccessService.getAcesso(
       Number(req.params.id),
-      { escopo: req.escopo }
+      { acessos: req.acessos }
     );
 
     return res.status(200).json({

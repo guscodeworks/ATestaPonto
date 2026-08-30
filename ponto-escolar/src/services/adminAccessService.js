@@ -19,7 +19,11 @@ const {
   BadRequestError,
   NotFoundError,
   ForbiddenError,
+  ConflictError,
 } = require("../utils/errors");
+const {
+  filtrarAcessosPorCapacidade,
+} = require("../utils/adminCapabilities");
 
 // Converte Date/string p/ 'YYYY-MM-DD' no timezone 'Z' do pool. null/inválido → null.
 function toDateString(value) {
@@ -219,11 +223,12 @@ function calcularEspecificidadeAcesso(acesso, recursoAlvo) {
 // filtrada por status/período no middleware de autenticação administrativa.
 function resolverAcessoAutorizador(
   acessos,
+  capacidade,
   perfilAlvo,
   recursoAlvo,
   podeAutorizar
 ) {
-  const lista = Array.isArray(acessos) ? acessos : [];
+  const lista = filtrarAcessosPorCapacidade(acessos, capacidade);
   const candidatos = [];
 
   for (const acesso of lista) {
@@ -260,6 +265,7 @@ function resolverAcessoAutorizador(
 function resolverConcedente(acessos, perfilAlvo, recursoAlvo) {
   return resolverAcessoAutorizador(
     acessos,
+    "acesso.conceder",
     perfilAlvo,
     recursoAlvo,
     podeConceder
@@ -421,16 +427,37 @@ async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
   };
 }
 
-async function getAcesso(acessoId, { escopo } = {}) {
+async function getAcesso(acessoId, { acessos } = {}) {
   const acesso = await adminAccessModel.findById(acessoId);
   if (!acesso) {
     throw new NotFoundError("Acesso administrativo nao encontrado");
   }
-  const autorizado = recursoNoEscopo(escopo, {
-    educationDepartmentId: acesso.diretoria_ensino_id,
-    schoolUnitId: acesso.unidade_escolar_id,
-  });
-  if (!autorizado) {
+
+  let recursoAlvo;
+  const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
+  try {
+    validarConsistenciaPerfil(
+      perfilAlvo,
+      acesso.diretoria_ensino_id,
+      acesso.unidade_escolar_id
+    );
+    recursoAlvo = await resolverRecursoAlvo(
+      perfilAlvo,
+      acesso.diretoria_ensino_id,
+      acesso.unidade_escolar_id
+    );
+  } catch (_error) {
+    throw new ForbiddenError("Escopo do acesso administrativo invalido");
+  }
+
+  const acessoAutorizador = filtrarAcessosPorCapacidade(
+    acessos,
+    "acesso.visualizar"
+  ).find((acessoCandidato) =>
+    recursoNoEscopo(buildEscopo([acessoCandidato]), recursoAlvo)
+  );
+
+  if (!acessoAutorizador) {
     throw new ForbiddenError(
       "Acesso administrativo fora do escopo do administrador"
     );
@@ -481,6 +508,7 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, acessos } = {}
   );
   const acessoAutorizador = resolverAcessoAutorizador(
     acessos,
+    `acesso.${acaoNorm}`,
     perfilAlvo,
     recursoAlvo,
     podeAlterar
