@@ -42,18 +42,34 @@ const CAPACIDADES_COORDENADOR = Object.freeze([
   "cargo.listar",
 ]);
 
-// DIRETOR e VICE_DIRETOR possuem o catálogo completo. As restrições sobre
-// perfis-alvo continuam exclusivamente na matriz podeConceder/podeAlterar.
+const CAPACIDADES_QR_ESCOLAR = Object.freeze([
+  "qr.visualizar",
+  "qr.gerar",
+]);
+
+const CAPACIDADES_DIRECAO = Object.freeze([
+  ...CAPACIDADES_ADMINISTRATIVAS,
+  ...CAPACIDADES_QR_ESCOLAR,
+]);
+
+const CAPACIDADES_SECRETARIA_COM_QR = Object.freeze([
+  ...CAPACIDADES_SECRETARIA,
+  ...CAPACIDADES_QR_ESCOLAR,
+]);
+
+// QR é administrado apenas por perfis escolares com uma unidade própria.
 const CAPACIDADES_POR_PERFIL = Object.freeze({
   ADMIN_SEDUC: CAPACIDADES_ADMINISTRATIVAS,
   ADMIN_DIRETORIA: CAPACIDADES_ADMINISTRATIVAS,
-  DIRETOR: CAPACIDADES_ADMINISTRATIVAS,
-  VICE_DIRETOR: CAPACIDADES_ADMINISTRATIVAS,
-  SECRETARIA: CAPACIDADES_SECRETARIA,
+  DIRETOR: CAPACIDADES_DIRECAO,
+  VICE_DIRETOR: CAPACIDADES_DIRECAO,
+  SECRETARIA: CAPACIDADES_SECRETARIA_COM_QR,
   COORDENADOR: CAPACIDADES_COORDENADOR,
 });
 
-const CAPACIDADES_CONHECIDAS = new Set(CAPACIDADES_ADMINISTRATIVAS);
+const CAPACIDADES_CONHECIDAS = new Set(
+  Object.values(CAPACIDADES_POR_PERFIL).flat()
+);
 const INDICE_CAPACIDADES_POR_PERFIL = new Map(
   Object.entries(CAPACIDADES_POR_PERFIL).map(([perfil, capacidades]) => [
     perfil,
