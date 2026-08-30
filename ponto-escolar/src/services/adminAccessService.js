@@ -19,7 +19,11 @@ const {
   BadRequestError,
   NotFoundError,
   ForbiddenError,
+  ConflictError,
 } = require("../utils/errors");
+const {
+  filtrarAcessosPorCapacidade,
+} = require("../utils/adminCapabilities");
 
 // Converte Date/string p/ 'YYYY-MM-DD' no timezone 'Z' do pool. null/inválido → null.
 function toDateString(value) {
@@ -157,37 +161,11 @@ function validarConsistenciaPerfil(perfil, diretoriaId, unidadeId) {
   throw new BadRequestError("perfil invalido");
 }
 
-// buildEscopo colapsa perfis escolares em unidadesPermitidas, descartando qual
-// perfil exato o concedente tem — a matriz de delegação precisa dessa distinção.
-function perfisDoConcedente(acessos) {
-  const lista = Array.isArray(acessos) ? acessos : [];
-  const perfis = new Set();
-  for (const acesso of lista) {
-    const perfil = String((acesso && acesso.perfil) || "").trim().toUpperCase();
-    if (perfil) {
-      perfis.add(perfil);
-    }
-  }
-  return perfis;
-}
-
-// Concessão combina duas dimensões: (1) matriz de delegação (podeConceder —
-// anti-escalada implícita, ninguém concede nível >= ao seu) e (2) escopo do
-// recurso (recursoNoEscopo). Matriz = pré-filtro; escopo é a checagem existente.
-async function autorizarConcessao(perfil, diretoriaId, unidadeId, escopo, acessos) {
-  const perfis = perfisDoConcedente(acessos);
-  const concedidoPorMatriz = Array.from(perfis).some((p) => podeConceder(p, perfil));
-  if (!concedidoPorMatriz) {
-    throw new ForbiddenError(
-      "Perfil do administrador nao permite conceder este perfil"
-    );
-  }
-
+// Resolve o recurso real antes da autorização. Para unidade, inclui a diretoria
+// obtida no backend para que um acesso ADMIN_DIRETORIA possa cobri-la.
+async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId) {
   if (perfil === PERFIL_SEDUC) {
-    if (!escopo || !escopo.isSeduc) {
-      throw new ForbiddenError("Apenas ADMIN_SEDUC pode conceder acesso SEDUC");
-    }
-    return;
+    return {};
   }
 
   if (perfil === PERFIL_DIRETORIA) {
@@ -195,49 +173,124 @@ async function autorizarConcessao(perfil, diretoriaId, unidadeId, escopo, acesso
     if (!diretoria) {
       throw new NotFoundError("Diretoria de ensino nao encontrada");
     }
-    if (!recursoNoEscopo(escopo, { educationDepartmentId: diretoriaId })) {
-      throw new ForbiddenError(
-        "Diretoria de ensino fora do escopo do administrador"
-      );
-    }
-    return;
+    return { educationDepartmentId: Number(diretoria.id) };
   }
 
-  // PERFIS_ESCOLARES
-  const unidade = await schoolUnitModel.findById(unidadeId);
-  if (!unidade) {
-    throw new NotFoundError("Unidade escolar nao encontrada");
+  if (PERFIS_ESCOLARES.has(perfil)) {
+    const unidade = await schoolUnitModel.findById(unidadeId);
+    if (!unidade) {
+      throw new NotFoundError("Unidade escolar nao encontrada");
+    }
+    return {
+      schoolUnitId: Number(unidade.id),
+      educationDepartmentId: Number(unidade.diretoria_ensino_id),
+    };
   }
-  if (
-    !recursoNoEscopo(escopo, {
-      schoolUnitId: unidade.id,
-      educationDepartmentId: unidade.diretoria_ensino_id,
-    })
-  ) {
-    throw new ForbiddenError(
-      "Unidade escolar fora do escopo do administrador"
-    );
-  }
+
+  throw new BadRequestError("perfil invalido");
 }
 
-// O acesso concedente: primeiro do concedente cujo escopo cobre o concedido
-// (self-FK concedido_por_acesso_id).
-function resolverConcedente(acessos, { educationDepartmentId, schoolUnitId }) {
-  const lista = Array.isArray(acessos) ? acessos : [];
+function calcularEspecificidadeAcesso(acesso, recursoAlvo) {
+  const unidadeAlvo = Number(recursoAlvo && recursoAlvo.schoolUnitId);
+  const unidadeAcesso = Number(acesso && acesso.unidade_escolar_id);
+  if (
+    Number.isInteger(unidadeAlvo) &&
+    unidadeAlvo > 0 &&
+    unidadeAcesso === unidadeAlvo
+  ) {
+    return 3;
+  }
+
+  const diretoriaAlvo = Number(
+    recursoAlvo && recursoAlvo.educationDepartmentId
+  );
+  const diretoriaAcesso = Number(acesso && acesso.diretoria_ensino_id);
+  if (
+    Number.isInteger(diretoriaAlvo) &&
+    diretoriaAlvo > 0 &&
+    diretoriaAcesso === diretoriaAlvo
+  ) {
+    return 2;
+  }
+
+  const perfilAcesso = String((acesso && acesso.perfil) || "")
+    .trim()
+    .toUpperCase();
+  return perfilAcesso === PERFIL_SEDUC ? 1 : 0;
+}
+
+// Perfil e escopo são avaliados no mesmo acesso ativo. A lista recebida já foi
+// filtrada por status/período no middleware de autenticação administrativa.
+function resolverAcessoAutorizador(
+  acessos,
+  capacidade,
+  perfilAlvo,
+  recursoAlvo,
+  podeAutorizar
+) {
+  const lista = filtrarAcessosPorCapacidade(acessos, capacidade);
+  const candidatos = [];
+
   for (const acesso of lista) {
+    const acessoId = Number(acesso && acesso.id);
+    if (!Number.isInteger(acessoId) || acessoId <= 0) {
+      continue;
+    }
+
+    if (!podeAutorizar(acesso.perfil, perfilAlvo)) {
+      continue;
+    }
+
     const escopoAcesso = buildEscopo([acesso]);
     if (
       escopoAcesso.temAcesso &&
-      recursoNoEscopo(escopoAcesso, { educationDepartmentId, schoolUnitId })
+      recursoNoEscopo(escopoAcesso, recursoAlvo)
     ) {
-      return Number(acesso.id);
+      candidatos.push({
+        acesso,
+        acessoId,
+        especificidade: calcularEspecificidadeAcesso(acesso, recursoAlvo),
+      });
     }
   }
-  return null;
+
+  candidatos.sort(
+    (a, b) =>
+      b.especificidade - a.especificidade || a.acessoId - b.acessoId
+  );
+
+  return candidatos.length > 0 ? candidatos[0].acesso : null;
+}
+
+function resolverConcedente(acessos, perfilAlvo, recursoAlvo) {
+  return resolverAcessoAutorizador(
+    acessos,
+    "acesso.conceder",
+    perfilAlvo,
+    recursoAlvo,
+    podeConceder
+  );
+}
+
+async function autorizarConcessao(perfil, diretoriaId, unidadeId, acessos) {
+  const recursoAlvo = await resolverRecursoAlvo(
+    perfil,
+    diretoriaId,
+    unidadeId
+  );
+  const acessoConcedente = resolverConcedente(acessos, perfil, recursoAlvo);
+
+  if (!acessoConcedente) {
+    throw new ForbiddenError(
+      "Nenhum acesso administrativo ativo permite conceder este perfil no recurso informado"
+    );
+  }
+
+  return acessoConcedente;
 }
 
 // Concessão: find-or-create da identidade admin + acesso na mesma transação.
-async function createAcesso(body, { adminId, ipOrigem, escopo, acessos } = {}) {
+async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
   const cpf = normalizeCpf(body && body.cpf);
   if (!cpf) {
     throw new BadRequestError("CPF e obrigatorio");
@@ -269,11 +322,13 @@ async function createAcesso(body, { adminId, ipOrigem, escopo, acessos } = {}) {
     throw new BadRequestError("status invalido");
   }
 
-  await autorizarConcessao(perfil, diretoriaId, unidadeId, escopo, acessos);
-  const concedidoPorAcessoId = resolverConcedente(acessos, {
-    educationDepartmentId: diretoriaId,
-    schoolUnitId: unidadeId,
-  });
+  const acessoConcedente = await autorizarConcessao(
+    perfil,
+    diretoriaId,
+    unidadeId,
+    acessos
+  );
+  const concedidoPorAcessoId = Number(acessoConcedente.id);
 
   const nome = body && body.nome !== undefined ? String(body.nome).trim() : null;
   const email =
@@ -372,16 +427,37 @@ async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
   };
 }
 
-async function getAcesso(acessoId, { escopo } = {}) {
+async function getAcesso(acessoId, { acessos } = {}) {
   const acesso = await adminAccessModel.findById(acessoId);
   if (!acesso) {
     throw new NotFoundError("Acesso administrativo nao encontrado");
   }
-  const autorizado = recursoNoEscopo(escopo, {
-    educationDepartmentId: acesso.diretoria_ensino_id,
-    schoolUnitId: acesso.unidade_escolar_id,
-  });
-  if (!autorizado) {
+
+  let recursoAlvo;
+  const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
+  try {
+    validarConsistenciaPerfil(
+      perfilAlvo,
+      acesso.diretoria_ensino_id,
+      acesso.unidade_escolar_id
+    );
+    recursoAlvo = await resolverRecursoAlvo(
+      perfilAlvo,
+      acesso.diretoria_ensino_id,
+      acesso.unidade_escolar_id
+    );
+  } catch (_error) {
+    throw new ForbiddenError("Escopo do acesso administrativo invalido");
+  }
+
+  const acessoAutorizador = filtrarAcessosPorCapacidade(
+    acessos,
+    "acesso.visualizar"
+  ).find((acessoCandidato) =>
+    recursoNoEscopo(buildEscopo([acessoCandidato]), recursoAlvo)
+  );
+
+  if (!acessoAutorizador) {
     throw new ForbiddenError(
       "Acesso administrativo fora do escopo do administrador"
     );
@@ -407,7 +483,7 @@ const ACOES_STATUS = {
 
 // Reusa a matriz de delegação (podeAlterar) e a checagem de escopo; não duplica
 // regras de perfil/escopo. Nunca apaga — só muda status e audita.
-async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acessos } = {}) {
+async function alterarStatus(acessoId, acao, { adminId, ipOrigem, acessos } = {}) {
   const acaoNorm = String(acao || "").trim().toLowerCase();
   const regra = ACOES_STATUS[acaoNorm];
   if (!regra) {
@@ -424,23 +500,23 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, escopo, acesso
     throw new ForbiddenError("Nao e permitido alterar o proprio acesso");
   }
 
-  // Acesso fora do escopo do administrador (diretoria/unidade).
-  if (!recursoNoEscopo(escopo, {
-    educationDepartmentId: acesso.diretoria_ensino_id,
-    schoolUnitId: acesso.unidade_escolar_id,
-  })) {
-    throw new ForbiddenError(
-      "Acesso administrativo fora do escopo do administrador"
-    );
-  }
-
-  // Nível: só altera acesso cujo perfil a matriz permite (abaixo do próprio nível).
   const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
-  const perfis = perfisDoConcedente(acessos);
-  const podeAlterarPerfil = Array.from(perfis).some((p) => podeAlterar(p, perfilAlvo));
-  if (!podeAlterarPerfil) {
+  const recursoAlvo = await resolverRecursoAlvo(
+    perfilAlvo,
+    acesso.diretoria_ensino_id,
+    acesso.unidade_escolar_id
+  );
+  const acessoAutorizador = resolverAcessoAutorizador(
+    acessos,
+    `acesso.${acaoNorm}`,
+    perfilAlvo,
+    recursoAlvo,
+    podeAlterar
+  );
+
+  if (!acessoAutorizador) {
     throw new ForbiddenError(
-      "Perfil do administrador nao permite alterar este acesso"
+      "Nenhum acesso administrativo ativo permite alterar este acesso"
     );
   }
 
@@ -499,8 +575,13 @@ function getMeusAcessos({ escopo, acessos, escopoUnidades } = {}) {
   return {
     acessos: lista.map(mapMeuAcesso),
     escopo: resumirEscopo(escopo),
-    // escopoUnidades é null p/ SEDUC/ausência; preservado para indicar o universo visível.
-    unidadesVisiveis: escopoUnidades == null ? null : [...escopoUnidades].map(Number).filter((n) => Number.isInteger(n) && n > 0),
+    // null só representa universo global quando o escopo ativo é SEDUC.
+    unidadesVisiveis:
+      escopo && escopo.temAcesso && escopo.isSeduc && escopoUnidades === null
+        ? null
+        : (Array.isArray(escopoUnidades) ? escopoUnidades : [])
+          .map(Number)
+          .filter((n) => Number.isInteger(n) && n > 0),
   };
 }
 

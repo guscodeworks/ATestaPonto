@@ -16,21 +16,30 @@ const {
   acessoIdValidator,
   paginationValidator,
 } = require("../middlewares/validators");
-const { escopoMiddleware } = require("../middlewares/adminScope");
+const {
+  escopoMiddleware,
+  escopoPorCapacidade,
+  exigirCapacidade,
+} = require("../middlewares/adminScope");
 
 const router = Router();
 
-// Escopo aplicado a todos os endpoints de acessos: listagens filtradas pelo
-// escopo e concessão/alteração sujeitas a anti-escalada no service.
-router.use(escopoMiddleware);
-
-router.get("/", paginationValidator, listAcessos);
+router.get(
+  "/",
+  escopoPorCapacidade("acesso.listar"),
+  paginationValidator,
+  listAcessos
+);
 
 // /meu ANTES de /:id — caso contrário "meu" é capturado por acessoIdValidator e
 // rejeitado como id inválido. Sem validadores extras: é leitura do próprio contexto.
-router.get("/meu", getMeusAcessos);
+router.get("/meu", exigirCapacidade("acesso.proprio.visualizar"), getMeusAcessos);
 
 router.get("/:id", acessoIdValidator, getAcesso);
+
+// Mutações preservam o escopo agregado existente, pois sua autorização também
+// depende da matriz de delegação no service.
+router.use(escopoMiddleware);
 router.post("/", sensitiveLimiter, createAcessoValidator, createAcesso);
 
 // Ciclo de vida (transição de status): suspender/reativar/revogar. Reusamos

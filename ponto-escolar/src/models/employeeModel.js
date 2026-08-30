@@ -24,16 +24,30 @@ const ACTIVE_VINCULO_LATERAL = `
   LIMIT 1
 `;
 
-// Filtra por unidades do escopo admin (null/vazio = sem restrição).
+// null representa escopo global SEDUC; [] ou valor inválido não retorna linhas.
 function buildEscopoUnidadeFilter(unidadesPermitidas) {
-  if (!Array.isArray(unidadesPermitidas) || unidadesPermitidas.length === 0) {
+  if (unidadesPermitidas === null) {
     return { clause: "", params: [] };
   }
 
-  const placeholders = unidadesPermitidas.map(() => "?").join(",");
+  if (!Array.isArray(unidadesPermitidas)) {
+    return { clause: "AND 1 = 0", params: [] };
+  }
+
+  const unitIds = [...new Set(
+    unidadesPermitidas
+      .map(Number)
+      .filter((id) => Number.isInteger(id) && id > 0)
+  )];
+
+  if (unitIds.length === 0) {
+    return { clause: "AND 1 = 0", params: [] };
+  }
+
+  const placeholders = unitIds.map(() => "?").join(",");
   return {
     clause: `AND lv.unidade_escolar_id IN (${placeholders})`,
-    params: unidadesPermitidas.map((id) => Number(id)),
+    params: unitIds,
   };
 }
 
@@ -222,7 +236,7 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
   );
 }
 
-async function countEmployees(filters = {}, escopoUnidades = null) {
+async function countEmployees(filters = {}, escopoUnidades = []) {
   const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.executeOne(
     COUNT_EMPLOYEES_QUERY + clause,
@@ -230,7 +244,7 @@ async function countEmployees(filters = {}, escopoUnidades = null) {
   );
 }
 
-async function listEmployees({ ativo, cargo, q, limit, offset } = {}, escopoUnidades = null) {
+async function listEmployees({ ativo, cargo, q, limit, offset } = {}, escopoUnidades = []) {
   const params = resolveEmployeeFilter({ ativo, cargo, q });
   const { clause, params: escopoParams } = buildEscopoUnidadeFilter(escopoUnidades);
 
@@ -240,7 +254,7 @@ async function listEmployees({ ativo, cargo, q, limit, offset } = {}, escopoUnid
   );
 }
 
-async function listForPointReport(escopoUnidades = null) {
+async function listForPointReport(escopoUnidades = []) {
   const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.execute(
     "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id, lv.unidade_escolar_id FROM funcionarios f LEFT JOIN LATERAL (" +

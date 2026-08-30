@@ -5,14 +5,27 @@ const {
   getDashboardSummary,
 } = require("../controllers/adminPointController");
 const { sensitiveLimiter } = require("../middlewares/rateLimiters");
-const { escopoMiddleware } = require("../middlewares/adminScope");
+const { escopoPorCapacidade } = require("../middlewares/adminScope");
 
 const router = Router();
 
-router.use(escopoMiddleware);
-
-router.get("/hoje", sensitiveLimiter, getTodayPoints);
-router.get("/relatorio", sensitiveLimiter, getDailyReport);
-router.get("/resumo", sensitiveLimiter, getDashboardSummary);
+router.get(
+  "/hoje",
+  escopoPorCapacidade("ponto.hoje.visualizar"),
+  sensitiveLimiter,
+  getTodayPoints
+);
+router.get(
+  "/relatorio",
+  escopoPorCapacidade("relatorio.visualizar"),
+  sensitiveLimiter,
+  getDailyReport
+);
+router.get(
+  "/resumo",
+  escopoPorCapacidade("ponto.resumo.visualizar"),
+  sensitiveLimiter,
+  getDashboardSummary
+);
 
 module.exports = router;

@@ -83,8 +83,12 @@ async function updateStatus(acessoId, novoStatus, client) {
 // WHERE de escopo p/ listagens: SEDUC não filtra; demais perfis veem só acessos
 // cuja diretoria ou unidade está no seu escopo. Retorna { clause, params }.
 function buildEscopoFilter(escopo, escopoUnidades) {
-  if (!escopo || !escopo.temAcesso || escopo.isSeduc) {
+  if (escopo && escopo.temAcesso && escopo.isSeduc) {
     return { clause: "", params: [] };
+  }
+
+  if (!escopo || !escopo.temAcesso) {
+    return { clause: " WHERE 1=0", params: [] };
   }
 
   const diretorias = [...(escopo.diretoriasPermitidas || [])];

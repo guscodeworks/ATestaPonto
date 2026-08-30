@@ -5,6 +5,8 @@ const { authenticateFuncionario } = require('../middlewares/authMiddleware');
 const { loginLimiter, pointLimiter, sensitiveLimiter, passwordRecoveryLimiter } = require('../middlewares/rateLimiters');
 const { baterPontoValidator, funcionarioLoginValidator, passwordRecoveryRequestValidator, passwordRecoveryCodeValidator, passwordRecoveryResetValidator } = require('../middlewares/validators');
 const passwordRecoverySession = require('../middlewares/passwordRecoverySession');
+const employeeQrAccessSession = require('../middlewares/employeeQrAccessSession');
+const { requireCurrentQrSchoolUnitContext } = require('../middlewares/qrSchoolUnitContext');
 const { MethodNotAllowedError } = require('../utils/errors');
 
 const router = Router();
@@ -12,7 +14,14 @@ const router = Router();
 // Confirma o que foi levantado no router pai: authenticateFuncionario protege
 // as rotas de registro de ponto neste nível, garantindo req.auth.id disponível
 // nos controllers.
-router.post('/login', loginLimiter, funcionarioLoginValidator, loginFuncionario);
+router.post(
+  '/login',
+  loginLimiter,
+  employeeQrAccessSession,
+  requireCurrentQrSchoolUnitContext,
+  funcionarioLoginValidator,
+  loginFuncionario
+);
 router.use('/recuperar-senha', passwordRecoverySession);
 router.post('/recuperar-senha/solicitar', passwordRecoveryLimiter, passwordRecoveryRequestValidator, requestRecovery);
 router.post('/recuperar-senha/validar', sensitiveLimiter, passwordRecoveryCodeValidator, verifyRecoveryCode);
