@@ -128,7 +128,7 @@ async function listAcessos({ escopo, escopoUnidades, limit, offset } = {}, clien
     `SELECT ${ACESSO_DETAIL_SELECT} ${ACESSO_DETAIL_JOINS}${clause}
      ORDER BY aa.criado_em DESC, aa.id DESC
      LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+    [...params, String(Number(limit)), String(Number(offset))]
   );
 }
 
