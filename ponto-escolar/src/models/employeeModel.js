@@ -271,7 +271,7 @@ async function listForPointReport(escopoUnidades = []) {
   return database.execute(
     "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id, lv.unidade_escolar_id FROM funcionarios f LEFT JOIN LATERAL (" +
       "SELECT v.cargo_id, v.unidade_escolar_id FROM vinculos_funcionais v WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1" +
-      ") lv ON TRUE WHERE 1=1" + clause + " ORDER BY f.nome ASC",
+      ") lv ON TRUE WHERE 1=1 " + clause + " ORDER BY f.nome ASC",
     params
   );
 }
