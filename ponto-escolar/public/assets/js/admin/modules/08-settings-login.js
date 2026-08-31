@@ -196,10 +196,13 @@ function iniciarConfiguracoes() {
    A rota real ja e protegida pelo backend com req.session.admin.
    ============================================================ */
 
-function aplicarAdminGovbr(admin) {
-  if (!admin || typeof ADMIN === 'undefined') {
+function aplicarAdminGovbr(admin, capacidades) {
+  if (typeof ADMIN === 'undefined') {
     return;
   }
+
+  definirCapacidadesAdmin(capacidades);
+  if (!admin) return;
 
   ADMIN.nome = admin.nome || admin.name || ADMIN.nome;
   // Cargo fixo: nesta tela todo usuário autenticado via gov.br é tratado
@@ -228,13 +231,14 @@ async function sincronizarSessaoAdmin() {
     const payload = await adminApiFetch('/api/admin/auth/me', {
       signal: controller.signal,
     });
-    const admin = getApiData(payload)?.admin;
+    const dadosSessao = getApiData(payload);
+    const admin = dadosSessao?.admin;
+    aplicarAdminGovbr(admin, dadosSessao?.capacidades);
     if (!admin) {
       const error = new Error('Sessão administrativa inválida.');
       error.status = 401;
       throw error;
     }
-    aplicarAdminGovbr(admin);
     return admin;
   } catch (error) {
     if (error?.name === 'AbortError') {
