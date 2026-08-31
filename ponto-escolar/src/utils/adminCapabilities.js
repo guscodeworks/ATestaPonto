@@ -121,9 +121,23 @@ function filtrarAcessosPorCapacidade(acessos, capacidade) {
   );
 }
 
+function listarCapacidadesDosAcessos(acessos) {
+  const lista = Array.isArray(acessos) ? acessos : [];
+
+  return [...CAPACIDADES_CONHECIDAS].filter((capacidade) =>
+    lista.some((acesso) =>
+      acesso &&
+      typeof acesso === "object" &&
+      !Array.isArray(acesso) &&
+      perfilPossuiCapacidade(acesso.perfil, capacidade)
+    )
+  );
+}
+
 module.exports = {
   CAPACIDADES_ADMINISTRATIVAS,
   CAPACIDADES_POR_PERFIL,
   perfilPossuiCapacidade,
   filtrarAcessosPorCapacidade,
+  listarCapacidadesDosAcessos,
 };

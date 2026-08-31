@@ -13,6 +13,7 @@ const {
   buscarUserInfo,
 } = require("../services/govbrAuth.service");
 const { verificarSeUsuarioGovbrEhAdmin } = require("../services/adminAuthorization.service");
+const { listarCapacidadesDosAcessos } = require("../utils/adminCapabilities");
 const env = require("../config/env");
 const adminUserModel = require("../models/adminUserModel");
 
@@ -249,6 +250,7 @@ function consultarSessaoAdmin(req, res) {
         ...admin,
         nome: admin.name,
       },
+      capacidades: listarCapacidadesDosAcessos(req.acessos),
     },
   });
 }
