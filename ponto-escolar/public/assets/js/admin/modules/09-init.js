@@ -103,6 +103,7 @@
     inicializacaoAdminEmAndamento = false;
 
     aplicarCapacidadesNaNavegacaoAdmin();
+    aplicarCapacidadesNaPaginaFuncionarios();
     if (existe('#admin-avatar,#admin-firstname,#admin-role,#sb-avatar,#sb-name,#sb-role')) renderizarPerfil();
     if (existe('.btn-logout')) iniciarLogoutAdmin();
     if (existe('#menu-toggle') && existe('#sidebar')) iniciarSidebar();
@@ -112,20 +113,21 @@
     // realmente precisar dela, evitando chamadas de API desnecessárias em
     // páginas que não exibem todos os blocos (ex.: uma tela sem relatório
     // não dispara a busca do relatório).
+    const paginaListaFuncionarios = Boolean(
+      document.getElementById('tbody-funcionarios')
+    );
     const precisaFuncionarios = Boolean(document.querySelector(
       '#tbody-funcionarios,#cards-funcionarios,#tbody-presentes,#tbody-ausentes,#tbody-relatorio,#tbody-ultimos,#stat-total,#form-registro,#grafico-presenca'
     ));
-    const precisaPontosHoje = Boolean(document.querySelector(
+    const precisaPontosHoje =
+      (!paginaListaFuncionarios || temCapacidade('ponto.hoje.visualizar')) &&
+      Boolean(document.querySelector(
       '#tbody-presentes,#tbody-ausentes,#tbody-ultimos,#stat-presentes,#count-presentes,#tbody-funcionarios,#grafico-presenca'
-    ));
+      ));
     const precisaResumo = Boolean(document.querySelector(
       '#stat-total,#hero-presentes,#relatorio-presentes,#grafico-presenca'
     ));
     const precisaRelatorio = Boolean(document.getElementById('tbody-relatorio'));
-    const paginaListaFuncionarios = Boolean(
-      document.getElementById('tbody-funcionarios')
-    );
-
     const dataOptions = {
       includeEmployees: precisaFuncionarios,
       includeToday: precisaPontosHoje,
