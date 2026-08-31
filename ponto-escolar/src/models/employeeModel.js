@@ -25,7 +25,10 @@ const ACTIVE_VINCULO_LATERAL = `
 `;
 
 // null representa escopo global SEDUC; [] ou valor inválido não retorna linhas.
-function buildEscopoUnidadeFilter(unidadesPermitidas) {
+function buildEscopoUnidadeFilter(
+  unidadesPermitidas,
+  unitColumn = "lv.unidade_escolar_id"
+) {
   if (unidadesPermitidas === null) {
     return { clause: "", params: [] };
   }
@@ -46,7 +49,7 @@ function buildEscopoUnidadeFilter(unidadesPermitidas) {
 
   const placeholders = unitIds.map(() => "?").join(",");
   return {
-    clause: `AND lv.unidade_escolar_id IN (${placeholders})`,
+    clause: `AND ${unitColumn} IN (${placeholders})`,
     params: unitIds,
   };
 }
@@ -237,9 +240,18 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
 }
 
 async function countEmployees(filters = {}, escopoUnidades = []) {
-  const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
+  const { clause, params } = buildEscopoUnidadeFilter(
+    escopoUnidades,
+    "v_escopo.unidade_escolar_id"
+  );
+  const escopoClause = clause
+    ? " AND EXISTS (SELECT 1 FROM vinculos_funcionais v_escopo WHERE v_escopo.funcionario_id = f.id AND v_escopo.status = 'ATIVO' " +
+      clause +
+      ")"
+    : "";
+
   return database.executeOne(
-    COUNT_EMPLOYEES_QUERY + clause,
+    COUNT_EMPLOYEES_QUERY + escopoClause,
     [...resolveEmployeeFilter(filters), ...params]
   );
 }
