@@ -1,6 +1,6 @@
 'use strict';
 
-const { configurableAdminUser, fakeUsers } = require('../config/fakeUsers');
+const { fakeUsers } = require('../config/fakeUsers');
 const { timingSafeStringEquals } = require('../utils/crypto');
 
 const fakeUsersBySub = new Map();
@@ -31,13 +31,28 @@ function findBySub(sub) {
 function authenticate({ login, password }) {
   const receivedLogin = String(login || '').trim();
   const receivedPassword = String(password || '');
-  const loginMatches = timingSafeStringEquals(receivedLogin, configurableAdminUser.login);
-  const passwordMatches = timingSafeStringEquals(
-    receivedPassword,
-    configurableAdminUser.password
-  );
+  let authenticatedUser = null;
 
-  return loginMatches && passwordMatches ? configurableAdminUser : null;
+  // Avalia todas as identidades com credencial para não antecipar a saída pelo
+  // login encontrado. Usuários sem login/senha (ex.: demo comum) não podem
+  // autenticar por esta rota.
+  for (const user of fakeUsers) {
+    if (!user.login || !user.password) {
+      continue;
+    }
+
+    const loginMatches = timingSafeStringEquals(receivedLogin, user.login);
+    const passwordMatches = timingSafeStringEquals(
+      receivedPassword,
+      user.password
+    );
+
+    if (loginMatches && passwordMatches) {
+      authenticatedUser = user;
+    }
+  }
+
+  return authenticatedUser;
 }
 
 function toUserInfo(user) {
