@@ -61,6 +61,20 @@ function iniciarSidebar() {
   });
 }
 
+function aplicarCapacidadesNaNavegacaoAdmin() {
+  const itensPorCapacidade = [
+    ['#sidebar a[href="/admin/funcionarios"], .quick-grid a[href="/admin/funcionarios"]', 'funcionario.listar'],
+    ['#sidebar a[href="/admin/funcionarios/novo"], .quick-grid a[href="/admin/funcionarios/novo"]', 'funcionario.criar'],
+    ['#sidebar a[href="/admin/pontos-do-dia"], .quick-grid a[href="/admin/pontos-do-dia"], .dashboard-records-panel a[href="/admin/pontos-do-dia"]', 'ponto.hoje.visualizar'],
+    ['#sidebar a[href="/admin/relatorios"], .quick-grid a[href="/admin/relatorios"]', 'relatorio.visualizar'],
+  ];
+
+  itensPorCapacidade.forEach(([seletor, capacidade]) => {
+    if (temCapacidade(capacidade)) return;
+    document.querySelectorAll(seletor).forEach((elemento) => elemento.remove());
+  });
+}
+
 /* ============================================================
    TABS
    ============================================================ */
