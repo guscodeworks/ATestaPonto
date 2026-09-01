@@ -22,10 +22,12 @@ async function findCpfConflictForUpdate(client, cpf, excludedFuncionarioId) {
   );
 }
 
+const TEMP_PASSWORD_EXPIRY_DAYS = 7;
+
 async function createLogin(client, { funcionarioId, senhaHash }) {
   return getClient(client).execute(
-    "INSERT INTO login_funcionario (funcionario_id, senha_hash, primeiro_acesso) VALUES (?, ?, ?)",
-    [funcionarioId, senhaHash, true]
+    "INSERT INTO login_funcionario (funcionario_id, senha_hash, primeiro_acesso, senha_temporaria_expira_em) VALUES (?, ?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? DAY))",
+    [funcionarioId, senhaHash, true, TEMP_PASSWORD_EXPIRY_DAYS]
   );
 }
 
