@@ -7,6 +7,7 @@ const { Router } = require("express");
 // diretamente (ex: /admin/dashboard.html) para a rota atual sem extensão.
 const CLEAN_ROUTES_COMPATIBLE_WITH_HTML_SUFFIX = new Set([
   "/login",
+  "/first-access",
   "/admin/login",
   "/admin/dashboard",
   "/admin/funcionario",

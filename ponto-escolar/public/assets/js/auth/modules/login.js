@@ -212,6 +212,28 @@
         }
       });
 
+      // Verifica se é primeiro acesso (backend retorna token_primeiro_acesso)
+      if (data.primeiro_acesso && data.token_primeiro_acesso) {
+        sessionStorage.setItem('funcionario_primeiro_acesso_token', data.token_primeiro_acesso);
+        sessionStorage.setItem('funcionario_primeiro_acesso_expira_em', data.expira_em || '');
+        
+        if (remember.checked) {
+          const rememberedIdentifier = identificador.includes('@')
+            ? normalizeIdentifier(identificador)
+            : formatCpf(identificador);
+          localStorage.setItem('func_saved_identificador', rememberedIdentifier);
+          localStorage.removeItem('func_saved_cpf');
+        } else {
+          localStorage.removeItem('func_saved_identificador');
+          localStorage.removeItem('func_saved_cpf');
+        }
+
+        // Redireciona para a tela de troca de senha de primeiro acesso
+        window.location.href = '/first-access';
+        return;
+      }
+
+      // Login normal
       sessionStorage.setItem('funcionario_token', data.token);
       sessionStorage.setItem('funcionario_data', JSON.stringify(data.funcionario));
       sessionStorage.setItem('func_nome', data.funcionario?.nome || '');

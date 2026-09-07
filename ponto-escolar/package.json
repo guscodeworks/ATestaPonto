@@ -15,7 +15,8 @@
     "db:init": "node src/scripts/initDatabase.js",
     "db:run": "node src/scripts/runSqlFile.js",
     "mvc:check": "node src/scripts/checkMvcBoundaries.js",
-    "test": "node --test --test-concurrency=1 test/*.test.js"
+    "test": "node --test --test-concurrency=1 test/*.test.js",
+    "test:first-access": "node test-first-access.js"
   },
   "dependencies": {
     "@upstash/redis": "^1.38.0",
