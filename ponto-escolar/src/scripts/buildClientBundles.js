@@ -94,7 +94,8 @@ const adminModules = [
   "admin/modules/settings.js",
 ];
 
-writeBundle("admin/admin.js", ["shared/loading.js", ...adminModules]);
+// Os módulos administrativos são carregados pelo bootstrap público em ordem.
+// Não os concatene: cada arquivo deve permanecer auditável e abaixo do limite.
 
 for (const page of ["profile", "punch", "report"]) {
   writeBundle(`employee/${page}.js`, [
@@ -108,24 +109,6 @@ writeBundle("auth/login.js", ["shared/loading.js", "auth/modules/login.js"]);
 writeBundle("auth/password-recovery.js", ["auth/modules/password-recovery.js"]);
 writeBundle("auth/password.js", ["auth/modules/password.js"]);
 
-writeCssBundle("bundles/admin.css", ["admin.css"]);
-writeCssBundle("bundles/employee-profile.css", [
-  "tokens.css",
-  "employee/base.css",
-  "employee/profile.css",
-]);
-writeCssBundle("bundles/employee-punch.css", [
-  "tokens.css",
-  "loading.css",
-  "employee/base.css",
-  "employee/punch.css",
-]);
-writeCssBundle("bundles/employee-report.css", [
-  "tokens.css",
-  "employee/base.css",
-  "employee/report.css",
-]);
-writeCssBundle("bundles/login.css", ["tokens.css", "employee-login.css"]);
-writeCssBundle("bundles/password.css", ["password/password.css"]);
-
-console.log("Client JS and CSS bundles built successfully.");
+// CSS é servido por manifestos @import em public/assets/css/bundles.
+// Isso mantém a organização por responsabilidade sem recriar arquivos grandes.
+console.log("Client JavaScript bundles built successfully; CSS uses public manifests.");

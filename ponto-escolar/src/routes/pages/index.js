@@ -5,6 +5,10 @@ const { createAuthPagesRouter } = require("./auth.routes");
 const { createAdminPagesRouter } = require("./admin.routes");
 const { createFuncionarioPagesRouter } = require("./employee.routes");
 const { createLegacyPagesRouter } = require("./legacy.routes");
+const employeeQrAccessSession = require("../../middlewares/employeeQrAccessSession");
+const {
+  establishQrSchoolUnitContext,
+} = require("../../middlewares/qrSchoolUnitContext");
 
 function createPagesRouter({ sendView }) {
   const router = Router();
@@ -23,9 +27,14 @@ function createPagesRouter({ sendView }) {
     res.redirect("/ponto/acessar");
   });
 
-  router.get("/ponto/acessar", (_req, res) => {
-    sendView(res, "index.html");
-  });
+  router.get(
+    "/ponto/acessar",
+    employeeQrAccessSession,
+    establishQrSchoolUnitContext,
+    (_req, res) => {
+      sendView(res, "index.html");
+    }
+  );
 
   // Rotas legadas registradas por último para não conflitar com as rotas atuais acima.
   router.use(createLegacyPagesRouter());
