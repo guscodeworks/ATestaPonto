@@ -108,6 +108,8 @@ for (const page of ["profile", "punch", "report"]) {
 writeBundle("auth/login.js", ["shared/loading.js", "auth/modules/login.js"]);
 writeBundle("auth/password-recovery.js", ["auth/modules/password-recovery.js"]);
 writeBundle("auth/password.js", ["auth/modules/password.js"]);
+writeBundle("auth/first-access.js", ["shared/loading.js", "auth/modules/first-access.js"]);
+writeBundle("auth/first-access.js", ["shared/loading.js", "auth/modules/first-access.js"]);
 
 // CSS é servido por manifestos @import em public/assets/css/bundles.
 // Isso mantém a organização por responsabilidade sem recriar arquivos grandes.

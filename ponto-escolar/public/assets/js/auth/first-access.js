@@ -349,29 +349,31 @@
 })(window);
 
 
-/* --- auth/modules/login.js --- */
+/* --- auth/modules/first-access.js --- */
 (function () {
   'use strict';
 
-  const form = document.getElementById('login-form');
-  const identificadorInput = document.getElementById('identificador');
-  const senhaInput = document.getElementById('senha');
-  const identificadorError = document.getElementById('identificador-error');
-  const senhaError = document.getElementById('senha-error');
-  const togglePw = document.getElementById('toggle-pw');
-  const btnLogin = document.getElementById('btn-login');
-  const remember = document.getElementById('remember');
+  const form = document.getElementById('first-access-form');
+  const novaSenhaInput = document.getElementById('nova-senha');
+  const confirmaSenhaInput = document.getElementById('confirma-senha');
+  const novaSenhaError = document.getElementById('nova-senha-error');
+  const confirmaSenhaError = document.getElementById('confirma-senha-error');
+  const toggleNovaSenha = document.getElementById('toggle-nova-senha');
+  const toggleConfirmaSenha = document.getElementById('toggle-confirma-senha');
+  const btnSalvar = document.getElementById('btn-salvar');
   const toastStack = document.getElementById('toast-stack');
+  const msgContainer = document.getElementById('msg-container');
+  const loginLink = document.getElementById('login-link');
 
   if (
-    !form || !identificadorInput || !senhaInput || !identificadorError || !senhaError ||
-    !togglePw || !btnLogin || !remember || !toastStack
+    !form || !novaSenhaInput || !confirmaSenhaInput || !novaSenhaError || !confirmaSenhaError ||
+    !toggleNovaSenha || !toggleConfirmaSenha || !btnSalvar || !toastStack || !msgContainer || !loginLink
   ) {
     return;
   }
 
   let isSubmitting = false;
-  let loginLoading = null;
+  let loadingHandle = null;
 
   function toast(message, type = 'info') {
     const el = document.createElement('div');
@@ -379,78 +381,46 @@
     el.innerHTML = '<span class="toast-icon" aria-hidden="true"></span><span class="toast-msg"></span>';
     el.querySelector('.toast-msg').textContent = message;
     toastStack.appendChild(el);
-    setTimeout(() => el.remove(), 3500);
+    setTimeout(() => el.remove(), 5000);
+  }
+
+  function showMessage(message, isError = false) {
+    msgContainer.textContent = message;
+    msgContainer.className = 'msg-container ' + (isError ? 'error' : 'success');
+    msgContainer.hidden = false;
+  }
+
+  function hideMessage() {
+    msgContainer.hidden = true;
+    msgContainer.textContent = '';
+    msgContainer.className = 'msg-container';
   }
 
   async function apiRequest(path, options = {}) {
+    const token = sessionStorage.getItem('funcionario_primeiro_acesso_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await fetch(`/api${path}`, {
-      method: options.method || 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {})
-      },
+      method: options.method || 'POST',
+      headers,
       body: options.body ? JSON.stringify(options.body) : undefined
     });
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok || payload.success === false) {
-      const error = new Error('Não foi possível concluir o login. Tente novamente.');
+      const error = new Error(payload.message || 'Não foi possível concluir a operação. Tente novamente.');
       error.status = response.status;
+      error.payload = payload;
       throw error;
     }
 
-    return payload.data;
-  }
-
-  function onlyDigits(value) {
-    return String(value || '').replace(/\D/g, '').slice(0, 11);
-  }
-
-  function formatCpf(value) {
-    const digits = onlyDigits(value);
-
-    return digits
-      .replace(/^(\d{3})(\d)/, '$1.$2')
-      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
-      .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
-  }
-
-  function isValidCpf(value) {
-    const cpf = onlyDigits(value);
-
-    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) {
-      return false;
-    }
-
-    const calculateDigit = (length) => {
-      let sum = 0;
-      for (let index = 0; index < length; index += 1) {
-        sum += Number(cpf[index]) * (length + 1 - index);
-      }
-      const remainder = (sum * 10) % 11;
-      return remainder === 10 ? 0 : remainder;
-    };
-
-    return calculateDigit(9) === Number(cpf[9]) &&
-      calculateDigit(10) === Number(cpf[10]);
-  }
-
-  function isValidEmail(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
-  }
-
-  function normalizeIdentifier(value) {
-    const identifier = String(value || '').trim();
-    return identifier.includes('@')
-      ? identifier.toLowerCase()
-      : onlyDigits(identifier);
-  }
-
-  function formatIdentifierInput(value) {
-    const identifier = String(value || '');
-    return /^[\d.\-\s]*$/.test(identifier)
-      ? formatCpf(identifier)
-      : identifier.slice(0, 150);
+    return payload;
   }
 
   function setFieldError(input, errorElement, message) {
@@ -458,56 +428,63 @@
     errorElement.classList.add('visible');
     input.classList.add('has-error');
     input.setAttribute('aria-invalid', 'true');
+    input.closest('.input-group')?.classList.add('has-error');
   }
 
   function clearFieldError(input, errorElement) {
     errorElement.classList.remove('visible');
     input.classList.remove('has-error');
     input.removeAttribute('aria-invalid');
+    input.closest('.input-group')?.classList.remove('has-error');
   }
 
   async function setLoading(loading) {
     isSubmitting = loading;
     if (loading) {
-      loginLoading = iniciarCarregamento(btnLogin, {
+      loadingHandle = window.iniciarCarregamento(btnSalvar, {
         tamanho: 'sm',
-        mensagem: 'Entrando...',
+        mensagem: 'Salvando...',
         mostrarMensagem: true,
       });
-      identificadorInput.disabled = true;
-      senhaInput.disabled = true;
-      remember.disabled = true;
-      togglePw.disabled = true;
+      novaSenhaInput.disabled = true;
+      confirmaSenhaInput.disabled = true;
+      toggleNovaSenha.disabled = true;
+      toggleConfirmaSenha.disabled = true;
       form.setAttribute('aria-busy', 'true');
     } else {
-      await finalizarCarregamento(loginLoading);
-      loginLoading = null;
-      identificadorInput.disabled = false;
-      senhaInput.disabled = false;
-      remember.disabled = false;
-      togglePw.disabled = false;
+      if (loadingHandle) {
+        await window.finalizarCarregamento(loadingHandle);
+        loadingHandle = null;
+      }
+      novaSenhaInput.disabled = false;
+      confirmaSenhaInput.disabled = false;
+      toggleNovaSenha.disabled = false;
+      toggleConfirmaSenha.disabled = false;
       form.removeAttribute('aria-busy');
     }
   }
 
-  identificadorInput.addEventListener('input', function () {
-    this.value = this.value.slice(0, 150);
-    clearFieldError(identificadorInput, identificadorError);
-  });
-
-  identificadorInput.addEventListener('blur', function () {
-    if (!this.value.includes('@') && /^[\d.\-\s]*$/.test(this.value)) {
-      this.value = formatCpf(this.value);
+  novaSenhaInput.addEventListener('input', function () {
+    clearFieldError(novaSenhaInput, novaSenhaError);
+    if (confirmaSenhaInput.value) {
+      clearFieldError(confirmaSenhaInput, confirmaSenhaError);
     }
   });
 
-  senhaInput.addEventListener('input', function () {
-    clearFieldError(senhaInput, senhaError);
+  confirmaSenhaInput.addEventListener('input', function () {
+    clearFieldError(confirmaSenhaInput, confirmaSenhaError);
   });
 
-  togglePw.addEventListener('click', function () {
-    const shouldShow = senhaInput.type === 'password';
-    senhaInput.type = shouldShow ? 'text' : 'password';
+  toggleNovaSenha.addEventListener('click', function () {
+    const shouldShow = novaSenhaInput.type === 'password';
+    novaSenhaInput.type = shouldShow ? 'text' : 'password';
+    this.textContent = shouldShow ? 'Ocultar' : 'Mostrar';
+    this.setAttribute('aria-label', shouldShow ? 'Ocultar senha' : 'Mostrar senha');
+  });
+
+  toggleConfirmaSenha.addEventListener('click', function () {
+    const shouldShow = confirmaSenhaInput.type === 'password';
+    confirmaSenhaInput.type = shouldShow ? 'text' : 'password';
     this.textContent = shouldShow ? 'Ocultar' : 'Mostrar';
     this.setAttribute('aria-label', shouldShow ? 'Ocultar senha' : 'Mostrar senha');
   });
@@ -519,28 +496,22 @@
       return;
     }
 
-    const identificador = identificadorInput.value.trim();
-    const senha = senhaInput.value;
+    const novaSenha = novaSenhaInput.value;
+    const confirmaSenha = confirmaSenhaInput.value;
     let firstInvalidField = null;
 
-    clearFieldError(identificadorInput, identificadorError);
-    clearFieldError(senhaInput, senhaError);
+    clearFieldError(novaSenhaInput, novaSenhaError);
+    clearFieldError(confirmaSenhaInput, confirmaSenhaError);
+    hideMessage();
 
-    const identificadorValido = identificador.includes('@')
-      ? isValidEmail(identificador)
-      : isValidCpf(identificador);
-    if (!identificadorValido) {
-      setFieldError(
-        identificadorInput,
-        identificadorError,
-        'Informe um CPF ou e-mail válido.'
-      );
-      firstInvalidField = identificadorInput;
+    if (novaSenha.length < 8 || novaSenha.length > 72) {
+      setFieldError(novaSenhaInput, novaSenhaError, 'A senha deve ter entre 8 e 72 caracteres.');
+      firstInvalidField = novaSenhaInput;
     }
 
-    if (senha.length < 8) {
-      setFieldError(senhaInput, senhaError, 'A senha deve ter pelo menos 8 caracteres.');
-      firstInvalidField ||= senhaInput;
+    if (novaSenha !== confirmaSenha) {
+      setFieldError(confirmaSenhaInput, confirmaSenhaError, 'As senhas não coincidem.');
+      firstInvalidField ||= confirmaSenhaInput;
     }
 
     if (firstInvalidField) {
@@ -556,82 +527,58 @@
     setLoading(true);
 
     try {
-      const data = await apiRequest('/pontos/login', {
+      const result = await apiRequest('/pontos/primeiro-acesso/trocar-senha', {
         method: 'POST',
         body: {
-          identificador: normalizeIdentifier(identificador),
-          senha
+          novaSenha
         }
       });
 
-      // Verifica se é primeiro acesso (backend retorna token_primeiro_acesso)
-      if (data.primeiro_acesso && data.token_primeiro_acesso) {
-        sessionStorage.setItem('funcionario_primeiro_acesso_token', data.token_primeiro_acesso);
-        sessionStorage.setItem('funcionario_primeiro_acesso_expira_em', data.expira_em || '');
-        
-        if (remember.checked) {
-          const rememberedIdentifier = identificador.includes('@')
-            ? normalizeIdentifier(identificador)
-            : formatCpf(identificador);
-          localStorage.setItem('func_saved_identificador', rememberedIdentifier);
-          localStorage.removeItem('func_saved_cpf');
-        } else {
-          localStorage.removeItem('func_saved_identificador');
-          localStorage.removeItem('func_saved_cpf');
-        }
+      // Sucesso: backend retorna { primeiro_acesso: false, message: "..." }
+      sessionStorage.removeItem('funcionario_primeiro_acesso_token');
+      sessionStorage.removeItem('funcionario_primeiro_acesso_expira_em');
 
-        // Redireciona para a tela de troca de senha de primeiro acesso
-        window.location.href = '/first-access';
-        return;
-      }
+      showMessage(result.message || 'Senha alterada com sucesso! Faça login novamente com a nova senha.', false);
+      toast('Senha alterada com sucesso!', 'success');
 
-      // Login normal
-      sessionStorage.setItem('funcionario_token', data.token);
-      sessionStorage.setItem('funcionario_data', JSON.stringify(data.funcionario));
-      sessionStorage.setItem('func_nome', data.funcionario?.nome || '');
-      sessionStorage.setItem('func_cpf', data.funcionario?.cpf || '');
+      // Esconde o formulário e mostra link para login
+      form.hidden = true;
+      loginLink.hidden = false;
 
-      if (remember.checked) {
-        const rememberedIdentifier = identificador.includes('@')
-          ? normalizeIdentifier(identificador)
-          : formatCpf(identificador);
-        localStorage.setItem('func_saved_identificador', rememberedIdentifier);
-        localStorage.removeItem('func_saved_cpf');
-      } else {
-        localStorage.removeItem('func_saved_identificador');
-        localStorage.removeItem('func_saved_cpf');
-      }
-
-      window.location.href = '/funcionario';
     } catch (error) {
       if (error instanceof TypeError) {
         toast('Não foi possível conectar ao servidor. Tente novamente.', 'error');
+        showMessage('Erro de conexão. Tente novamente.', true);
+      } else if (error.status === 401 || error.status === 403) {
+        const msg = error.payload?.message || 'Token inválido ou expirado. Faça login novamente.';
+        toast(msg, 'error');
+        showMessage(msg, true);
+        // Limpa token inválido
+        sessionStorage.removeItem('funcionario_primeiro_acesso_token');
+        sessionStorage.removeItem('funcionario_primeiro_acesso_expira_em');
+      } else if (error.status === 409) {
+        const msg = error.payload?.message || 'Primeiro acesso já foi concluído. Faça login normalmente.';
+        toast(msg, 'error');
+        showMessage(msg, true);
+        sessionStorage.removeItem('funcionario_primeiro_acesso_token');
+        sessionStorage.removeItem('funcionario_primeiro_acesso_expira_em');
       } else {
-        // Erro de credencial do servidor: aplica o mesmo estado visual de erro
-        // dos campos (borda vermelha + mensagem via aria-live) além do toast.
-        const message = 'CPF/e-mail ou senha inválidos.';
-        setFieldError(identificadorInput, identificadorError, message);
-        setFieldError(senhaInput, senhaError, message);
-        toast(message, 'error');
+        const msg = error.payload?.message || 'Erro ao alterar senha. Tente novamente.';
+        toast(msg, 'error');
+        showMessage(msg, true);
       }
     } finally {
       await setLoading(false);
     }
   });
 
-  const savedIdentifier = localStorage.getItem('func_saved_identificador') ||
-    localStorage.getItem('func_saved_cpf');
-  if (savedIdentifier) {
-    identificadorInput.value = formatIdentifierInput(savedIdentifier);
-    remember.checked = true;
+  // Verifica se há token de primeiro acesso ao carregar a página
+  const token = sessionStorage.getItem('funcionario_primeiro_acesso_token');
+  if (!token) {
+    showMessage('Nenhum token de primeiro acesso encontrado. Faça login primeiro.', true);
+    form.hidden = true;
+    loginLink.hidden = false;
   }
-
-  remember.addEventListener('change', function () {
-    if (!this.checked) {
-      localStorage.removeItem('func_saved_identificador');
-      localStorage.removeItem('func_saved_cpf');
-    }
-  });
 })();
 
 

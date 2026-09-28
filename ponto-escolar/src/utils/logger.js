@@ -40,11 +40,7 @@ function maskToken(value) {
     return 'Bearer [REDACTED]';
   }
 
-  if (trimmed.length <= 12) {
-    return '[REDACTED_TOKEN]';
-  }
-
-  return `${trimmed.slice(0, 6)}...${trimmed.slice(-4)}`;
+  return '[REDACTED_TOKEN]';
 }
 
 function isSensitiveKey(key) {
