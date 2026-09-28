@@ -115,6 +115,14 @@ const upstashRedisRestUrl = redisEnabled
 
 const fakeAdminLogin = getOptionalVar("GOVBR_FAKE_ADMIN_LOGIN");
 const fakeAdminPassword = getOptionalVar("GOVBR_FAKE_ADMIN_PASSWORD");
+const LOCAL_ADMIN_ACCOUNT_KEYS = Object.freeze([
+  "SEDUC",
+  "DRE1",
+  "DRE2",
+  "VICE_DIRETOR",
+  "SECRETARIA",
+  "COORDENADOR",
+]);
 
 if (fakeAdminLogin !== "adminlocal") {
   throwEnvError('"GOVBR_FAKE_ADMIN_LOGIN" must be "adminlocal"');
@@ -128,6 +136,33 @@ if (
     '"GOVBR_FAKE_ADMIN_PASSWORD" must be replaced with a demo password of at least 8 characters'
   );
 }
+
+function readLocalAdministrativeUser(key) {
+  const prefix = `GOVBR_FAKE_ADMIN_${key}`;
+  const user = {
+    login: getOptionalVar(`${prefix}_LOGIN`),
+    password: getOptionalVar(`${prefix}_PASSWORD`),
+    sub: getOptionalVar(`${prefix}_SUB`),
+    name: getOptionalVar(`${prefix}_NAME`),
+    email: getOptionalVar(`${prefix}_EMAIL`),
+  };
+
+  if (Object.values(user).some((value) => !value)) {
+    throwEnvError(`all fields for "${prefix}" are required`);
+  }
+  if (user.password.length < 8) {
+    throwEnvError(`"${prefix}_PASSWORD" must have at least 8 characters`);
+  }
+  if (!/^\d{11}$/.test(user.sub)) {
+    throwEnvError(`"${prefix}_SUB" must contain exactly 11 digits`);
+  }
+
+  return Object.freeze(user);
+}
+
+const localAdministrativeUsers = Object.freeze(
+  LOCAL_ADMIN_ACCOUNT_KEYS.map(readLocalAdministrativeUser)
+);
 
 // Configuracao do servidor mock/fake do Gov.br, usado apenas em ambiente local
 // de desenvolvimento para simular o fluxo OAuth sem depender da integracao real
@@ -172,6 +207,7 @@ const env = Object.freeze({
   ).trim(),
   fakeAdminLogin,
   fakeAdminPassword,
+  localAdministrativeUsers,
   fakeSessionTtlMs: 2 * 60 * 60 * 1000,
   authCodeTtlMs: 5 * 60 * 1000,
   accessTokenTtlMs: 60 * 60 * 1000,
