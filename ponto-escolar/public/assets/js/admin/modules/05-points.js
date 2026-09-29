@@ -2,6 +2,23 @@
    PONTOS DO DIA
    ============================================================ */
 
+function validarAcessoPaginaPontosHoje() {
+  const pagina = document.querySelector('.pontos-page');
+  if (!pagina) return true;
+
+  if (!temCapacidade('ponto.hoje.visualizar')) {
+    pagina.remove();
+    window.location.replace('/admin/dashboard');
+    return false;
+  }
+
+  if (!temCapacidade('relatorio.visualizar')) {
+    pagina.querySelector('a[href="/admin/relatorios"]')?.remove();
+  }
+
+  return true;
+}
+
 function renderizarPontosHoje() {
   const tbodyP = document.getElementById('tbody-presentes');
   const tbodyA = document.getElementById('tbody-ausentes');

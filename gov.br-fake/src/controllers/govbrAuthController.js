@@ -8,6 +8,7 @@ const { registerAccessToken, findUserInfoByAccessToken } = require('../services/
 const { validateS256 } = require('../services/pkceService');
 const fakeUserService = require('../services/fakeUserService');
 const memoryStore = require('../repositories/memoryStore');
+const pendingAuthorizeStore = require('../repositories/redisPendingAuthorizeStore');
 const {
   createFakeSessionStore
 } = require('../repositories/fakeSessionStoreFactory');
@@ -169,30 +170,21 @@ function validateAuthorizeRequest(authorizeRequest) {
   return authorizeRequest;
 }
 
-function savePendingAuthorizeRequest(res, authorizeRequest) {
-  memoryStore.cleanupExpiredRecords();
+async function savePendingAuthorizeRequest(res, authorizeRequest) {
   const requestId = generateSecureToken('authorize_request');
 
-  memoryStore.savePendingAuthorizeRequest(requestId, {
-    ...authorizeRequest,
-    expiresAt: Date.now() + env.pendingAuthorizeRequestTtlMs
-  });
+  await pendingAuthorizeStore.savePendingAuthorizeRequest(requestId, authorizeRequest);
   res.setHeader('Set-Cookie', buildCookie(PENDING_AUTHORIZE_COOKIE, requestId, {
     maxAge: Math.floor(env.pendingAuthorizeRequestTtlMs / 1000)
   }));
 }
 
-function getPendingAuthorizeRequest(req) {
-  memoryStore.cleanupExpiredRecords();
+async function getPendingAuthorizeRequest(req) {
   const requestId = getCookie(req, PENDING_AUTHORIZE_COOKIE);
-  return requestId ? memoryStore.getPendingAuthorizeRequest(requestId) : null;
+  return requestId ? pendingAuthorizeStore.getPendingAuthorizeRequest(requestId) : null;
 }
 
-function clearPendingAuthorizeRequest(req, res) {
-  const requestId = getCookie(req, PENDING_AUTHORIZE_COOKIE);
-  if (requestId) {
-    memoryStore.deletePendingAuthorizeRequest(requestId);
-  }
+function clearPendingAuthorizeCookie(res) {
   res.setHeader('Set-Cookie', buildCookie(PENDING_AUTHORIZE_COOKIE, '', {
     maxAge: 0
   }));
@@ -252,8 +244,8 @@ async function showAuthorize(req, res, next) {
     const hasAuthorizeQuery = Object.hasOwn(req.query, 'response_type');
     const pendingAuthorizeRequest = hasAuthorizeQuery
       ? null
-      : getPendingAuthorizeRequest(req);
-    const authorizeRequest = validateAuthorizeRequest(
+      : await getPendingAuthorizeRequest(req);
+    let authorizeRequest = validateAuthorizeRequest(
       hasAuthorizeQuery
         ? readAuthorizeRequest(req.query)
         : pendingAuthorizeRequest || {}
@@ -262,13 +254,20 @@ async function showAuthorize(req, res, next) {
     const authenticatedUser = await getAuthenticatedUser(req);
     if (!authenticatedUser) {
       if (hasAuthorizeQuery) {
-        savePendingAuthorizeRequest(res, authorizeRequest);
+        await savePendingAuthorizeRequest(res, authorizeRequest);
       }
       return res.redirect('/auth/login');
     }
 
     if (pendingAuthorizeRequest) {
-      clearPendingAuthorizeRequest(req, res);
+      const consumed = await pendingAuthorizeStore.consumePendingAuthorizeRequest(
+        getCookie(req, PENDING_AUTHORIZE_COOKIE)
+      );
+      clearPendingAuthorizeCookie(res);
+      if (!consumed) {
+        throw requestError('Autorizacao pendente invalida ou expirada.', 400, 'invalid_request');
+      }
+      authorizeRequest = validateAuthorizeRequest(consumed);
     }
 
     const { code } = await registerAuthorizationCode({

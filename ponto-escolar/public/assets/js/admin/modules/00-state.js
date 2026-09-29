@@ -13,7 +13,38 @@
 const ADMIN = {
   nome: 'Administrador',
   cargo: 'Administrador',
+  capacidades: new Set(),
 };
+
+function normalizarCapacidadeAdmin(capacidade) {
+  return typeof capacidade === 'string' ? capacidade.trim().toLowerCase() : '';
+}
+
+function definirCapacidadesAdmin(capacidades) {
+  const lista = Array.isArray(capacidades) ? capacidades : [];
+
+  ADMIN.capacidades = new Set(
+    lista.map(normalizarCapacidadeAdmin).filter(Boolean),
+  );
+}
+
+function temCapacidade(capacidade) {
+  const capacidadeNormalizada = normalizarCapacidadeAdmin(capacidade);
+
+  return Boolean(
+    capacidadeNormalizada
+      && ADMIN.capacidades instanceof Set
+      && ADMIN.capacidades.has(capacidadeNormalizada),
+  );
+}
+
+function temAlgumaCapacidade(...capacidades) {
+  return capacidades.some(temCapacidade);
+}
+
+function temTodasCapacidades(...capacidades) {
+  return capacidades.length > 0 && capacidades.every(temCapacidade);
+}
 
 // Estado em memória da tela administrativa. É preenchido pelas funções
 // carregarXxxAdmin() e consumido pelas funções renderizarXxx() (definidas

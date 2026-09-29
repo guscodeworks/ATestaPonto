@@ -12,20 +12,12 @@ const {
   trocarCodePorToken,
   buscarUserInfo,
 } = require("../services/govbrAuth.service");
-const { verificarSeUsuarioGovbrEhAdmin } = require("../services/adminAuthorization.service");
+const {
+  obterAdminParaLoginGovbr,
+  registrarUltimoLoginAdmin,
+} = require("../services/adminAuthorization.service");
+const { listarCapacidadesDosAcessos } = require("../utils/adminCapabilities");
 const env = require("../config/env");
-const adminUserModel = require("../models/adminUserModel");
-
-// Logout do simulador de identidade (dev/teste).
-function getGovbrFakeLogoutUrl() {
-  const baseUrl = String(
-    process.env.GOVBR_FAKE_BASE_URL || "http://127.0.0.1:4000"
-  )
-    .trim()
-    .replace(/\/+$/, "");
-
-  return `${baseUrl}/auth/logout`;
-}
 
 // timingSafeEqual exige buffers do mesmo tamanho.
 function matchesState(receivedState, storedState) {
@@ -160,9 +152,7 @@ async function concluirLoginGovbr(req, res, next) {
 
     const userInfo = await buscarUserInfo(accessToken);
 
-    const admin = await adminUserModel.findByCpf(
-      userInfo.cpf
-    );
+    const admin = await obterAdminParaLoginGovbr(userInfo.cpf);
 
     if (!admin) {
       throw new ForbiddenError(
@@ -193,7 +183,7 @@ async function concluirLoginGovbr(req, res, next) {
     req.session.admin = adminSession;
     await saveSession(req);
 
-    await adminUserModel.updateLastLogin(admin.id);
+    await registrarUltimoLoginAdmin(admin.id);
 
     return res.redirect("/admin/dashboard");
   } catch (error) {
@@ -210,7 +200,7 @@ async function sairGovbr(req, res, next) {
   });
 
   if (!req.session) {
-    return res.redirect(getGovbrFakeLogoutUrl());
+    return res.redirect(env.GOVBR_LOGOUT_URL || "/");
   }
 
   try {
@@ -218,7 +208,7 @@ async function sairGovbr(req, res, next) {
     delete req.session.oauthGovbr;
     await destroySession(req);
 
-    return res.redirect(getGovbrFakeLogoutUrl());
+    return res.redirect(env.GOVBR_LOGOUT_URL || "/");
   } catch (error) {
     return next(error);
   }
@@ -249,6 +239,7 @@ function consultarSessaoAdmin(req, res) {
         ...admin,
         nome: admin.name,
       },
+      capacidades: listarCapacidadesDosAcessos(req.acessos),
     },
   });
 }

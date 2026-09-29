@@ -1,6 +1,8 @@
 "use strict";
 
-const adminUserModel = require("../models/adminUserModel");
+const {
+  obterContextoAutorizacaoAdmin,
+} = require("../services/adminAuthorization.service");
 
 /**
  * Protege paginas admin: Gov.br autentica, ATestaPonto autoriza.
@@ -17,10 +19,9 @@ function ensureAdminAuthenticated(req, res, next) {
     return res.redirect("/auth/govbr/login");
   }
 
-  // Busca o administrativo real no banco para validar se ainda existe e esta ativo
-  adminUserModel
-    .findById(adminSession.id)
-    .then((adminFromDb) => {
+  // Busca o administrativo real e seus acessos via service para revalidar a sessão.
+  obterContextoAutorizacaoAdmin(adminSession.id)
+    .then(({ admin: adminFromDb, acessos }) => {
       if (!adminFromDb) {
         return res.redirect("/auth/govbr/login");
       }
@@ -29,31 +30,26 @@ function ensureAdminAuthenticated(req, res, next) {
         return res.redirect("/auth/govbr/login");
       }
 
-      // Admin válido - busca seus acessos ativos
-      return adminUserModel
-        .findAcessosAtivosPorUsuario(adminFromDb.id)
-        .then((acessos) => {
-          // Admin válido - define req.user com dados reais do banco.
-          // usuarios_administrativos não possui funcionario_id nem govbr_sub
-          // (cpf-keyed); apenas campos reais são expostos.
-          req.user = {
-            id: adminFromDb.id,
-            email: adminFromDb.email,
-            nome: adminFromDb.nome,
-            ultimoLoginEm: adminFromDb.ultimo_login_em,
-            criadoEm: adminFromDb.criado_em,
-            atualizadoEm: adminFromDb.atualizado_em,
-            ativo: adminFromDb.ativo,
-          };
+      // Admin válido - define req.user com dados reais do banco.
+      // usuarios_administrativos não possui funcionario_id nem govbr_sub
+      // (cpf-keyed); apenas campos reais são expostos.
+      req.user = {
+        id: adminFromDb.id,
+        email: adminFromDb.email,
+        nome: adminFromDb.nome,
+        ultimoLoginEm: adminFromDb.ultimo_login_em,
+        criadoEm: adminFromDb.criado_em,
+        atualizadoEm: adminFromDb.atualizado_em,
+        ativo: adminFromDb.ativo,
+      };
 
-          // Disponibiliza os acessos ativos no request
-          req.acessos = acessos || [];
+      // Disponibiliza os acessos ativos no request
+      req.acessos = acessos || [];
 
-          // Determina o contexto/perfil aplicável (primeiro acesso ativo por padrão)
-          req.contextoAdmin = acessos && acessos.length > 0 ? acessos[0] : null;
+      // Determina o contexto/perfil aplicável (primeiro acesso ativo por padrão)
+      req.contextoAdmin = acessos && acessos.length > 0 ? acessos[0] : null;
 
-          return next();
-        });
+      return next();
     })
     .catch((error) => {
       return res.redirect("/auth/govbr/login");

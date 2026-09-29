@@ -2,7 +2,7 @@
 
 const nodemailer = require("nodemailer");
 const env = require("../config/env");
-const { logger } = require("../utils/logger");
+const { logger, safeErrorContext } = require("../utils/logger");
 
 let transport;
 
@@ -43,10 +43,9 @@ async function sendEmployeeWelcomeEmail({ nome, email, senhaTemporaria }) {
     });
     return { enviado: true };
   } catch (error) {
-    // Senha nunca logada; logger já mascara o e-mail.
+    // Registre somente diagnóstico técnico, nunca destinatário ou credenciais.
     logger.error("Falha ao enviar e-mail de acesso ao funcionario", {
-      error: { name: error.name, code: error.code },
-      email,
+      error: safeErrorContext(error),
     });
     return { enviado: false, motivo: "falha_no_envio" };
   }
@@ -71,8 +70,7 @@ async function sendPasswordRecoveryCode({ nome, email, codigo }) {
     return { enviado: true };
   } catch (error) {
     logger.error("Falha ao enviar código de recuperação de senha", {
-      error: { name: error.name, code: error.code },
-      email,
+      error: safeErrorContext(error),
     });
     return { enviado: false, motivo: "falha_no_envio" };
   }

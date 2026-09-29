@@ -5,7 +5,6 @@
 // ambiente de demonstração, não de produção.
 const authCodes = new Map();
 const accessTokens = new Map();
-const pendingAuthorizeRequests = new Map();
 const fakeLoginSessions = new Map();
 
 // Suporta tanto registros com método `isExpired` (ex.: instâncias de AccessToken/AuthCode)
@@ -39,7 +38,6 @@ function cleanupExpiredRecords() {
 
   deleteExpiredFromMap(authCodes, now);
   deleteExpiredFromMap(accessTokens, now);
-  deleteExpiredFromMap(pendingAuthorizeRequests, now);
   deleteExpiredFromMap(fakeLoginSessions, now);
 }
 
@@ -81,19 +79,6 @@ function deleteAccessToken(token) {
   accessTokens.delete(token);
 }
 
-function savePendingAuthorizeRequest(id, request) {
-  pendingAuthorizeRequests.set(id, request);
-  return request;
-}
-
-function getPendingAuthorizeRequest(id) {
-  return pendingAuthorizeRequests.get(id) || null;
-}
-
-function deletePendingAuthorizeRequest(id) {
-  pendingAuthorizeRequests.delete(id);
-}
-
 function saveFakeLoginSession(id, session) {
   fakeLoginSessions.set(id, session);
   return session;
@@ -110,7 +95,6 @@ function deleteFakeLoginSession(id) {
 module.exports = {
   authCodes,
   accessTokens,
-  pendingAuthorizeRequests,
   fakeLoginSessions,
   cleanupExpiredRecords,
   startCleanup,
@@ -120,9 +104,6 @@ module.exports = {
   saveAccessToken,
   getAccessToken,
   deleteAccessToken,
-  savePendingAuthorizeRequest,
-  getPendingAuthorizeRequest,
-  deletePendingAuthorizeRequest,
   saveFakeLoginSession,
   getFakeLoginSession,
   deleteFakeLoginSession

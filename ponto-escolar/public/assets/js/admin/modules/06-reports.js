@@ -2,6 +2,15 @@
    RELATORIO
    ============================================================ */
 
+function validarAcessoPaginaRelatorios() {
+  const pagina = document.querySelector('.reports-page');
+  if (!pagina || temCapacidade('relatorio.visualizar')) return true;
+
+  pagina.remove();
+  window.location.replace('/admin/dashboard');
+  return false;
+}
+
 function renderizarGraficoSemanalRelatorio() {
   const container = document.getElementById('chart-presenca-semanal');
   if (!container) return;

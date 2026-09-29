@@ -53,6 +53,31 @@ function obterPontoHojeFuncionario(funcionario) {
   return { label: 'Sem ponto', className: 'badge-absent' };
 }
 
+function podeVisualizarPontoHojeFuncionarios() {
+  return temCapacidade('ponto.hoje.visualizar');
+}
+
+function aplicarCapacidadesNaPaginaFuncionarios() {
+  const page = document.querySelector('.employees-page');
+  if (!page) return;
+
+  if (!temCapacidade('funcionario.criar')) {
+    page.querySelector('.employees-page-header a[href="/admin/funcionarios/novo"]')?.remove();
+  }
+
+  if (!podeVisualizarPontoHojeFuncionarios()) {
+    page.querySelector('[data-employee-today-column]')?.remove();
+  }
+
+  if (temCapacidade('funcionario.listar')) return;
+
+  page.querySelector('.employees-page-header .page-subtitle')?.remove();
+  page.querySelector('.employees-action-bar')?.remove();
+  page.querySelector('.employees-table-panel')?.remove();
+  page.querySelector('#cards-funcionarios')?.remove();
+  atualizarFeedbackFuncionarios();
+}
+
 function obterFiltrosFuncionarios() {
   return {
     q: document.getElementById('busca-funcionario')?.value || '',
@@ -110,6 +135,7 @@ function criarEstadoListaFuncionarios({ icon, title, description, retry = false 
 }
 
 function criarLoadingTabelaFuncionarios() {
+  const exibirPontoHoje = podeVisualizarPontoHojeFuncionarios();
   return Array.from({ length: 4 }, () => `
     <tr class="employee-loading-row" aria-hidden="true">
       <td><span class="employee-skeleton employee-skeleton-name"></span></td>
@@ -117,7 +143,7 @@ function criarLoadingTabelaFuncionarios() {
       <td><span class="employee-skeleton"></span></td>
       <td><span class="employee-skeleton"></span></td>
       <td><span class="employee-skeleton employee-skeleton-short"></span></td>
-      <td><span class="employee-skeleton employee-skeleton-short"></span></td>
+      ${exibirPontoHoje ? '<td><span class="employee-skeleton employee-skeleton-short"></span></td>' : ''}
       <td><span class="employee-skeleton employee-skeleton-short"></span></td>
     </tr>
   `).join('');
@@ -125,24 +151,36 @@ function criarLoadingTabelaFuncionarios() {
 
 function criarMenuAcoesFuncionario(funcionario) {
   const isActive = funcionario.status === 'ativo';
+  const podeVisualizar = temCapacidade('funcionario.visualizar');
+  const podeAlterarStatus = temCapacidade(
+    isActive ? 'funcionario.desativar' : 'funcionario.reativar'
+  );
+  if (!podeVisualizar && !podeAlterarStatus) return '—';
+
   const statusLabel = isActive ? 'Desativar' : 'Reativar';
+  const tituloVisualizacao = temCapacidade('funcionario.editar') ? 'Editar' : 'Ver detalhes';
   return `
     <details class="employee-actions-menu">
       <summary aria-label="Abrir ações de ${escapeHtml(funcionario.nome)}">Ações <span aria-hidden="true">⌄</span></summary>
       <div class="employee-actions-popover">
-        <button type="button" data-employee-edit="${Number(funcionario.id)}">
-          <img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> Editar
-        </button>
-        <button type="button" data-employee-status="${Number(funcionario.id)}" class="${isActive ? 'action-danger' : 'action-success'}">
-          ${statusLabel}
-        </button>
+        ${podeVisualizar ? `
+          <button type="button" data-employee-edit="${Number(funcionario.id)}">
+            <img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> ${tituloVisualizacao}
+          </button>
+        ` : ''}
+        ${podeAlterarStatus ? `
+          <button type="button" data-employee-status="${Number(funcionario.id)}" class="${isActive ? 'action-danger' : 'action-success'}">
+            ${statusLabel}
+          </button>
+        ` : ''}
       </div>
     </details>
   `;
 }
 
 function criarLinhaFuncionario(funcionario) {
-  const point = obterPontoHojeFuncionario(funcionario);
+  const exibirPontoHoje = podeVisualizarPontoHojeFuncionarios();
+  const point = exibirPontoHoje ? obterPontoHojeFuncionario(funcionario) : null;
   return `
     <tr>
       <td>
@@ -158,14 +196,15 @@ function criarLinhaFuncionario(funcionario) {
       <td class="td-mono">${escapeHtml(formatarCpfFuncionario(funcionario.cpf))}</td>
       <td>${escapeHtml(formatarTelefoneFuncionario(funcionario.tel))}</td>
       <td><span class="badge ${funcionario.ativo ? 'badge-active' : 'badge-inactive'}">${funcionario.ativo ? 'Ativo' : 'Inativo'}</span></td>
-      <td><span class="badge ${point.className}">${point.label}</span></td>
+      ${exibirPontoHoje ? `<td><span class="badge ${point.className}">${point.label}</span></td>` : ''}
       <td>${criarMenuAcoesFuncionario(funcionario)}</td>
     </tr>
   `;
 }
 
 function criarCardFuncionario(funcionario) {
-  const point = obterPontoHojeFuncionario(funcionario);
+  const exibirPontoHoje = podeVisualizarPontoHojeFuncionarios();
+  const point = exibirPontoHoje ? obterPontoHojeFuncionario(funcionario) : null;
   return `
     <article class="func-card-item fade-in">
       <div class="employee-card-header">
@@ -182,7 +221,7 @@ function criarCardFuncionario(funcionario) {
       </dl>
       <div class="employee-card-statuses">
         <span class="badge ${funcionario.ativo ? 'badge-active' : 'badge-inactive'}">${funcionario.ativo ? 'Ativo' : 'Inativo'}</span>
-        <span class="badge ${point.className}">Ponto hoje: ${point.label}</span>
+        ${exibirPontoHoje ? `<span class="badge ${point.className}">Ponto hoje: ${point.label}</span>` : ''}
       </div>
     </article>
   `;
@@ -191,6 +230,12 @@ function criarCardFuncionario(funcionario) {
 function atualizarFeedbackFuncionarios() {
   const feedback = document.getElementById('funcionarios-feedback');
   if (!feedback) return;
+
+  if (!temCapacidade('funcionario.listar')) {
+    feedback.className = 'employees-feedback is-error';
+    feedback.textContent = 'Você não possui permissão para consultar funcionários.';
+    return;
+  }
 
   if (FUNCIONARIOS_LOADING) {
     feedback.className = 'employees-feedback is-loading';
@@ -203,7 +248,7 @@ function atualizarFeedbackFuncionarios() {
     feedback.textContent = state.title;
     return;
   }
-  if (PONTOS_HOJE_DATA_ERROR) {
+  if (podeVisualizarPontoHojeFuncionarios() && PONTOS_HOJE_DATA_ERROR) {
     feedback.className = 'employees-feedback is-warning';
     const message = document.createElement('span');
     message.textContent = 'Funcionários carregados. O ponto de hoje está temporariamente indisponível.';
@@ -235,6 +280,10 @@ function renderizarFuncionarios() {
       ? '—'
       : String(FUNCIONARIOS_TOTAL_SISTEMA);
   }
+  if (!temCapacidade('funcionario.listar')) {
+    atualizarFeedbackFuncionarios();
+    return;
+  }
   if (tablePanel) tablePanel.setAttribute('aria-busy', String(FUNCIONARIOS_LOADING));
   if (cardList) cardList.setAttribute('aria-busy', String(FUNCIONARIOS_LOADING));
   atualizarFeedbackFuncionarios();
@@ -259,7 +308,7 @@ function renderizarFuncionarios() {
       description: state.description,
       retry: ![401, 403].includes(Number(FUNCIONARIOS_DATA_ERROR.status || 0)),
     });
-    if (tbody) tbody.innerHTML = `<tr><td colspan="7">${markup}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="${podeVisualizarPontoHojeFuncionarios() ? 7 : 6}">${markup}</td></tr>`;
     if (cardList) cardList.innerHTML = markup;
     return;
   }
@@ -273,7 +322,7 @@ function renderizarFuncionarios() {
         ? 'Revise a busca ou limpe os filtros para ver outros funcionários.'
         : 'Os funcionários cadastrados aparecerão aqui.',
     });
-    if (tbody) tbody.innerHTML = `<tr><td colspan="7">${markup}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="${podeVisualizarPontoHojeFuncionarios() ? 7 : 6}">${markup}</td></tr>`;
     if (cardList) cardList.innerHTML = markup;
     return;
   }
@@ -283,6 +332,7 @@ function renderizarFuncionarios() {
 }
 
 async function recarregarListaFuncionarios() {
+  if (!temCapacidade('funcionario.listar')) return;
   FUNCIONARIOS_ABORT_CONTROLLER?.abort();
   const controller = new AbortController();
   FUNCIONARIOS_ABORT_CONTROLLER = controller;
@@ -539,6 +589,10 @@ async function confirmarAlteracaoStatusFuncionario(event) {
   const elements = elementosStatusFuncionario();
   const employeeId = Number(estadoStatusFuncionario.id);
   const isReactivation = estadoStatusFuncionario.acao === 'reativar';
+  const capacidade = isReactivation
+    ? 'funcionario.reativar'
+    : 'funcionario.desativar';
+  if (!temCapacidade(capacidade)) return;
   if (!Number.isInteger(employeeId) || employeeId < 1) return;
   if (!isReactivation && elements.confirmation?.value !== 'DESATIVAR') {
     atualizarBotaoStatusFuncionario();
@@ -610,7 +664,15 @@ function iniciarModalStatusFuncionario() {
 
 function alterarAtivacaoFuncionario(id, button) {
   const funcionario = getFuncionarioPorId(id);
-  if (!funcionario || button?.disabled || estadoStatusFuncionario.enviando) return;
+  const capacidade = funcionario?.status === 'ativo'
+    ? 'funcionario.desativar'
+    : 'funcionario.reativar';
+  if (
+    !funcionario ||
+    !temCapacidade(capacidade) ||
+    button?.disabled ||
+    estadoStatusFuncionario.enviando
+  ) return;
   iniciarModalStatusFuncionario();
   abrirModalStatusFuncionario(funcionario, button);
 }
@@ -781,6 +843,12 @@ function definirFeedbackEdicao(message = '', type = '') {
 function atualizarBotaoSalvarEdicao() {
   const { form, save } = elementosEdicaoFuncionario();
   if (!save) return;
+  if (!temCapacidade('funcionario.editar')) {
+    save.hidden = true;
+    save.disabled = true;
+    return;
+  }
+  save.hidden = false;
   save.disabled = Boolean(
     estadoEdicaoFuncionario.carregando ||
     estadoEdicaoFuncionario.salvando ||
@@ -836,13 +904,19 @@ function mostrarErroEdicao(error) {
 }
 
 function mostrarFormularioEdicao(funcionario) {
-  const { form, loading, error, panel, nome } = elementosEdicaoFuncionario();
+  const { form, loading, error, panel, nome, save } = elementosEdicaoFuncionario();
   preencherCamposEdicao(funcionario);
   estadoEdicaoFuncionario.carregando = false;
   estadoEdicaoFuncionario.valoresIniciais = coletarValoresEdicao();
   if (loading) loading.hidden = true;
   if (error) error.hidden = true;
   if (form) form.hidden = false;
+  form?.querySelectorAll('input[name], select[name]').forEach((campo) => {
+    const podeEditar = temCapacidade('funcionario.editar');
+    if (campo instanceof HTMLSelectElement) campo.disabled = !podeEditar;
+    else campo.readOnly = !podeEditar;
+  });
+  if (save) save.hidden = !temCapacidade('funcionario.editar');
   if (panel) panel.removeAttribute('aria-busy');
   definirFeedbackEdicao();
   atualizarBotaoSalvarEdicao();
@@ -938,6 +1012,7 @@ function manterFocoNoPainelEdicao(event) {
 }
 
 async function carregarFuncionarioEdicao() {
+  if (!temCapacidade('funcionario.visualizar')) return;
   const employeeId = Number(estadoEdicaoFuncionario.id);
   if (!Number.isInteger(employeeId) || employeeId < 1) return;
   const requestId = ++estadoEdicaoFuncionario.requestId;
@@ -1003,7 +1078,11 @@ function atualizarFuncionarioEditadoNaLista(funcionarioAtualizado) {
 
 async function salvarEdicaoFuncionario(event) {
   event.preventDefault();
-  if (estadoEdicaoFuncionario.carregando || estadoEdicaoFuncionario.salvando) return;
+  if (
+    !temCapacidade('funcionario.editar') ||
+    estadoEdicaoFuncionario.carregando ||
+    estadoEdicaoFuncionario.salvando
+  ) return;
 
   const elements = elementosEdicaoFuncionario();
   if (!elements.form?.checkValidity()) {
@@ -1130,6 +1209,7 @@ function iniciarPainelEdicaoFuncionarios() {
 }
 
 function abrirEdicao(id, trigger = null) {
+  if (!temCapacidade('funcionario.visualizar')) return;
   const employeeId = Number(id);
   if (!Number.isInteger(employeeId) || employeeId < 1) return;
   iniciarPainelEdicaoFuncionarios();
