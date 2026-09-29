@@ -99,7 +99,7 @@ async function reactivateEmployee(req, res, next) {
     const result = await employeeService.reactivateEmployee(
       employeeId,
       req.body.confirmacao,
-      getAuditContext(req)
+      { ...getAuditContext(req), vinculoAutorizado: req.vinculoAutorizado }
     );
 
     return res.status(200).json({

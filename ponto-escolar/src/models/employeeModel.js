@@ -24,6 +24,26 @@ const ACTIVE_VINCULO_LATERAL = `
   LIMIT 1
 `;
 
+// Listagens administrativas usam o vínculo ativo para funcionários ativos e o
+// vínculo histórico mais recente para inativos. Assim o mesmo vínculo define
+// cargo, unidade visível e escopo nas consultas de lista e contagem.
+const ADMIN_LIST_VINCULO_LATERAL = `
+  SELECT v.cargo_id, c.cargo, v.unidade_escolar_id,
+         TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
+         TIME_FORMAT(v.horario_saida_almoco, '%H:%i:%s') AS saida_almoco,
+         TIME_FORMAT(v.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco,
+         TIME_FORMAT(v.horario_saida, '%H:%i:%s') AS saida
+  FROM vinculos_funcionais v
+  INNER JOIN cargos c ON c.id = v.cargo_id
+  WHERE v.funcionario_id = f.id
+    AND (
+      (f.ativo = 1 AND v.status = 'ATIVO') OR
+      (f.ativo = 0 AND v.status <> 'ATIVO')
+    )
+  ORDER BY v.id DESC
+  LIMIT 1
+`;
+
 // null representa escopo global SEDUC; [] ou valor inválido não retorna linhas.
 function buildEscopoUnidadeFilter(
   unidadesPermitidas,
@@ -54,14 +74,20 @@ function buildEscopoUnidadeFilter(
   };
 }
 
-// EXISTS no vínculo ativo evita inflar a contagem (sem LATERAL).
+const ADMIN_EMPLOYEE_FROM =
+  " FROM funcionarios f INNER JOIN LATERAL (" +
+  ADMIN_LIST_VINCULO_LATERAL +
+  ") lv ON TRUE";
+
+const ADMIN_EMPLOYEE_FILTERS =
+  " WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
+
 const COUNT_EMPLOYEES_QUERY =
-  "SELECT COUNT(*) AS total FROM funcionarios f WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR EXISTS (SELECT 1 FROM vinculos_funcionais v INNER JOIN cargos c ON c.id = v.cargo_id WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' AND c.cargo = ?)) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
+  "SELECT COUNT(*) AS total" + ADMIN_EMPLOYEE_FROM + ADMIN_EMPLOYEE_FILTERS;
 
 const LIST_EMPLOYEES_QUERY =
-  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, lv.cargo, lv.unidade_escolar_id, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f INNER JOIN LATERAL (" +
-  ACTIVE_VINCULO_LATERAL +
-  ") lv ON TRUE WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
+  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, lv.cargo, lv.unidade_escolar_id, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida" +
+  ADMIN_EMPLOYEE_FROM + ADMIN_EMPLOYEE_FILTERS;
 
 // allowlist sem cargoId (jornada/cargo migraram para vinculos_funcionais).
 const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
@@ -240,18 +266,10 @@ async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
 }
 
 async function countEmployees(filters = {}, escopoUnidades = []) {
-  const { clause, params } = buildEscopoUnidadeFilter(
-    escopoUnidades,
-    "v_escopo.unidade_escolar_id"
-  );
-  const escopoClause = clause
-    ? " AND EXISTS (SELECT 1 FROM vinculos_funcionais v_escopo WHERE v_escopo.funcionario_id = f.id AND v_escopo.status = 'ATIVO' " +
-      clause +
-      ")"
-    : "";
+  const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
 
   return database.executeOne(
-    COUNT_EMPLOYEES_QUERY + escopoClause,
+    COUNT_EMPLOYEES_QUERY + clause,
     [...resolveEmployeeFilter(filters), ...params]
   );
 }
