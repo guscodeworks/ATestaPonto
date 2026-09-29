@@ -2,3 +2,23 @@ node_modules/
 .env
 !vercel.json
 .npm-cache/
+
+# Dumps, backups e exportacoes locais do banco
+*.sql
+*.sql.gz
+*.sql.bz2
+*.sql.xz
+*.dump
+*.dump.gz
+*.dump.bz2
+*.dump.xz
+*.backup
+*.bak
+*.bkp
+/database/dumps/
+/database/backups/
+/database/exports/
+
+# SQL estrutural mantido sob controle de versao
+!/database/schema/*.sql
+!/database/migrations/*.sql
