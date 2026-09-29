@@ -198,6 +198,20 @@ async function findForPunchLoginByEmail(email) {
   );
 }
 
+// Mesma fonte da credencial usada no login; consulta a cada requisição, sem cache.
+async function findForTokenValidationById(funcionarioId) {
+  if (!(await hasModernLoginTable())) {
+    return database.executeOne(
+      "SELECT f.id, f.cpf, f.nome, f.email, f.ativo, COALESCE(l.senha, f.senha) AS senha_hash FROM funcionarios f LEFT JOIN login l ON l.id = f.login_id WHERE f.id = ? LIMIT 1",
+      [funcionarioId]
+    );
+  }
+  return database.executeOne(
+    "SELECT f.id, f.cpf, f.nome, f.email, f.ativo, lf.senha_hash FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
+    [funcionarioId]
+  );
+}
+
 async function hasModernLoginTable() {
   const table = await database.executeOne(
     "SELECT 1 AS found FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'login_funcionario' LIMIT 1"
@@ -377,6 +391,7 @@ module.exports = {
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
   findForPunchLoginByEmail,
+  findForTokenValidationById,
   hasModernLoginTable,
   findForPasswordRecoveryByCpf,
   updatePasswordForRecovery,

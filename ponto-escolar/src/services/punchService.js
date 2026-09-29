@@ -28,6 +28,7 @@ const { registerAuditLog } = require("./auditLogService");
 // Fuso da escola p/ separar dias de ponto, independente do fuso do servidor.
 function getSaoPauloDateTime(referenceDate = new Date()) {
   const formatter = new Intl.DateTimeFormat("sv-SE", {
+const { buildCredentialVersion } = require("./authService");
     timeZone: "America/Sao_Paulo",
     year: "numeric",
     month: "2-digit",
@@ -439,6 +440,7 @@ async function loginFuncionario(
   const token = jwt.sign(tokenPayload, env.JWT_SECRET, {
     expiresIn: env.FUNCIONARIO_JWT_EXPIRES_IN,
   });
+    credentialVersion: buildCredentialVersion(funcionario),
 
   await registerAuditLog({
     evento: "funcionario_login_sucesso",

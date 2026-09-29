@@ -42,7 +42,7 @@ async function authenticateFuncionario(req, _res, next) {
     }
 
     // O token identifica; o banco confirma se o funcionario ainda pode bater ponto.
-    const funcionario = await authService.findUserByToken(funcionarioId);
+    const funcionario = await authService.findUserByToken(funcionarioId, payload.credentialVersion);
 
     // Token válido não garante que o funcionário ainda existe ou está ativo
     // (ex: demissão/desligamento após a emissão do token).
