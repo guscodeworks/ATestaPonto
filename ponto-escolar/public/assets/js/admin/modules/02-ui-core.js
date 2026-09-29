@@ -75,6 +75,26 @@ function aplicarCapacidadesNaNavegacaoAdmin() {
   });
 }
 
+function aplicarCapacidadesNosPaineisAdmin() {
+  const paineisPorCapacidade = [
+    ['.dashboard-page .stat-card.blue', 'funcionario.listar'],
+    ['.dashboard-page .stat-card.green, .dashboard-page .stat-card.red, .dashboard-page .stat-card.purple', 'ponto.resumo.visualizar'],
+    ['.dashboard-records-panel, .dashboard-presence-panel, .dashboard-alerts-panel', 'ponto.hoje.visualizar'],
+  ];
+
+  paineisPorCapacidade.forEach(([seletor, capacidade]) => {
+    if (temCapacidade(capacidade)) return;
+    document.querySelectorAll(seletor).forEach((elemento) => elemento.remove());
+  });
+
+  // Ainda não há capacidade nem endpoint para alterar estas configurações.
+  document.querySelectorAll(
+    '.settings-nav-item[data-panel="panel-horarios"], #panel-horarios, '
+    + '.settings-nav-item[data-panel="panel-sistema"], #panel-sistema, '
+    + '.settings-nav-item[data-panel="panel-permissoes"], #panel-permissoes'
+  ).forEach((elemento) => elemento.remove());
+}
+
 /* ============================================================
    TABS
    ============================================================ */

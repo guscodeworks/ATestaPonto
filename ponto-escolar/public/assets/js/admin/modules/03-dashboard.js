@@ -12,7 +12,7 @@ function renderizarUltimosRegistros() {
       error.message,
       ![401, 403].includes(Number(error.status || 0))
     );
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5">${state}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4">${state}</td></tr>`;
     if (cardsMobile) cardsMobile.innerHTML = state;
     return;
   }
@@ -20,7 +20,7 @@ function renderizarUltimosRegistros() {
   const lista = PONTOS_HOJE.slice(-5).reverse();
 
   if (tbody && !lista.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
   }
 
   if (tbody && lista.length) {
@@ -43,9 +43,6 @@ function renderizarUltimosRegistros() {
           <td class="td-mono">${p.entrada || '<span class="muted-dash">—</span>'}</td>
           <td class="td-mono">${p.saida || '<span class="muted-dash">—</span>'}</td>
           <td><span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span></td>
-          <td>
-            <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> Ajustar</button>
-          </td>
         </tr>
       `;
     }).join('');

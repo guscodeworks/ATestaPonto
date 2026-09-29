@@ -39,8 +39,8 @@ function renderizarPontosHoje() {
       error.message,
       ![401, 403].includes(Number(error.status || 0))
     );
-    if (tbodyP) tbodyP.innerHTML = `<tr><td colspan="8">${state}</td></tr>`;
-    if (tbodyA) tbodyA.innerHTML = `<tr><td colspan="5">${state}</td></tr>`;
+    if (tbodyP) tbodyP.innerHTML = `<tr><td colspan="7">${state}</td></tr>`;
+    if (tbodyA) tbodyA.innerHTML = `<tr><td colspan="4">${state}</td></tr>`;
     if (cardP) cardP.innerHTML = state;
     if (cardA) cardA.innerHTML = state;
     const countPresentes = document.getElementById('count-presentes');
@@ -68,11 +68,8 @@ function renderizarPontosHoje() {
           <td class="td-mono">${p.retorno || '<span class="td-muted">—</span>'}</td>
           <td class="td-mono">${p.saida || '<span class="td-muted">—</span>'}</td>
           <td><span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span></td>
-          <td>
-            <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')">${icon('pencil')} Ajustar</button>
-          </td>
         </tr>
-      `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">${icon('clipboard-list')}</div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
+      `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">${icon('clipboard-list')}</div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
   }
 
   if (cardP) {
@@ -109,11 +106,8 @@ function renderizarPontosHoje() {
         <td>${escapeHtml(func.cargo)}</td>
         <td class="td-mono">${escapeHtml(func.tel || 'Nao disponivel na API')}</td>
         <td><span class="badge badge-absent">Nao bateu ponto</span></td>
-        <td>
-          <button class="btn btn-ghost btn-sm" onclick="toast('Notificacao de ausente ainda nao integrada.','info')">${icon('mail')} Notificar</button>
-        </td>
       </tr>
-    `).join('') : `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">${icon('circle-check')}</div><div class="empty-title">Nenhum ausente ativo hoje</div></div></td></tr>`;
+    `).join('') : `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">${icon('circle-check')}</div><div class="empty-title">Nenhum ausente ativo hoje</div></div></td></tr>`;
   }
 
   if (cardA) {
@@ -124,7 +118,6 @@ function renderizarPontosHoje() {
           <div class="func-card-name">${escapeHtml(func.nome)}</div>
           <div class="func-card-cargo">${escapeHtml(func.cargo)}</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="toast('Notificacao de ausente ainda nao integrada.','info')">${icon('mail')}</button>
       </div>
     `).join('') : `<div class="empty-state"><div class="empty-icon">${icon('circle-check')}</div><div class="empty-title">Nenhum ausente ativo hoje</div></div>`;
   }
