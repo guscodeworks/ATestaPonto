@@ -1,6 +1,6 @@
 const env = require("../config/env");
 const { AppError, normalizeError } = require("../utils/errors");
-const { logger } = require("../utils/logger");
+const { logger, safeRequestContext, safeErrorContext } = require("../utils/logger");
 
 function buildErrorPayload(error) {
   const statusCode = Number.isInteger(error.statusCode)
@@ -34,26 +34,12 @@ function errorMiddleware(error, req, res, next) {
   // Se os headers já foram enviados, não é mais possível responder ao cliente;
   // delega ao handler de erro padrão do Express (comportamento exigido pela própria lib).
   if (res.headersSent) {
-    return next(error);
+    logger.error("Request failed after headers sent", {
+      ...safeRequestContext(req),
+      error: safeErrorContext(error),
+    });
+    return next(new Error("Request failed after headers sent"));
   }
-
-  // Log do erro bruto, antes de qualquer normalização, para não perder informação
-  // de diagnóstico caso a normalização falhe ou descarte algum dado.
-  logger.error("Raw request error", {
-    method: req.method,
-    path: req.originalUrl,
-    ip: req.ip,
-    userId: req.auth?.id || {},
-    error: {
-      name: error?.name || {},
-      code: error?.code || {},
-      status: error?.status || {},
-      statusCode: error?.statusCode || {},
-      message: error?.message || {},
-      stack: error?.stack || {},
-      cause: error?.cause || {},
-    },
-  });
 
   const normalized = normalizeError(error);
   // Erros que não são AppError (operacionais/esperados) são tratados como falha
@@ -64,23 +50,17 @@ function errorMiddleware(error, req, res, next) {
       : normalizeError(new Error("Unhandled non-operational error"));
 
   // Em produção, erros 5xx nunca expõem mensagem ou detalhes originais ao cliente,
-  // apenas uma mensagem genérica — os detalhes reais já foram logados acima.
+  // apenas uma mensagem genérica. Logs também omitem detalhes não confiáveis.
   if (env.IS_PRODUCTION && safeError.statusCode >= 500) {
     safeError.message = "Internal server error";
     safeError.details = {};
   }
 
   logger.error("Request failed", {
-    method: req.method,
-    path: req.originalUrl,
-    ip: req.ip,
-    userId: req.auth?.id || {},
-    error: {
-      name: safeError.name,
-      code: safeError.code,
-      statusCode: safeError.statusCode,
-      message: safeError.message,
-    },
+    ...safeRequestContext(req),
+    statusCode: safeError.statusCode,
+    error: safeErrorContext(error),
+    normalizedError: safeErrorContext(safeError),
   });
 
   const { statusCode, payload } = buildErrorPayload(safeError);

@@ -12,7 +12,25 @@ function getRequiredParameter(value, name) {
   return normalized;
 }
 
-// Extrai erro OAuth do JSON do Gov.br antes da mensagem genérica.
+function providerError(code, operation, upstreamStatus) {
+  const error = new Error('Falha na comunicacao com Gov.br.');
+  error.code = code;
+  error.operation = operation;
+  error.upstreamStatus = upstreamStatus;
+  return error;
+}
+
+async function requestGovbr(url, options, operation) {
+  let response;
+  try {
+    response = await fetch(url, options);
+  } catch (_error) {
+    throw providerError('OAUTH_NETWORK_ERROR', operation);
+  }
+  return parseJsonResponse(response, operation);
+}
+
+// Respostas externas podem ecoar credenciais: preserve só operação e status.
 async function parseJsonResponse(response, operation) {
   let data;
 
@@ -20,23 +38,14 @@ async function parseJsonResponse(response, operation) {
     data = await response.json();
   } catch (_error) {
     if (!response.ok) {
-      throw new Error(
-        `Falha do Gov.br ao ${operation} (HTTP ${response.status}).`
-      );
+      throw providerError('OAUTH_UPSTREAM_ERROR', operation, response.status);
     }
 
-    throw new Error(`Resposta invalida do Gov.br ao ${operation}.`);
+    throw providerError('OAUTH_INVALID_RESPONSE', operation, response.status);
   }
 
   if (!response.ok) {
-    const detail =
-      data && typeof data === "object"
-        ? data.error_description || data.error || data.message
-        : "";
-    const suffix = detail ? `: ${detail}` : "";
-    throw new Error(
-      `Falha do Gov.br ao ${operation} (HTTP ${response.status})${suffix}`
-    );
+    throw providerError('OAUTH_UPSTREAM_ERROR', operation, response.status);
   }
 
   return data;
@@ -76,16 +85,14 @@ async function trocarCodePorToken({ code, codeVerifier }) {
     code_verifier: getRequiredParameter(codeVerifier, "codeVerifier"),
   });
 
-  const response = await fetch(config.tokenUrl, {
+  return requestGovbr(config.tokenUrl, {
     method: "POST",
     headers: {
       Authorization: `Basic ${credentials}`,
       "Content-Type": "application/x-www-form-urlencoded",
     },
     body,
-  });
-
-  return parseJsonResponse(response, "trocar o codigo por token");
+  }, 'token_exchange');
 }
 
 // Permissão admin é validada em outro serviço (adminAuthorization).
@@ -93,14 +100,12 @@ async function buscarUserInfo(accessToken) {
   const config = getGovbrConfig();
   const token = getRequiredParameter(accessToken, "accessToken");
 
-  const response = await fetch(config.userInfoUrl, {
+  return requestGovbr(config.userInfoUrl, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${token}`,
     },
-  });
-
-  return parseJsonResponse(response, "consultar userinfo");
+  }, 'userinfo');
 }
 
 module.exports = {

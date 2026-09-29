@@ -607,7 +607,7 @@ form {
 }
 
 #senha {
-  background-image: url("/assets/img/icons/lock.svg");
+  background-image: url("/assets/icons/lock.svg");
 }
 
 .field-input::placeholder {
@@ -666,7 +666,7 @@ form {
   border: 0;
   border-radius: 7px;
   outline: 0;
-  background: transparent url("/assets/img/icons/eye.svg") center / 20px no-repeat;
+  background: transparent url("/assets/icons/eye.svg") center / 20px no-repeat;
   font-size: 0;
   cursor: pointer;
 }
@@ -676,7 +676,7 @@ form {
 }
 
 .toggle-pw[aria-label="Ocultar senha"] {
-  background-image: url("/assets/img/icons/eye-off.svg");
+  background-image: url("/assets/icons/eye-off.svg");
 }
 
 .toggle-pw:focus-visible {
@@ -835,7 +835,7 @@ form {
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
-  background: transparent url("/assets/img/icons/error.svg") center / contain no-repeat;
+  background: transparent url("/assets/icons/circle-x.svg") center / contain no-repeat;
   filter: brightness(0) invert(1);
 }
 
@@ -1318,4 +1318,3 @@ form {
     animation-iteration-count: 1 !important;
   }
 }
-

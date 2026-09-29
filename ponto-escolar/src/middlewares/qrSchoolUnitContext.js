@@ -73,6 +73,7 @@ async function requireCurrentQrSchoolUnitContext(req, _res, next) {
 }
 
 module.exports = {
+  clearQrSchoolUnitContext,
   establishQrSchoolUnitContext,
   requireCurrentQrSchoolUnitContext,
 };

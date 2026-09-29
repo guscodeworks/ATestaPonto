@@ -1,25 +1,6 @@
 /* ============================================================
    PDF / IMPRESSAO
    ============================================================ */
-function gerarPDF() {
-  const btn = document.getElementById('btn-gerar-pdf');
-  if (!btn) return;
-  btn.classList.add('loading');
-  // Funcionalidade pendente: o setTimeout simula o tempo de geração
-  // apenas para dar feedback visual, mas nenhum PDF é gerado de fato.
-  setTimeout(() => {
-    toast('Geracao de PDF ainda nao integrada. Use imprimir por enquanto.', 'info');
-    btn.classList.remove('loading');
-  }, 1800);
-}
-
-function imprimirRelatorio() {
-  toast('Abrindo janela de impressao...', 'info');
-  // Pequeno atraso para o toast ser percebido pelo usuário antes que o
-  // diálogo de impressão do navegador (bloqueante) seja aberto.
-  setTimeout(() => window.print(), 600);
-}
-
 // Exportação real: o PDF e a impressão usam os dados recebidos da API, não
 // uma captura da tela administrativa.
 function obterDadosExportacaoRelatorio() {
@@ -129,7 +110,7 @@ function criarPdfRelatorio(relatorio) {
 
 function gerarPDF() {
   const btn = document.getElementById('btn-gerar-pdf');
-  if (!btn) return;
+  if (!btn || !temCapacidade('relatorio.visualizar')) return;
   try {
     btn.classList.add('loading');
     const relatorio = obterDadosExportacaoRelatorio();
@@ -159,6 +140,7 @@ function criarHtmlImpressaoRelatorio(relatorio) {
 }
 
 function imprimirRelatorio() {
+  if (!temCapacidade('relatorio.visualizar')) return;
   try {
     const janela = window.open('', '_blank');
     if (!janela) throw new Error('O navegador bloqueou a janela de impressão. Permita pop-ups e tente novamente.');

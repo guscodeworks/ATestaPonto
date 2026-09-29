@@ -6,7 +6,9 @@ const env = require("../config/env");
 const employeeModel = require("../models/employeeModel");
 const { sendPasswordRecoveryCode } = require("./emailService");
 const { registerAuditLog } = require("./auditLogService");
-const { BadRequestError, UnauthorizedError } = require("../utils/errors");
+const { UnauthorizedError } = require("../utils/errors");
+const { logger, safeErrorContext } = require("../utils/logger");
+const { digestSubject, loginSubject } = require("../utils/rateLimitSubject");
 
 const RECOVERY_TTL_MS = 15 * 60 * 1000;
 const MAX_CODE_ATTEMPTS = 5;
@@ -32,44 +34,56 @@ async function requestRecovery({ cpf, session, ipOrigem }) {
   clearRecovery(session);
   const employee = await employeeModel.findForPasswordRecoveryByCpf(cpf);
 
-  // Resposta é propositalmente igual, com ou sem conta: evita enumerar CPFs.
-  if (!employee || !employee.email) {
-    return { message: "Se houver uma conta ativa com este CPF, enviaremos um código para o e-mail cadastrado." };
-  }
-
+  const canRecover = Boolean(employee && employee.email);
   const codigo = String(crypto.randomInt(100000, 1000000));
+  // Mesmo ciclo de sessão/cookie e tentativas, sem autorizar conta inexistente.
   session.passwordRecovery = {
-    employeeId: Number(employee.id),
+    authorizationId: crypto.randomBytes(32).toString("hex"),
+    rateLimitSubject: digestSubject(loginSubject({ cpf })),
+    employeeId: canRecover ? Number(employee.id) : null,
     codeHash: hashCode(codigo),
     expiresAt: Date.now() + RECOVERY_TTL_MS,
     attempts: 0,
     verified: false,
   };
 
-  await sendPasswordRecoveryCode({ nome: employee.nome, email: employee.email, codigo });
-  await registerAuditLog({
-    evento: "recuperacao_senha_solicitada",
-    funcionarioId: employee.id,
-    nivel: "INFO",
-    mensagem: "Código de recuperação de senha solicitado",
-    ipOrigem,
-  });
-
-  return { message: "Se houver uma conta ativa com este CPF, enviaremos um código para o e-mail cadastrado." };
+  return {
+    data: { message: "Se houver uma conta ativa com este CPF, enviaremos um código para o e-mail cadastrado." },
+    // O controller chama após persistir a sessão e concluir a resposta pública.
+    // Não inclui destinatário/código em data nem depende do SMTP para responder.
+    async deliver() {
+      try {
+        if (canRecover) {
+          await sendPasswordRecoveryCode({ nome: employee.nome, email: employee.email, codigo });
+        }
+        await registerAuditLog({
+          evento: "recuperacao_senha_solicitada",
+          funcionarioId: canRecover ? employee.id : null,
+          nivel: "INFO",
+          mensagem: "Solicitação de recuperação de senha recebida",
+          ipOrigem,
+        });
+      } catch (error) {
+        logger.error("Falha no processamento da recuperacao de senha", { error: safeErrorContext(error) });
+      }
+    },
+  };
 }
 
 function getActiveRecovery(session) {
   const recovery = session.passwordRecovery;
   if (!recovery || Date.now() > Number(recovery.expiresAt)) {
     clearRecovery(session);
-    throw new UnauthorizedError("Código expirado. Solicite um novo código.");
+    throw new UnauthorizedError("Código inválido ou expirado.");
   }
   return recovery;
 }
 
 function verifyRecoveryCode({ codigo, session }) {
   const recovery = getActiveRecovery(session);
-  if (recovery.attempts >= MAX_CODE_ATTEMPTS || !codesMatch(recovery.codeHash, codigo)) {
+  const matches = codesMatch(recovery.codeHash, codigo);
+  if (recovery.attempts >= MAX_CODE_ATTEMPTS || !matches ||
+      !Number.isSafeInteger(recovery.employeeId) || recovery.employeeId <= 0) {
     recovery.attempts = Number(recovery.attempts || 0) + 1;
     if (recovery.attempts >= MAX_CODE_ATTEMPTS) clearRecovery(session);
     throw new UnauthorizedError("Código inválido ou expirado.");
@@ -79,21 +93,65 @@ function verifyRecoveryCode({ codigo, session }) {
   return { message: "Código confirmado." };
 }
 
-async function resetPassword({ novaSenha, session, ipOrigem }) {
+function consumePasswordRecovery(sessionStore, sessionId, recovery) {
+  if (
+    !sessionStore ||
+    typeof sessionStore.consumePasswordRecovery !== "function" ||
+    typeof sessionId !== "string" ||
+    sessionId.length === 0
+  ) {
+    throw new Error("Password recovery store does not support atomic consumption");
+  }
+
+  return new Promise((resolve, reject) => {
+    sessionStore.consumePasswordRecovery(
+      sessionId,
+      {
+        authorizationId: recovery.authorizationId,
+        employeeId: recovery.employeeId,
+      },
+      (error, consumed) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(consumed === true);
+      }
+    );
+  });
+}
+
+async function resetPassword({
+  novaSenha,
+  session,
+  sessionId,
+  sessionStore,
+  ipOrigem,
+}) {
   const recovery = getActiveRecovery(session);
-  if (!recovery.verified) {
+  if (!recovery.verified || !Number.isSafeInteger(recovery.employeeId) || recovery.employeeId <= 0) {
     throw new UnauthorizedError("Confirme o código antes de redefinir a senha.");
+  }
+
+  const employeeId = Number(recovery.employeeId);
+  const consumed = await consumePasswordRecovery(
+    sessionStore,
+    sessionId,
+    recovery
+  );
+  clearRecovery(session);
+  if (!consumed) {
+    throw new UnauthorizedError("Código inválido ou expirado.");
   }
 
   const passwordHash = await bcrypt.hash(novaSenha, env.BCRYPT_SALT_ROUNDS);
   await employeeModel.updatePasswordForRecovery(
-    Number(recovery.employeeId),
+    employeeId,
     passwordHash
   );
-  clearRecovery(session);
   await registerAuditLog({
     evento: "senha_funcionario_redefinida",
-    funcionarioId: Number(recovery.employeeId),
+    funcionarioId: employeeId,
     nivel: "INFO",
     mensagem: "Senha de funcionário redefinida por recuperação de acesso",
     ipOrigem,

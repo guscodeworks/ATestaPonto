@@ -64,43 +64,6 @@ app.use(
   })
 );
 
-function getRequestHost(req) {
-  return String(req.headers["x-forwarded-host"] || req.get("host") || "")
-    .split(",")[0]
-    .trim()
-    .toLowerCase();
-}
-
-// Requisicoes vindas do mesmo host (ex: front-end servido pela propria
-// aplicacao) sao sempre permitidas, mesmo sem estarem na allowlist de
-// CORS_ORIGINS — evita a necessidade de configurar a propria origem do app
-// na lista de origens externas permitidas.
-function isSameHostOrigin(req, origin) {
-  if (!origin) {
-    return true;
-  }
-
-  try {
-    const originUrl = new URL(origin);
-    const requestHost = getRequestHost(req);
-    return (
-      requestHost.length > 0 && originUrl.host.toLowerCase() === requestHost
-    );
-  } catch (_error) {
-    return false;
-  }
-}
-
-function isAllowedRequestOrigin(req, origin) {
-  if (!origin) {
-    return true;
-  }
-  if (isSameHostOrigin(req, origin)) {
-    return true;
-  }
-  return isAllowedOrigin(origin);
-}
-
 const corsBaseOptions = {
   credentials: true,
   methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
@@ -111,7 +74,8 @@ app.use(
   cors((req, callback) => {
     const origin = req.headers.origin;
 
-    if (isAllowedRequestOrigin(req, origin)) {
+    // Host/X-Forwarded-Host não concedem acesso fora da allowlist configurada.
+    if (isAllowedOrigin(origin)) {
       return callback(null, {
         ...corsBaseOptions,
         origin: true,

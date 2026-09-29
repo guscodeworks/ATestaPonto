@@ -1,8 +1,7 @@
 "use strict";
 
 const { ConflictError, ForbiddenError } = require("../utils/errors");
-const employmentLinkModel = require("../models/employmentLinkModel");
-const schoolUnitModel = require("../models/schoolUnitModel");
+const adminScopeService = require("../services/adminScopeService");
 const {
   filtrarAcessosPorCapacidade,
 } = require("../utils/adminCapabilities");
@@ -165,7 +164,9 @@ async function expandirUnidadesPermitidas(escopo) {
   const permitidas = new Set(escopo.unidadesPermitidas);
 
   for (const diretoriaId of escopo.diretoriasPermitidas) {
-    const unidades = await schoolUnitModel.findByDiretoriaId(diretoriaId);
+    const unidades = await adminScopeService.listarUnidadesPorDiretoria(
+      diretoriaId
+    );
     for (const unidade of unidades || []) {
       if (unidade && Number.isInteger(Number(unidade.id))) {
         permitidas.add(Number(unidade.id));
@@ -350,6 +351,11 @@ function restringirCapacidadeFuncionarioPorVinculo(
 
     req.acessosAutorizadores = acessosAutorizadores;
     req.acessoAutorizador = acessoAutorizador;
+    req.vinculoAutorizado = {
+      id: Number(vinculo.id),
+      unidadeEscolarId: Number(vinculo.unidade_escolar_id),
+      diretoriaEnsinoId: Number(vinculo.diretoria_ensino_id),
+    };
     return next();
   };
 }
@@ -360,7 +366,7 @@ function restringirCapacidadeFuncionario(capacidade, paramName = "id") {
     capacidade,
     paramName,
     (funcionarioId) =>
-      employmentLinkModel.findActiveByFuncionarioIdWithDetails(funcionarioId),
+      adminScopeService.buscarVinculoAtivoDoFuncionario(funcionarioId),
     "Funcionario sem vinculo ativo visivel ao escopo do administrador"
   );
 }
@@ -374,7 +380,7 @@ function restringirCapacidadeFuncionarioReativacao(
     capacidade,
     paramName,
     (funcionarioId) =>
-      employmentLinkModel.findLatestByFuncionarioIdWithDetails(funcionarioId),
+      adminScopeService.buscarVinculoMaisRecenteDoFuncionario(funcionarioId),
     "Funcionario sem vinculo para definir escopo de reativacao (pendencia)"
   );
 }
@@ -401,7 +407,7 @@ function restringirCapacidadeUnidadeDoBody(
 
     let unidade;
     try {
-      unidade = await schoolUnitModel.findById(unidadeId);
+      unidade = await adminScopeService.buscarUnidadePorId(unidadeId);
     } catch (error) {
       return next(
         new ForbiddenError("Falha ao validar escopo da unidade escolar")
@@ -455,7 +461,7 @@ function restringirEscopoFuncionario(paramName = "id") {
 
     let vinculo;
     try {
-      vinculo = await employmentLinkModel.findActiveByFuncionarioIdWithDetails(
+      vinculo = await adminScopeService.buscarVinculoAtivoDoFuncionario(
         funcionarioId
       );
     } catch (error) {
@@ -509,7 +515,7 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
 
     let unidade;
     try {
-      unidade = await schoolUnitModel.findById(unidadeId);
+      unidade = await adminScopeService.buscarUnidadePorId(unidadeId);
     } catch (error) {
       return next(
         new ForbiddenError("Falha ao validar escopo da unidade escolar")
@@ -535,7 +541,7 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
   };
 }
 
-// Reativação: escopo via vínculo mais recente (encerrado), pois reativar não reabre vínculo.
+// Reativação: escopo via vínculo mais recente, base para o novo vínculo ativo.
 function restringirEscopoFuncionarioReativacao(paramName = "id") {
   return async function (req, _res, next) {
     const escopo = req.escopo || buildEscopo(req.acessos);
@@ -558,7 +564,7 @@ function restringirEscopoFuncionarioReativacao(paramName = "id") {
 
     let vinculo;
     try {
-      vinculo = await employmentLinkModel.findLatestByFuncionarioIdWithDetails(
+      vinculo = await adminScopeService.buscarVinculoMaisRecenteDoFuncionario(
         funcionarioId
       );
     } catch (error) {

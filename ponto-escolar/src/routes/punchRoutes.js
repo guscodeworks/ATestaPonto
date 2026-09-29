@@ -2,7 +2,7 @@ const { Router } = require('express');
 const { loginFuncionario, registerPunch } = require('../controllers/punchController');
 const { requestRecovery, verifyRecoveryCode, resetPassword } = require('../controllers/passwordRecoveryController');
 const { authenticateFuncionario } = require('../middlewares/authMiddleware');
-const { loginLimiter, pointLimiter, sensitiveLimiter, passwordRecoveryLimiter } = require('../middlewares/rateLimiters');
+const { loginLimiter, pointLimiter, ipAbuseLimiter, sensitiveLimiter, passwordRecoveryLimiter } = require('../middlewares/rateLimiters');
 const { baterPontoValidator, funcionarioLoginValidator, passwordRecoveryRequestValidator, passwordRecoveryCodeValidator, passwordRecoveryResetValidator } = require('../middlewares/validators');
 const passwordRecoverySession = require('../middlewares/passwordRecoverySession');
 const employeeQrAccessSession = require('../middlewares/employeeQrAccessSession');
@@ -26,8 +26,8 @@ router.use('/recuperar-senha', passwordRecoverySession);
 router.post('/recuperar-senha/solicitar', passwordRecoveryLimiter, passwordRecoveryRequestValidator, requestRecovery);
 router.post('/recuperar-senha/validar', sensitiveLimiter, passwordRecoveryCodeValidator, verifyRecoveryCode);
 router.post('/recuperar-senha/redefinir', sensitiveLimiter, passwordRecoveryResetValidator, resetPassword);
-router.post('/registrar', pointLimiter, authenticateFuncionario, baterPontoValidator, registerPunch);
-router.post('/bater', pointLimiter, authenticateFuncionario, baterPontoValidator, registerPunch);
+router.post('/registrar', ipAbuseLimiter, authenticateFuncionario, pointLimiter, baterPontoValidator, registerPunch);
+router.post('/bater', ipAbuseLimiter, authenticateFuncionario, pointLimiter, baterPontoValidator, registerPunch);
 
 // router.all abaixo dos handlers POST só é alcançado para outros verbos
 // (GET, PUT, DELETE etc.), já que uma requisição POST correspondente já teria

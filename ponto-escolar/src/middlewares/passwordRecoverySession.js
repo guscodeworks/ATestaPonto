@@ -2,7 +2,10 @@
 
 const session = require("express-session");
 const env = require("../config/env");
-const { RedisSessionStore } = require("../config/redisSessionStore");
+const {
+  RecoveryMemorySessionStore,
+  RedisSessionStore,
+} = require("../config/redisSessionStore");
 
 const options = {
   name: "ponto_recovery",
@@ -18,7 +21,9 @@ const options = {
 };
 
 if (env.REDIS_ENABLED) {
-  options.store = new RedisSessionStore();
+  options.store = new RedisSessionStore({ maxTtlMs: options.cookie.maxAge });
+} else {
+  options.store = new RecoveryMemorySessionStore();
 }
 
 module.exports = session(options);

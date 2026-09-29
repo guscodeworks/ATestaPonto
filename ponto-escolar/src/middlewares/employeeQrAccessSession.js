@@ -20,7 +20,7 @@ const options = {
 };
 
 if (env.REDIS_ENABLED) {
-  options.store = new RedisSessionStore();
+  options.store = new RedisSessionStore({ maxTtlMs: options.cookie.maxAge });
 }
 
 module.exports = session(options);

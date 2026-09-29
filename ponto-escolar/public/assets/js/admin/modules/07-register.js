@@ -31,6 +31,19 @@ function gerarOpcoesDeHorario() {
 
 const OPCOES_DE_HORARIO = gerarOpcoesDeHorario();
 
+function validarAcessoPaginaRegistroFuncionario() {
+  const pagina = document.querySelector('.register-page');
+  if (!pagina || temCapacidade('funcionario.criar')) return true;
+
+  const form = document.getElementById('form-registro');
+  form?.querySelectorAll('input, select, button').forEach((controle) => {
+    controle.disabled = true;
+  });
+  form?.remove();
+  window.location.replace('/admin/dashboard');
+  return false;
+}
+
 function preencherSelectDeHorario(select, horarioAnterior = null) {
   if (!select) return;
 
@@ -64,6 +77,10 @@ function preencherSelectDeHorario(select, horarioAnterior = null) {
 function iniciarFormRegistro() {
   const form = document.getElementById('form-registro');
   if (!form) return;
+  if (!temCapacidade('funcionario.criar')) {
+    form.remove();
+    return;
+  }
   // Impede que uma reinicializacao da pagina registre novamente os mesmos
   // listeners e transforme uma unica resposta de erro em toasts duplicados.
   if (form.dataset.registroInicializado === 'true') return;
@@ -166,6 +183,7 @@ function iniciarFormRegistro() {
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
+    if (!temCapacidade('funcionario.criar')) return;
     // Bloqueia cliques/envios repetidos enquanto o POST atual ainda esta em
     // andamento. Assim, cada tentativa possui uma unica resposta e um toast.
     if (form.dataset.cadastroEmAndamento === 'true') return;

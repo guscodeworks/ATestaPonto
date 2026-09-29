@@ -99,6 +99,10 @@
     }
 
     await finalizarCarregamentoGlobal(overlaySessao);
+    if (!validarAcessoPaginaRegistroFuncionario()) {
+      inicializacaoAdminEmAndamento = false;
+      return;
+    }
     document.documentElement.removeAttribute('data-admin-session');
     inicializacaoAdminEmAndamento = false;
 
@@ -150,8 +154,12 @@
 
     const btnPDF = document.getElementById('btn-gerar-pdf');
     const btnImprimir = document.getElementById('btn-imprimir');
-    if (btnPDF) btnPDF.addEventListener('click', gerarPDF);
-    if (btnImprimir) btnImprimir.addEventListener('click', imprimirRelatorio);
+    if (btnPDF && temCapacidade('relatorio.visualizar')) {
+      btnPDF.addEventListener('click', gerarPDF);
+    }
+    if (btnImprimir && temCapacidade('relatorio.visualizar')) {
+      btnImprimir.addEventListener('click', imprimirRelatorio);
+    }
 
     document.querySelectorAll('.ui-dialog-overlay,.modal-overlay').forEach(m => {
       m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });

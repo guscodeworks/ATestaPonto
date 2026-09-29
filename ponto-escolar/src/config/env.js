@@ -2,11 +2,7 @@ const dotenv = require("dotenv");
 
 dotenv.config({ quiet: true });
 
-const DEFAULT_GOVBR_FAKE_BASE_URL = process.env.GOVBR_FAKE_BASE_URL;
 const GOVBR_CALLBACK_PATH = "/auth/govbr/callback";
-// Path antigo do callback gov.br, mantido apenas para migrar
-// automaticamente redirect URIs configuradas com o valor legado.
-const LEGACY_GOVBR_CALLBACK_PATH = "/admin/auth/callback";
 
 // Lista de segredos comuns/triviais rejeitados mesmo que passem no
 // critério de comprimento e complexidade, para evitar configuração
@@ -75,19 +71,6 @@ function parseInteger(value, name, min, max) {
   return parsed;
 }
 
-function parseBoolean(value, name) {
-  const normalized = String(value).trim().toLowerCase();
-
-  if (normalized === "true") {
-    return true;
-  }
-  if (normalized === "false") {
-    return false;
-  }
-
-  throwEnvError(`"${name}" must be "true" or "false"`);
-}
-
 function parseFloatValue(value, name, min, max) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) {
@@ -143,7 +126,8 @@ function validateExpiresIn(value, name) {
       `"${name}" must be a number of seconds or format like 15m/8h/7d`
     );
   }
-  return normalized;
+  // O ambiente fornece strings; sem unidade, jsonwebtoken interpreta como ms.
+  return /^\d+$/.test(normalized) ? `${normalized}s` : normalized;
 }
 
 function validateUrl(name, value) {
@@ -174,10 +158,6 @@ function parseBoolean(value, name) {
   throwEnvError(`"${name}" must be true or false`);
 }
 
-function normalizeBaseUrl(value) {
-  return value ? value.replace(/\/+$/, "") : "";
-}
-
 function validateRedisNamespace(value) {
   if (value.length > 128) {
     throwEnvError('"REDIS_NAMESPACE" must have at most 128 characters');
@@ -197,38 +177,22 @@ function validateRedisNamespace(value) {
   return value;
 }
 
-// Permite configurar cada endpoint do gov.br explicitamente (produção) ou
-// derivá-lo automaticamente a partir de uma base URL de um mock/fake
-// gov.br local (desenvolvimento/testes), evitando repetir a URL completa
-// em várias variáveis de ambiente durante o desenvolvimento.
-function getGovbrEndpointUrl(name, fakeBaseUrl, fakePath) {
-  const explicitUrl = getOptionalUrl(name);
-  if (explicitUrl) {
-    return explicitUrl;
+// Endpoints explícitos para qualquer provedor; nunca derivados do simulador.
+function getGovbrEndpointUrl(name, optional = false) {
+  const value = optional ? getOptionalVar(name) : getRequiredVar(name);
+  if (!value) return "";
+  const url = new URL(validateUrl(name, value));
+  if (url.username || url.password || url.hash || url.search ||
+      (IS_PRODUCTION && url.protocol !== "https:")) {
+    throwEnvError(`"${name}" must have no credentials, query or fragment and must use HTTPS in production`);
   }
-  if (fakeBaseUrl) {
-    return validateUrl(name, `${fakeBaseUrl}${fakePath}`);
-  }
-  throwEnvError(`"${name}" is required`);
+  return url.toString();
 }
 
 function getGovbrRedirectUri() {
-  const value = getOptionalAliasedVar(
-    "GOVBR_FAKE_REDIRECT_URI",
-    "GOVBR_REDIRECT_URI"
-  );
-  if (!value) {
-    throwEnvError(
-      '"GOVBR_FAKE_REDIRECT_URI" or "GOVBR_REDIRECT_URI" is required'
-    );
-  }
-  const redirectUrl = new URL(validateUrl("GOVBR_REDIRECT_URI", value));
-
-  // Corrige automaticamente configurações antigas que ainda apontam para
-  // o path de callback legado, evitando quebrar ambientes que não
-  // atualizaram a variável de ambiente após a mudança de rota.
-  if (redirectUrl.pathname === LEGACY_GOVBR_CALLBACK_PATH) {
-    redirectUrl.pathname = GOVBR_CALLBACK_PATH;
+  const redirectUrl = new URL(getGovbrEndpointUrl("GOVBR_REDIRECT_URI"));
+  if (redirectUrl.pathname !== GOVBR_CALLBACK_PATH) {
+    throwEnvError(`"GOVBR_REDIRECT_URI" must use ${GOVBR_CALLBACK_PATH}`);
   }
 
   return redirectUrl.toString();
@@ -254,10 +218,14 @@ function validateCorsOrigins(rawOrigins, isProduction) {
     if (origin === "*") {
       return;
     }
-    validateUrl("CORS_ORIGIN", origin);
+    const url = new URL(validateUrl("CORS_ORIGIN", origin));
+    if (url.username || url.password || url.pathname !== "/" || url.search || url.hash ||
+        (isProduction && url.protocol !== "https:")) {
+      throwEnvError('"CORS_ORIGIN" must contain origins only, using HTTPS in production');
+    }
   });
 
-  return Object.freeze(origins);
+  return Object.freeze(origins.map((origin) => origin === "*" ? origin : new URL(origin).origin));
 }
 
 function getList(name) {
@@ -373,15 +341,6 @@ if (jwtSecret === sessionSecret) {
   throwEnvError('"JWT_SECRET" and "SESSION_SECRET" must be different');
 }
 
-// Em produção não há base de gov.br "fake" por padrão — a integração real
-// deve ser usada. Em outros ambientes, cai para um mock local se não for
-// configurado explicitamente.
-const govbrFakeBaseUrl = normalizeBaseUrl(
-  getOptionalUrl(
-    "GOVBR_FAKE_BASE_URL",
-    IS_PRODUCTION ? "" : DEFAULT_GOVBR_FAKE_BASE_URL
-  )
-);
 const adminSubs = Object.freeze(getList("ADMIN_GOVBR_SUBS"));
 const adminEmails = Object.freeze(
   validateAdminEmails(getList("ADMIN_GOVBR_EMAILS"))
@@ -457,30 +416,19 @@ const env = {
     getRequiredVar("CORS_ORIGIN"),
     IS_PRODUCTION
   ),
-  GOVBR_FAKE_BASE_URL: govbrFakeBaseUrl,
-  GOVBR_AUTHORIZE_URL: getGovbrEndpointUrl(
-    "GOVBR_AUTHORIZE_URL",
-    govbrFakeBaseUrl,
-    "/fake-govbr/authorize"
+  // IP é teto complementar de abuso, não cota individual de toda a escola.
+  RATE_LIMIT_IP_MAX: parseInteger(
+    getOptionalVar("RATE_LIMIT_IP_MAX", "2000"), "RATE_LIMIT_IP_MAX", 100, 100000
   ),
-  GOVBR_TOKEN_URL: getGovbrEndpointUrl(
-    "GOVBR_TOKEN_URL",
-    govbrFakeBaseUrl,
-    "/fake-govbr/token"
+  LOGIN_RATE_LIMIT_IP_FAILURE_MAX: parseInteger(
+    getOptionalVar("LOGIN_RATE_LIMIT_IP_FAILURE_MAX", "100"), "LOGIN_RATE_LIMIT_IP_FAILURE_MAX", 5, 10000
   ),
-  GOVBR_USERINFO_URL: getGovbrEndpointUrl(
-    "GOVBR_USERINFO_URL",
-    govbrFakeBaseUrl,
-    "/fake-govbr/userinfo"
-  ),
-  GOVBR_CLIENT_ID: getRequiredAliasedVar(
-    "GOVBR_FAKE_CLIENT_ID",
-    "GOVBR_CLIENT_ID"
-  ),
-  GOVBR_CLIENT_SECRET: getRequiredAliasedVar(
-    "GOVBR_FAKE_CLIENT_SECRET",
-    "GOVBR_CLIENT_SECRET"
-  ),
+  GOVBR_AUTHORIZE_URL: getGovbrEndpointUrl("GOVBR_AUTHORIZE_URL"),
+  GOVBR_TOKEN_URL: getGovbrEndpointUrl("GOVBR_TOKEN_URL"),
+  GOVBR_USERINFO_URL: getGovbrEndpointUrl("GOVBR_USERINFO_URL"),
+  GOVBR_LOGOUT_URL: getGovbrEndpointUrl("GOVBR_LOGOUT_URL", true),
+  GOVBR_CLIENT_ID: getRequiredVar("GOVBR_CLIENT_ID"),
+  GOVBR_CLIENT_SECRET: getRequiredVar("GOVBR_CLIENT_SECRET"),
   GOVBR_REDIRECT_URI: getGovbrRedirectUri(),
   ADMIN_GOVBR_SUBS: adminSubs,
   ADMIN_GOVBR_EMAILS: adminEmails,
@@ -499,5 +447,9 @@ const env = {
     15
   ),
 };
+
+if (!env.CORS_ORIGINS.includes(new URL(env.GOVBR_REDIRECT_URI).origin)) {
+  throwEnvError('"CORS_ORIGIN" must explicitly include the GOVBR_REDIRECT_URI origin');
+}
 
 module.exports = Object.freeze(env);
