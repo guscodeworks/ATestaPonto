@@ -50,8 +50,11 @@ async function registerPunch(req, res, next) {
     const result = await punchService.registerPunch(
       {
         funcionarioId: req.auth.id,
+        chaveIdempotencia: req.body.chaveIdempotencia,
         latitude: req.body.latitude,
         longitude: req.body.longitude,
+        accuracy: req.body.accuracy,
+        timestamp: req.body.timestamp,
       },
       {
         ipOrigem: getClientIp(req),

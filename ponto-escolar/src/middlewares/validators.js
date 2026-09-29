@@ -375,20 +375,22 @@ const funcionarioLoginValidator = withValidation([
 ]);
 
 const baterPontoValidator = withValidation([
+  body("chaveIdempotencia")
+    .isUUID(4)
+    .withMessage("chaveIdempotencia deve ser um UUID v4 por acao de registro"),
   body("latitude")
-    .notEmpty()
-    .withMessage("Localizacao obrigatoria para bater ponto")
-    .bail()
-    .isFloat({ min: -90, max: 90 })
-    .withMessage("latitude invalida")
-    .toFloat(),
+    .custom((value) => Number.isFinite(value) && value >= -90 && value <= 90)
+    .withMessage("latitude deve ser um numero entre -90 e 90"),
   body("longitude")
-    .notEmpty()
-    .withMessage("Localizacao obrigatoria para bater ponto")
-    .bail()
-    .isFloat({ min: -180, max: 180 })
-    .withMessage("longitude invalida")
-    .toFloat(),
+    .custom((value) => Number.isFinite(value) && value >= -180 && value <= 180)
+    .withMessage("longitude deve ser um numero entre -180 e 180"),
+  // Ausência só pode passar para replay legado; o service exige ambos em novas ações.
+  body("accuracy").optional()
+    .custom((value) => Number.isFinite(value) && value > 0)
+    .withMessage("accuracy deve ser um numero positivo em metros"),
+  body("timestamp").optional()
+    .custom((value) => Number.isSafeInteger(value) && value > 0)
+    .withMessage("timestamp deve ser um inteiro positivo em milissegundos"),
 ]);
 
 const passwordRecoveryRequestValidator = withValidation([

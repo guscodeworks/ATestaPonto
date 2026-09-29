@@ -194,7 +194,9 @@ function getCurrentLocation() {
       (position) => {
         resolve({
           latitude: position.coords.latitude,
-          longitude: position.coords.longitude
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          timestamp: position.timestamp
         });
       },
       () => reject(new Error('Para bater ponto, permita o acesso à localização.')),
@@ -747,12 +749,30 @@ async function confirmarRegistroPonto() {
   mostrarEstadoRegistrando(etapa);
 
   try {
-    const location = await getCurrentLocation();
+    // Persiste antes do envio e reutiliza corpo/chave após falha ou recarga.
+    // A deduplicação autoritativa acontece no banco, não neste armazenamento.
+    const storageKey = 'funcionario_ponto_pendente';
+    const funcionarioId = JSON.parse(sessionStorage.getItem('funcionario_data') || '{}').id;
+    if (!Number.isSafeInteger(Number(funcionarioId)) || Number(funcionarioId) <= 0) {
+      throw new Error('Identificação da sessão indisponível. Entre novamente.');
+    }
+    let pending = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
+    if (!pending || Number(pending.funcionarioId) !== Number(funcionarioId)) {
+      const location = await getCurrentLocation();
+      const bytes = crypto.getRandomValues(new Uint8Array(16));
+      bytes[6] = (bytes[6] & 15) | 64;
+      bytes[8] = (bytes[8] & 63) | 128;
+      const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+      const chaveIdempotencia = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      pending = { funcionarioId, body: { ...location, chaveIdempotencia } };
+      sessionStorage.setItem(storageKey, JSON.stringify(pending));
+    }
     await apiRequest('/pontos/registrar', {
       method: 'POST',
-      body: { ...location }
+      body: pending.body
     });
     postConfirmado = true;
+    sessionStorage.removeItem(storageKey);
     registroConfirmadoPendenteAtualizacao = true;
     fecharConfirm({ forcar: true });
     const confirmadoEm = window.performance.now();
@@ -760,6 +780,11 @@ async function confirmarRegistroPonto() {
     await sincronizarAposRegistro(confirmadoEm);
   } catch (error) {
     if (!postConfirmado) {
+      // Rejeições definitivas permitem corrigir os dados (ex.: sair do raio).
+      // Falha de rede, 5xx e conflito mantêm a ação para evitar outra batida.
+      if ([400, 403, 422].includes(error.status)) {
+        sessionStorage.removeItem('funcionario_ponto_pendente');
+      }
       toast(mensagemSeguraRegistro(error), 'error');
       if (error.status === 401) {
         window.setTimeout(sair, 1400);

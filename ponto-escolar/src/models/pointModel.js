@@ -10,6 +10,21 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
+// Consultar depois do lock do funcionário; chave e batida têm o mesmo commit.
+async function findIdempotencyForUpdate(client, funcionarioId, chave) {
+  return getClient(client).executeOne(
+    "SELECT requisicao_hash, resposta FROM ponto_idempotencia WHERE funcionario_id = ? AND chave = ? FOR UPDATE",
+    [funcionarioId, chave]
+  );
+}
+
+async function saveIdempotency(client, funcionarioId, chave, requestHash, response) {
+  return getClient(client).execute(
+    "INSERT INTO ponto_idempotencia (funcionario_id, chave, requisicao_hash, resposta) VALUES (?, ?, ?, ?)",
+    [funcionarioId, chave, requestHash, JSON.stringify(response)]
+  );
+}
+
 // 1 linha/batida por vínculo+dia; chave = vinculo_funcional_id (não funcionario_id).
 
 async function findByEmployeeAndDate(vinculoFuncionalId, date) {
@@ -127,6 +142,8 @@ async function replacePunchRow(
 }
 
 module.exports = {
+  findIdempotencyForUpdate,
+  saveIdempotency,
   withTransaction,
   findByEmployeeAndDate,
   listByEmployeeAndDateRange,

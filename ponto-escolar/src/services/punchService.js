@@ -1,6 +1,7 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
+const crypto = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const employeeModel = require("../models/employeeModel");
@@ -8,7 +9,10 @@ const loginModel = require("../models/loginModel");
 const pointModel = require("../models/pointModel");
 const employmentLinkModel = require("../models/employmentLinkModel");
 const schoolUnitModel = require("../models/schoolUnitModel");
-const { isWithinRadius } = require("../utils/location");
+const {
+  isWithinRadius, validateCoordinates,
+  MAX_GPS_ACCURACY_METERS, MAX_GPS_AGE_MS, MAX_GPS_FUTURE_MS,
+} = require("../utils/location");
 const { isValidCpf, maskCpf, normalizeCpf } = require("../utils/cpf");
 const {
   EMPTY_PUNCH_TIME,
@@ -24,11 +28,11 @@ const {
   UnauthorizedError,
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
+const { buildCredentialVersion } = require("./authService");
 
 // Fuso da escola p/ separar dias de ponto, independente do fuso do servidor.
 function getSaoPauloDateTime(referenceDate = new Date()) {
   const formatter = new Intl.DateTimeFormat("sv-SE", {
-const { buildCredentialVersion } = require("./authService");
     timeZone: "America/Sao_Paulo",
     year: "numeric",
     month: "2-digit",
@@ -69,23 +73,23 @@ async function resolveUnidadeGeolocation(funcionarioId) {
   return { vinculoId: vinculo.id, geolocation };
 }
 
-function validateDistanceAgainst(geolocation, latitude, longitude) {
+function validateDistanceAgainst(geolocation, latitude, longitude, accuracy) {
   const distanceCheck = isWithinRadius(
     { latitude: geolocation.latitude, longitude: geolocation.longitude },
     { latitude, longitude },
-    geolocation.raio_permitido_metros
+    geolocation.raio_permitido_metros,
+    accuracy
   );
 
   if (
-    !distanceCheck.distanceMeters &&
-    distanceCheck.distanceMeters !== 0
+    !Number.isFinite(distanceCheck.distanceMeters)
   ) {
-    throw new BadRequestError("Localizacao invalida para registro de ponto");
+    throw new ForbiddenError("Geolocalizacao da unidade nao configurada corretamente. Contate a administracao.");
   }
 
   if (!distanceCheck.isWithin) {
     throw new ForbiddenError(
-      "Voce so pode bater ponto dentro da area permitida da escola."
+      "A localizacao e sua margem de precisao devem estar dentro da area permitida da escola."
     );
   }
 
@@ -436,11 +440,11 @@ async function loginFuncionario(
   const tokenPayload = {
     sub: String(funcionario.id),
     role: "funcionario",
+    credentialVersion: buildCredentialVersion(funcionario),
   };
   const token = jwt.sign(tokenPayload, env.JWT_SECRET, {
     expiresIn: env.FUNCIONARIO_JWT_EXPIRES_IN,
   });
-    credentialVersion: buildCredentialVersion(funcionario),
 
   await registerAuditLog({
     evento: "funcionario_login_sucesso",
@@ -460,36 +464,50 @@ async function loginFuncionario(
 
 // Mantém a sequência de batidas no service (fora do controller).
 async function registerPunch(
-  { funcionarioId, latitude, longitude },
+  { funcionarioId, latitude, longitude, accuracy, timestamp, chaveIdempotencia },
   { ipOrigem, userAgent } = {}
 ) {
-  const safeLatitude = Number(latitude);
-  const safeLongitude = Number(longitude);
+  const safeLatitude = latitude;
+  const safeLongitude = longitude;
+  if (typeof chaveIdempotencia !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(chaveIdempotencia)) {
+    throw new BadRequestError("chaveIdempotencia deve ser um UUID v4");
+  }
+  const actionKey = chaveIdempotencia.toLowerCase();
 
-  if (!Number.isFinite(safeLatitude) || !Number.isFinite(safeLongitude)) {
+  if (!Number.isFinite(safeLatitude) || !Number.isFinite(safeLongitude) ||
+      !validateCoordinates(safeLatitude, safeLongitude).isValid) {
     throw new BadRequestError("Localizacao invalida para registro de ponto");
   }
 
-  // Geolocalização por unidade (via vínculo), fail-fast antes da transação:
-  // fora da área nem abre a tx.
-  const { vinculoId, geolocation } =
-    await resolveUnidadeGeolocation(funcionarioId);
-  const distanceCheck = validateDistanceAgainst(
-    geolocation,
-    safeLatitude,
-    safeLongitude
-  );
-  const { date, time, dateTime } = getSaoPauloDateTime(new Date());
+  // Hash legado só permite replay de ações A03 já confirmadas, nunca novas batidas.
+  const requestData = accuracy === undefined && timestamp === undefined
+    ? [safeLatitude, safeLongitude]
+    : [safeLatitude, safeLongitude, accuracy, timestamp];
+  const requestHash = crypto.createHash("sha256")
+    .update(JSON.stringify(requestData)).digest("hex");
 
   try {
     // Leitura+decisão+escrita da batida numa transação com FOR UPDATE no vínculo
     // ativo e nas batidas do dia, p/ evitar corrida (ex: duas "entradas" no mesmo
     // dia). Chave de negócio = `vinculo_funcional_id` (não funcionario_id).
-    const punch = await pointModel.withTransaction(async (tx) => {
+    const result = await pointModel.withTransaction(async (tx) => {
       const funcionario = await employeeModel.findForPunchRegisterByIdForUpdate(
         tx,
         funcionarioId
       );
+
+      const previous = await pointModel.findIdempotencyForUpdate(tx, funcionarioId, actionKey);
+      if (previous) {
+        if (previous.requisicao_hash !== requestHash) {
+          throw new ConflictError("Chave de idempotencia ja usada com outros dados");
+        }
+        return {
+          replayed: true,
+          response: typeof previous.resposta === "string"
+            ? JSON.parse(previous.resposta) : previous.resposta,
+        };
+      }
 
       if (!funcionario) {
         throw new NotFoundError("Funcionario nao encontrado");
@@ -499,8 +517,12 @@ async function registerPunch(
         throw new ForbiddenError("Funcionario inativo");
       }
 
-      // Reconfirma e trava o vínculo DENTRO da tx (o FOR UPDATE aqui evita a
-      // corrida; a leitura fora da tx era só fail-fast de geolocation).
+      if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > MAX_GPS_ACCURACY_METERS ||
+          !Number.isSafeInteger(timestamp) || timestamp <= 0) {
+        throw new BadRequestError("Leitura GPS exige precisao maior que zero e de ate 100 metros, com timestamp em milissegundos.");
+      }
+
+      // Nova ação: mantém o lock do vínculo e valida a localização na mesma tx.
       const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
         tx,
         funcionarioId
@@ -509,11 +531,24 @@ async function registerPunch(
         throw new NotFoundError("Funcionario sem vinculo ativo");
       }
 
+      const geolocation = await schoolUnitModel.findGeolocationByVinculo(vinculo.id, tx);
+      if (!geolocation) {
+        throw new NotFoundError("Unidade escolar do vinculo nao encontrada");
+      }
+      const distanceCheck = validateDistanceAgainst(geolocation, safeLatitude, safeLongitude, accuracy);
+      const { date, time, dateTime } = getSaoPauloDateTime(new Date());
+
       const existingPunches = await pointModel.findByEmployeeAndDateForUpdate(
         tx,
         vinculo.id,
         date
       );
+
+      // Após os locks, só novas ações precisam de leitura recente. Replay não grava.
+      const readingAge = Date.now() - timestamp;
+      if (readingAge > MAX_GPS_AGE_MS || readingAge < -MAX_GPS_FUTURE_MS) {
+        throw new BadRequestError("Leitura GPS vencida ou com horario futuro. Atualize a localizacao e confira o relogio do aparelho.");
+      }
 
       let rowId = null;
       let sequence = 1;
@@ -559,41 +594,38 @@ async function registerPunch(
         rowId = matched ? Number(matched.id) : null;
       }
 
-      return {
-        id: rowId,
-        funcionario,
-        sequence,
-        type,
-        registeredAt: dateTime,
-        distanceMeters: distanceCheck.distanceMeters,
+      const response = {
+        ponto: {
+          id: rowId,
+          sequencia: sequence,
+          tipo: type,
+          registrado_em: dateTime,
+          distancia_metros: distanceCheck.distanceMeters,
+        },
+        funcionario: mapFuncionario(funcionario),
       };
+      await pointModel.saveIdempotency(tx, funcionarioId, actionKey, requestHash, response);
+      return { replayed: false, response };
     });
 
+    if (result.replayed) return result.response;
+    const punch = result.response;
     await registerAuditLog({
       evento: "batida_ponto_realizada",
       funcionarioId: punch.funcionario.id,
       mensagem: "Batida de ponto registrada com sucesso",
       ipOrigem,
       metadados: {
-        sequencia: punch.sequence,
-        tipo: punch.type,
-        distancia_metros: punch.distanceMeters,
+        sequencia: punch.ponto.sequencia,
+        tipo: punch.ponto.tipo,
+        distancia_metros: punch.ponto.distancia_metros,
         latitude: safeLatitude,
         longitude: safeLongitude,
         user_agent: userAgent,
       },
     });
 
-    return {
-      ponto: {
-        id: punch.id,
-        sequencia: punch.sequence,
-        tipo: punch.type,
-        registrado_em: punch.registeredAt,
-        distancia_metros: punch.distanceMeters,
-      },
-      funcionario: mapFuncionario(punch.funcionario),
-    };
+    return punch;
   } catch (error) {
     // Rede de segurança contra corrida que escape do FOR UPDATE (ex: criar a
     // linha do dia pela primeira vez) → constraint vira msg de negócio amigável.
