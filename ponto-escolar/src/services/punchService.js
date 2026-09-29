@@ -206,18 +206,17 @@ async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date
     throw new UnauthorizedError("Sessao do funcionario invalida");
   }
 
-  const { vinculoId } = await resolveUnidadeGeolocation(safeFuncionarioId);
   const period = resolveHistoryPeriod(rawMonth, referenceDate);
   const rows = await pointModel.listByEmployeeAndDateRange(
-    vinculoId,
+    safeFuncionarioId,
     period.startDate,
     period.endDate
   );
 
-  // 1 linha por batida → agrupa por data_referencia p/ reconstruir o dia.
+  // Transferências no mesmo dia não podem combinar jornadas de vínculos diferentes.
   const byDate = new Map();
   for (const row of rows) {
-    const key = mapDateReference(row.data_referencia);
+    const key = `${mapDateReference(row.data_referencia)}:${row.vinculo_funcional_id}`;
     if (!byDate.has(key)) {
       byDate.set(key, []);
     }
@@ -225,7 +224,12 @@ async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date
   }
   const records = Array.from(byDate.entries())
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([date, punches]) => mapHistoryDay(date, punches));
+    .map(([, punches]) => ({
+      ...mapHistoryDay(punches[0].data_referencia, punches),
+      vinculo_funcional_id: Number(punches[0].vinculo_funcional_id),
+      unidade_escolar_id: Number(punches[0].unidade_escolar_id),
+      unidade_escolar_nome: punches[0].unidade_escolar_nome,
+    }));
   const completeRecords = records.filter(
     (record) => record.status === "COMPLETO"
   );
@@ -233,7 +237,7 @@ async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date
   return {
     periodo: period.month,
     resumo: {
-      dias_com_registro: records.length,
+      dias_com_registro: new Set(records.map((record) => record.data_referencia)).size,
       jornadas_completas: completeRecords.length,
       jornadas_incompletas: records.length - completeRecords.length,
       total_minutos: completeRecords.reduce(

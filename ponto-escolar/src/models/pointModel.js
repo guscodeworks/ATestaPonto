@@ -20,10 +20,17 @@ async function findByEmployeeAndDate(vinculoFuncionalId, date) {
 }
 
 // WHERE por data_referencia (sem função) preserva o índice do intervalo.
-async function listByEmployeeAndDateRange(vinculoFuncionalId, startDate, endDate) {
+async function listByEmployeeAndDateRange(funcionarioId, startDate, endDate) {
   return database.execute(
-    "SELECT id, vinculo_funcional_id, data_referencia, tipo, registrado_em, created_at, updated_at FROM registro_de_pontos WHERE vinculo_funcional_id = ? AND data_referencia >= ? AND data_referencia <= ? ORDER BY data_referencia ASC, tipo ASC",
-    [vinculoFuncionalId, startDate, endDate]
+    `SELECT p.id, p.vinculo_funcional_id, p.data_referencia, p.tipo,
+            p.registrado_em, p.created_at, p.updated_at,
+            v.unidade_escolar_id, ue.nome AS unidade_escolar_nome
+     FROM registro_de_pontos p
+     INNER JOIN vinculos_funcionais v ON v.id = p.vinculo_funcional_id
+     INNER JOIN unidades_escolares ue ON ue.id = v.unidade_escolar_id
+     WHERE v.funcionario_id = ? AND p.data_referencia >= ? AND p.data_referencia <= ?
+     ORDER BY p.data_referencia ASC, p.vinculo_funcional_id ASC, p.tipo ASC`,
+    [funcionarioId, startDate, endDate]
   );
 }
 
@@ -35,11 +42,38 @@ async function findByEmployeeAndDateForUpdate(client, vinculoFuncionalId, date) 
   );
 }
 
-// Snapshot diário do relatório: batidas do dia de todos os vínculos.
-async function listRowsByDate(date) {
+// O escopo incide sobre a unidade do vínculo vigente na data consultada.
+// LEFT JOIN conserva vínculos vigentes sem batidas para a lista de ausentes.
+async function listRowsByDate(date, escopoUnidades = []) {
+  let scopeClause = "";
+  const params = [date, date, date];
+  if (escopoUnidades !== null) {
+    if (!Array.isArray(escopoUnidades) || escopoUnidades.length === 0) {
+      return [];
+    }
+    const unitIds = [...new Set(escopoUnidades.map(Number))];
+    if (unitIds.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+      return [];
+    }
+    scopeClause = `AND ue.id IN (${unitIds.map(() => "?").join(",")})`;
+    params.push(...unitIds);
+  }
+
   return database.execute(
-    "SELECT id, vinculo_funcional_id, data_referencia, tipo, registrado_em, created_at, updated_at FROM registro_de_pontos WHERE data_referencia = ? ORDER BY vinculo_funcional_id ASC, tipo ASC",
-    [date]
+    `SELECT p.id, v.id AS vinculo_funcional_id,
+            p.data_referencia, p.tipo, p.registrado_em, p.created_at, p.updated_at,
+            f.id AS funcionario_id, f.nome, f.email, f.cpf, f.ativo,
+            v.cargo_id, ue.id AS unidade_escolar_id, ue.nome AS unidade_escolar_nome
+     FROM vinculos_funcionais v
+     INNER JOIN unidades_escolares ue ON ue.id = v.unidade_escolar_id
+     INNER JOIN funcionarios f ON f.id = v.funcionario_id
+     LEFT JOIN registro_de_pontos p
+       ON p.vinculo_funcional_id = v.id AND p.data_referencia = ?
+     WHERE (v.data_inicio IS NULL OR v.data_inicio <= ?)
+       AND (v.data_fim IS NULL OR v.data_fim >= ?)
+       ${scopeClause}
+     ORDER BY f.nome ASC, v.id ASC, p.tipo ASC`,
+    params
   );
 }
 
