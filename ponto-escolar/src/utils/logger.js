@@ -8,7 +8,20 @@ function maskEmail() {
   return '[REDACTED_EMAIL]';
 }
 
-function maskToken() {
+function maskToken(value) {
+  if (typeof value !== 'string') {
+    return '[REDACTED_TOKEN]';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '[REDACTED_TOKEN]';
+  }
+
+  if (trimmed.startsWith('Bearer ')) {
+    return 'Bearer [REDACTED]';
+  }
+
   return '[REDACTED_TOKEN]';
 }
 
