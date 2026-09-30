@@ -31,12 +31,12 @@ async function createAcesso(req, res, next) {
   }
 }
 
-// /meu: leitura pura em memória (req.acessos/escopo/escopoUnidades), sem model/DB.
+// /meu: usa os acessos ativos autorizadores e o escopo resolvido pelo middleware.
 async function getMeusAcessos(req, res, next) {
   try {
     const result = adminAccessService.getMeusAcessos({
       escopo: req.escopo,
-      acessos: req.acessos,
+      acessos: req.acessosAutorizadores,
       escopoUnidades: req.escopoUnidades,
     });
 
