@@ -59,7 +59,10 @@ async function listRegistrationUnits(req, res, next) {
 
 async function getEmployee(req, res, next) {
   try {
-    const result = await employeeService.getEmployee(Number(req.params.id));
+    const result = await employeeService.getEmployee(
+      Number(req.params.id),
+      req.vinculoAutorizado?.id
+    );
 
     return res.status(200).json({
       success: true,

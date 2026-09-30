@@ -20,6 +20,7 @@ const {
 const {
   escopoPorCapacidade,
   restringirCapacidadeFuncionario,
+  restringirCapacidadeFuncionarioVisualizacao,
   restringirCapacidadeFuncionarioReativacao,
   restringirCapacidadeUnidadeDoBody,
 } = require("../middlewares/adminScope");
@@ -40,7 +41,7 @@ router.get(
 router.get(
   "/:id",
   employeeIdValidator,
-  restringirCapacidadeFuncionario("funcionario.visualizar", "id"),
+  restringirCapacidadeFuncionarioVisualizacao("id"),
   getEmployee
 );
 

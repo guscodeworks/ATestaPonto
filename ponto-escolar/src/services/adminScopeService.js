@@ -23,6 +23,10 @@ async function buscarVinculoAtivoDoFuncionario(funcionarioId) {
   );
 }
 
+async function buscarVinculoVisivelDoFuncionario(funcionarioId) {
+  return employmentLinkModel.findForAdminEmployeeView(funcionarioId);
+}
+
 async function buscarVinculoMaisRecenteDoFuncionario(funcionarioId) {
   return employmentLinkModel.findLatestByFuncionarioIdWithDetails(
     funcionarioId
@@ -34,5 +38,6 @@ module.exports = {
   listarUnidadesParaCadastro,
   buscarUnidadePorId,
   buscarVinculoAtivoDoFuncionario,
+  buscarVinculoVisivelDoFuncionario,
   buscarVinculoMaisRecenteDoFuncionario,
 };
