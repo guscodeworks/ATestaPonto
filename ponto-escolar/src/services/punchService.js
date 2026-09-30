@@ -358,6 +358,10 @@ async function findFuncionarioForLogin({ cpf, email }) {
   return employeeModel.findForPunchLoginByCpf(cpf);
 }
 
+function isFirstAccess(value) {
+  return value === true || value === 1 || value === "1";
+}
+
 // Autenticação própria do funcionário (separada do login admin Gov.br).
 async function loginFuncionario(
   body,
@@ -435,6 +439,25 @@ async function loginFuncionario(
     throw new ForbiddenError("Contexto de QR Code indisponivel");
   }
 
+  if (isFirstAccess(funcionario.primeiro_acesso)) {
+    const tokenPrimeiroAcesso = createFirstAccessToken(funcionario.id);
+
+    await registerAuditLog({
+      evento: "funcionario_primeiro_acesso_validado",
+      funcionarioId: funcionario.id,
+      mensagem: "Senha temporaria validada; troca de senha obrigatoria",
+      ipOrigem,
+      metadados: { login: login.auditLogin },
+    });
+
+    return {
+      primeiro_acesso: true,
+      token_primeiro_acesso: tokenPrimeiroAcesso,
+      expiresIn: env.FIRST_ACCESS_TOKEN_EXPIRES_IN,
+      funcionario: mapFuncionario(funcionario),
+    };
+  }
+
   await loginModel.updateLastLogin(funcionario.id);
 
   const tokenPayload = {
@@ -457,7 +480,7 @@ async function loginFuncionario(
   return {
     token,
     expiresIn: env.FUNCIONARIO_JWT_EXPIRES_IN,
-    primeiro_acesso: Boolean(funcionario.primeiro_acesso),
+    primeiro_acesso: false,
     funcionario: mapFuncionario(funcionario),
   };
 }

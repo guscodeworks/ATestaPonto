@@ -13,6 +13,10 @@ const { digestSubject, loginSubject } = require("../utils/rateLimitSubject");
 const RECOVERY_TTL_MS = 15 * 60 * 1000;
 const MAX_CODE_ATTEMPTS = 5;
 
+function isFirstAccess(value) {
+  return value === true || value === 1 || value === "1";
+}
+
 function hashCode(code) {
   return crypto
     .createHash("sha256")
@@ -34,7 +38,11 @@ async function requestRecovery({ cpf, session, ipOrigem }) {
   clearRecovery(session);
   const employee = await employeeModel.findForPasswordRecoveryByCpf(cpf);
 
-  const canRecover = Boolean(employee && employee.email);
+  // Resposta é propositalmente igual, com ou sem conta: evita enumerar CPFs.
+  if (!employee || !employee.email || isFirstAccess(employee.primeiro_acesso)) {
+    return { message: "Se houver uma conta ativa com este CPF, enviaremos um código para o e-mail cadastrado." };
+  }
+
   const codigo = String(crypto.randomInt(100000, 1000000));
   // Mesmo ciclo de sessão/cookie e tentativas, sem autorizar conta inexistente.
   session.passwordRecovery = {
@@ -145,10 +153,19 @@ async function resetPassword({
   }
 
   const passwordHash = await bcrypt.hash(novaSenha, env.BCRYPT_SALT_ROUNDS);
-  await employeeModel.updatePasswordForRecovery(
-    employeeId,
+  const updateResult = await employeeModel.updatePasswordForRecovery(
+    Number(recovery.employeeId),
     passwordHash
   );
+
+  // Evita que uma sessão de recuperação iniciada antes de uma mudança de
+  // estado contorne a troca obrigatória de primeiro acesso.
+  if (Number(updateResult?.affectedRows) !== 1) {
+    clearRecovery(session);
+    throw new UnauthorizedError("Nao foi possivel redefinir a senha.");
+  }
+
+  clearRecovery(session);
   await registerAuditLog({
     evento: "senha_funcionario_redefinida",
     funcionarioId: employeeId,
