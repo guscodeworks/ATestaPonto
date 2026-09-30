@@ -50,6 +50,16 @@ async function authenticateFuncionario(req, _res, next) {
       throw new UnauthorizedError("Funcionario inexistente ou inativo");
     }
 
+    // Também invalida JWTs normais emitidos antes desta regra para quem ainda
+    // precisa substituir a senha temporária.
+    if (
+      funcionario.primeiro_acesso === true ||
+      funcionario.primeiro_acesso === 1 ||
+      funcionario.primeiro_acesso === "1"
+    ) {
+      throw new ForbiddenError("Troca de senha obrigatoria antes de acessar o ponto");
+    }
+
     req.auth = {
       id: funcionario.id,
       nome: funcionario.nome,
