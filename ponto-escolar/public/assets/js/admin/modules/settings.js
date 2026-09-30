@@ -11,10 +11,22 @@
   const paginaAcessos = document.getElementById('admin-access-page');
   const anteriorAcessos = document.getElementById('admin-access-prev');
   const proximaAcessos = document.getElementById('admin-access-next');
+  const secaoConcessao = document.getElementById('admin-access-create');
+  const formularioConcessao = document.getElementById('admin-access-create-form');
+  const feedbackConcessao = document.getElementById('admin-access-create-feedback');
+  const perfilConcessao = document.getElementById('access-perfil');
+  const campoEscopoConcessao = document.getElementById('access-escopo-field');
+  const rotuloEscopoConcessao = document.getElementById('access-escopo-label');
+  const escopoConcessao = document.getElementById('access-escopo');
+  const botaoConcessao = document.getElementById('admin-access-create-submit');
+
   let carregado = false;
   let carregando = false;
   let paginaAtualAcessos = 1;
   let carregandoAcessos = false;
+  let carregandoOpcoes = false;
+  let enviandoConcessao = false;
+  let opcoesConcessao = [];
 
   function criarCelula(tag, texto, escopo) {
     const celula = document.createElement(tag);
@@ -164,8 +176,138 @@
     }
   }
 
+  function criarOpcao(texto, valor) {
+    const opcao = document.createElement('option');
+    opcao.textContent = texto;
+    opcao.value = String(valor);
+    return opcao;
+  }
+
+  function atualizarEscopoConcessao() {
+    const selecionado = opcoesConcessao.find(({ perfil }) => perfil === perfilConcessao.value);
+    escopoConcessao.replaceChildren();
+    if (!selecionado || selecionado.tipo_escopo === 'SEDUC') {
+      campoEscopoConcessao.hidden = true;
+      escopoConcessao.disabled = true;
+      escopoConcessao.required = false;
+      return;
+    }
+
+    campoEscopoConcessao.hidden = false;
+    escopoConcessao.disabled = false;
+    escopoConcessao.required = true;
+    rotuloEscopoConcessao.textContent = selecionado.tipo_escopo === 'DRE'
+      ? 'Diretoria de ensino'
+      : 'Unidade escolar';
+    escopoConcessao.appendChild(criarOpcao('Selecione uma opção autorizada...', ''));
+    selecionado.recursos.forEach(({ id, nome }) => {
+      escopoConcessao.appendChild(criarOpcao(nome, id));
+    });
+    if (selecionado.recursos.length === 1) {
+      escopoConcessao.value = String(selecionado.recursos[0].id);
+    }
+  }
+
+  async function carregarOpcoesConcessao() {
+    if (!secaoConcessao || carregandoOpcoes || enviandoConcessao) return;
+    carregandoOpcoes = true;
+    secaoConcessao.hidden = false;
+    formularioConcessao.hidden = true;
+    botaoConcessao.disabled = true;
+    feedbackConcessao.textContent = 'Consultando perfis e escopos autorizados...';
+    opcoesConcessao = [];
+
+    try {
+      const resposta = await adminApiFetch('/api/admin/acessos/opcoes-concessao');
+      const perfis = getApiData(resposta)?.perfis;
+      if (!Array.isArray(perfis) || perfis.some((item) =>
+        !item || typeof item.perfil !== 'string'
+        || !['SEDUC', 'DRE', 'ESCOLA'].includes(item.tipo_escopo)
+        || !Array.isArray(item.recursos)
+        || item.recursos.some((recurso) => !Number.isSafeInteger(recurso.id)
+          || recurso.id < 1 || typeof recurso.nome !== 'string')
+      )) {
+        throw new Error('Opções de concessão inválidas.');
+      }
+      opcoesConcessao = perfis;
+      perfilConcessao.replaceChildren(criarOpcao('Selecione um perfil...', ''));
+      perfis.forEach(({ perfil }) => perfilConcessao.appendChild(criarOpcao(perfil, perfil)));
+      perfilConcessao.value = '';
+      atualizarEscopoConcessao();
+      if (perfis.length > 0) {
+        formularioConcessao.hidden = false;
+        botaoConcessao.disabled = false;
+        feedbackConcessao.textContent = '';
+      } else {
+        feedbackConcessao.textContent = 'Nenhum perfil pode ser concedido no seu escopo.';
+      }
+    } catch (erro) {
+      feedbackConcessao.textContent = erro.message || 'Não foi possível carregar as opções de concessão.';
+      if (erro.status === 401) redirecionarAdminParaGovbr();
+    } finally {
+      carregandoOpcoes = false;
+    }
+  }
+
+  async function enviarConcessao(evento) {
+    evento.preventDefault();
+    if (enviandoConcessao || !temCapacidade('acesso.conceder')) return;
+    const selecionado = opcoesConcessao.find(({ perfil }) => perfil === perfilConcessao.value);
+    if (!selecionado) return;
+
+    const recursoId = Number(escopoConcessao.value);
+    if (selecionado.tipo_escopo !== 'SEDUC'
+      && !selecionado.recursos.some(({ id }) => id === recursoId)) {
+      feedbackConcessao.textContent = 'Selecione um escopo autorizado.';
+      return;
+    }
+
+    const dadosFormulario = new FormData(formularioConcessao);
+    const corpo = {
+      cpf: String(dadosFormulario.get('cpf') || '').trim(),
+      nome: String(dadosFormulario.get('nome') || '').trim(),
+      perfil: selecionado.perfil,
+    };
+    const email = String(dadosFormulario.get('email') || '').trim();
+    const dataInicio = String(dadosFormulario.get('data_inicio') || '');
+    const dataFim = String(dadosFormulario.get('data_fim') || '');
+    if (email) corpo.email = email;
+    if (dataInicio) corpo.data_inicio = dataInicio;
+    if (dataFim) corpo.data_fim = dataFim;
+    if (selecionado.tipo_escopo === 'DRE') corpo.diretoria_ensino_id = recursoId;
+    if (selecionado.tipo_escopo === 'ESCOLA') corpo.unidade_escolar_id = recursoId;
+
+    enviandoConcessao = true;
+    botaoConcessao.disabled = true;
+    feedbackConcessao.textContent = 'Concedendo acesso...';
+    try {
+      await adminApiFetch('/api/admin/acessos', {
+        method: 'POST',
+        body: JSON.stringify(corpo),
+      });
+      formularioConcessao.reset();
+      atualizarEscopoConcessao();
+      feedbackConcessao.textContent = 'Acesso administrativo concedido.';
+      if (temCapacidade('acesso.listar')) await carregarAcessos(1);
+    } catch (erro) {
+      feedbackConcessao.textContent = erro.message || 'Não foi possível conceder o acesso.';
+      if (erro.status === 401) redirecionarAdminParaGovbr();
+    } finally {
+      enviandoConcessao = false;
+      botaoConcessao.disabled = false;
+    }
+  }
+
   aba.addEventListener('click', () => {
     carregarPermissoes();
+    if (secaoConcessao) {
+      if (temCapacidade('acesso.conceder')) {
+        carregarOpcoesConcessao();
+      } else {
+        secaoConcessao.hidden = true;
+        formularioConcessao.hidden = true;
+      }
+    }
     if (!listaAcessos) return;
     if (!temCapacidade('acesso.listar')) {
       listaAcessos.hidden = true;
@@ -177,4 +319,6 @@
   });
   anteriorAcessos?.addEventListener('click', () => carregarAcessos(paginaAtualAcessos - 1));
   proximaAcessos?.addEventListener('click', () => carregarAcessos(paginaAtualAcessos + 1));
+  perfilConcessao?.addEventListener('change', atualizarEscopoConcessao);
+  formularioConcessao?.addEventListener('submit', enviarConcessao);
 })();

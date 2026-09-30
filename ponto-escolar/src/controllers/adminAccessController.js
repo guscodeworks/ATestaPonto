@@ -64,6 +64,18 @@ function getCapacidadesPorPerfil(_req, res) {
   });
 }
 
+async function getConcessionOptions(req, res, next) {
+  try {
+    const result = await adminAccessService.listConcessionOptions(
+      req.acessosAutorizadores
+    );
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function listAcessos(req, res, next) {
   try {
     const result = await adminAccessService.listAcessos(req.query, {
@@ -127,6 +139,7 @@ module.exports = {
   createAcesso,
   getMeusAcessos,
   getCapacidadesPorPerfil,
+  getConcessionOptions,
   listAcessos,
   getAcesso,
   suspenderAcesso,

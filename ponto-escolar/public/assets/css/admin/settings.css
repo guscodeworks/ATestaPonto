@@ -292,19 +292,30 @@
   color: var(--color-text-muted);
 }
 
+.settings-page .settings-access-create,
 .settings-page .settings-access-list {
   margin-top: 32px;
 }
 
+.settings-page .settings-access-create[hidden],
+.settings-page .settings-access-create form[hidden],
+.settings-page .settings-access-create .form-field[hidden],
 .settings-page .settings-access-list[hidden],
 .settings-page .settings-access-pagination[hidden] {
   display: none;
 }
 
+.settings-page .settings-access-create h2,
 .settings-page .settings-access-list h2 {
   margin-bottom: 16px;
   color: var(--color-text);
   font-size: 16px;
+}
+
+.settings-page #admin-access-create-feedback {
+  margin-bottom: 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
 }
 
 .settings-page .settings-access-table {

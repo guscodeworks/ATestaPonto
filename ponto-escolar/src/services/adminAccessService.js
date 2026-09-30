@@ -23,6 +23,7 @@ const {
 } = require("../utils/errors");
 const {
   filtrarAcessosPorCapacidade,
+  CAPACIDADES_POR_PERFIL,
 } = require("../utils/adminCapabilities");
 
 // Converte Date/string p/ 'YYYY-MM-DD' no timezone 'Z' do pool. null/inválido → null.
@@ -270,6 +271,49 @@ function resolverConcedente(acessos, perfilAlvo, recursoAlvo) {
     recursoAlvo,
     podeConceder
   );
+}
+
+// Opções de leitura para o formulário: cada par perfil/recurso passa pela mesma
+// autorização por acesso usada pelo POST, sem expor uma matriz paralela ao cliente.
+async function listConcessionOptions(acessos) {
+  const concedentes = filtrarAcessosPorCapacidade(acessos, "acesso.conceder");
+  const perfis = Object.keys(CAPACIDADES_POR_PERFIL);
+  const candidatos = perfis.filter((perfil) =>
+    concedentes.some((acesso) => podeConceder(acesso.perfil, perfil))
+  );
+
+  const precisaDiretorias = candidatos.includes(PERFIL_DIRETORIA);
+  const precisaUnidades = candidatos.some((perfil) => PERFIS_ESCOLARES.has(perfil));
+  const [diretorias, unidades] = await Promise.all([
+    precisaDiretorias ? educationDepartmentModel.list() : [],
+    precisaUnidades ? schoolUnitModel.list() : [],
+  ]);
+
+  return {
+    perfis: candidatos.flatMap((perfil) => {
+      if (perfil === PERFIL_SEDUC) {
+        return resolverConcedente(concedentes, perfil, {})
+          ? [{ perfil, tipo_escopo: "SEDUC", recursos: [] }]
+          : [];
+      }
+
+      const recursos = perfil === PERFIL_DIRETORIA
+        ? diretorias.filter((diretoria) => resolverConcedente(concedentes, perfil, {
+          educationDepartmentId: Number(diretoria.id),
+        })).map(({ id, nome }) => ({ id: Number(id), nome }))
+        : unidades.filter((unidade) => resolverConcedente(concedentes, perfil, {
+          schoolUnitId: Number(unidade.id),
+          educationDepartmentId: Number(unidade.diretoria_ensino_id),
+        })).map(({ id, nome }) => ({ id: Number(id), nome }));
+
+      if (recursos.length === 0) return [];
+      return [{
+        perfil,
+        tipo_escopo: perfil === PERFIL_DIRETORIA ? "DRE" : "ESCOLA",
+        recursos,
+      }];
+    }),
+  };
 }
 
 async function autorizarConcessao(perfil, diretoriaId, unidadeId, acessos) {
@@ -597,6 +641,7 @@ function getMeusAcessos({ escopo, acessos, escopoUnidades } = {}) {
 
 module.exports = {
   createAcesso,
+  listConcessionOptions,
   listAcessos,
   getAcesso,
   alterarStatus,

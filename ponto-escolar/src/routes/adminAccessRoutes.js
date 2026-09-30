@@ -5,6 +5,7 @@ const {
   createAcesso,
   getMeusAcessos,
   getCapacidadesPorPerfil,
+  getConcessionOptions,
   listAcessos,
   getAcesso,
   suspenderAcesso,
@@ -39,6 +40,12 @@ router.get(
   "/capacidades",
   exigirCapacidade("acesso.proprio.visualizar"),
   getCapacidadesPorPerfil
+);
+
+router.get(
+  "/opcoes-concessao",
+  exigirCapacidade("acesso.conceder"),
+  getConcessionOptions
 );
 
 router.get("/:id", acessoIdValidator, getAcesso);

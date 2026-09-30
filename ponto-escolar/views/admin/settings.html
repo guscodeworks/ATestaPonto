@@ -274,6 +274,46 @@
 
                 <div class="settings-permissions-table" id="rbac-permissions" aria-live="polite"></div>
 
+                <section class="settings-access-create" id="admin-access-create" hidden>
+                  <h2>Conceder acesso administrativo</h2>
+                  <p id="admin-access-create-feedback" role="status" aria-live="polite"></p>
+                  <form id="admin-access-create-form" hidden>
+                    <div class="form-grid-2">
+                      <div class="form-field">
+                        <label for="access-cpf">CPF do usuário</label>
+                        <input class="field-input" id="access-cpf" name="cpf" type="text" inputmode="numeric" autocomplete="off" required>
+                      </div>
+                      <div class="form-field">
+                        <label for="access-nome">Nome completo</label>
+                        <input class="field-input" id="access-nome" name="nome" type="text" maxlength="150" required>
+                      </div>
+                      <div class="form-field">
+                        <label for="access-email">E-mail (opcional)</label>
+                        <input class="field-input" id="access-email" name="email" type="email" maxlength="150">
+                      </div>
+                      <div class="form-field">
+                        <label for="access-perfil">Perfil</label>
+                        <select class="field-input" id="access-perfil" name="perfil" required></select>
+                      </div>
+                      <div class="form-field" id="access-escopo-field">
+                        <label for="access-escopo" id="access-escopo-label">Unidade de escopo</label>
+                        <select class="field-input" id="access-escopo" required></select>
+                      </div>
+                      <div class="form-field">
+                        <label for="access-data-inicio">Início da vigência (opcional)</label>
+                        <input class="field-input" id="access-data-inicio" name="data_inicio" type="date">
+                      </div>
+                      <div class="form-field">
+                        <label for="access-data-fim">Fim da vigência (opcional)</label>
+                        <input class="field-input" id="access-data-fim" name="data_fim" type="date">
+                      </div>
+                    </div>
+                    <div class="form-actions settings-form-actions">
+                      <button class="ui-btn ui-btn-primary" id="admin-access-create-submit" type="submit">Conceder acesso</button>
+                    </div>
+                  </form>
+                </section>
+
                 <section class="settings-access-list" id="admin-access-list" hidden>
                   <h2>Acessos administrativos</h2>
                   <div class="settings-permissions-table" id="admin-access-results" aria-live="polite"></div>
