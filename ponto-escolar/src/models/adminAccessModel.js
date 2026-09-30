@@ -72,6 +72,22 @@ async function findById(acessoId, client) {
   );
 }
 
+// A linha autorizadora permanece bloqueada até o commit da mutação que ela permite.
+async function findActiveAuthorizerByIdForUpdate(client, acessoId, adminUserId) {
+  return getClient(client).executeOne(
+    `SELECT aa.id, aa.usuario_administrativo_id, aa.perfil,
+            aa.diretoria_ensino_id, aa.unidade_escolar_id
+     FROM acessos_administrativos aa
+     INNER JOIN usuarios_administrativos ua ON ua.id = aa.usuario_administrativo_id
+     WHERE aa.id = ? AND aa.usuario_administrativo_id = ?
+       AND ua.ativo = 1 AND aa.status = 'ATIVO'
+       AND (aa.data_inicio IS NULL OR aa.data_inicio <= CURRENT_DATE)
+       AND (aa.data_fim IS NULL OR aa.data_fim >= CURRENT_DATE)
+     LIMIT 1 FOR UPDATE`,
+    [acessoId, adminUserId]
+  );
+}
+
 // Ciclo de vida = transição de status, nunca exclusão (preserva linha/histórico).
 // O status de origem torna o UPDATE atômico: uma transição concorrente faz a
 // operação afetar zero linhas, em vez de sobrescrever o estado mais recente.
@@ -149,6 +165,7 @@ module.exports = {
   withTransaction,
   createAcesso,
   findById,
+  findActiveAuthorizerByIdForUpdate,
   updateStatus,
   listAcessos,
   countAcessos,

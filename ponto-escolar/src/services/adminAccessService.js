@@ -164,13 +164,15 @@ function validarConsistenciaPerfil(perfil, diretoriaId, unidadeId) {
 
 // Resolve o recurso real antes da autorização. Para unidade, inclui a diretoria
 // obtida no backend para que um acesso ADMIN_DIRETORIA possa cobri-la.
-async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId) {
+async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId, client) {
   if (perfil === PERFIL_SEDUC) {
     return {};
   }
 
   if (perfil === PERFIL_DIRETORIA) {
-    const diretoria = await educationDepartmentModel.findById(diretoriaId);
+    const diretoria = client
+      ? await educationDepartmentModel.findByIdForUpdate(client, diretoriaId)
+      : await educationDepartmentModel.findById(diretoriaId);
     if (!diretoria) {
       throw new NotFoundError("Diretoria de ensino nao encontrada");
     }
@@ -178,7 +180,9 @@ async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId) {
   }
 
   if (PERFIS_ESCOLARES.has(perfil)) {
-    const unidade = await schoolUnitModel.findById(unidadeId);
+    const unidade = client
+      ? await schoolUnitModel.findByIdForUpdate(client, unidadeId)
+      : await schoolUnitModel.findById(unidadeId);
     if (!unidade) {
       throw new NotFoundError("Unidade escolar nao encontrada");
     }
@@ -333,6 +337,49 @@ async function autorizarConcessao(perfil, diretoriaId, unidadeId, acessos) {
   return acessoConcedente;
 }
 
+// Revalida a linha persistida, bloqueada pela transação, antes de qualquer escrita.
+// A matriz de capacidade/delegação e o escopo são os mesmos do pré-filtro.
+async function revalidarAcessoAutorizador(
+  tx,
+  { acessoId, adminId, capacidade, perfilAlvo, diretoriaId, unidadeId, podeAutorizar }
+) {
+  const operadorId = Number(adminId);
+  const autorizadorId = Number(acessoId);
+  if (!Number.isSafeInteger(operadorId) || operadorId < 1 ||
+      !Number.isSafeInteger(autorizadorId) || autorizadorId < 1) {
+    throw new ForbiddenError("Acesso autorizador invalido");
+  }
+
+  const acesso = await adminAccessModel.findActiveAuthorizerByIdForUpdate(
+    tx,
+    autorizadorId,
+    operadorId
+  );
+  if (!acesso) {
+    throw new ForbiddenError("Acesso autorizador nao esta mais ativo ou vigente");
+  }
+
+  let recursoAlvo;
+  try {
+    recursoAlvo = await resolverRecursoAlvo(perfilAlvo, diretoriaId, unidadeId, tx);
+  } catch (error) {
+    if (!(error instanceof NotFoundError) && !(error instanceof BadRequestError)) {
+      throw error;
+    }
+    throw new ForbiddenError("Escopo do acesso administrativo invalido");
+  }
+
+  if (!resolverAcessoAutorizador(
+    [acesso],
+    capacidade,
+    perfilAlvo,
+    recursoAlvo,
+    podeAutorizar
+  )) {
+    throw new ForbiddenError("Acesso autorizador sem capacidade ou escopo suficiente");
+  }
+}
+
 // Concessão: find-or-create da identidade admin + acesso na mesma transação.
 async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
   const cpf = normalizeCpf(body && body.cpf);
@@ -382,6 +429,16 @@ async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
 
   const { acessoId, criouIdentidade } =
     await adminAccessModel.withTransaction(async (tx) => {
+      await revalidarAcessoAutorizador(tx, {
+        acessoId: concedidoPorAcessoId,
+        adminId,
+        capacidade: "acesso.conceder",
+        perfilAlvo: perfil,
+        diretoriaId,
+        unidadeId,
+        podeAutorizar: podeConceder,
+      });
+
       let usuario = await adminUserModel.findByCpf(cpf, tx);
       let criouIdentidadeFlag = false;
 
@@ -624,6 +681,20 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, acessos } = {}
   const paraStatus = regra.para;
 
   await adminAccessModel.withTransaction(async (tx) => {
+    const alvoAtual = await adminAccessModel.findById(acessoId, tx);
+    if (!alvoAtual) {
+      throw new NotFoundError("Acesso administrativo nao encontrado");
+    }
+    await revalidarAcessoAutorizador(tx, {
+      acessoId: acessoAutorizador.id,
+      adminId,
+      capacidade: `acesso.${acaoNorm}`,
+      perfilAlvo: String(alvoAtual.perfil || "").trim().toUpperCase(),
+      diretoriaId: alvoAtual.diretoria_ensino_id,
+      unidadeId: alvoAtual.unidade_escolar_id,
+      podeAutorizar: podeAlterar,
+    });
+
     const result = await adminAccessModel.updateStatus(
       acessoId,
       deStatus,
