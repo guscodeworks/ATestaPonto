@@ -2,6 +2,7 @@
 
 const { Router } = require("express");
 const requireAdmin = require("../../middlewares/ensureAdminAuthenticated");
+const { escopoPorCapacidade } = require("../../middlewares/adminScope");
 
 function renderAdminView(sendView, viewPath) {
   return (_req, res) => sendView(res, viewPath);
@@ -36,17 +37,19 @@ function createAdminPagesRouter({ sendView }) {
   router.get("/admin/dashboard", requireAdmin, dashboardPage);
 
   // Rotas alternativas/legadas mantidas por compatibilidade, apontando para a mesma view.
-  router.get("/admin/funcionario", requireAdmin, funcionariosPage);
-  router.get("/admin/funcionarios", requireAdmin, funcionariosPage);
+  router.get("/admin/funcionario", requireAdmin, escopoPorCapacidade("funcionario.listar"), funcionariosPage);
+  router.get("/admin/funcionarios", requireAdmin, escopoPorCapacidade("funcionario.listar"), funcionariosPage);
   router.get(
     "/admin/funcionarios/novo",
     requireAdmin,
+    escopoPorCapacidade("funcionario.criar"),
     registrarFuncionarioPage
   );
   // Rota antiga de cadastro de funcionário, redirecionada para a URL atual.
   router.get(
     "/admin/registrar-funcionario",
     requireAdmin,
+    escopoPorCapacidade("funcionario.criar"),
     redirectTo("/admin/funcionarios/novo")
   );
 

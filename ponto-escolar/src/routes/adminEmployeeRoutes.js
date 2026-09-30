@@ -19,6 +19,7 @@ const {
 } = require("../middlewares/validators");
 const {
   escopoPorCapacidade,
+  exigirCapacidade,
   restringirCapacidadeFuncionario,
   restringirCapacidadeFuncionarioVisualizacao,
   restringirCapacidadeFuncionarioReativacao,
@@ -47,6 +48,7 @@ router.get(
 
 router.post(
   "/",
+  exigirCapacidade("funcionario.criar"),
   sensitiveLimiter,
   createFuncionarioValidator,
   restringirCapacidadeUnidadeDoBody(

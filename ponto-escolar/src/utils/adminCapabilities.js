@@ -3,7 +3,6 @@
 const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
   "funcionario.listar",
   "funcionario.visualizar",
-  "funcionario.criar",
   "funcionario.editar",
   "funcionario.desativar",
   "funcionario.reativar",
@@ -49,6 +48,7 @@ const CAPACIDADES_QR_ESCOLAR = Object.freeze([
 
 const CAPACIDADES_DIRECAO = Object.freeze([
   ...CAPACIDADES_ADMINISTRATIVAS,
+  "funcionario.criar",
   ...CAPACIDADES_QR_ESCOLAR,
 ]);
 
