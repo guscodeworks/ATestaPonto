@@ -4,6 +4,7 @@ const { Router } = require("express");
 const {
   createAcesso,
   getMeusAcessos,
+  getCapacidadesPorPerfil,
   listAcessos,
   getAcesso,
   suspenderAcesso,
@@ -33,6 +34,12 @@ router.get(
 
 // /meu ANTES de /:id; resolve o escopo dos acessos ativos que autorizam a consulta.
 router.get("/meu", escopoPorCapacidade("acesso.proprio.visualizar"), getMeusAcessos);
+
+router.get(
+  "/capacidades",
+  exigirCapacidade("acesso.proprio.visualizar"),
+  getCapacidadesPorPerfil
+);
 
 router.get("/:id", acessoIdValidator, getAcesso);
 

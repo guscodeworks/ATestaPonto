@@ -1,6 +1,7 @@
 "use strict";
 
 const adminAccessService = require("../services/adminAccessService");
+const { CAPACIDADES_POR_PERFIL } = require("../utils/adminCapabilities");
 const { getClientIp } = require("../utils/request");
 
 // Contexto de auditoria: quem concedeu e de onde.
@@ -49,6 +50,18 @@ async function getMeusAcessos(req, res, next) {
   } catch (error) {
     return next(error);
   }
+}
+
+function getCapacidadesPorPerfil(_req, res) {
+  res.set("Cache-Control", "no-store");
+  return res.status(200).json({
+    success: true,
+    data: {
+      perfis: Object.entries(CAPACIDADES_POR_PERFIL).map(
+        ([perfil, capacidades]) => ({ perfil, capacidades })
+      ),
+    },
+  });
 }
 
 async function listAcessos(req, res, next) {
@@ -113,6 +126,7 @@ const revogarAcesso = alterarStatusAcesso("revogar");
 module.exports = {
   createAcesso,
   getMeusAcessos,
+  getCapacidadesPorPerfil,
   listAcessos,
   getAcesso,
   suspenderAcesso,
