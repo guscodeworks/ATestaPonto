@@ -7,6 +7,7 @@
 
   const listaAcessos = document.getElementById('admin-access-list');
   const resultadosAcessos = document.getElementById('admin-access-results');
+  const feedbackAcaoAcesso = document.getElementById('admin-access-action-feedback');
   const paginacaoAcessos = document.getElementById('admin-access-pagination');
   const paginaAcessos = document.getElementById('admin-access-page');
   const anteriorAcessos = document.getElementById('admin-access-prev');
@@ -24,9 +25,15 @@
   let carregando = false;
   let paginaAtualAcessos = 1;
   let carregandoAcessos = false;
+  let alterandoAcesso = false;
   let carregandoOpcoes = false;
   let enviandoConcessao = false;
   let opcoesConcessao = [];
+  const rotulosAcoes = {
+    suspender: 'Suspender',
+    reativar: 'Reativar',
+    revogar: 'Revogar',
+  };
 
   function criarCelula(tag, texto, escopo) {
     const celula = document.createElement(tag);
@@ -111,7 +118,9 @@
       tabela.className = 'settings-access-table';
       const cabecalho = document.createElement('thead');
       const linhaCabecalho = document.createElement('tr');
+      const temAcoes = itens.some((acesso) => acoesVisiveis(acesso).length > 0);
       const colunas = ['Usuário', 'Perfil', 'Escopo', 'Status', 'Vigência'];
+      if (temAcoes) colunas.push('Ações');
       colunas.forEach((titulo) => {
         linhaCabecalho.appendChild(criarCelula('th', titulo, 'col'));
       });
@@ -138,6 +147,22 @@
         termino.textContent = acesso.data_fim ? `Até ${formatarData(acesso.data_fim)}` : 'Sem término';
         vigencia.appendChild(termino);
         linha.appendChild(vigencia);
+        if (temAcoes) {
+          const celulaAcoes = document.createElement('td');
+          const grupoAcoes = document.createElement('div');
+          grupoAcoes.className = 'settings-access-actions';
+          acoesVisiveis(acesso).forEach((acao) => {
+            const botao = document.createElement('button');
+            botao.type = 'button';
+            botao.className = `ui-btn ui-btn-outline${acao === 'revogar' ? ' settings-access-revoke' : ''}`;
+            botao.textContent = rotulosAcoes[acao];
+            botao.dataset.accessId = String(acesso.id);
+            botao.dataset.accessAction = acao;
+            grupoAcoes.appendChild(botao);
+          });
+          celulaAcoes.appendChild(grupoAcoes);
+          linha.appendChild(celulaAcoes);
+        }
         corpo.appendChild(linha);
       });
       tabela.appendChild(corpo);
@@ -152,8 +177,17 @@
     paginacaoAcessos.hidden = false;
   }
 
+  function acoesVisiveis(acesso) {
+    if (!Number.isSafeInteger(acesso?.id) || acesso.id < 1
+      || !Array.isArray(acesso.acoes_permitidas)) return [];
+    return acesso.acoes_permitidas.filter((acao) =>
+      Object.prototype.hasOwnProperty.call(rotulosAcoes, acao)
+      && temCapacidade(`acesso.${acao}`)
+    );
+  }
+
   async function carregarAcessos(pagina = paginaAtualAcessos) {
-    if (carregandoAcessos || !temCapacidade('acesso.listar')) return;
+    if (carregandoAcessos || alterandoAcesso || !temCapacidade('acesso.listar')) return;
     carregandoAcessos = true;
     paginacaoAcessos.hidden = true;
     resultadosAcessos.textContent = 'Carregando acessos administrativos...';
@@ -173,6 +207,36 @@
       resultadosAcessos.textContent = 'Não foi possível carregar os acessos. Selecione a aba novamente para tentar de novo.';
     } finally {
       carregandoAcessos = false;
+    }
+  }
+
+  async function alterarAcesso(evento) {
+    const botao = evento.target.closest('button[data-access-action]');
+    if (!botao || alterandoAcesso || carregandoAcessos) return;
+
+    const acao = botao.dataset.accessAction;
+    const acessoId = Number(botao.dataset.accessId);
+    if (!Object.prototype.hasOwnProperty.call(rotulosAcoes, acao)
+      || !Number.isSafeInteger(acessoId) || acessoId < 1
+      || !temCapacidade(`acesso.${acao}`)) return;
+    if (acao === 'revogar' && !window.confirm(
+      'Revogar este acesso definitivamente? Um acesso revogado não pode ser reativado.'
+    )) return;
+
+    alterandoAcesso = true;
+    resultadosAcessos.querySelectorAll('button[data-access-action]').forEach((acaoBotao) => {
+      acaoBotao.disabled = true;
+    });
+    feedbackAcaoAcesso.textContent = `${rotulosAcoes[acao]} acesso...`;
+    try {
+      await adminApiFetch(`/api/admin/acessos/${acessoId}/${acao}`, { method: 'PATCH' });
+      feedbackAcaoAcesso.textContent = `Acesso ${acao === 'suspender' ? 'suspenso' : acao === 'reativar' ? 'reativado' : 'revogado'}.`;
+    } catch (erro) {
+      feedbackAcaoAcesso.textContent = erro.message || 'Não foi possível alterar o acesso.';
+      if (erro.status === 401) redirecionarAdminParaGovbr();
+    } finally {
+      alterandoAcesso = false;
+      await carregarAcessos(paginaAtualAcessos);
     }
   }
 
@@ -321,4 +385,5 @@
   proximaAcessos?.addEventListener('click', () => carregarAcessos(paginaAtualAcessos + 1));
   perfilConcessao?.addEventListener('change', atualizarEscopoConcessao);
   formularioConcessao?.addEventListener('submit', enviarConcessao);
+  resultadosAcessos?.addEventListener('click', alterarAcesso);
 })();

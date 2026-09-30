@@ -449,7 +449,7 @@ async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
   };
 }
 
-async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
+async function listAcessos(query = {}, { escopo, escopoUnidades, acessos, adminId } = {}) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
   const offset = (page - 1) * limit;
@@ -466,7 +466,10 @@ async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
   });
 
   return {
-    items: rows.map((row) => mapAcesso(row)),
+    items: rows.map((row) => ({
+      ...mapAcesso(row),
+      acoes_permitidas: listarAcoesPermitidas(row, acessos, adminId),
+    })),
     pagination: { page, limit, total: Number(total) },
   };
 }
@@ -524,6 +527,45 @@ const ACOES_STATUS = {
     de: new Set(["ATIVO", "SUSPENSO"]),
   },
 };
+
+function listarAcoesPermitidas(acesso, acessos, adminId) {
+  const operadorId = Number(adminId);
+  const proprietarioId = Number(acesso && acesso.usuario_administrativo_id);
+  if (!Number.isSafeInteger(operadorId) || operadorId < 1
+    || !Number.isSafeInteger(proprietarioId) || proprietarioId < 1
+    || proprietarioId === operadorId) {
+    return [];
+  }
+
+  const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
+  const statusAtual = String(acesso.status || "").trim().toUpperCase();
+  let recursoAlvo;
+  if (perfilAlvo === PERFIL_SEDUC) {
+    recursoAlvo = {};
+  } else if (perfilAlvo === PERFIL_DIRETORIA && Number(acesso.diretoria_ensino_id) > 0) {
+    recursoAlvo = { educationDepartmentId: Number(acesso.diretoria_ensino_id) };
+  } else if (PERFIS_ESCOLARES.has(perfilAlvo)
+    && Number(acesso.unidade_escolar_id) > 0
+    && Number(acesso.unidade_diretoria_ensino_id) > 0) {
+    recursoAlvo = {
+      schoolUnitId: Number(acesso.unidade_escolar_id),
+      educationDepartmentId: Number(acesso.unidade_diretoria_ensino_id),
+    };
+  } else {
+    return [];
+  }
+
+  return Object.entries(ACOES_STATUS)
+    .filter(([acao, regra]) => regra.de.has(statusAtual)
+      && resolverAcessoAutorizador(
+        acessos,
+        `acesso.${acao}`,
+        perfilAlvo,
+        recursoAlvo,
+        podeAlterar
+      ))
+    .map(([acao]) => acao);
+}
 
 // Reusa a matriz de delegação (podeAlterar) e a checagem de escopo; não duplica
 // regras de perfil/escopo. Nunca apaga — só muda status e audita.

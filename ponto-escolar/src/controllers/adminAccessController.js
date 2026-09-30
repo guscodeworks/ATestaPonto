@@ -81,6 +81,8 @@ async function listAcessos(req, res, next) {
     const result = await adminAccessService.listAcessos(req.query, {
       escopo: req.escopo,
       escopoUnidades: req.escopoUnidades,
+      acessos: req.acessos,
+      adminId: req.auth.id,
     });
 
     return res.status(200).json({

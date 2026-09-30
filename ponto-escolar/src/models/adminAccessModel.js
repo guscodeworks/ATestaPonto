@@ -22,7 +22,8 @@ const ACESSO_DETAIL_SELECT = `
   ua.cpf AS usuario_cpf, ua.nome AS usuario_nome, ua.email AS usuario_email,
   ua.ativo AS usuario_ativo,
   de.nome AS diretoria_ensino_nome,
-  ue.nome AS unidade_escolar_nome
+  ue.nome AS unidade_escolar_nome,
+  ue.diretoria_ensino_id AS unidade_diretoria_ensino_id
 `;
 
 const ACESSO_DETAIL_JOINS = `

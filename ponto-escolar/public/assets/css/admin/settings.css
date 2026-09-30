@@ -318,6 +318,12 @@
   font-size: 13px;
 }
 
+.settings-page #admin-access-action-feedback:not(:empty) {
+  margin-bottom: 12px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
 .settings-page .settings-access-table {
   width: 100%;
   min-width: 760px;
@@ -340,6 +346,22 @@
 
 .settings-page .settings-access-table td {
   color: var(--color-text);
+}
+
+.settings-page .settings-access-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-page .settings-access-actions .ui-btn {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.settings-page .settings-access-revoke {
+  color: var(--color-danger, #b42318);
 }
 
 .settings-page .settings-access-detail {
