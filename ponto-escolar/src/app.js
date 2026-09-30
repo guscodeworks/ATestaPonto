@@ -43,6 +43,23 @@ function isAllowedOrigin(origin) {
   return env.CORS_ORIGINS.includes(origin);
 }
 
+// O formulário de logout é same-origin mesmo quando o servidor local usa
+// outra porta. Esta exceção não libera outras rotas ou chamadas cross-origin.
+function isLocalLogoutOrigin(req, origin) {
+  if (env.IS_PRODUCTION || req.path !== "/auth/govbr/logout" ||
+      !["POST", "OPTIONS"].includes(req.method)) {
+    return false;
+  }
+  try {
+    const source = new URL(origin);
+    const target = new URL(`${req.protocol}://${req.get("host")}`);
+    return ["localhost", "127.0.0.1"].includes(source.hostname) &&
+      source.origin === target.origin;
+  } catch (_error) {
+    return false;
+  }
+}
+
 app.disable("x-powered-by");
 // Necessario para que req.ip e "secure" (cookie) reflitam corretamente o
 // protocolo/IP originais quando a aplicacao roda atras de um proxy reverso.
@@ -75,7 +92,7 @@ app.use(
     const origin = req.headers.origin;
 
     // Host/X-Forwarded-Host não concedem acesso fora da allowlist configurada.
-    if (isAllowedOrigin(origin)) {
+    if (isAllowedOrigin(origin) || isLocalLogoutOrigin(req, origin)) {
       return callback(null, {
         ...corsBaseOptions,
         origin: true,
