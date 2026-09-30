@@ -533,38 +533,36 @@ async function listAcessos(query = {}, { escopo, escopoUnidades, acessos, adminI
 
 async function getAcesso(acessoId, { acessos } = {}) {
   const acesso = await adminAccessModel.findById(acessoId);
-  if (!acesso) {
-    throw new NotFoundError("Acesso administrativo nao encontrado");
-  }
+  let acessoAutorizador;
 
-  let recursoAlvo;
-  const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
-  try {
-    validarConsistenciaPerfil(
-      perfilAlvo,
-      acesso.diretoria_ensino_id,
-      acesso.unidade_escolar_id
-    );
-    recursoAlvo = await resolverRecursoAlvo(
-      perfilAlvo,
-      acesso.diretoria_ensino_id,
-      acesso.unidade_escolar_id
-    );
-  } catch (_error) {
-    throw new ForbiddenError("Escopo do acesso administrativo invalido");
+  if (acesso) {
+    const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
+    try {
+      validarConsistenciaPerfil(
+        perfilAlvo,
+        acesso.diretoria_ensino_id,
+        acesso.unidade_escolar_id
+      );
+      const recursoAlvo = await resolverRecursoAlvo(
+        perfilAlvo,
+        acesso.diretoria_ensino_id,
+        acesso.unidade_escolar_id
+      );
+      acessoAutorizador = filtrarAcessosPorCapacidade(
+        acessos,
+        "acesso.visualizar"
+      ).find((acessoCandidato) =>
+        recursoNoEscopo(buildEscopo([acessoCandidato]), recursoAlvo)
+      );
+    } catch (error) {
+      if (!(error instanceof BadRequestError) && !(error instanceof NotFoundError)) {
+        throw error;
+      }
+    }
   }
-
-  const acessoAutorizador = filtrarAcessosPorCapacidade(
-    acessos,
-    "acesso.visualizar"
-  ).find((acessoCandidato) =>
-    recursoNoEscopo(buildEscopo([acessoCandidato]), recursoAlvo)
-  );
 
   if (!acessoAutorizador) {
-    throw new ForbiddenError(
-      "Acesso administrativo fora do escopo do administrador"
-    );
+    throw new NotFoundError("Acesso administrativo nao encontrado");
   }
   return { acesso: mapAcesso(acesso) };
 }
