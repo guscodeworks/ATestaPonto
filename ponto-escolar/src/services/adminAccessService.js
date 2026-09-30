@@ -23,6 +23,7 @@ const {
 } = require("../utils/errors");
 const {
   filtrarAcessosPorCapacidade,
+  CAPACIDADES_POR_PERFIL,
 } = require("../utils/adminCapabilities");
 
 // Converte Date/string p/ 'YYYY-MM-DD' no timezone 'Z' do pool. null/inválido → null.
@@ -163,13 +164,15 @@ function validarConsistenciaPerfil(perfil, diretoriaId, unidadeId) {
 
 // Resolve o recurso real antes da autorização. Para unidade, inclui a diretoria
 // obtida no backend para que um acesso ADMIN_DIRETORIA possa cobri-la.
-async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId) {
+async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId, client) {
   if (perfil === PERFIL_SEDUC) {
     return {};
   }
 
   if (perfil === PERFIL_DIRETORIA) {
-    const diretoria = await educationDepartmentModel.findById(diretoriaId);
+    const diretoria = client
+      ? await educationDepartmentModel.findByIdForUpdate(client, diretoriaId)
+      : await educationDepartmentModel.findById(diretoriaId);
     if (!diretoria) {
       throw new NotFoundError("Diretoria de ensino nao encontrada");
     }
@@ -177,7 +180,9 @@ async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId) {
   }
 
   if (PERFIS_ESCOLARES.has(perfil)) {
-    const unidade = await schoolUnitModel.findById(unidadeId);
+    const unidade = client
+      ? await schoolUnitModel.findByIdForUpdate(client, unidadeId)
+      : await schoolUnitModel.findById(unidadeId);
     if (!unidade) {
       throw new NotFoundError("Unidade escolar nao encontrada");
     }
@@ -272,6 +277,49 @@ function resolverConcedente(acessos, perfilAlvo, recursoAlvo) {
   );
 }
 
+// Opções de leitura para o formulário: cada par perfil/recurso passa pela mesma
+// autorização por acesso usada pelo POST, sem expor uma matriz paralela ao cliente.
+async function listConcessionOptions(acessos) {
+  const concedentes = filtrarAcessosPorCapacidade(acessos, "acesso.conceder");
+  const perfis = Object.keys(CAPACIDADES_POR_PERFIL);
+  const candidatos = perfis.filter((perfil) =>
+    concedentes.some((acesso) => podeConceder(acesso.perfil, perfil))
+  );
+
+  const precisaDiretorias = candidatos.includes(PERFIL_DIRETORIA);
+  const precisaUnidades = candidatos.some((perfil) => PERFIS_ESCOLARES.has(perfil));
+  const [diretorias, unidades] = await Promise.all([
+    precisaDiretorias ? educationDepartmentModel.list() : [],
+    precisaUnidades ? schoolUnitModel.list() : [],
+  ]);
+
+  return {
+    perfis: candidatos.flatMap((perfil) => {
+      if (perfil === PERFIL_SEDUC) {
+        return resolverConcedente(concedentes, perfil, {})
+          ? [{ perfil, tipo_escopo: "SEDUC", recursos: [] }]
+          : [];
+      }
+
+      const recursos = perfil === PERFIL_DIRETORIA
+        ? diretorias.filter((diretoria) => resolverConcedente(concedentes, perfil, {
+          educationDepartmentId: Number(diretoria.id),
+        })).map(({ id, nome }) => ({ id: Number(id), nome }))
+        : unidades.filter((unidade) => resolverConcedente(concedentes, perfil, {
+          schoolUnitId: Number(unidade.id),
+          educationDepartmentId: Number(unidade.diretoria_ensino_id),
+        })).map(({ id, nome }) => ({ id: Number(id), nome }));
+
+      if (recursos.length === 0) return [];
+      return [{
+        perfil,
+        tipo_escopo: perfil === PERFIL_DIRETORIA ? "DRE" : "ESCOLA",
+        recursos,
+      }];
+    }),
+  };
+}
+
 async function autorizarConcessao(perfil, diretoriaId, unidadeId, acessos) {
   const recursoAlvo = await resolverRecursoAlvo(
     perfil,
@@ -287,6 +335,49 @@ async function autorizarConcessao(perfil, diretoriaId, unidadeId, acessos) {
   }
 
   return acessoConcedente;
+}
+
+// Revalida a linha persistida, bloqueada pela transação, antes de qualquer escrita.
+// A matriz de capacidade/delegação e o escopo são os mesmos do pré-filtro.
+async function revalidarAcessoAutorizador(
+  tx,
+  { acessoId, adminId, capacidade, perfilAlvo, diretoriaId, unidadeId, podeAutorizar }
+) {
+  const operadorId = Number(adminId);
+  const autorizadorId = Number(acessoId);
+  if (!Number.isSafeInteger(operadorId) || operadorId < 1 ||
+      !Number.isSafeInteger(autorizadorId) || autorizadorId < 1) {
+    throw new ForbiddenError("Acesso autorizador invalido");
+  }
+
+  const acesso = await adminAccessModel.findActiveAuthorizerByIdForUpdate(
+    tx,
+    autorizadorId,
+    operadorId
+  );
+  if (!acesso) {
+    throw new ForbiddenError("Acesso autorizador nao esta mais ativo ou vigente");
+  }
+
+  let recursoAlvo;
+  try {
+    recursoAlvo = await resolverRecursoAlvo(perfilAlvo, diretoriaId, unidadeId, tx);
+  } catch (error) {
+    if (!(error instanceof NotFoundError) && !(error instanceof BadRequestError)) {
+      throw error;
+    }
+    throw new ForbiddenError("Escopo do acesso administrativo invalido");
+  }
+
+  if (!resolverAcessoAutorizador(
+    [acesso],
+    capacidade,
+    perfilAlvo,
+    recursoAlvo,
+    podeAutorizar
+  )) {
+    throw new ForbiddenError("Acesso autorizador sem capacidade ou escopo suficiente");
+  }
 }
 
 // Concessão: find-or-create da identidade admin + acesso na mesma transação.
@@ -338,6 +429,16 @@ async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
 
   const { acessoId, criouIdentidade } =
     await adminAccessModel.withTransaction(async (tx) => {
+      await revalidarAcessoAutorizador(tx, {
+        acessoId: concedidoPorAcessoId,
+        adminId,
+        capacidade: "acesso.conceder",
+        perfilAlvo: perfil,
+        diretoriaId,
+        unidadeId,
+        podeAutorizar: podeConceder,
+      });
+
       let usuario = await adminUserModel.findByCpf(cpf, tx);
       let criouIdentidadeFlag = false;
 
@@ -405,7 +506,7 @@ async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
   };
 }
 
-async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
+async function listAcessos(query = {}, { escopo, escopoUnidades, acessos, adminId } = {}) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
   const offset = (page - 1) * limit;
@@ -422,45 +523,46 @@ async function listAcessos(query = {}, { escopo, escopoUnidades } = {}) {
   });
 
   return {
-    items: rows.map((row) => mapAcesso(row)),
+    items: rows.map((row) => ({
+      ...mapAcesso(row),
+      acoes_permitidas: listarAcoesPermitidas(row, acessos, adminId),
+    })),
     pagination: { page, limit, total: Number(total) },
   };
 }
 
 async function getAcesso(acessoId, { acessos } = {}) {
   const acesso = await adminAccessModel.findById(acessoId);
-  if (!acesso) {
-    throw new NotFoundError("Acesso administrativo nao encontrado");
-  }
+  let acessoAutorizador;
 
-  let recursoAlvo;
-  const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
-  try {
-    validarConsistenciaPerfil(
-      perfilAlvo,
-      acesso.diretoria_ensino_id,
-      acesso.unidade_escolar_id
-    );
-    recursoAlvo = await resolverRecursoAlvo(
-      perfilAlvo,
-      acesso.diretoria_ensino_id,
-      acesso.unidade_escolar_id
-    );
-  } catch (_error) {
-    throw new ForbiddenError("Escopo do acesso administrativo invalido");
+  if (acesso) {
+    const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
+    try {
+      validarConsistenciaPerfil(
+        perfilAlvo,
+        acesso.diretoria_ensino_id,
+        acesso.unidade_escolar_id
+      );
+      const recursoAlvo = await resolverRecursoAlvo(
+        perfilAlvo,
+        acesso.diretoria_ensino_id,
+        acesso.unidade_escolar_id
+      );
+      acessoAutorizador = filtrarAcessosPorCapacidade(
+        acessos,
+        "acesso.visualizar"
+      ).find((acessoCandidato) =>
+        recursoNoEscopo(buildEscopo([acessoCandidato]), recursoAlvo)
+      );
+    } catch (error) {
+      if (!(error instanceof BadRequestError) && !(error instanceof NotFoundError)) {
+        throw error;
+      }
+    }
   }
-
-  const acessoAutorizador = filtrarAcessosPorCapacidade(
-    acessos,
-    "acesso.visualizar"
-  ).find((acessoCandidato) =>
-    recursoNoEscopo(buildEscopo([acessoCandidato]), recursoAlvo)
-  );
 
   if (!acessoAutorizador) {
-    throw new ForbiddenError(
-      "Acesso administrativo fora do escopo do administrador"
-    );
+    throw new NotFoundError("Acesso administrativo nao encontrado");
   }
   return { acesso: mapAcesso(acesso) };
 }
@@ -480,6 +582,45 @@ const ACOES_STATUS = {
     de: new Set(["ATIVO", "SUSPENSO"]),
   },
 };
+
+function listarAcoesPermitidas(acesso, acessos, adminId) {
+  const operadorId = Number(adminId);
+  const proprietarioId = Number(acesso && acesso.usuario_administrativo_id);
+  if (!Number.isSafeInteger(operadorId) || operadorId < 1
+    || !Number.isSafeInteger(proprietarioId) || proprietarioId < 1
+    || proprietarioId === operadorId) {
+    return [];
+  }
+
+  const perfilAlvo = String(acesso.perfil || "").trim().toUpperCase();
+  const statusAtual = String(acesso.status || "").trim().toUpperCase();
+  let recursoAlvo;
+  if (perfilAlvo === PERFIL_SEDUC) {
+    recursoAlvo = {};
+  } else if (perfilAlvo === PERFIL_DIRETORIA && Number(acesso.diretoria_ensino_id) > 0) {
+    recursoAlvo = { educationDepartmentId: Number(acesso.diretoria_ensino_id) };
+  } else if (PERFIS_ESCOLARES.has(perfilAlvo)
+    && Number(acesso.unidade_escolar_id) > 0
+    && Number(acesso.unidade_diretoria_ensino_id) > 0) {
+    recursoAlvo = {
+      schoolUnitId: Number(acesso.unidade_escolar_id),
+      educationDepartmentId: Number(acesso.unidade_diretoria_ensino_id),
+    };
+  } else {
+    return [];
+  }
+
+  return Object.entries(ACOES_STATUS)
+    .filter(([acao, regra]) => regra.de.has(statusAtual)
+      && resolverAcessoAutorizador(
+        acessos,
+        `acesso.${acao}`,
+        perfilAlvo,
+        recursoAlvo,
+        podeAlterar
+      ))
+    .map(([acao]) => acao);
+}
 
 // Reusa a matriz de delegação (podeAlterar) e a checagem de escopo; não duplica
 // regras de perfil/escopo. Nunca apaga — só muda status e audita.
@@ -538,6 +679,20 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, acessos } = {}
   const paraStatus = regra.para;
 
   await adminAccessModel.withTransaction(async (tx) => {
+    const alvoAtual = await adminAccessModel.findById(acessoId, tx);
+    if (!alvoAtual) {
+      throw new NotFoundError("Acesso administrativo nao encontrado");
+    }
+    await revalidarAcessoAutorizador(tx, {
+      acessoId: acessoAutorizador.id,
+      adminId,
+      capacidade: `acesso.${acaoNorm}`,
+      perfilAlvo: String(alvoAtual.perfil || "").trim().toUpperCase(),
+      diretoriaId: alvoAtual.diretoria_ensino_id,
+      unidadeId: alvoAtual.unidade_escolar_id,
+      podeAutorizar: podeAlterar,
+    });
+
     const result = await adminAccessModel.updateStatus(
       acessoId,
       deStatus,
@@ -597,6 +752,7 @@ function getMeusAcessos({ escopo, acessos, escopoUnidades } = {}) {
 
 module.exports = {
   createAcesso,
+  listConcessionOptions,
   listAcessos,
   getAcesso,
   alterarStatus,

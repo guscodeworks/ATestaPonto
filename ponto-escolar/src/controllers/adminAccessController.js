@@ -1,6 +1,7 @@
 "use strict";
 
 const adminAccessService = require("../services/adminAccessService");
+const { CAPACIDADES_POR_PERFIL } = require("../utils/adminCapabilities");
 const { getClientIp } = require("../utils/request");
 
 // Contexto de auditoria: quem concedeu e de onde.
@@ -31,12 +32,12 @@ async function createAcesso(req, res, next) {
   }
 }
 
-// /meu: leitura pura em memória (req.acessos/escopo/escopoUnidades), sem model/DB.
+// /meu: usa os acessos ativos autorizadores e o escopo resolvido pelo middleware.
 async function getMeusAcessos(req, res, next) {
   try {
     const result = adminAccessService.getMeusAcessos({
       escopo: req.escopo,
-      acessos: req.acessos,
+      acessos: req.acessosAutorizadores,
       escopoUnidades: req.escopoUnidades,
     });
 
@@ -51,11 +52,37 @@ async function getMeusAcessos(req, res, next) {
   }
 }
 
+function getCapacidadesPorPerfil(_req, res) {
+  res.set("Cache-Control", "no-store");
+  return res.status(200).json({
+    success: true,
+    data: {
+      perfis: Object.entries(CAPACIDADES_POR_PERFIL).map(
+        ([perfil, capacidades]) => ({ perfil, capacidades })
+      ),
+    },
+  });
+}
+
+async function getConcessionOptions(req, res, next) {
+  try {
+    const result = await adminAccessService.listConcessionOptions(
+      req.acessosAutorizadores
+    );
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function listAcessos(req, res, next) {
   try {
     const result = await adminAccessService.listAcessos(req.query, {
       escopo: req.escopo,
       escopoUnidades: req.escopoUnidades,
+      acessos: req.acessos,
+      adminId: req.auth.id,
     });
 
     return res.status(200).json({
@@ -113,6 +140,8 @@ const revogarAcesso = alterarStatusAcesso("revogar");
 module.exports = {
   createAcesso,
   getMeusAcessos,
+  getCapacidadesPorPerfil,
+  getConcessionOptions,
   listAcessos,
   getAcesso,
   suspenderAcesso,

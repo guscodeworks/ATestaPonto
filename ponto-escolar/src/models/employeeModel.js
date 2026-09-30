@@ -28,7 +28,7 @@ const ACTIVE_VINCULO_LATERAL = `
 // vínculo histórico mais recente para inativos. Assim o mesmo vínculo define
 // cargo, unidade visível e escopo nas consultas de lista e contagem.
 const ADMIN_LIST_VINCULO_LATERAL = `
-  SELECT v.cargo_id, c.cargo, v.unidade_escolar_id,
+  SELECT v.id, v.cargo_id, c.cargo, v.unidade_escolar_id,
          TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
          TIME_FORMAT(v.horario_saida_almoco, '%H:%i:%s') AS saida_almoco,
          TIME_FORMAT(v.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco,
@@ -125,12 +125,12 @@ async function findById(employeeId, client) {
   );
 }
 
-async function findAdminEmployeeById(employeeId, client) {
+async function findAdminEmployeeById(employeeId, vinculoId, client) {
   return getClient(client).executeOne(
     "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
-      ACTIVE_VINCULO_LATERAL +
-      ") lv ON TRUE WHERE f.id = ? LIMIT 1",
-    [employeeId]
+      ADMIN_LIST_VINCULO_LATERAL +
+      ") lv ON TRUE WHERE f.id = ? AND lv.id = ? LIMIT 1",
+    [employeeId, vinculoId]
   );
 }
 

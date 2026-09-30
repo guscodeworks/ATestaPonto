@@ -75,6 +75,22 @@ async function findByDiretoriaId(educationDepartmentId, client) {
   );
 }
 
+async function listForEmployeeRegistration(escopoUnidades = []) {
+  if (escopoUnidades !== null && !Array.isArray(escopoUnidades)) return [];
+  if (Array.isArray(escopoUnidades) && escopoUnidades.length === 0) return [];
+
+  const ids = escopoUnidades === null
+    ? null
+    : [...new Set(escopoUnidades.map(Number))];
+  if (ids && ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) return [];
+
+  const filtro = ids ? `WHERE ue.id IN (${ids.map(() => "?").join(",")})` : "";
+  return database.execute(
+    `SELECT ue.id, ue.nome FROM unidades_escolares ue ${filtro} ORDER BY ue.nome ASC, ue.id ASC`,
+    ids || []
+  );
+}
+
 module.exports = {
   findById,
   findByIdForUpdate,
@@ -83,4 +99,5 @@ module.exports = {
   findGeolocationByVinculo,
   list,
   findByDiretoriaId,
+  listForEmployeeRegistration,
 };

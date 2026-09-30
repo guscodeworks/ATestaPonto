@@ -9,6 +9,10 @@ async function listarUnidadesPorDiretoria(diretoriaId) {
   return schoolUnitModel.findByDiretoriaId(diretoriaId);
 }
 
+async function listarUnidadesParaCadastro(escopoUnidades) {
+  return schoolUnitModel.listForEmployeeRegistration(escopoUnidades);
+}
+
 async function buscarUnidadePorId(unidadeId) {
   return schoolUnitModel.findById(unidadeId);
 }
@@ -19,6 +23,10 @@ async function buscarVinculoAtivoDoFuncionario(funcionarioId) {
   );
 }
 
+async function buscarVinculoVisivelDoFuncionario(funcionarioId) {
+  return employmentLinkModel.findForAdminEmployeeView(funcionarioId);
+}
+
 async function buscarVinculoMaisRecenteDoFuncionario(funcionarioId) {
   return employmentLinkModel.findLatestByFuncionarioIdWithDetails(
     funcionarioId
@@ -27,7 +35,9 @@ async function buscarVinculoMaisRecenteDoFuncionario(funcionarioId) {
 
 module.exports = {
   listarUnidadesPorDiretoria,
+  listarUnidadesParaCadastro,
   buscarUnidadePorId,
   buscarVinculoAtivoDoFuncionario,
+  buscarVinculoVisivelDoFuncionario,
   buscarVinculoMaisRecenteDoFuncionario,
 };

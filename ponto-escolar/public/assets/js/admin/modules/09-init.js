@@ -99,7 +99,9 @@
     }
 
     await finalizarCarregamentoGlobal(overlaySessao);
-    if (!validarAcessoPaginaRegistroFuncionario()) {
+    if (!validarAcessoPaginaRegistroFuncionario()
+      || !validarAcessoPaginaPontosHoje()
+      || !validarAcessoPaginaRelatorios()) {
       inicializacaoAdminEmAndamento = false;
       return;
     }
@@ -108,6 +110,8 @@
 
     aplicarCapacidadesNaNavegacaoAdmin();
     aplicarCapacidadesNaPaginaFuncionarios();
+    aplicarCapacidadesNosPaineisAdmin();
+    if (existe('#quick-add-school')) iniciarAcaoAdicionarEscola();
     if (existe('#admin-avatar,#admin-firstname,#admin-role,#sb-avatar,#sb-name,#sb-role')) renderizarPerfil();
     if (existe('.btn-logout')) iniciarLogoutAdmin();
     if (existe('#menu-toggle') && existe('#sidebar')) iniciarSidebar();
@@ -120,18 +124,19 @@
     const paginaListaFuncionarios = Boolean(
       document.getElementById('tbody-funcionarios')
     );
-    const precisaFuncionarios = Boolean(document.querySelector(
+    const precisaFuncionarios = temCapacidade('funcionario.listar') && Boolean(document.querySelector(
       '#tbody-funcionarios,#cards-funcionarios,#tbody-presentes,#tbody-ausentes,#tbody-relatorio,#tbody-ultimos,#stat-total,#form-registro,#grafico-presenca'
     ));
     const precisaPontosHoje =
-      (!paginaListaFuncionarios || temCapacidade('ponto.hoje.visualizar')) &&
+      temCapacidade('ponto.hoje.visualizar') &&
       Boolean(document.querySelector(
       '#tbody-presentes,#tbody-ausentes,#tbody-ultimos,#stat-presentes,#count-presentes,#tbody-funcionarios,#grafico-presenca'
       ));
-    const precisaResumo = Boolean(document.querySelector(
+    const precisaResumo = temCapacidade('ponto.resumo.visualizar') && Boolean(document.querySelector(
       '#stat-total,#hero-presentes,#relatorio-presentes,#grafico-presenca'
     ));
-    const precisaRelatorio = Boolean(document.getElementById('tbody-relatorio'));
+    const precisaRelatorio = temCapacidade('relatorio.visualizar')
+      && Boolean(document.getElementById('tbody-relatorio'));
     const dataOptions = {
       includeEmployees: precisaFuncionarios,
       includeToday: precisaPontosHoje,

@@ -349,8 +349,14 @@ async function listEmployees(query = {}, escopoUnidades = []) {
   };
 }
 
-async function getEmployee(employeeId) {
-  const employee = await employeeModel.findAdminEmployeeById(employeeId);
+async function getEmployee(employeeId, vinculoAutorizadoId) {
+  if (!Number.isSafeInteger(vinculoAutorizadoId) || vinculoAutorizadoId < 1) {
+    throw new NotFoundError("Funcionario nao encontrado");
+  }
+  const employee = await employeeModel.findAdminEmployeeById(
+    employeeId,
+    vinculoAutorizadoId
+  );
   if (!employee) {
     throw new NotFoundError("Funcionario nao encontrado");
   }

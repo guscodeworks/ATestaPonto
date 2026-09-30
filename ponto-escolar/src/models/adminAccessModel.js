@@ -22,7 +22,8 @@ const ACESSO_DETAIL_SELECT = `
   ua.cpf AS usuario_cpf, ua.nome AS usuario_nome, ua.email AS usuario_email,
   ua.ativo AS usuario_ativo,
   de.nome AS diretoria_ensino_nome,
-  ue.nome AS unidade_escolar_nome
+  ue.nome AS unidade_escolar_nome,
+  ue.diretoria_ensino_id AS unidade_diretoria_ensino_id
 `;
 
 const ACESSO_DETAIL_JOINS = `
@@ -68,6 +69,22 @@ async function findById(acessoId, client) {
   return getClient(client).executeOne(
     `SELECT ${ACESSO_DETAIL_SELECT} ${ACESSO_DETAIL_JOINS} WHERE aa.id = ? LIMIT 1`,
     [acessoId]
+  );
+}
+
+// A linha autorizadora permanece bloqueada até o commit da mutação que ela permite.
+async function findActiveAuthorizerByIdForUpdate(client, acessoId, adminUserId) {
+  return getClient(client).executeOne(
+    `SELECT aa.id, aa.usuario_administrativo_id, aa.perfil,
+            aa.diretoria_ensino_id, aa.unidade_escolar_id
+     FROM acessos_administrativos aa
+     INNER JOIN usuarios_administrativos ua ON ua.id = aa.usuario_administrativo_id
+     WHERE aa.id = ? AND aa.usuario_administrativo_id = ?
+       AND ua.ativo = 1 AND aa.status = 'ATIVO'
+       AND (aa.data_inicio IS NULL OR aa.data_inicio <= CURRENT_DATE)
+       AND (aa.data_fim IS NULL OR aa.data_fim >= CURRENT_DATE)
+     LIMIT 1 FOR UPDATE`,
+    [acessoId, adminUserId]
   );
 }
 
@@ -148,6 +165,7 @@ module.exports = {
   withTransaction,
   createAcesso,
   findById,
+  findActiveAuthorizerByIdForUpdate,
   updateStatus,
   listAcessos,
   countAcessos,

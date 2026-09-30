@@ -2,6 +2,7 @@ const { Router } = require("express");
 const {
   createEmployee,
   listEmployees,
+  listRegistrationUnits,
   getEmployee,
   updateEmployee,
   deactivateEmployee,
@@ -18,7 +19,9 @@ const {
 } = require("../middlewares/validators");
 const {
   escopoPorCapacidade,
+  exigirCapacidade,
   restringirCapacidadeFuncionario,
+  restringirCapacidadeFuncionarioVisualizacao,
   restringirCapacidadeFuncionarioReativacao,
   restringirCapacidadeUnidadeDoBody,
 } = require("../middlewares/adminScope");
@@ -32,14 +35,20 @@ router.get(
   listEmployees
 );
 router.get(
+  "/unidades",
+  escopoPorCapacidade("funcionario.criar"),
+  listRegistrationUnits
+);
+router.get(
   "/:id",
   employeeIdValidator,
-  restringirCapacidadeFuncionario("funcionario.visualizar", "id"),
+  restringirCapacidadeFuncionarioVisualizacao("id"),
   getEmployee
 );
 
 router.post(
   "/",
+  exigirCapacidade("funcionario.criar"),
   sensitiveLimiter,
   createFuncionarioValidator,
   restringirCapacidadeUnidadeDoBody(

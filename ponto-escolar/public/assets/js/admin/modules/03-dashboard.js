@@ -12,7 +12,7 @@ function renderizarUltimosRegistros() {
       error.message,
       ![401, 403].includes(Number(error.status || 0))
     );
-    if (tbody) tbody.innerHTML = `<tr><td colspan="5">${state}</td></tr>`;
+    if (tbody) tbody.innerHTML = `<tr><td colspan="4">${state}</td></tr>`;
     if (cardsMobile) cardsMobile.innerHTML = state;
     return;
   }
@@ -20,7 +20,7 @@ function renderizarUltimosRegistros() {
   const lista = PONTOS_HOJE.slice(-5).reverse();
 
   if (tbody && !lista.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
   }
 
   if (tbody && lista.length) {
@@ -43,9 +43,6 @@ function renderizarUltimosRegistros() {
           <td class="td-mono">${p.entrada || '<span class="muted-dash">—</span>'}</td>
           <td class="td-mono">${p.saida || '<span class="muted-dash">—</span>'}</td>
           <td><span class="badge ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span></td>
-          <td>
-            <button class="btn btn-ghost btn-sm" onclick="toast('Ajuste de ponto ainda nao integrado nesta tela.','info')"><img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> Ajustar</button>
-          </td>
         </tr>
       `;
     }).join('');
@@ -205,4 +202,95 @@ function renderizarAlertas() {
       </div>
     </div>
   `).join('');
+}
+
+// A criação de escolas ainda não possui API. Este painel apresenta somente
+// a DRE elegível, sem tentar persistir dados pelo navegador.
+async function iniciarAcaoAdicionarEscola() {
+  const acao = document.getElementById('quick-add-school');
+  const painel = document.getElementById('school-setup');
+  const fechar = document.getElementById('school-setup-close');
+  const introducao = document.getElementById('school-setup-intro');
+  const diretoria = document.getElementById('school-setup-dre');
+  const feedback = document.getElementById('school-setup-feedback');
+  if (!acao || !painel || !fechar || !introducao || !diretoria || !feedback) return;
+
+  let seduc = false;
+  let diretoriasProprias = [];
+  try {
+    const dados = getApiData(await adminApiFetch('/api/admin/acessos/meu'));
+    if (!Array.isArray(dados?.acessos)) return;
+    seduc = dados.acessos.some((acesso) => acesso?.perfil === 'ADMIN_SEDUC');
+    diretoriasProprias = [...new Set(dados.acessos
+      .filter((acesso) => acesso?.perfil === 'ADMIN_DIRETORIA')
+      .map((acesso) => Number(acesso.diretoria_ensino_id))
+      .filter((id) => Number.isSafeInteger(id) && id > 0))];
+    if (!seduc && diretoriasProprias.length === 0) return;
+  } catch (_erro) {
+    return;
+  }
+
+  function preencherDiretorias(itens) {
+    diretoria.replaceChildren();
+    itens.forEach(({ id, nome }) => {
+      const opcao = document.createElement('option');
+      opcao.value = String(id);
+      opcao.textContent = nome;
+      diretoria.appendChild(opcao);
+    });
+    if (itens.length === 0) {
+      diretoria.disabled = true;
+      feedback.textContent = 'Nenhuma diretoria autorizada está disponível.';
+      return;
+    }
+    diretoria.value = String(itens[0].id);
+    diretoria.disabled = itens.length === 1 && !seduc;
+    feedback.textContent = seduc
+      ? 'Selecione a DRE de destino para a futura escola.'
+      : 'A escola ficará vinculada a uma DRE do seu acesso administrativo.';
+  }
+
+  async function abrirPainel() {
+    painel.hidden = false;
+    acao.setAttribute('aria-expanded', 'true');
+    introducao.textContent = seduc
+      ? 'Selecione a diretoria de ensino à qual a escola ficará vinculada.'
+      : 'A escola deverá ficar vinculada a uma diretoria do seu acesso administrativo.';
+    if (!seduc) {
+      preencherDiretorias(diretoriasProprias.map((id) => ({ id, nome: `DRE ${id}` })));
+      if (!diretoria.disabled && !painel.hidden) diretoria.focus();
+      return;
+    }
+
+    diretoria.disabled = true;
+    diretoria.replaceChildren();
+    feedback.textContent = 'Carregando diretorias autorizadas...';
+    try {
+      const dados = getApiData(await adminApiFetch('/api/admin/acessos/opcoes-concessao'));
+      const opcoes = dados?.perfis?.find((item) =>
+        item?.perfil === 'ADMIN_DIRETORIA' && item.tipo_escopo === 'DRE'
+      )?.recursos;
+      if (!Array.isArray(opcoes)) throw new Error('Diretorias indisponíveis.');
+      preencherDiretorias(opcoes.filter((item) =>
+        Number.isSafeInteger(item?.id) && item.id > 0 && typeof item.nome === 'string'
+      ));
+      if (!diretoria.disabled && !painel.hidden) diretoria.focus();
+    } catch (_erro) {
+      feedback.textContent = 'Não foi possível carregar as DREs autorizadas.';
+    }
+  }
+
+  acao.hidden = false;
+  acao.addEventListener('click', () => {
+    if (painel.hidden) abrirPainel();
+    else {
+      painel.hidden = true;
+      acao.setAttribute('aria-expanded', 'false');
+    }
+  });
+  fechar.addEventListener('click', () => {
+    painel.hidden = true;
+    acao.setAttribute('aria-expanded', 'false');
+    acao.focus();
+  });
 }

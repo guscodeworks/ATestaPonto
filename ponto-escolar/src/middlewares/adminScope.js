@@ -371,6 +371,18 @@ function restringirCapacidadeFuncionario(capacidade, paramName = "id") {
   );
 }
 
+// Consulta individual segue o mesmo vinculo exibido na listagem, inclusive
+// para inativos, sem usar um vinculo historico para liberar um ativo transferido.
+function restringirCapacidadeFuncionarioVisualizacao(paramName = "id") {
+  return restringirCapacidadeFuncionarioPorVinculo(
+    "funcionario.visualizar",
+    paramName,
+    (funcionarioId) =>
+      adminScopeService.buscarVinculoVisivelDoFuncionario(funcionarioId),
+    "Funcionario sem vinculo visivel ao escopo do administrador"
+  );
+}
+
 // Autoriza reativacao pelo vinculo mais recente, que pode estar encerrado.
 function restringirCapacidadeFuncionarioReativacao(
   capacidade,
@@ -615,6 +627,7 @@ module.exports = {
   exigirCapacidade,
   restringirCapacidadeQrUnidade,
   restringirCapacidadeFuncionario,
+  restringirCapacidadeFuncionarioVisualizacao,
   restringirCapacidadeFuncionarioReativacao,
   restringirCapacidadeUnidadeDoBody,
   restringirEscopoFuncionario,
