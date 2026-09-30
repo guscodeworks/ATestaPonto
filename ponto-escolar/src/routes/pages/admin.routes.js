@@ -30,7 +30,6 @@ function createAdminPagesRouter({ sendView }) {
   // Login/logout de admin não têm view própria: o fluxo real é delegado ao
   // OAuth do Gov.br (rotas /auth/govbr/*).
   router.get("/admin/login", redirectTo("/auth/govbr/login"));
-  router.get("/admin/logout", redirectTo("/auth/govbr/logout"));
 
   router.get("/admin", requireAdmin, redirectTo("/admin/dashboard"));
   router.get("/admin/index", requireAdmin, redirectTo("/admin/dashboard"));

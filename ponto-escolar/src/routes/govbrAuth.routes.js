@@ -6,13 +6,13 @@ const {
   concluirLoginGovbr,
   sairGovbr
 } = require('../controllers/govbrAuth.controller');
+const requireSameOrigin = require('../middlewares/requireSameOrigin');
 
 const router = Router();
 
 router.get('/start', (_req, res) => res.redirect('/auth/govbr/login'));
 router.get('/login', iniciarLoginGovbr);
 router.get('/callback', concluirLoginGovbr);
-router.get('/logout', sairGovbr);
-router.post('/logout', sairGovbr);
+router.post('/logout', requireSameOrigin, sairGovbr);
 
 module.exports = router;

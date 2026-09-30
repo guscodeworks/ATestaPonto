@@ -94,8 +94,21 @@ function redirecionarAdminParaGovbr(
     : '/auth/govbr/login';
   document.documentElement.setAttribute('data-admin-session', 'pending');
 
-  if (typeof iniciarCarregamentoGlobal !== 'function') {
+  function navegar() {
+    if (caminhoSeguro === '/auth/govbr/logout') {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = caminhoSeguro;
+      form.hidden = true;
+      document.body.appendChild(form);
+      form.submit();
+      return;
+    }
     window.location.replace(caminhoSeguro);
+  }
+
+  if (typeof iniciarCarregamentoGlobal !== 'function') {
+    navegar();
     return null;
   }
 
@@ -105,7 +118,7 @@ function redirecionarAdminParaGovbr(
     atrasoMs: 0,
   });
   window.requestAnimationFrame(() => {
-    window.setTimeout(() => window.location.replace(caminhoSeguro), 0);
+    window.setTimeout(navegar, 0);
   });
 
   // Caso o navegador não conclua a navegação, o overlay deixa de ser um
