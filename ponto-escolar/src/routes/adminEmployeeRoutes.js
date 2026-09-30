@@ -2,6 +2,7 @@ const { Router } = require("express");
 const {
   createEmployee,
   listEmployees,
+  listRegistrationUnits,
   getEmployee,
   updateEmployee,
   deactivateEmployee,
@@ -30,6 +31,11 @@ router.get(
   escopoPorCapacidade("funcionario.listar"),
   paginationValidator,
   listEmployees
+);
+router.get(
+  "/unidades",
+  escopoPorCapacidade("funcionario.criar"),
+  listRegistrationUnits
 );
 router.get(
   "/:id",

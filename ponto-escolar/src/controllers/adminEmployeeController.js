@@ -1,6 +1,7 @@
 "use strict";
 
 const employeeService = require("../services/employeeService");
+const adminScopeService = require("../services/adminScopeService");
 const { getClientIp } = require("../utils/request");
 
 // Quem (admin) + de onde (IP): registrado junto às operações que alteram dados.
@@ -39,6 +40,18 @@ async function listEmployees(req, res, next) {
       success: true,
       data: result,
     });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function listRegistrationUnits(req, res, next) {
+  try {
+    const items = await adminScopeService.listarUnidadesParaCadastro(
+      req.escopoUnidades
+    );
+    res.set("Cache-Control", "no-store");
+    return res.status(200).json({ success: true, data: { items } });
   } catch (error) {
     return next(error);
   }
@@ -114,6 +127,7 @@ async function reactivateEmployee(req, res, next) {
 module.exports = {
   createEmployee,
   listEmployees,
+  listRegistrationUnits,
   getEmployee,
   updateEmployee,
   deactivateEmployee,

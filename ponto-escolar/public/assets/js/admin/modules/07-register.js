@@ -92,6 +92,56 @@ function iniciarFormRegistro() {
   const inputSaidaAlmoco = document.getElementById('input-saida-almoco');
   const inputRetornoAlmoco = document.getElementById('input-retorno-almoco');
   const inputSaida = document.getElementById('input-saida');
+  const inputUnidade = document.getElementById('input-unidade');
+  const feedbackUnidade = document.getElementById('unidade-feedback');
+  const btnRegistrar = document.getElementById('btn-registrar');
+  let unidadesAutorizadas = new Set();
+
+  async function carregarUnidadesParaCadastro() {
+    btnRegistrar.disabled = true;
+    inputUnidade.disabled = true;
+    if (feedbackUnidade) feedbackUnidade.textContent = 'Consultando unidades autorizadas...';
+
+    try {
+      const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.funcionarios}/unidades`);
+      const items = getApiData(payload)?.items;
+      if (!Array.isArray(items)) throw new Error('Não foi possível obter as unidades autorizadas.');
+
+      const unidades = items.filter((item) =>
+        Number.isSafeInteger(Number(item?.id)) && Number(item.id) > 0 && item.nome
+      );
+      unidadesAutorizadas = new Set(unidades.map((item) => Number(item.id)));
+      inputUnidade.replaceChildren();
+
+      if (unidades.length > 1) {
+        const placeholder = new Option('Selecione a unidade escolar...', '', true, true);
+        placeholder.disabled = true;
+        inputUnidade.add(placeholder);
+      }
+      unidades.forEach((item) => {
+        const option = new Option(String(item.nome), String(item.id));
+        option.defaultSelected = unidades.length === 1;
+        option.selected = unidades.length === 1;
+        inputUnidade.add(option);
+      });
+
+      inputUnidade.disabled = unidades.length <= 1;
+      btnRegistrar.disabled = unidades.length === 0;
+      if (feedbackUnidade) {
+        feedbackUnidade.textContent = unidades.length === 0
+          ? 'Nenhuma unidade autorizada para cadastro.'
+          : unidades.length === 1
+            ? 'Sua unidade foi selecionada automaticamente.'
+            : 'Selecione uma das unidades autorizadas para o cadastro.';
+      }
+    } catch (error) {
+      unidadesAutorizadas = new Set();
+      inputUnidade.replaceChildren(new Option('Unidades indisponíveis', ''));
+      if (feedbackUnidade) feedbackUnidade.textContent = error.message || 'Não foi possível carregar as unidades.';
+      if (error.status === 401) redirecionarAdminParaGovbr();
+    }
+  }
+
   function reiniciarHorarios() {
     preencherSelectDeHorario(inputEntrada);
     preencherSelectDeHorario(inputSaidaAlmoco);
@@ -192,6 +242,7 @@ function iniciarFormRegistro() {
     const cpf = document.getElementById('input-cpf')?.value.trim();
     const cpfDigits = somenteDigitos(cpf);
     const cargo = document.getElementById('input-cargo')?.value;
+    const unidadeEscolarId = Number(inputUnidade.value);
     const tel = document.getElementById('input-tel')?.value.trim();
     const entrada = document.getElementById('input-entrada')?.value;
     const saidaAlmoco = document.getElementById('input-saida-almoco')?.value;
@@ -204,6 +255,10 @@ function iniciarFormRegistro() {
     }
     if (!nome || !email || !cpf || !cargo) {
       toast('Preencha todos os campos obrigatorios.', 'error');
+      return;
+    }
+    if (!unidadesAutorizadas.has(unidadeEscolarId)) {
+      toast('Selecione uma unidade escolar autorizada.', 'error');
       return;
     }
     const validacaoCpf = validarCpfCadastroAdmin(cpfDigits);
@@ -239,6 +294,7 @@ function iniciarFormRegistro() {
           telefone: tel ? somenteDigitos(tel) : null,
           ativo: true,
           cargo,
+          unidade_escolar_id: unidadeEscolarId,
           entrada,
           saida_almoco: saidaAlmoco,
           retorno_almoco: retornoAlmoco,
@@ -273,4 +329,6 @@ function iniciarFormRegistro() {
       form.removeAttribute('aria-busy');
     }
   });
+
+  carregarUnidadesParaCadastro();
 }

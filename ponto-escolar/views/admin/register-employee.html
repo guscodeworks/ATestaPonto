@@ -144,6 +144,16 @@
                   </div>
                 </div>
 
+                <div class="form-field full">
+                  <label for="input-unidade">Unidade escolar *</label>
+                  <div class="select-wrap">
+                    <select id="input-unidade" class="field-select no-icon" required disabled>
+                      <option value="">Carregando unidades autorizadas...</option>
+                    </select>
+                  </div>
+                  <span class="field-help" id="unidade-feedback" aria-live="polite"></span>
+                </div>
+
                 <div class="form-field">
                   <label for="input-entrada">Entrada *</label>
                   <div class="select-wrap">
@@ -192,7 +202,7 @@
               </div>
 
               <div class="form-actions">
-                <button type="submit" id="btn-registrar" class="ui-btn ui-btn-primary ui-btn-lg">
+                <button type="submit" id="btn-registrar" class="ui-btn ui-btn-primary ui-btn-lg" disabled>
                   <span class="btn-label"><img src="/assets/icons/check.svg" alt="" aria-hidden="true" width="18" height="18"> Registrar Funcionário</span>
                   <div class="spinner"></div>
                 </button>
