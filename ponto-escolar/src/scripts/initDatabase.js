@@ -53,17 +53,11 @@ function parsePort(value) {
   return parsed;
 }
 
-// Tenta localizar o arquivo de schema em múltiplos caminhos possíveis,
-// dando preferência ao local padrão do projeto e caindo para nomes alternativos
-// (incluindo variações históricas do arquivo) caso o padrão não exista.
+// Somente o baseline canônico pode inicializar um banco novo. Os antigos
+// ponto.sql e "ponto (2).sql" não representam mais a estrutura da aplicação.
 function resolveSchemaPath() {
-  const candidates = [
-    path.resolve(__dirname, '../../database/schema/ponto.sql'),
-    path.resolve(__dirname, '../../ponto (2).sql'),
-    path.resolve(__dirname, '../../ponto.sql')
-  ];
-
-  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+  const schemaPath = path.resolve(__dirname, '../../database/schema/ponto.sql');
+  return fs.existsSync(schemaPath) ? schemaPath : null;
 }
 
 async function main() {
@@ -86,7 +80,7 @@ async function main() {
 
     const sqlFilePath = resolveSchemaPath();
     if (!sqlFilePath) {
-      console.error('[initDatabase] Nenhum arquivo de schema SQL encontrado (database/schema/ponto.sql, ponto (2).sql ou ponto.sql).');
+      console.error('[initDatabase] Baseline canonico nao encontrado: database/schema/ponto.sql.');
       process.exitCode = 1;
       return;
     }
@@ -117,6 +111,16 @@ async function main() {
       `CREATE DATABASE IF NOT EXISTS \`${databaseName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
     );
     await connection.query(`USE \`${databaseName}\``);
+    // O baseline exige um banco vazio, inclusive apos uma inicializacao parcial.
+    const [existingTables] = await connection.query(
+      'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? LIMIT 1',
+      [databaseName]
+    );
+    if (existingTables.length > 0) {
+      console.error('[initDatabase] Inicializacao interrompida: o banco de destino ja contem tabelas ou views. O baseline exige um banco vazio e nao foi executado. Para atualizar a estrutura, use as migrations apropriadas.');
+      process.exitCode = 1;
+      return;
+    }
     await connection.query(schemaSql);
 
     console.log('[initDatabase] Banco inicializado com sucesso.');

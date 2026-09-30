@@ -100,10 +100,18 @@ async function main() {
     const sqlFilePath = resolveSqlFile(getCliArg('file'));
     // Remove o BOM (caractere invisível que alguns editores/downloads adicionam
     // no início do arquivo), que quebraria a execução do SQL se não fosse tratado.
-    const sql = fs.readFileSync(sqlFilePath, 'utf8').replace(/^\uFEFF/, '').trim();
+    const source = fs.readFileSync(sqlFilePath, 'utf8');
+    const sql = source.replace(/^\uFEFF/, '').trim();
 
     if (!sql) {
       console.error('[runSqlFile] Arquivo SQL esta vazio.');
+      process.exitCode = 1;
+      return;
+    }
+
+    console.log(`[runSqlFile] Destino: host=${JSON.stringify(process.env.DB_HOST)} banco=${JSON.stringify(process.env.DB_NAME)}`);
+    if (IS_PRODUCTION && !process.argv.slice(2).includes('--confirm-production')) {
+      console.error('[runSqlFile] Execucao cancelada: producao exige confirmacao explicita com --confirm-production. Confira o destino antes de executar novamente. Nenhum SQL foi executado.');
       process.exitCode = 1;
       return;
     }

@@ -538,7 +538,17 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, acessos } = {}
   const paraStatus = regra.para;
 
   await adminAccessModel.withTransaction(async (tx) => {
-    await adminAccessModel.updateStatus(acessoId, paraStatus, tx);
+    const result = await adminAccessModel.updateStatus(
+      acessoId,
+      deStatus,
+      paraStatus,
+      tx
+    );
+    if (Number(result && result.affectedRows) !== 1) {
+      throw new ConflictError(
+        "Status do acesso foi alterado por outra operacao; atualize e tente novamente"
+      );
+    }
   });
 
   // Recarrega pós-update para refletir status/atualizado_em no payload.

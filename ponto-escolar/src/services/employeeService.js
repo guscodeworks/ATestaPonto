@@ -254,7 +254,7 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
 
     await loginModel.createLogin(tx, { funcionarioId, senhaHash });
     // Vínculo na mesma transação; rollback desfaz funcionário, login e cargo juntos.
-    await employmentLinkModel.createVinculo(tx, {
+    const vinculoResult = await employmentLinkModel.createVinculo(tx, {
       funcionarioId,
       schoolUnitId,
       cargoId,
@@ -263,6 +263,9 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
       retornoAlmoco: cargoSchedule.retornoAlmoco,
       saida: cargoSchedule.saida,
     });
+    if (!ativo) {
+      await employmentLinkModel.encerrarVinculo(tx, vinculoResult.insertId);
+    }
 
     return { funcionarioId, cargoId };
   });
@@ -525,7 +528,7 @@ async function changeEmployeeActivation(
   employeeId,
   ativo,
   confirmation,
-  { adminId, ipOrigem } = {}
+  { adminId, ipOrigem, vinculoAutorizado } = {}
 ) {
   const expectedConfirmation = ativo ? "REATIVAR" : "DESATIVAR";
   if (confirmation !== expectedConfirmation) {
@@ -557,9 +560,7 @@ async function changeEmployeeActivation(
       throw new Error("Falha ao atualizar o status do funcionario");
     }
 
-    // Desativar encerra o vínculo ativo (cargo/escola/jornada vive nele); não
-    // apaga pontos (histórico intacto). Reativar NÃO (re)abre vínculo — isso é
-    // operação de cadastro separada.
+    // A flag e o vínculo mudam atomicamente; vínculos encerrados são históricos.
     if (!ativo) {
       const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
         tx,
@@ -568,6 +569,44 @@ async function changeEmployeeActivation(
       if (vinculo) {
         await employmentLinkModel.encerrarVinculo(tx, vinculo.id);
       }
+    } else {
+      const ativoExistente = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
+        tx, employeeId
+      );
+      if (ativoExistente) {
+        throw new ConflictError("Funcionario inativo possui vinculo ativo; regularize o cadastro");
+      }
+      const ultimo = await employmentLinkModel.findLatestByFuncionarioIdWithDetails(
+        employeeId, tx
+      );
+      if (!ultimo || Number(ultimo.id) !== vinculoAutorizado?.id) {
+        throw new ConflictError("Vinculo de reativacao alterado ou ausente; atualize e tente novamente");
+      }
+      const vinculo = await employmentLinkModel.getByIdForUpdate(tx, ultimo.id);
+      if (!vinculo || vinculo.status !== "ENCERRADO") {
+        throw new ConflictError("Reativacao exige um vinculo anterior encerrado");
+      }
+      const unidade = await schoolUnitModel.findByIdForUpdate(tx, vinculo.unidade_escolar_id);
+      if (!unidade || !Boolean(unidade.ativa)) {
+        throw new ConflictError("Unidade escolar ausente ou inativa para reativacao");
+      }
+      if (Number(unidade.id) !== vinculoAutorizado.unidadeEscolarId ||
+          Number(unidade.diretoria_ensino_id) !== vinculoAutorizado.diretoriaEnsinoId) {
+        throw new ConflictError("Escopo da unidade alterado; atualize e tente novamente");
+      }
+      const jornada = readCargoSchedule({ ...vinculo, cargo: ultimo.cargo });
+      // A matricula pertence ao periodo funcional encerrado. O novo vinculo
+      // nasce sem matricula para preservar o historico e respeitar a UNIQUE
+      // (unidade_escolar_id, matricula).
+      await employmentLinkModel.createVinculo(tx, {
+        funcionarioId: employeeId,
+        schoolUnitId: unidade.id,
+        cargoId: vinculo.cargo_id,
+        entrada: jornada.entrada,
+        saidaAlmoco: jornada.saidaAlmoco,
+        retornoAlmoco: jornada.retornoAlmoco,
+        saida: jornada.saida,
+      });
     }
 
     const status = await employeeModel.findEmployeeActivationById(

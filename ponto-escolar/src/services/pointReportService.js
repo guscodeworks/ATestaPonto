@@ -1,8 +1,6 @@
 "use strict";
 
-const employeeModel = require("../models/employeeModel");
 const pointModel = require("../models/pointModel");
-const employmentLinkModel = require("../models/employmentLinkModel");
 const { maskCpf } = require("../utils/cpf");
 const {
   EMPTY_PUNCH_TIME,
@@ -99,6 +97,10 @@ function summarizeEmployeeDay(employee, punches, date) {
       : "EM_ANDAMENTO";
 
   return {
+    id: `${employee.vinculo_funcional_id}-${date}`,
+    vinculo_funcional_id: Number(employee.vinculo_funcional_id),
+    unidade_escolar_id: Number(employee.unidade_escolar_id),
+    unidade_escolar_nome: employee.unidade_escolar_nome,
     funcionario: {
       id: employee.id,
       nome: employee.nome,
@@ -115,87 +117,55 @@ function summarizeEmployeeDay(employee, punches, date) {
   };
 }
 
-// listRowsByDate retorna 1 linha por batida (sem coluna funcionario_id, ordenada
-// por vínculo/tipo). Agrupando por funcionário, resolvemos cada vínculo ao seu
-// funcionário; vínculos repetidos reaproveitam a resolução.
-async function resolveVinculoToFuncionario(vinculoIds) {
-  const uniqueIds = [...new Set(vinculoIds.map(Number).filter(Number.isInteger))];
-  const byVinculo = new Map();
-  for (const vinculoId of uniqueIds) {
-    const vinculo = await employmentLinkModel.getById(vinculoId);
-    if (vinculo) {
-      byVinculo.set(vinculoId, Number(vinculo.funcionario_id));
-    }
-  }
-  return byVinculo;
-}
-
-// Agrupa batidas do dia por funcionário. Cada vínculo resolve-se em seu
-// funcionário; sem batidas não aparecem (completados pelo cruzamento com ativos).
-function indexPunchesByEmployee(punchRows, vinculoToFuncionario) {
-  const byEmployee = new Map();
-
-  for (const row of punchRows) {
-    const vinculoId = Number(row.vinculo_funcional_id);
-    const funcionarioId = vinculoToFuncionario.get(vinculoId);
-    if (!Number.isInteger(funcionarioId)) {
-      continue;
-    }
-    if (!byEmployee.has(funcionarioId)) {
-      byEmployee.set(funcionarioId, []);
-    }
-    byEmployee.get(funcionarioId).push(row);
-  }
-
-  return byEmployee;
-}
-
-// Taxa de presença só sobre ativos (desligados nunca batem ponto e distorceriam).
+// listRowsByDate já limita o universo aos vínculos vigentes na data consultada.
 function buildSummary(summaries) {
-  const activeSummaries = summaries.filter((item) => item.funcionario.ativo);
-  const presentes = activeSummaries.filter((item) => item.total_batidas > 0);
-  const ausentes = activeSummaries.filter((item) => item.total_batidas === 0);
-  const totalAtivos = activeSummaries.length;
-  const totalPresentes = presentes.length;
+  const presentes = summaries.filter((item) => item.total_batidas > 0);
+  const ausentes = summaries.filter((item) => item.total_batidas === 0);
+  // Os itens são por vínculo; os indicadores de funcionários continuam por pessoa.
+  const countEmployees = (items) => new Set(items.map((item) => item.funcionario.id)).size;
+  const totalVigentes = countEmployees(summaries);
+  const totalPresentes = countEmployees(presentes);
 
   return {
     presentes,
     ausentes,
     resumo: {
-      total_funcionarios: summaries.length,
-      total_ativos: totalAtivos,
+      total_funcionarios: countEmployees(summaries),
+      total_ativos: totalVigentes,
       presentes: totalPresentes,
-      ausentes: ausentes.length,
+      ausentes: totalVigentes - totalPresentes,
       taxa_presenca_percent:
-        totalAtivos > 0 ? Math.round((totalPresentes / totalAtivos) * 100) : 0,
+        totalVigentes > 0
+          ? Math.round((totalPresentes / totalVigentes) * 100)
+          : 0,
     },
   };
 }
 
 // Visão diária nasce em memória (não altera registros durante a consulta).
 async function buildDailySnapshot(date, escopoUnidades = []) {
-  const employees = await employeeModel.listForPointReport(escopoUnidades);
-  const punchRows = await pointModel.listRowsByDate(date);
-  const vinculoToFuncionario = await resolveVinculoToFuncionario(
-    punchRows.map((row) => row.vinculo_funcional_id)
-  );
-  const byEmployee = indexPunchesByEmployee(punchRows, vinculoToFuncionario);
-  // Filtra batidas de fora do escopo: snapshot nasce da lista de permitidos.
-  const permittedIds = new Set(employees.map((e) => Number(e.id)));
-  const summaries = employees.map((employee) =>
-    summarizeEmployeeDay(
-      employee,
-      permittedIds.has(Number(employee.id))
-        ? byEmployee.get(Number(employee.id)) || []
-        : [],
-      date
-    )
+  const rows = await pointModel.listRowsByDate(date, escopoUnidades);
+  const byVinculo = new Map();
+  for (const row of rows) {
+    const vinculoId = Number(row.vinculo_funcional_id);
+    if (!byVinculo.has(vinculoId)) {
+      byVinculo.set(vinculoId, {
+        employee: { ...row, id: row.funcionario_id },
+        punches: [],
+      });
+    }
+    if (row.id !== null) {
+      byVinculo.get(vinculoId).punches.push(row);
+    }
+  }
+  const summaries = Array.from(byVinculo.values(), ({ employee, punches }) =>
+    summarizeEmployeeDay(employee, punches, date)
   );
   const { presentes, ausentes, resumo } = buildSummary(summaries);
 
   return {
     date,
-    total_funcionarios: summaries.length,
+    total_funcionarios: resumo.total_funcionarios,
     total_funcionarios_ativos: resumo.total_ativos,
     presentes,
     ausentes,

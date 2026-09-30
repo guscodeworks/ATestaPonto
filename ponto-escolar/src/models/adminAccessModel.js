@@ -72,11 +72,12 @@ async function findById(acessoId, client) {
 }
 
 // Ciclo de vida = transição de status, nunca exclusão (preserva linha/histórico).
-// Dentro da transação passada (tx).
-async function updateStatus(acessoId, novoStatus, client) {
+// O status de origem torna o UPDATE atômico: uma transição concorrente faz a
+// operação afetar zero linhas, em vez de sobrescrever o estado mais recente.
+async function updateStatus(acessoId, statusAtual, novoStatus, client) {
   return getClient(client).execute(
-    "UPDATE acessos_administrativos SET status = ? WHERE id = ?",
-    [novoStatus, acessoId]
+    "UPDATE acessos_administrativos SET status = ? WHERE id = ? AND status = ?",
+    [novoStatus, acessoId, statusAtual]
   );
 }
 
