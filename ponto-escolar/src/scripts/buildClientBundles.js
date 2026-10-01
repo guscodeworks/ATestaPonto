@@ -90,6 +90,7 @@ const adminModules = [
   "admin/modules/07-register.js",
   "admin/modules/08-settings-login.js",
   "admin/modules/09-init.js",
+  "admin/modules/10-schools.js",
   "admin/modules/mobile-check.js",
   "admin/modules/settings.js",
 ];

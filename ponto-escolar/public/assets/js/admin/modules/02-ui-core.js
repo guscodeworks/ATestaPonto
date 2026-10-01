@@ -12,7 +12,10 @@ function iniciarRelogio() {
     elData.textContent = formatarData(now);
   }
   atualizar();
-  setInterval(atualizar, 1000);
+  window.setTimeout(() => {
+    atualizar();
+    window.setInterval(atualizar, 60000);
+  }, 60000 - (Date.now() % 60000));
 }
 
 /* ============================================================
@@ -126,26 +129,30 @@ function mostrarToast(msg, tipo) { toast(msg, tipo); }
 
 function renderizarStats() {
   const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
-  if (ADMIN_DATA_ERROR) {
+  const resumoDisponivel = !PONTOS_HOJE_DATA_ERROR && !RESUMO_DATA_ERROR;
+  const funcionariosDisponiveis = !FUNCIONARIOS_DATA_ERROR;
+  if (!resumoDisponivel && !funcionariosDisponiveis) {
     ['stat-total','stat-ativos','stat-presentes','stat-ausentes','stat-taxa','stat-registros','hero-presentes','hero-ausentes','hero-total']
       .forEach((id) => set(id, '—'));
     return;
   }
 
-  // Prioriza os valores já calculados pela API (RESUMO_PONTOS) e só
-  // recalcula localmente como fallback, caso o resumo não tenha vindo.
-  const ativos = RESUMO_PONTOS.total_ativos || FUNCIONARIOS.filter(f => f.status === 'ativo').length;
-  const total = RESUMO_PONTOS.total_funcionarios || FUNCIONARIOS.length;
-  const presentes = RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
-  const ausentes = RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
-  const taxa = RESUMO_PONTOS.taxa_presenca_percent || (ativos > 0 ? Math.round((presentes/ativos)*100) : 0);
+  const ativos = resumoDisponivel
+    ? RESUMO_PONTOS.total_ativos
+    : FUNCIONARIOS.filter(f => f.status === 'ativo').length;
+  const total = resumoDisponivel
+    ? RESUMO_PONTOS.total_funcionarios
+    : FUNCIONARIOS.length;
+  const presentes = resumoDisponivel ? RESUMO_PONTOS.presentes : '—';
+  const ausentes = resumoDisponivel ? RESUMO_PONTOS.ausentes : '—';
+  const taxa = resumoDisponivel ? RESUMO_PONTOS.taxa_presenca_percent : null;
 
   set('stat-total',     total);
   set('stat-ativos',    ativos);
   set('stat-presentes', presentes);
   set('stat-ausentes',  ausentes);
-  set('stat-taxa',      ativos > 0 ? taxa+'%' : '—');
-  set('stat-registros', PONTOS_HOJE.length);
+  set('stat-taxa',      resumoDisponivel && ativos > 0 ? taxa+'%' : '—');
+  set('stat-registros', resumoDisponivel ? PONTOS_HOJE.length : '—');
 
   // Dashboard hero
   set('hero-presentes', presentes);

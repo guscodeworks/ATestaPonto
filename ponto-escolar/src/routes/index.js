@@ -8,6 +8,7 @@ const adminEmployeeRoutes = require('./adminEmployeeRoutes');
 const adminAccessRoutes = require('./adminAccessRoutes');
 const adminQrRoutes = require('./adminQrRoutes');
 const adminPointRoutes = require('./adminPointRoutes');
+const adminSchoolUnitRoutes = require('./adminSchoolUnitRoutes');
 const punchRoutes = require('./punchRoutes');
 const { getPunchHistory, getTodayPunch } = require('../controllers/punchController');
 const { authenticateFuncionario } = require('../middlewares/authMiddleware');
@@ -21,6 +22,7 @@ router.use('/admin/funcionarios', ensureAdminApiAuthenticated, adminEmployeeRout
 router.use('/admin/acessos', ensureAdminApiAuthenticated, adminAccessRoutes);
 router.use('/admin/qr-tokens', ensureAdminApiAuthenticated, adminQrRoutes);
 router.use('/admin/pontos', ensureAdminApiAuthenticated, adminPointRoutes);
+router.use('/admin/escolas', ensureAdminApiAuthenticated, adminSchoolUnitRoutes);
 router.get('/pontos/historico', authenticateFuncionario, getPunchHistory);
 router.get('/pontos/hoje', authenticateFuncionario, getTodayPunch);
 router.use('/pontos', punchRoutes);

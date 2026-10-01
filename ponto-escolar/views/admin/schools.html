@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-admin-session="pending">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Escolas | ATestaPonto</title>
+  <link rel="icon" type="image/png" sizes="96x96" href="/assets/img/favicon.ico" />
+  <script src="/assets/js/admin/admin.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/bundles/admin.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="app-wrap">
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-text"><span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span><span class="sidebar-brand-sub">Administração</span></div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">--</div>
+      <div class="sidebar-user-info"><div class="sidebar-user-name" id="sb-name">Administrador</div><div class="sidebar-user-role" id="sb-role">Administrador</div></div>
+      <div class="sidebar-admin-badge">ADMIN</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
+      <div class="sidebar-section-label">Gestão</div>
+      <a href="/admin/escolas" class="nav-link active"><span class="nav-icon"><img src="/assets/icons/building-2.svg" alt="" aria-hidden="true" width="18" height="18"></span> Escolas</a>
+      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
+      <div class="sidebar-section-label">Ponto</div>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
+    </nav>
+    <div class="sidebar-footer"><button class="btn-logout" onclick="window.location.href='/auth/govbr/logout'"><span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema</button></div>
+  </aside>
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <div class="breadcrumb"><span>ATesta<span class="brand-accent">Ponto</span></span><span class="breadcrumb-sep">›</span><span class="breadcrumb-current">Escolas</span></div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock"><div class="topbar-time" id="topbar-time">--:--</div><div class="topbar-date" id="topbar-date"></div></div>
+        <div class="topbar-user"><div class="topbar-avatar" id="admin-avatar">--</div><div class="topbar-user-info"><span class="topbar-user-name" id="admin-firstname">Administrador</span><span class="topbar-user-role" id="admin-role">Administrador</span></div></div>
+      </div>
+    </header>
+    <main class="page-content schools-page" id="schools-page" aria-busy="true">
+      <div class="page-header-row fade-in">
+        <div><h1 class="page-title">Escolas</h1><p class="page-subtitle"><span id="schools-count">—</span> unidades no seu escopo</p></div>
+        <button class="ui-btn ui-btn-primary" id="school-create-toggle" type="button" hidden><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"> Cadastrar escola</button>
+      </div>
+
+      <section class="ui-panel school-create-panel" id="school-create-panel" aria-labelledby="school-form-title" hidden>
+        <div class="ui-panel-header"><div><h2 class="ui-panel-title" id="school-form-title">Nova escola</h2><p class="ui-panel-subtitle">Informe os dados da unidade escolar.</p></div></div>
+        <form id="school-form" novalidate>
+          <div class="schools-form-grid">
+            <div class="form-field schools-field-wide"><label for="school-name">Nome da escola</label><input class="field-input no-icon" id="school-name" name="nome" type="text" minlength="3" maxlength="150" autocomplete="organization" required></div>
+            <div class="form-field"><label for="school-inep">Código INEP <span class="school-optional">opcional</span></label><input class="field-input no-icon" id="school-inep" name="codigo_inep" type="text" inputmode="numeric" maxlength="8" pattern="[0-9]{8}"></div>
+            <div class="form-field"><label for="school-department">Diretoria de Ensino</label><select class="field-select no-icon" id="school-department" name="diretoria_ensino_id" required></select></div>
+            <div class="form-field"><label for="school-cep">CEP</label><div class="school-cep-control"><input class="field-input no-icon" id="school-cep" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" aria-describedby="school-cep-feedback"><button class="ui-btn ui-btn-secondary ui-btn-sm" id="school-cep-lookup" type="button" aria-label="Consultar CEP"><img src="/assets/icons/search.svg" alt="" aria-hidden="true" width="16" height="16"></button></div><span class="school-field-feedback" id="school-cep-feedback" aria-live="polite"></span></div>
+            <div class="form-field"><label for="school-city">Cidade</label><input class="field-input no-icon" id="school-city" name="cidade" type="text" maxlength="100" autocomplete="address-level2" required></div>
+            <div class="form-field schools-field-wide"><label for="school-address">Endereço</label><input class="field-input no-icon" id="school-address" name="endereco" type="text" maxlength="255" autocomplete="street-address" required></div>
+          </div>
+          <div class="school-form-feedback" id="school-form-feedback" role="status" aria-live="polite"></div>
+          <div class="school-form-actions"><button class="ui-btn ui-btn-secondary" id="school-form-cancel" type="button">Cancelar</button><button class="ui-btn ui-btn-primary" id="school-submit" type="submit">Salvar escola</button></div>
+        </form>
+      </section>
+
+      <section class="ui-panel schools-list-panel" aria-label="Lista de escolas">
+        <div class="schools-toolbar"><div class="search-box"><span class="search-icon"><img src="/assets/icons/search.svg" alt="" aria-hidden="true" width="18" height="18"></span><input type="search" id="school-search" placeholder="Buscar escola ou cidade" aria-label="Buscar escolas"></div><button class="ui-btn ui-btn-ghost ui-btn-sm" id="schools-reload" type="button">Atualizar</button></div>
+        <div class="school-list-state" id="schools-loading" role="status"><span class="school-loader" aria-hidden="true"></span><strong>Carregando escolas</strong></div>
+        <div class="school-list-state school-list-error" id="schools-error" role="alert" hidden><img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true" width="28" height="28"><strong>Não foi possível carregar as escolas</strong><span id="schools-error-message">Verifique a conexão e tente novamente.</span><button class="ui-btn ui-btn-secondary ui-btn-sm" id="schools-retry" type="button">Tentar novamente</button></div>
+        <div class="school-list-state" id="schools-empty" hidden><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="28" height="28"><strong id="schools-empty-title">Nenhuma escola encontrada</strong><span id="schools-empty-message">Não há unidades disponíveis no seu escopo.</span></div>
+        <div class="table-wrap schools-table-wrap" id="schools-table-wrap" hidden><table class="data-table"><thead><tr><th>Escola</th><th>Código INEP</th><th>Cidade</th><th>Status</th></tr></thead><tbody id="schools-table-body"></tbody></table></div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast-stack" id="toast-stack"></div>
+</body>
+</html>

@@ -128,7 +128,9 @@
     const dataOptions = {
       includeEmployees: precisaFuncionarios,
       includeToday: precisaPontosHoje,
-      includeSummary: precisaResumo,
+      // As respostas de hoje e do relatório já incluem o resumo. Evita
+      // recalcular o mesmo snapshot em uma chamada separada.
+      includeSummary: precisaResumo && !precisaPontosHoje && !precisaRelatorio,
       includeReport: precisaRelatorio,
     };
     iniciarRecarregamentoDeDados(dataOptions, paginaListaFuncionarios);

@@ -75,6 +75,26 @@ async function findByDiretoriaId(educationDepartmentId, client) {
   );
 }
 
+async function findByIds(ids, client) {
+  const schoolIds = Array.isArray(ids)
+    ? ids.map(Number).filter((id) => Number.isInteger(id) && id > 0)
+    : [];
+  if (schoolIds.length === 0) return [];
+
+  return getClient(client).execute(
+    `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ue.id IN (${schoolIds.map(() => "?").join(", ")}) ORDER BY ue.nome ASC`,
+    schoolIds
+  );
+}
+
+async function create(client, { diretoriaEnsinoId, nome, codigoInep, endereco, cidade }) {
+  const result = await getClient(client).execute(
+    "INSERT INTO unidades_escolares (diretoria_ensino_id, nome, codigo_inep, endereco, cidade, ativa) VALUES (?, ?, ?, ?, ?, 1)",
+    [diretoriaEnsinoId, nome, codigoInep || null, endereco, cidade]
+  );
+  return findById(result.insertId, client);
+}
+
 module.exports = {
   findById,
   findByIdForUpdate,
@@ -83,4 +103,6 @@ module.exports = {
   findGeolocationByVinculo,
   list,
   findByDiretoriaId,
+  findByIds,
+  create,
 };

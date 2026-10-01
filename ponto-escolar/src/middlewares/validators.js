@@ -208,6 +208,43 @@ const createFuncionarioValidator = withValidation([
     .toBoolean(),
 ]);
 
+const createSchoolValidator = withValidation([
+  body("nome")
+    .trim()
+    .notEmpty()
+    .withMessage("Nome da escola e obrigatorio")
+    .isLength({ min: 3, max: 150 })
+    .withMessage("Nome da escola deve ter entre 3 e 150 caracteres"),
+  body("diretoria_ensino_id")
+    .isInt({ min: 1 })
+    .withMessage("Diretoria de ensino invalida")
+    .toInt(),
+  body("codigo_inep")
+    .optional({ values: "falsy" })
+    .trim()
+    .matches(/^\d{8}$/)
+    .withMessage("Codigo INEP deve conter 8 digitos"),
+  body("endereco")
+    .trim()
+    .notEmpty()
+    .withMessage("Endereco e obrigatorio")
+    .isLength({ max: 255 })
+    .withMessage("Endereco muito longo"),
+  body("cidade")
+    .trim()
+    .notEmpty()
+    .withMessage("Cidade e obrigatoria")
+    .isLength({ max: 100 })
+    .withMessage("Cidade muito longa"),
+]);
+
+const cepParamValidator = withValidation([
+  param("cep")
+    .trim()
+    .matches(/^\d{8}$/)
+    .withMessage("CEP deve conter 8 digitos"),
+]);
+
 const employeeIdValidator = withValidation([
   param("id")
     .isInt({ min: 1 })
@@ -475,6 +512,8 @@ const acessoIdValidator = withValidation([
 ]);
 
 module.exports = {
+  createSchoolValidator,
+  cepParamValidator,
   createFuncionarioValidator,
   employeeIdValidator,
   updateFuncionarioValidator,

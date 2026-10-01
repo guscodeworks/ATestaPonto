@@ -15,6 +15,7 @@ function createAdminPagesRouter({ sendView }) {
   const router = Router();
   const dashboardPage = renderAdminView(sendView, "admin/dashboard.html");
   const funcionariosPage = renderAdminView(sendView, "admin/employees.html");
+  const escolasPage = renderAdminView(sendView, "admin/schools.html");
   const registrarFuncionarioPage = renderAdminView(
     sendView,
     "admin/register-employee.html"
@@ -38,6 +39,7 @@ function createAdminPagesRouter({ sendView }) {
   // Rotas alternativas/legadas mantidas por compatibilidade, apontando para a mesma view.
   router.get("/admin/funcionario", requireAdmin, funcionariosPage);
   router.get("/admin/funcionarios", requireAdmin, funcionariosPage);
+  router.get("/admin/escolas", requireAdmin, escolasPage);
   router.get(
     "/admin/funcionarios/novo",
     requireAdmin,

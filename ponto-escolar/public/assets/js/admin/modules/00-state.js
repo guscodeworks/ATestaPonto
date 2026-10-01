@@ -377,7 +377,8 @@ async function recarregarDadosAdminTela() {
   await carregarDadosAdmin({
     includeEmployees: true,
     includeToday: true,
-    includeSummary: true,
+    // /pontos/hoje já devolve RESUMO_PONTOS junto com os registros.
+    includeSummary: false,
     // O relatório só é buscado se a tabela correspondente existir no DOM,
     // evitando uma chamada de API desnecessária em telas que não a exibem.
     includeReport: Boolean(document.getElementById('tbody-relatorio')),
