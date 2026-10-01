@@ -10,38 +10,35 @@ async function withTransaction(callback) {
   return database.withTransaction(callback);
 }
 
-// Vínculo ATIVO mais recente por funcionário; LATERAL + LIMIT 1 evita duplicar linhas.
-const ACTIVE_VINCULO_LATERAL = `
-  SELECT v.cargo_id, c.cargo, v.unidade_escolar_id,
-         TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
-         TIME_FORMAT(v.horario_saida_almoco, '%H:%i:%s') AS saida_almoco,
-         TIME_FORMAT(v.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco,
-         TIME_FORMAT(v.horario_saida, '%H:%i:%s') AS saida
-  FROM vinculos_funcionais v
-  INNER JOIN cargos c ON c.id = v.cargo_id
-  WHERE v.funcionario_id = f.id AND v.status = 'ATIVO'
-  ORDER BY v.id DESC
-  LIMIT 1
+// A subconsulta correlacionada escolhe um único vínculo por funcionário sem
+// depender de LATERAL, que não é suportado por versões locais do MariaDB.
+const ACTIVE_VINCULO_JOIN = `
+  LEFT JOIN vinculos_funcionais lv ON lv.id = (
+    SELECT v.id
+    FROM vinculos_funcionais v
+    WHERE v.funcionario_id = f.id AND v.status = 'ATIVO'
+    ORDER BY v.id DESC
+    LIMIT 1
+  )
+  LEFT JOIN cargos c ON c.id = lv.cargo_id
 `;
 
 // Listagens administrativas usam o vínculo ativo para funcionários ativos e o
-// vínculo histórico mais recente para inativos. Assim o mesmo vínculo define
-// cargo, unidade visível e escopo nas consultas de lista e contagem.
-const ADMIN_LIST_VINCULO_LATERAL = `
-  SELECT v.id, v.cargo_id, c.cargo, v.unidade_escolar_id,
-         TIME_FORMAT(v.horario_entrada, '%H:%i:%s') AS entrada,
-         TIME_FORMAT(v.horario_saida_almoco, '%H:%i:%s') AS saida_almoco,
-         TIME_FORMAT(v.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco,
-         TIME_FORMAT(v.horario_saida, '%H:%i:%s') AS saida
-  FROM vinculos_funcionais v
-  INNER JOIN cargos c ON c.id = v.cargo_id
-  WHERE v.funcionario_id = f.id
-    AND (
-      (f.ativo = 1 AND v.status = 'ATIVO') OR
-      (f.ativo = 0 AND v.status <> 'ATIVO')
-    )
-  ORDER BY v.id DESC
-  LIMIT 1
+// vínculo histórico mais recente para inativos. LEFT JOIN preserva registros
+// legados ainda sem vínculo; eles continuam fora de escopos por unidade.
+const ADMIN_LIST_VINCULO_JOIN = `
+  LEFT JOIN vinculos_funcionais lv ON lv.id = (
+    SELECT v.id
+    FROM vinculos_funcionais v
+    WHERE v.funcionario_id = f.id
+      AND (
+        (f.ativo = 1 AND v.status = 'ATIVO') OR
+        (f.ativo = 0 AND v.status <> 'ATIVO')
+      )
+    ORDER BY v.id DESC
+    LIMIT 1
+  )
+  LEFT JOIN cargos c ON c.id = lv.cargo_id
 `;
 
 // null representa escopo global SEDUC; [] ou valor inválido não retorna linhas.
@@ -75,18 +72,16 @@ function buildEscopoUnidadeFilter(
 }
 
 const ADMIN_EMPLOYEE_FROM =
-  " FROM funcionarios f INNER JOIN LATERAL (" +
-  ADMIN_LIST_VINCULO_LATERAL +
-  ") lv ON TRUE";
+  " FROM funcionarios f" + ADMIN_LIST_VINCULO_JOIN;
 
 const ADMIN_EMPLOYEE_FILTERS =
-  " WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
+  " WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
 const COUNT_EMPLOYEES_QUERY =
   "SELECT COUNT(*) AS total" + ADMIN_EMPLOYEE_FROM + ADMIN_EMPLOYEE_FILTERS;
 
 const LIST_EMPLOYEES_QUERY =
-  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, lv.cargo, lv.unidade_escolar_id, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida" +
+  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, c.cargo, lv.unidade_escolar_id, TIME_FORMAT(lv.horario_entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(lv.horario_saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(lv.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(lv.horario_saida, '%H:%i:%s') AS saida" +
   ADMIN_EMPLOYEE_FROM + ADMIN_EMPLOYEE_FILTERS;
 
 // allowlist sem cargoId (jornada/cargo migraram para vinculos_funcionais).
@@ -118,27 +113,27 @@ function resolveEmployeeFilter({ ativo, cargo, q } = {}) {
 
 async function findById(employeeId, client) {
   return getClient(client).executeOne(
-    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, lv.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f LEFT JOIN LATERAL (" +
-      ACTIVE_VINCULO_LATERAL +
-      ") lv ON TRUE LEFT JOIN cargos c ON c.id = lv.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
+    "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, lv.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f" +
+      ACTIVE_VINCULO_JOIN +
+      " LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
     [employeeId]
   );
 }
 
 async function findAdminEmployeeById(employeeId, vinculoId, client) {
   return getClient(client).executeOne(
-    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
-      ADMIN_LIST_VINCULO_LATERAL +
-      ") lv ON TRUE WHERE f.id = ? AND lv.id = ? LIMIT 1",
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, c.cargo, TIME_FORMAT(lv.horario_entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(lv.horario_saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(lv.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(lv.horario_saida, '%H:%i:%s') AS saida FROM funcionarios f" +
+      ADMIN_LIST_VINCULO_JOIN +
+      " WHERE f.id = ? AND lv.id = ? LIMIT 1",
     [employeeId, vinculoId]
   );
 }
 
 async function findAdminEmployeeByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
-    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
-      ACTIVE_VINCULO_LATERAL +
-      ") lv ON TRUE WHERE f.id = ? LIMIT 1 FOR UPDATE",
+    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, c.cargo, TIME_FORMAT(lv.horario_entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(lv.horario_saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(lv.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(lv.horario_saida, '%H:%i:%s') AS saida FROM funcionarios f" +
+      ACTIVE_VINCULO_JOIN +
+      " WHERE f.id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
@@ -161,9 +156,9 @@ async function findForPunchRegisterByIdForUpdate(client, employeeId) {
 
 async function findForPunchDashboardById(employeeId) {
   return database.executeOne(
-    "SELECT f.id, f.nome, f.ativo, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
-      ACTIVE_VINCULO_LATERAL +
-      ") lv ON TRUE WHERE f.id = ? LIMIT 1",
+    "SELECT f.id, f.nome, f.ativo, c.cargo, TIME_FORMAT(lv.horario_entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(lv.horario_saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(lv.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(lv.horario_saida, '%H:%i:%s') AS saida FROM funcionarios f" +
+      ACTIVE_VINCULO_JOIN +
+      " WHERE f.id = ? LIMIT 1",
     [employeeId]
   );
 }
@@ -301,9 +296,9 @@ async function listEmployees({ ativo, cargo, q, limit, offset } = {}, escopoUnid
 async function listForPointReport(escopoUnidades = []) {
   const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.execute(
-    "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id, lv.unidade_escolar_id FROM funcionarios f LEFT JOIN LATERAL (" +
-      "SELECT v.cargo_id, v.unidade_escolar_id FROM vinculos_funcionais v WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1" +
-      ") lv ON TRUE WHERE 1=1 " + clause + " ORDER BY f.nome ASC",
+    "SELECT f.id, f.nome, f.email, f.cpf, f.ativo, lv.cargo_id, lv.unidade_escolar_id FROM funcionarios f" +
+      ACTIVE_VINCULO_JOIN +
+      " WHERE 1=1 " + clause + " ORDER BY f.nome ASC",
     params
   );
 }
