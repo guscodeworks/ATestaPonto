@@ -348,6 +348,16 @@ const mailFrom = mailEnabled
   ? getRequiredVar("MAIL_FROM")
   : getOptionalVar("MAIL_FROM", "Atesta Ponto <atestaponto@gmail.com>");
 const appBaseUrl = getOptionalUrl("APP_BASE_URL", "http://127.0.0.1:3000");
+const brasilApiCepBaseUrl = getOptionalUrl(
+  "BRASIL_API_CEP_BASE_URL",
+  "https://brasilapi.com.br/api"
+).replace(/\/$/, "");
+const brasilApiCepTimeoutMs = parseInteger(
+  getOptionalVar("BRASIL_API_CEP_TIMEOUT_MS", "5000"),
+  "BRASIL_API_CEP_TIMEOUT_MS",
+  500,
+  15000
+);
 
 // Os dois segredos protegem mecanismos de autenticação diferentes (JWT e
 // sessão); reutilizar o mesmo valor reduziria a segurança caso um dos
@@ -460,6 +470,8 @@ const env = {
   SMTP_PASS: smtpPass,
   MAIL_FROM: mailFrom,
   APP_BASE_URL: appBaseUrl,
+  BRASIL_API_CEP_BASE_URL: brasilApiCepBaseUrl,
+  BRASIL_API_CEP_TIMEOUT_MS: brasilApiCepTimeoutMs,
   BCRYPT_SALT_ROUNDS: parseInteger(
     getOptionalVar("BCRYPT_SALT_ROUNDS", "12"),
     "BCRYPT_SALT_ROUNDS",

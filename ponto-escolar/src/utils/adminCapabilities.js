@@ -19,6 +19,11 @@ const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
   "cargo.listar",
 ]);
 
+const CAPACIDADES_GESTAO_ESCOLAR = Object.freeze([
+  "escola.listar",
+  "escola.criar",
+]);
+
 const CAPACIDADES_SECRETARIA = Object.freeze([
   "funcionario.listar",
   "funcionario.visualizar",
@@ -59,8 +64,8 @@ const CAPACIDADES_SECRETARIA_COM_QR = Object.freeze([
 
 // QR é administrado apenas por perfis escolares com uma unidade própria.
 const CAPACIDADES_POR_PERFIL = Object.freeze({
-  ADMIN_SEDUC: CAPACIDADES_ADMINISTRATIVAS,
-  ADMIN_DIRETORIA: CAPACIDADES_ADMINISTRATIVAS,
+  ADMIN_SEDUC: [...CAPACIDADES_ADMINISTRATIVAS, ...CAPACIDADES_GESTAO_ESCOLAR],
+  ADMIN_DIRETORIA: [...CAPACIDADES_ADMINISTRATIVAS, ...CAPACIDADES_GESTAO_ESCOLAR],
   DIRETOR: CAPACIDADES_DIRECAO,
   VICE_DIRETOR: CAPACIDADES_DIRECAO,
   SECRETARIA: CAPACIDADES_SECRETARIA_COM_QR,

@@ -5,6 +5,7 @@ const { env } = require('../config/env');
 const { buildRedisKeyPrefix, getRedisClient } = require('../config/redis');
 
 const KEY_PREFIX = buildRedisKeyPrefix('gov', 'pending-authorize');
+const localPendingAuthorizations = new Map();
 
 function buildKey(id) {
   if (typeof id !== 'string' || !id) {
@@ -34,16 +35,41 @@ async function savePendingAuthorizeRequest(id, request) {
     codeChallengeMethod: request.codeChallengeMethod,
     expiresAt: Date.now() + ttlMs,
   };
-  await getRedisClient().set(buildKey(id), JSON.stringify(record), { px: ttlMs });
+  if (env.redisEnabled) {
+    await getRedisClient().set(buildKey(id), JSON.stringify(record), { px: ttlMs });
+    return;
+  }
+
+  for (const [key, pending] of localPendingAuthorizations) {
+    if (pending.expiresAt <= Date.now()) localPendingAuthorizations.delete(key);
+  }
+  localPendingAuthorizations.set(buildKey(id), record);
 }
 
 async function getPendingAuthorizeRequest(id) {
-  return deserialize(await getRedisClient().get(buildKey(id)));
+  const key = buildKey(id);
+  if (env.redisEnabled) {
+    return deserialize(await getRedisClient().get(key));
+  }
+
+  const record = localPendingAuthorizations.get(key);
+  if (record && record.expiresAt <= Date.now()) {
+    localPendingAuthorizations.delete(key);
+    return null;
+  }
+  return deserialize(record || null);
 }
 
 async function consumePendingAuthorizeRequest(id) {
+  const key = buildKey(id);
+  if (!env.redisEnabled) {
+    const record = localPendingAuthorizations.get(key);
+    localPendingAuthorizations.delete(key);
+    return deserialize(record || null);
+  }
+
   // GETDEL é atômico entre processos; nunca separar leitura e remoção.
-  return deserialize(await getRedisClient().getdel(buildKey(id)));
+  return deserialize(await getRedisClient().getdel(key));
 }
 
 module.exports = {

@@ -6,8 +6,8 @@ function getClient(client) {
   return client || database;
 }
 
-// A geolocalização da batida reside em unidades_escolares (lat/lng/raio_permitido_metros),
-// por unidade — antes vinha de env vars globais. Model só de leitura.
+// SQL e acesso às unidades escolares. A geolocalização da batida reside
+// nesta tabela por unidade — antes vinha de env vars globais.
 
 // Colunas básicas; `ue.` qualifica para JOINs sem ambiguidade.
 const UNIDADE_SELECT = `
@@ -68,10 +68,48 @@ async function list({ ativa } = {}, client) {
 }
 
 // Escolas vinculadas a uma diretoria de ensino.
-async function findByDiretoriaId(educationDepartmentId, client) {
+async function findByDiretoriaId(educationDepartmentId, { ativa } = {}, client) {
+  const whereAtiva = ativa === true || ativa === false ? " AND ue.ativa = ?" : "";
+  const params = [educationDepartmentId];
+  if (whereAtiva) params.push(ativa ? 1 : 0);
   return getClient(client).execute(
-    `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ue.diretoria_ensino_id = ? ORDER BY ue.nome ASC`,
-    [educationDepartmentId]
+    `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ue.diretoria_ensino_id = ?${whereAtiva} ORDER BY ue.nome ASC`,
+    params
+  );
+}
+
+async function listByDiretoriaIds(diretoriaIds, { ativa } = {}, client) {
+  if (!Array.isArray(diretoriaIds) || diretoriaIds.length === 0) return [];
+  const ids = [...new Set(diretoriaIds.map(Number))];
+  if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) return [];
+  const where = [`ue.diretoria_ensino_id IN (${ids.map(() => "?").join(",")})`];
+  const params = [...ids];
+  if (ativa === true || ativa === false) {
+    where.push("ue.ativa = ?");
+    params.push(ativa ? 1 : 0);
+  }
+  return getClient(client).execute(
+    `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ${where.join(" AND ")} ORDER BY ue.nome ASC`,
+    params
+  );
+}
+
+async function create(client, escola) {
+  return getClient(client).execute(
+    `INSERT INTO unidades_escolares
+      (diretoria_ensino_id, nome, latitude, longitude, raio_permitido_metros, ativa, codigo_inep, endereco, cidade)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      escola.diretoria_ensino_id,
+      escola.nome,
+      escola.latitude,
+      escola.longitude,
+      escola.raio_permitido_metros,
+      escola.ativa ? 1 : 0,
+      escola.codigo_inep,
+      escola.endereco,
+      escola.cidade,
+    ]
   );
 }
 
@@ -99,5 +137,7 @@ module.exports = {
   findGeolocationByVinculo,
   list,
   findByDiretoriaId,
+  listByDiretoriaIds,
+  create,
   listForEmployeeRegistration,
 };
