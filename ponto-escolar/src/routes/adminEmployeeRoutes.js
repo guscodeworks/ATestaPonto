@@ -17,44 +17,59 @@ const {
   paginationValidator,
 } = require("../middlewares/validators");
 const {
-  escopoMiddleware,
-  restringirEscopoFuncionario,
-  restringirEscopoFuncionarioReativacao,
-  restringirEscopoUnidadeDoBody,
+  escopoPorCapacidade,
+  restringirCapacidadeFuncionario,
+  restringirCapacidadeFuncionarioReativacao,
+  restringirCapacidadeUnidadeDoBody,
 } = require("../middlewares/adminScope");
 
 const router = Router();
 
-router.use(escopoMiddleware);
+router.get(
+  "/",
+  escopoPorCapacidade("funcionario.listar"),
+  paginationValidator,
+  listEmployees
+);
+router.get(
+  "/:id",
+  employeeIdValidator,
+  restringirCapacidadeFuncionario("funcionario.visualizar", "id"),
+  getEmployee
+);
 
-router.get("/", paginationValidator, listEmployees);
-router.get("/:id", employeeIdValidator, restringirEscopoFuncionario("id"), getEmployee);
 router.post(
   "/",
   sensitiveLimiter,
   createFuncionarioValidator,
-  restringirEscopoUnidadeDoBody("unidade_escolar_id"),
+  restringirCapacidadeUnidadeDoBody(
+    "funcionario.criar",
+    "unidade_escolar_id"
+  ),
   createEmployee
 );
 router.patch(
   "/:id",
   sensitiveLimiter,
   updateFuncionarioValidator,
-  restringirEscopoFuncionario("id"),
+  restringirCapacidadeFuncionario("funcionario.editar", "id"),
   updateEmployee
 );
 router.patch(
   "/:id/desativar",
   sensitiveLimiter,
   deactivateEmployeeValidator,
-  restringirEscopoFuncionario("id"),
+  restringirCapacidadeFuncionario("funcionario.desativar", "id"),
   deactivateEmployee
 );
 router.patch(
   "/:id/reativar",
   sensitiveLimiter,
   reactivateEmployeeValidator,
-  restringirEscopoFuncionarioReativacao("id"),
+  restringirCapacidadeFuncionarioReativacao(
+    "funcionario.reativar",
+    "id"
+  ),
   reactivateEmployee
 );
 

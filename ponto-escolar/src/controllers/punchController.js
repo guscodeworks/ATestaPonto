@@ -7,6 +7,7 @@ async function loginFuncionario(req, res, next) {
   try {
     const result = await punchService.loginFuncionario(req.body, {
       ipOrigem: getClientIp(req),
+      unidadeEscolarIdQr: req.qrSchoolUnit?.unidade_escolar_id,
     });
 
     return res.status(200).json({

@@ -16,8 +16,12 @@ function renderizarUltimosRegistros() {
     if (cardsMobile) cardsMobile.innerHTML = state;
     return;
   }
-  // Mostra apenas os 5 registros mais recentes, do mais novo para o mais antigo.
-  const lista = PONTOS_HOJE.slice(-5).reverse();
+  // Ordena pelo horário da última batida, não pela ordem de funcionários da API.
+  const lista = PONTOS_HOJE
+    .map((ponto, indice) => ({ ponto, indice, instante: obterInstanteUltimaBatida(ponto) }))
+    .sort((a, b) => b.instante - a.instante || a.indice - b.indice)
+    .slice(0, 5)
+    .map(({ ponto }) => ponto);
 
   if (tbody && !lista.length) {
     tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
@@ -70,6 +74,27 @@ function renderizarUltimosRegistros() {
       `;
     }).join('') : `<div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div>`;
   }
+}
+
+function obterInstanteUltimaBatida(ponto) {
+  const registros = Array.isArray(ponto.raw?.registros) ? ponto.raw.registros : [];
+  const instanteRegistro = registros.reduce((maisRecente, registro) => {
+    const valor = String(registro?.registrado_em || "").replace(" ", "T");
+    const instante = Date.parse(valor);
+    return Number.isFinite(instante) ? Math.max(maisRecente, instante) : maisRecente;
+  }, 0);
+  if (instanteRegistro) return instanteRegistro;
+
+  const horario = String(
+    ponto.raw?.saida || ponto.raw?.entrada || ponto.saida || ponto.entrada || ""
+  );
+  const instanteCompleto = Date.parse(horario.replace(" ", "T"));
+  if (Number.isFinite(instanteCompleto)) return instanteCompleto;
+
+  const hora = horario.match(/^(\d{2}):(\d{2})(?::(\d{2}))?/);
+  if (!hora) return 0;
+  const data = DATA_REFERENCIA_PONTOS || new Date().toISOString().slice(0, 10);
+  return Date.parse(`${data}T${hora[1]}:${hora[2]}:${hora[3] || "00"}`) || 0;
 }
 
 /* ============================================================

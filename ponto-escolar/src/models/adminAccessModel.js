@@ -83,8 +83,12 @@ async function updateStatus(acessoId, novoStatus, client) {
 // WHERE de escopo p/ listagens: SEDUC não filtra; demais perfis veem só acessos
 // cuja diretoria ou unidade está no seu escopo. Retorna { clause, params }.
 function buildEscopoFilter(escopo, escopoUnidades) {
-  if (!escopo || !escopo.temAcesso || escopo.isSeduc) {
+  if (escopo && escopo.temAcesso && escopo.isSeduc) {
     return { clause: "", params: [] };
+  }
+
+  if (!escopo || !escopo.temAcesso) {
+    return { clause: " WHERE 1=0", params: [] };
   }
 
   const diretorias = [...(escopo.diretoriasPermitidas || [])];
@@ -124,7 +128,7 @@ async function listAcessos({ escopo, escopoUnidades, limit, offset } = {}, clien
     `SELECT ${ACESSO_DETAIL_SELECT} ${ACESSO_DETAIL_JOINS}${clause}
      ORDER BY aa.criado_em DESC, aa.id DESC
      LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
+    [...params, String(Number(limit)), String(Number(offset))]
   );
 }
 

@@ -1,32 +1,25 @@
 const { Router } = require("express");
 const {
-  generateQrShortcut,
-  listQrShortcuts,
-  deactivateQrShortcut,
-  validateQrShortcut,
+  getCurrentQr,
+  generateQr,
 } = require("../controllers/adminQrController");
 const { sensitiveLimiter } = require("../middlewares/rateLimiters");
 const {
-  qrShortcutIdParamValidator,
-  validateQrShortcutValidator,
-  paginationValidator,
-} = require("../middlewares/validators");
+  restringirCapacidadeQrUnidade,
+} = require("../middlewares/adminScope");
 
 const router = Router();
 
-router.get("/", paginationValidator, listQrShortcuts);
-router.post("/", sensitiveLimiter, generateQrShortcut);
-router.patch(
-  "/:id/desativar",
-  sensitiveLimiter,
-  qrShortcutIdParamValidator,
-  deactivateQrShortcut
+router.get(
+  "/",
+  restringirCapacidadeQrUnidade("qr.visualizar"),
+  getCurrentQr
 );
 router.post(
-  "/validar",
+  "/",
   sensitiveLimiter,
-  validateQrShortcutValidator,
-  validateQrShortcut
+  restringirCapacidadeQrUnidade("qr.gerar"),
+  generateQr
 );
 
 module.exports = router;

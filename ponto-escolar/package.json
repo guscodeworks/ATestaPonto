@@ -12,6 +12,7 @@
     "start:govbr": "npm --prefix ../gov.br-fake start",
     "dev": "concurrently -n PONTO,GOVBR \"npm run start:ponto\" \"npm run start:govbr\"",
     "build:client": "node src/scripts/buildClientBundles.js",
+    "check:public-assets": "node src/scripts/checkPublicAssetSizes.js",
     "db:init": "node src/scripts/initDatabase.js",
     "db:run": "node src/scripts/runSqlFile.js",
     "mvc:check": "node src/scripts/checkMvcBoundaries.js",
@@ -31,7 +32,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.22.5",
-    "nodemailer": "^9.0.3",
+    "nodemailer": "^10.0.13",
     "path": "^0.12.7",
     "qrcode": "^1.5.4"
   },

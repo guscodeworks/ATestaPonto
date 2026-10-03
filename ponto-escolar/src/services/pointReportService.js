@@ -173,7 +173,7 @@ function buildSummary(summaries) {
 }
 
 // Visão diária nasce em memória (não altera registros durante a consulta).
-async function buildDailySnapshot(date, escopoUnidades = null) {
+async function buildDailySnapshot(date, escopoUnidades = []) {
   const employees = await employeeModel.listForPointReport(escopoUnidades);
   const punchRows = await pointModel.listRowsByDate(date);
   const vinculoToFuncionario = await resolveVinculoToFuncionario(
@@ -204,7 +204,7 @@ async function buildDailySnapshot(date, escopoUnidades = null) {
   };
 }
 
-async function getTodayPoints({ data } = {}, escopoUnidades = null) {
+async function getTodayPoints({ data } = {}, escopoUnidades = []) {
   const date = resolveReportDate(data);
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
@@ -216,7 +216,7 @@ async function getTodayPoints({ data } = {}, escopoUnidades = null) {
   };
 }
 
-async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades = null) {
+async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades = []) {
   const date = resolveReportDate(data);
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
 
@@ -235,7 +235,7 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades =
   };
 }
 
-async function getDashboardSummary(escopoUnidades = null) {
+async function getDashboardSummary(escopoUnidades = []) {
   const date = getTodayDateInSaoPaulo();
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
 

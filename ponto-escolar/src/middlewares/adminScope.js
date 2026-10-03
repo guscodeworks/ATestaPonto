@@ -1,8 +1,11 @@
 "use strict";
 
-const { ForbiddenError } = require("../utils/errors");
+const { ConflictError, ForbiddenError } = require("../utils/errors");
 const employmentLinkModel = require("../models/employmentLinkModel");
 const schoolUnitModel = require("../models/schoolUnitModel");
+const {
+  filtrarAcessosPorCapacidade,
+} = require("../utils/adminCapabilities");
 
 // Escopo por perfil: só este módulo interpreta perfis; demais camadas recebem ids ou null (SEDUC).
 
@@ -150,10 +153,10 @@ function recursoNoEscopo(escopo, { educationDepartmentId, schoolUnitId } = {}) {
   return false;
 }
 
-// Expande diretorias → unidades. null = sem filtro (SEDUC); [] = nenhuma permitida.
+// Expande diretorias → unidades. null = escopo global SEDUC; [] = nenhuma permitida.
 async function expandirUnidadesPermitidas(escopo) {
   if (!escopo || !escopo.temAcesso) {
-    return null;
+    return [];
   }
   if (escopo.isSeduc) {
     return null;
@@ -162,15 +165,11 @@ async function expandirUnidadesPermitidas(escopo) {
   const permitidas = new Set(escopo.unidadesPermitidas);
 
   for (const diretoriaId of escopo.diretoriasPermitidas) {
-    try {
-      const unidades = await schoolUnitModel.findByDiretoriaId(diretoriaId);
-      for (const unidade of unidades || []) {
-        if (unidade && Number.isInteger(Number(unidade.id))) {
-          permitidas.add(Number(unidade.id));
-        }
+    const unidades = await schoolUnitModel.findByDiretoriaId(diretoriaId);
+    for (const unidade of unidades || []) {
+      if (unidade && Number.isInteger(Number(unidade.id))) {
+        permitidas.add(Number(unidade.id));
       }
-    } catch (_error) {
-      // Falha em uma diretoria não invalida as demais permissões.
     }
   }
 
@@ -189,7 +188,7 @@ async function escopoMiddleware(req, _res, next) {
 
   req.escopo = escopo;
 
-  // Pré-computa unidades permitidas para filtros em listagens (null = sem filtro).
+  // Pré-computa unidades permitidas (null só para SEDUC; [] não retorna linhas).
   try {
     req.escopoUnidades = await expandirUnidadesPermitidas(escopo);
   } catch (error) {
@@ -199,6 +198,238 @@ async function escopoMiddleware(req, _res, next) {
   }
 
   return next();
+}
+
+// Popula o escopo de uma colecao somente com acessos que possuem a capacidade.
+function escopoPorCapacidade(capacidade) {
+  return async function (req, _res, next) {
+    const acessosAutorizadores = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    );
+
+    if (acessosAutorizadores.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    const escopo = buildEscopo(acessosAutorizadores);
+    if (!escopo.temAcesso) {
+      return next(new ForbiddenError("Escopo administrativo invalido"));
+    }
+
+    try {
+      req.escopoUnidades = await expandirUnidadesPermitidas(escopo);
+    } catch (error) {
+      return next(new ForbiddenError("Falha ao resolver escopo administrativo"));
+    }
+
+    req.acessosAutorizadores = acessosAutorizadores;
+    req.escopo = escopo;
+    return next();
+  };
+}
+
+// Exige somente a capacidade; útil para recursos sem escopo territorial.
+function exigirCapacidade(capacidade) {
+  return function (req, _res, next) {
+    const acessosAutorizadores = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    );
+
+    if (acessosAutorizadores.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    req.acessosAutorizadores = acessosAutorizadores;
+    return next();
+  };
+}
+
+// QR sempre pertence à unidade do mesmo acesso que oferece a capacidade.
+// Várias unidades elegíveis não são escolhidas implicitamente: o cliente deve
+// resolver a ambiguidade em um fluxo posterior.
+function restringirCapacidadeQrUnidade(capacidade) {
+  return function (req, _res, next) {
+    const candidatos = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    )
+      .map((acesso) => {
+        const unidadeEscolarId = Number(acesso.unidade_escolar_id);
+        const escopoDoAcesso = buildEscopo([acesso]);
+        if (
+          !Number.isInteger(unidadeEscolarId) ||
+          unidadeEscolarId < 1 ||
+          !escopoDoAcesso.temAcesso ||
+          !escopoDoAcesso.unidadesPermitidas.has(unidadeEscolarId)
+        ) {
+          return null;
+        }
+
+        return { acesso, unidadeEscolarId };
+      })
+      .filter(Boolean);
+
+    if (candidatos.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    const unidadesElegiveis = [
+      ...new Set(candidatos.map(({ unidadeEscolarId }) => unidadeEscolarId)),
+    ].sort((a, b) => a - b);
+    if (unidadesElegiveis.length !== 1) {
+      return next(
+        new ConflictError(
+          "Operacao de QR ambigua: mais de uma unidade escolar elegivel",
+          { unidades_escolares_ids: unidadesElegiveis }
+        )
+      );
+    }
+
+    candidatos.sort(
+      (a, b) => Number(a.acesso.id) - Number(b.acesso.id)
+    );
+    req.acessoAutorizador = candidatos[0].acesso;
+    req.unidadeEscolarId = unidadesElegiveis[0];
+    return next();
+  };
+}
+
+function encontrarAcessoAutorizador(acessos, recurso) {
+  return acessos.find((acesso) =>
+    recursoNoEscopo(buildEscopo([acesso]), recurso)
+  );
+}
+
+function restringirCapacidadeFuncionarioPorVinculo(
+  capacidade,
+  paramName,
+  carregarVinculo,
+  mensagemSemVinculo
+) {
+  return async function (req, _res, next) {
+    const acessosAutorizadores = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    );
+
+    if (acessosAutorizadores.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    const funcionarioId = Number(req.params[paramName]);
+    if (!Number.isInteger(funcionarioId) || funcionarioId <= 0) {
+      return next(new ForbiddenError("Identificador de funcionario invalido"));
+    }
+
+    let vinculo;
+    try {
+      vinculo = await carregarVinculo(funcionarioId);
+    } catch (error) {
+      return next(new ForbiddenError("Falha ao validar escopo do funcionario"));
+    }
+
+    if (!vinculo) {
+      return next(new ForbiddenError(mensagemSemVinculo));
+    }
+
+    const acessoAutorizador = encontrarAcessoAutorizador(
+      acessosAutorizadores,
+      {
+        schoolUnitId: vinculo.unidade_escolar_id,
+        educationDepartmentId: vinculo.diretoria_ensino_id,
+      }
+    );
+
+    if (!acessoAutorizador) {
+      return next(
+        new ForbiddenError("Funcionario fora do escopo do administrador")
+      );
+    }
+
+    req.acessosAutorizadores = acessosAutorizadores;
+    req.acessoAutorizador = acessoAutorizador;
+    return next();
+  };
+}
+
+// Autoriza um funcionario quando o mesmo acesso possui capacidade e cobre seu vinculo ativo real.
+function restringirCapacidadeFuncionario(capacidade, paramName = "id") {
+  return restringirCapacidadeFuncionarioPorVinculo(
+    capacidade,
+    paramName,
+    (funcionarioId) =>
+      employmentLinkModel.findActiveByFuncionarioIdWithDetails(funcionarioId),
+    "Funcionario sem vinculo ativo visivel ao escopo do administrador"
+  );
+}
+
+// Autoriza reativacao pelo vinculo mais recente, que pode estar encerrado.
+function restringirCapacidadeFuncionarioReativacao(
+  capacidade,
+  paramName = "id"
+) {
+  return restringirCapacidadeFuncionarioPorVinculo(
+    capacidade,
+    paramName,
+    (funcionarioId) =>
+      employmentLinkModel.findLatestByFuncionarioIdWithDetails(funcionarioId),
+    "Funcionario sem vinculo para definir escopo de reativacao (pendencia)"
+  );
+}
+
+// Resolve a unidade recebida no backend e exige capacidade + escopo no mesmo acesso.
+function restringirCapacidadeUnidadeDoBody(
+  capacidade,
+  field = "unidade_escolar_id"
+) {
+  return async function (req, _res, next) {
+    const acessosAutorizadores = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    );
+
+    if (acessosAutorizadores.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    const unidadeId = Number(req.body && req.body[field]);
+    if (!Number.isInteger(unidadeId) || unidadeId <= 0) {
+      return next(new ForbiddenError("Unidade escolar nao informada"));
+    }
+
+    let unidade;
+    try {
+      unidade = await schoolUnitModel.findById(unidadeId);
+    } catch (error) {
+      return next(
+        new ForbiddenError("Falha ao validar escopo da unidade escolar")
+      );
+    }
+
+    if (!unidade) {
+      return next(new ForbiddenError("Unidade escolar nao encontrada"));
+    }
+
+    const acessoAutorizador = encontrarAcessoAutorizador(
+      acessosAutorizadores,
+      {
+        schoolUnitId: unidade.id,
+        educationDepartmentId: unidade.diretoria_ensino_id,
+      }
+    );
+
+    if (!acessoAutorizador) {
+      return next(
+        new ForbiddenError("Unidade escolar fora do escopo do administrador")
+      );
+    }
+
+    req.acessosAutorizadores = acessosAutorizadores;
+    req.acessoAutorizador = acessoAutorizador;
+    return next();
+  };
 }
 
 // Valida escopo via vínculo ativo do funcionário (resolvido no backend).
@@ -374,6 +605,12 @@ module.exports = {
   recursoNoEscopo,
   expandirUnidadesPermitidas,
   escopoMiddleware,
+  escopoPorCapacidade,
+  exigirCapacidade,
+  restringirCapacidadeQrUnidade,
+  restringirCapacidadeFuncionario,
+  restringirCapacidadeFuncionarioReativacao,
+  restringirCapacidadeUnidadeDoBody,
   restringirEscopoFuncionario,
   restringirEscopoUnidadeDoBody,
   restringirEscopoFuncionarioReativacao,

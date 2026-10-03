@@ -21,14 +21,23 @@ const commonDemoUser = new FakeUser({
   email: 'usuario.demo@govbr.fake'
 });
 
+// Identidades exclusivamente locais para os cenários de autorização do
+// ponto-escolar. O perfil administrativo continua sendo resolvido pelo banco
+// da aplicação principal; o simulador entrega somente a identidade Gov.br.
+const localAdministrativeTestUsers = Object.freeze(
+  env.localAdministrativeUsers.map((user) => new FakeUser(user))
+);
+
 const fakeUsers = Object.freeze([
   // Usuário "admin" configurável via variáveis de ambiente, permitindo customizar
   // as credenciais de demonstração por ambiente (dev, staging, etc.) sem alterar o código.
   configurableAdminUser,
+  ...localAdministrativeTestUsers,
   commonDemoUser
 ]);
 
 module.exports = {
   fakeUsers,
-  configurableAdminUser
+  configurableAdminUser,
+  localAdministrativeTestUsers
 };

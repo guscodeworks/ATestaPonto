@@ -101,7 +101,7 @@ html::-webkit-scrollbar {
   body {
     min-height: 100vh;
     background:
-      url("background-mobile.png")
+      url("/assets/img/background-mobile.webp")
       center center / cover
       no-repeat fixed;
   }
@@ -113,7 +113,7 @@ html::-webkit-scrollbar {
   body {
     align-items: center;
     padding: 40px 20px;
-    background: url("background-desktop.png") center center / cover no-repeat fixed;
+    background: url("/assets/img/background-desktop.webp") center center / cover no-repeat fixed;
   }
 
   .logo-desktop {

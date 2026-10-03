@@ -11,6 +11,7 @@ const CLEAN_ROUTES_COMPATIBLE_WITH_HTML_SUFFIX = new Set([
   "/admin/dashboard",
   "/admin/funcionario",
   "/admin/funcionarios",
+  "/admin/escolas",
   "/admin/funcionarios/novo",
   "/admin/pontos",
   "/admin/pontos-do-dia",
