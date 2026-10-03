@@ -278,23 +278,16 @@ function mapSchoolUnit(linha) {
     diretoria_ensino_nome: linha.diretoria_ensino_nome,
     nome: linha.nome,
     codigo_inep: linha.codigo_inep,
-    cep: linha.cep,
-    logradouro: linha.endereco,
-    numero: linha.numero,
-    bairro: linha.bairro,
+    endereco: linha.endereco,
     cidade: linha.cidade,
-    uf: linha.uf,
-    cep_verificado: Boolean(linha.cep_verificado),
     latitude: linha.latitude === null ? null : Number(linha.latitude),
     longitude: linha.longitude === null ? null : Number(linha.longitude),
-    origem_coordenadas: linha.origem_coordenadas,
     raio_permitido_metros: Number(linha.raio_permitido_metros),
     ativa: Boolean(linha.ativa),
     criado_em: linha.criado_em,
     atualizado_em: linha.atualizado_em,
   };
 }
-
 // contexto: { adminId, ipOrigem, acessos } — `acessos` vem de req.acessos.
 async function createSchoolUnit(payload, contexto = {}) {
   const dados = normalizarEntrada(payload);
@@ -338,22 +331,24 @@ async function createSchoolUnit(payload, contexto = {}) {
       throw new ConflictError("Ja existe escola com este nome na diretoria de ensino");
     }
 
-    const resultado = await schoolUnitModel.createSchoolUnit(tx, {
-      diretoriaEnsinoId: dados.diretoriaEnsinoId,
-      nome: dados.nome,
-      codigoInep: dados.codigoInep,
-      cep: dados.cep,
-      logradouro: final.logradouro,
-      numero: dados.numero,
-      bairro: final.bairro,
-      cidade: final.cidade,
-      uf: final.uf,
-      cepVerificado: final.cepVerificado,
-      latitude: final.latitude,
-      longitude: final.longitude,
-      origemCoordenadas: final.origemCoordenadas,
-      raioPermitidoMetros: dados.raioPermitidoMetros,
-    });
+    const endereco = [
+  final.logradouro,
+  dados.numero,
+  final.bairro,
+]
+  .filter(Boolean)
+  .join(", ");
+
+const resultado = await schoolUnitModel.createSchoolUnit(tx, {
+  diretoriaEnsinoId: dados.diretoriaEnsinoId,
+  nome: dados.nome,
+  codigoInep: dados.codigoInep,
+  endereco,
+  cidade: final.cidade,
+  latitude: final.latitude,
+  longitude: final.longitude,
+  raioPermitidoMetros: dados.raioPermitidoMetros,
+});
     return Number(resultado.insertId);
   });
 

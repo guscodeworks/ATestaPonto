@@ -100,11 +100,10 @@ async function listForEmployeeRegistration(escopoUnidades = []) {
 
 const UNIDADE_ADMIN_SELECT = `
   ue.id, ue.diretoria_ensino_id, de.nome AS diretoria_ensino_nome, ue.nome,
-  ue.codigo_inep, ue.cep, ue.endereco, ue.numero, ue.bairro, ue.cidade, ue.uf,
-  ue.cep_verificado, ue.latitude, ue.longitude, ue.origem_coordenadas,
-  ue.raio_permitido_metros, ue.ativa, ue.criado_em, ue.atualizado_em
+  ue.codigo_inep, ue.endereco, ue.cidade,
+  ue.latitude, ue.longitude, ue.raio_permitido_metros,
+  ue.ativa, ue.criado_em, ue.atualizado_em
 `;
-
 const UNIDADE_ADMIN_FROM = `
   FROM unidades_escolares ue
   INNER JOIN diretorias_ensino de ON de.id = ue.diretoria_ensino_id
@@ -139,24 +138,17 @@ async function findByNomeNaDiretoria(client, diretoriaId, nome) {
 async function createSchoolUnit(client, dados) {
   return getClient(client).execute(
     `INSERT INTO unidades_escolares
-      (diretoria_ensino_id, nome, codigo_inep, cep, endereco, numero, bairro,
-       cidade, uf, cep_verificado, latitude, longitude, origem_coordenadas,
-       raio_permitido_metros)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (diretoria_ensino_id, nome, codigo_inep, endereco, cidade,
+       latitude, longitude, raio_permitido_metros)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       dados.diretoriaEnsinoId,
       dados.nome,
       dados.codigoInep,
-      dados.cep,
-      dados.logradouro,
-      dados.numero,
-      dados.bairro,
+      dados.endereco,
       dados.cidade,
-      dados.uf,
-      dados.cepVerificado ? 1 : 0,
       dados.latitude,
       dados.longitude,
-      dados.origemCoordenadas,
       dados.raioPermitidoMetros,
     ]
   );
