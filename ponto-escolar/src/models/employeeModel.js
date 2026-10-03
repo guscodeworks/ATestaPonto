@@ -1,5 +1,3 @@
-"use strict";
-
 const database = require("../config/database");
 
 function getClient(client) {
@@ -47,7 +45,7 @@ const ADMIN_LIST_VINCULO_LATERAL = `
 // null representa escopo global SEDUC; [] ou valor inválido não retorna linhas.
 function buildEscopoUnidadeFilter(
   unidadesPermitidas,
-  unitColumn = "lv.unidade_escolar_id"
+  unitColumn = "lvf.unidade_escolar_id"
 ) {
   if (unidadesPermitidas === null) {
     return { clause: "", params: [] };
@@ -74,21 +72,31 @@ function buildEscopoUnidadeFilter(
   };
 }
 
-const ADMIN_EMPLOYEE_FROM =
-  " FROM funcionarios f INNER JOIN LATERAL (" +
-  ADMIN_LIST_VINCULO_LATERAL +
-  ") lv ON TRUE";
+const ADMIN_EMPLOYEE_FROM = `
+ FROM funcionarios f
+ LEFT JOIN vinculos_funcionais lvf
+   ON lvf.id = (
+     SELECT v2.id
+     FROM vinculos_funcionais v2
+     WHERE v2.funcionario_id = f.id
+       AND (
+         (f.ativo = 1 AND v2.status = 'ATIVO') OR
+         (f.ativo = 0 AND v2.status <> 'ATIVO')
+       )
+     ORDER BY v2.id DESC
+     LIMIT 1
+   )
+ LEFT JOIN cargos c ON c.id = lvf.cargo_id`;
 
 const ADMIN_EMPLOYEE_FILTERS =
-  " WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR lv.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
+  " WHERE (? IS NULL OR f.ativo = ?) AND (? = '' OR c.cargo = ?) AND (? = '' OR (f.nome LIKE CONCAT('%', ?, '%') OR f.cpf LIKE CONCAT('%', ?, '%')))";
 
 const COUNT_EMPLOYEES_QUERY =
   "SELECT COUNT(*) AS total" + ADMIN_EMPLOYEE_FROM + ADMIN_EMPLOYEE_FILTERS;
 
 const LIST_EMPLOYEES_QUERY =
-  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, lv.cargo_id, lv.cargo, lv.unidade_escolar_id, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida" +
+  "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, c.id AS cargo_id, c.cargo, lvf.unidade_escolar_id, TIME_FORMAT(lvf.horario_entrada, '%H:%i:%s') AS entrada, TIME_FORMAT(lvf.horario_saida_almoco, '%H:%i:%s') AS saida_almoco, TIME_FORMAT(lvf.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco, TIME_FORMAT(lvf.horario_saida, '%H:%i:%s') AS saida" +
   ADMIN_EMPLOYEE_FROM + ADMIN_EMPLOYEE_FILTERS;
-
 // allowlist sem cargoId (jornada/cargo migraram para vinculos_funcionais).
 const EMPLOYEE_UPDATE_ALLOWLIST = Object.freeze({
   cpf: "UPDATE funcionarios SET cpf = ? WHERE id = ?",

@@ -165,6 +165,16 @@ function getOptionalUrl(name, fallbackValue = "") {
   const value = getOptionalVar(name, fallbackValue);
   return value ? validateUrl(name, value) : "";
 }
+ 
+function parsePort(value) {
+  const port = Number(value);
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throwEnvError(`"REDIS_PORT" must be a valid port`);
+  }
+
+  return port;
+}
 
 function parseBoolean(value, name) {
   const normalized = String(value).trim().toLowerCase();
@@ -284,29 +294,12 @@ const redisNamespace = validateRedisNamespace(
     IS_PRODUCTION ? "atestaponto:production" : "atestaponto:local"
   )
 );
-const upstashRedisRestUrlRaw = getOptionalVar("UPSTASH_REDIS_REST_URL");
-const upstashRedisRestToken = getOptionalVar("UPSTASH_REDIS_REST_TOKEN");
+const redisHost = getOptionalVar("REDIS_HOST", "127.0.0.1");
+const redisPort = parsePort(getOptionalVar("REDIS_PORT", "6379"));
 
 if (IS_PRODUCTION && !redisEnabled) {
   throwEnvError('"REDIS_ENABLED" must be "true" in production');
 }
-
-if (redisEnabled && !upstashRedisRestUrlRaw) {
-  throwEnvError(
-    '"UPSTASH_REDIS_REST_URL" is required when REDIS_ENABLED=true'
-  );
-}
-
-if (redisEnabled && !upstashRedisRestToken) {
-  throwEnvError(
-    '"UPSTASH_REDIS_REST_TOKEN" is required when REDIS_ENABLED=true'
-  );
-}
-
-const upstashRedisRestUrl = redisEnabled
-  ? validateUrl("UPSTASH_REDIS_REST_URL", upstashRedisRestUrlRaw)
-  : "";
-
 const dbPassword = getOptionalAliasedVar("DB_PASSWORD", "DB_PASS");
 const dbName = getOptionalAliasedVar("DB_NAME", "DB");
 const dbSslEnabled = parseBoolean(
@@ -368,8 +361,8 @@ const env = {
   IS_PRODUCTION,
   REDIS_ENABLED: redisEnabled,
   REDIS_NAMESPACE: redisNamespace,
-  UPSTASH_REDIS_REST_URL: upstashRedisRestUrl,
-  UPSTASH_REDIS_REST_TOKEN: redisEnabled ? upstashRedisRestToken : "",
+  REDIS_HOST: redisHost,
+  REDIS_PORT: redisPort,
   HOST: getOptionalVar("HOST", "0.0.0.0"),
   // A Function da Vercel exporta o Express sem abrir uma porta. O fallback
   // preserva `npm start` local sem tornar PORT obrigatoria no ambiente serverless.
@@ -465,6 +458,20 @@ const env = {
     "BCRYPT_SALT_ROUNDS",
     10,
     15
+  ),
+  // Consulta de CEP (BrasilAPI v2). A URL base fica configurável para testes e
+  // para trocar de provedor sem mexer na regra de negócio; a barra final é removida.
+  BRASILAPI_BASE_URL: getOptionalUrl(
+    "BRASILAPI_BASE_URL",
+    "https://brasilapi.com.br/api"
+  ).replace(/\/+$/, ""),
+  // Tempo máximo de espera pela BrasilAPI. Curto de propósito: o cadastro não
+  // deve ficar preso a um serviço externo (a função serverless também tem limite).
+  BRASILAPI_TIMEOUT_MS: parseInteger(
+    getOptionalVar("BRASILAPI_TIMEOUT_MS", "4000"),
+    "BRASILAPI_TIMEOUT_MS",
+    500,
+    15000
   ),
 };
 

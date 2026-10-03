@@ -450,6 +450,91 @@ function restringirCapacidadeUnidadeDoBody(
   };
 }
 
+// Resolve a DRE recebida no body e exige capacidade + escopo no mesmo acesso.
+// SEDUC cobre qualquer DRE; ADMIN_DIRETORIA, só a(s) própria(s).
+function restringirCapacidadeDiretoriaDoBody(
+  capacidade,
+  field = "diretoria_ensino_id"
+) {
+  return function (req, _res, next) {
+    const acessosAutorizadores = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    );
+
+    if (acessosAutorizadores.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    const diretoriaId = Number(req.body && req.body[field]);
+    if (!Number.isInteger(diretoriaId) || diretoriaId <= 0) {
+      return next(new ForbiddenError("Diretoria de ensino nao informada"));
+    }
+
+    const acessoAutorizador = encontrarAcessoAutorizador(
+      acessosAutorizadores,
+      { educationDepartmentId: diretoriaId }
+    );
+
+    if (!acessoAutorizador) {
+      return next(
+        new ForbiddenError("Diretoria de ensino fora do escopo do administrador")
+      );
+    }
+
+    req.acessosAutorizadores = acessosAutorizadores;
+    req.acessoAutorizador = acessoAutorizador;
+    return next();
+  };
+}
+
+// Resolve a unidade recebida na URL (req.params) e exige capacidade + escopo no
+// mesmo acesso. Inexistente e fora do escopo respondem igual, para não revelar
+// quais escolas existem fora do escopo do administrador.
+function restringirCapacidadeUnidadeDoParametro(capacidade, paramName = "id") {
+  return async function (req, _res, next) {
+    const acessosAutorizadores = filtrarAcessosPorCapacidade(
+      req.acessos,
+      capacidade
+    );
+
+    if (acessosAutorizadores.length === 0) {
+      return next(new ForbiddenError("Capacidade administrativa insuficiente"));
+    }
+
+    const unidadeId = Number(req.params && req.params[paramName]);
+    if (!Number.isInteger(unidadeId) || unidadeId <= 0) {
+      return next(new ForbiddenError("Unidade escolar nao informada"));
+    }
+
+    let unidade;
+    try {
+      unidade = await adminScopeService.buscarUnidadePorId(unidadeId);
+    } catch (error) {
+      return next(
+        new ForbiddenError("Falha ao validar escopo da unidade escolar")
+      );
+    }
+
+    const acessoAutorizador = unidade
+      ? encontrarAcessoAutorizador(acessosAutorizadores, {
+          schoolUnitId: unidade.id,
+          educationDepartmentId: unidade.diretoria_ensino_id,
+        })
+      : null;
+
+    if (!acessoAutorizador) {
+      return next(
+        new ForbiddenError("Unidade escolar fora do escopo do administrador")
+      );
+    }
+
+    req.acessosAutorizadores = acessosAutorizadores;
+    req.acessoAutorizador = acessoAutorizador;
+    return next();
+  };
+}
+
 // Valida escopo via vínculo ativo do funcionário (resolvido no backend).
 function restringirEscopoFuncionario(paramName = "id") {
   return async function (req, _res, next) {
@@ -630,6 +715,8 @@ module.exports = {
   restringirCapacidadeFuncionarioVisualizacao,
   restringirCapacidadeFuncionarioReativacao,
   restringirCapacidadeUnidadeDoBody,
+  restringirCapacidadeDiretoriaDoBody,
+  restringirCapacidadeUnidadeDoParametro,
   restringirEscopoFuncionario,
   restringirEscopoUnidadeDoBody,
   restringirEscopoFuncionarioReativacao,

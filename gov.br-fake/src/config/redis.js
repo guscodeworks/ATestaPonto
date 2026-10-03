@@ -1,16 +1,47 @@
 "use strict";
 
-const { Redis } = require("@upstash/redis");
+const { createClient } = require("redis");
 const { env } = require("./env");
 
 const SAFE_PREFIX_SEGMENT = /^[a-z][a-z_-]*$/;
 
 const redisClient = env.redisEnabled
-  ? new Redis({
-      url: env.upstashRedisRestUrl,
-      token: env.upstashRedisRestToken,
+  ? createClient({
+      socket: {
+        host: env.redisHost || "127.0.0.1",
+        port: Number(env.redisPort || 6379),
+        connectTimeout: 2000,
+      },
     })
   : null;
+
+if (redisClient) {
+  redisClient.on("error", (error) => {
+    console.error("[REDIS] Erro:", error.message);
+  });
+}
+
+let redisConnectionPromise = null;
+
+async function ensureRedisConnection() {
+  if (!redisClient) {
+    throw new Error(
+      "Redis client requested while REDIS_ENABLED=false. Check the caller configuration."
+    );
+  }
+
+  if (!redisClient.isOpen) {
+    if (!redisConnectionPromise) {
+      redisConnectionPromise = redisClient.connect().finally(() => {
+        redisConnectionPromise = null;
+      });
+    }
+
+    await redisConnectionPromise;
+  }
+
+  return redisClient;
+}
 
 function getRedisClient() {
   if (!redisClient) {
@@ -19,7 +50,48 @@ function getRedisClient() {
     );
   }
 
-  return redisClient;
+  return {
+    get: async (key) => {
+      const client = await ensureRedisConnection();
+      return client.get(key);
+    },
+
+    set: async (key, value, options = {}) => {
+      const client = await ensureRedisConnection();
+
+      const args = {};
+
+      if (options.px !== undefined) {
+        args.PX = Number(options.px);
+      }
+
+      return client.set(key, value, args);
+    },
+
+    del: async (key) => {
+      const client = await ensureRedisConnection();
+      return client.del(key);
+    },
+
+    getdel: async (key) => {
+      const client = await ensureRedisConnection();
+      return client.getDel(key);
+    },
+
+    ping: async () => {
+      const client = await ensureRedisConnection();
+      return client.ping();
+    },
+
+    eval: async (script, keys, args) => {
+      const client = await ensureRedisConnection();
+
+      return client.eval(script, {
+        keys,
+        arguments: args,
+      });
+    },
+  };
 }
 
 function buildRedisKeyPrefix(...segments) {
@@ -41,9 +113,6 @@ function buildRedisKeyPrefix(...segments) {
     return segment;
   });
 
-  // Esta função aceita somente partes estruturais da chave. Identificadores,
-  // CPF, e-mail, tokens e cookies deverão ser transformados em hash antes que
-  // etapas futuras os anexem ao prefixo retornado.
   return `${env.redisNamespace}:${safeSegments.join(":")}:`;
 }
 

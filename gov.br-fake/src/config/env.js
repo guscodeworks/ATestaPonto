@@ -91,28 +91,12 @@ const redisNamespace = validateRedisNamespace(
   )
 );
 const upstashRedisRestUrlRaw = getOptionalVar("UPSTASH_REDIS_REST_URL");
-const upstashRedisRestToken = getOptionalVar("UPSTASH_REDIS_REST_TOKEN");
+const redisHost = getOptionalVar("REDIS_HOST", "127.0.0.1");
+const redisPort = parsePort(getOptionalVar("REDIS_PORT", "6379"));
 
 if (isProduction && !redisEnabled) {
   throwEnvError('"REDIS_ENABLED" must be "true" in production');
 }
-
-if (redisEnabled && !upstashRedisRestUrlRaw) {
-  throwEnvError(
-    '"UPSTASH_REDIS_REST_URL" is required when REDIS_ENABLED=true'
-  );
-}
-
-if (redisEnabled && !upstashRedisRestToken) {
-  throwEnvError(
-    '"UPSTASH_REDIS_REST_TOKEN" is required when REDIS_ENABLED=true'
-  );
-}
-
-const upstashRedisRestUrl = redisEnabled
-  ? validateUrl("UPSTASH_REDIS_REST_URL", upstashRedisRestUrlRaw)
-  : "";
-
 const fakeAdminLogin = getOptionalVar("GOVBR_FAKE_ADMIN_LOGIN");
 const fakeAdminPassword = getOptionalVar("GOVBR_FAKE_ADMIN_PASSWORD");
 const LOCAL_ADMIN_ACCOUNT_KEYS = Object.freeze([
@@ -172,8 +156,8 @@ const env = Object.freeze({
   isProduction,
   redisEnabled,
   redisNamespace,
-  upstashRedisRestUrl,
-  upstashRedisRestToken: redisEnabled ? upstashRedisRestToken : "",
+  redisHost,
+  redisPort,
   host: process.env.HOST || DEFAULT_HOST,
   // Aceita GOVBR_FAKE_PORT ou PORT como fallback, permitindo reaproveitar a
   // mesma variavel de ambiente PORT em plataformas de deploy que a definem
