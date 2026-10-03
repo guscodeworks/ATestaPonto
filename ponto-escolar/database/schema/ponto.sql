@@ -1,8 +1,7 @@
 -- Baseline estrutural canônico do Ponto Escolar.
 --
 -- Fonte: estrutura do dump ponto.sql de 2026-08-26, complementada pela tabela
--- ponto_idempotencia exigida pelo backend atual e pelas colunas de endereço/CEP
--- de unidades_escolares (migration 20261001_unidades_escolares_endereco.sql).
+-- ponto_idempotencia exigida pelo backend atual.
 --
 -- Este arquivo destina-se exclusivamente à criação de um banco vazio.
 -- Não contém dados, credenciais ou comandos DROP/ALTER.
@@ -75,13 +74,7 @@ CREATE TABLE `unidades_escolares` (
   `atualizado_em` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `codigo_inep` VARCHAR(20) DEFAULT NULL,
   `endereco` VARCHAR(255) DEFAULT NULL,
-  `cep` CHAR(8) DEFAULT NULL,
-  `numero` VARCHAR(20) DEFAULT NULL,
-  `bairro` VARCHAR(100) DEFAULT NULL,
   `cidade` VARCHAR(100) NOT NULL DEFAULT 'Campinas',
-  `uf` CHAR(2) DEFAULT NULL,
-  `cep_verificado` TINYINT(1) NOT NULL DEFAULT 0,
-  `origem_coordenadas` ENUM('BRASILAPI','MANUAL') NOT NULL DEFAULT 'MANUAL',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_unidades_codigo_inep` (`codigo_inep`),
   KEY `idx_unidades_diretoria` (`diretoria_ensino_id`),
@@ -89,8 +82,7 @@ CREATE TABLE `unidades_escolares` (
     REFERENCES `diretorias_ensino` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT `chk_unidade_latitude` CHECK (`latitude` BETWEEN -90 AND 90),
   CONSTRAINT `chk_unidade_longitude` CHECK (`longitude` BETWEEN -180 AND 180),
-  CONSTRAINT `chk_unidade_raio` CHECK (`raio_permitido_metros` > 0),
-  CONSTRAINT `chk_unidade_uf` CHECK (`uf` IS NULL OR CHAR_LENGTH(`uf`) = 2)
+  CONSTRAINT `chk_unidade_raio` CHECK (`raio_permitido_metros` > 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `login_funcionario` (
