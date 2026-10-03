@@ -1,25 +1,28 @@
-const { Redis } = require("@upstash/redis");
+const { createClient } = require("redis");
 const env = require("./env");
 
 const SAFE_PREFIX_SEGMENT = /^[a-z][a-z_-]*$/;
 const REDIS_REQUEST_TIMEOUT_MS = 2000;
-const REDIS_RETRY_COUNT = 1;
-const REDIS_RETRY_BACKOFF_MS = 50;
 
 const redisClient = env.REDIS_ENABLED
-  ? new Redis({
-      url: env.UPSTASH_REDIS_REST_URL,
-      token: env.UPSTASH_REDIS_REST_TOKEN,
-      retry: {
-        retries: REDIS_RETRY_COUNT,
-        backoff: () => REDIS_RETRY_BACKOFF_MS,
+  ? createClient({
+      socket: {
+        host: env.REDIS_HOST || "127.0.0.1",
+        port: env.REDIS_PORT || 6379,
+        connectTimeout: REDIS_REQUEST_TIMEOUT_MS,
       },
-      // A SDK aceita uma factory de AbortSignal; assim cada comando recebe
-      // seu proprio prazo e falhas de rede nao bloqueiam a requisicao por
-      // varios segundos. O erro continua sendo propagado ao chamador.
-      signal: () => AbortSignal.timeout(REDIS_REQUEST_TIMEOUT_MS),
     })
   : null;
+
+if (redisClient) {
+  redisClient.on("error", (error) => {
+    console.error("[Redis] Erro:", error.message);
+  });
+
+  redisClient.connect().catch((error) => {
+    console.error("[Redis] Falha ao conectar:", error.message);
+  });
+}
 
 function getRedisClient() {
   if (!redisClient) {
@@ -50,9 +53,6 @@ function buildRedisKeyPrefix(...segments) {
     return segment;
   });
 
-  // Esta função aceita somente partes estruturais da chave. Identificadores,
-  // CPF, e-mail, tokens e cookies deverão ser transformados em hash antes que
-  // etapas futuras os anexem ao prefixo retornado.
   return `${env.REDIS_NAMESPACE}:${safeSegments.join(":")}:`;
 }
 

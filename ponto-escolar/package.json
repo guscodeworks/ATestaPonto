@@ -35,7 +35,8 @@
     "mysql2": "^3.23.1",
     "nodemailer": "^9.0.3",
     "path": "^0.12.7",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "redis": "^6.3.0"
   },
   "overrides": {
     "qs": "^6.16.0"

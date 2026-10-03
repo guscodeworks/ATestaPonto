@@ -120,7 +120,7 @@ return {hits, math.max(0, ttl)}
 
 async function readRedis(name, digest, windowMs) {
   const key = buildRateLimitKey(name, digest);
-  const [hits, ttl] = await getRedisClient().eval(READ_SCRIPT, [key], [windowMs]);
+  const [hits, ttl] = await getRedisClient().eval(READ_SCRIPT, { keys: [key], arguments: [String(windowMs)] });
   if (!Number.isSafeInteger(Number(hits)) || Number(hits) < 0 ||
       !Number.isFinite(Number(ttl)) || Number(ttl) < 0) throw new Error("Invalid Redis rate limit state");
   return { hits: Number(hits), ttl: Number(ttl) };
@@ -128,7 +128,7 @@ async function readRedis(name, digest, windowMs) {
 
 async function incrementRedis(name, digest, windowMs) {
   const key = buildRateLimitKey(name, digest);
-  const [hits, ttl, generation] = await getRedisClient().eval(INCREMENT_SCRIPT, [key], [windowMs]);
+  const [hits, ttl, generation] = await getRedisClient().eval(INCREMENT_SCRIPT, { keys: [key], arguments: [String(windowMs)] });
   if (!Number.isSafeInteger(Number(hits)) || Number(hits) < 1 ||
       !Number.isFinite(Number(ttl)) || Number(ttl) < 0 || typeof generation !== "string") {
     throw new Error("Invalid Redis rate limit state");
@@ -137,7 +137,7 @@ async function incrementRedis(name, digest, windowMs) {
 }
 
 async function refundRedis({ key, generation }) {
-  await getRedisClient().eval(REFUND_SCRIPT, [key], [generation]);
+  await getRedisClient().eval(REFUND_SCRIPT, { keys: [key], arguments: [generation] });
 }
 
 const memoryStore = {

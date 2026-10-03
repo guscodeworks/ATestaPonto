@@ -1,6 +1,18 @@
 "use strict";
 
+// Consulta de escolas: o recorte (todas, da diretoria ou só a própria unidade)
+// vem do escopo do acesso, não da capacidade.
+const CAPACIDADES_ESCOLA_CONSULTA = Object.freeze([
+  "escola.listar",
+  "escola.visualizar",
+]);
+
+// Cadastro de escola: somente ADMIN_SEDUC (qualquer DRE) e ADMIN_DIRETORIA
+// (apenas a própria DRE, validado em adminScope). Perfis escolares não recebem.
+const CAPACIDADES_ESCOLA_CADASTRO = Object.freeze(["escola.criar"]);
+
 const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
+  ...CAPACIDADES_ESCOLA_CONSULTA,
   "funcionario.listar",
   "funcionario.visualizar",
   "funcionario.editar",
@@ -20,6 +32,7 @@ const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
 ]);
 
 const CAPACIDADES_SECRETARIA = Object.freeze([
+  ...CAPACIDADES_ESCOLA_CONSULTA,
   "funcionario.listar",
   "funcionario.visualizar",
   "funcionario.criar",
@@ -32,6 +45,7 @@ const CAPACIDADES_SECRETARIA = Object.freeze([
 ]);
 
 const CAPACIDADES_COORDENADOR = Object.freeze([
+  ...CAPACIDADES_ESCOLA_CONSULTA,
   "funcionario.listar",
   "funcionario.visualizar",
   "ponto.hoje.visualizar",
@@ -59,8 +73,14 @@ const CAPACIDADES_SECRETARIA_COM_QR = Object.freeze([
 
 // QR é administrado apenas por perfis escolares com uma unidade própria.
 const CAPACIDADES_POR_PERFIL = Object.freeze({
-  ADMIN_SEDUC: CAPACIDADES_ADMINISTRATIVAS,
-  ADMIN_DIRETORIA: CAPACIDADES_ADMINISTRATIVAS,
+  ADMIN_SEDUC: Object.freeze([
+    ...CAPACIDADES_ADMINISTRATIVAS,
+    ...CAPACIDADES_ESCOLA_CADASTRO,
+  ]),
+  ADMIN_DIRETORIA: Object.freeze([
+    ...CAPACIDADES_ADMINISTRATIVAS,
+    ...CAPACIDADES_ESCOLA_CADASTRO,
+  ]),
   DIRETOR: CAPACIDADES_DIRECAO,
   VICE_DIRETOR: CAPACIDADES_DIRECAO,
   SECRETARIA: CAPACIDADES_SECRETARIA_COM_QR,
