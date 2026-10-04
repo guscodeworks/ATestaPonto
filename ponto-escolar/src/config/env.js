@@ -453,6 +453,8 @@ const env = {
   SMTP_PASS: smtpPass,
   MAIL_FROM: mailFrom,
   APP_BASE_URL: appBaseUrl,
+  SPRING_BACKEND_URL: getOptionalUrl("SPRING_BACKEND_URL", "http://127.0.0.1:8081"),
+  INTERNAL_API_SHARED_KEY: getOptionalVar("INTERNAL_API_SHARED_KEY"),
   BCRYPT_SALT_ROUNDS: parseInteger(
     getOptionalVar("BCRYPT_SALT_ROUNDS", "12"),
     "BCRYPT_SALT_ROUNDS",
