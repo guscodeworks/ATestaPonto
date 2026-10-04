@@ -1,21 +1,27 @@
 "use strict";
 
+const adminSchoolService = require("../services/adminSchoolService");
 const schoolUnitService = require("../services/schoolUnitService");
 const { getClientIp } = require("../utils/request");
 
-// Controller só traduz HTTP <-> service. Escopo e regras ficam no service/middleware.
+async function previewSchool(req, res, next) {
+  try {
+    const result = await adminSchoolService.previewSchool(req.body);
+    res.set("Cache-Control", "no-store");
+    return res.status(result.status).json(result.body);
+  } catch (error) {
+    return next(error);
+  }
+}
 
 async function createSchool(req, res, next) {
   try {
-    const result = await schoolUnitService.createSchoolUnit(req.body, {
+    const result = await adminSchoolService.createSchool(req.body, {
       adminId: req.auth.id,
       ipOrigem: getClientIp(req),
-      acessos: req.acessos,
     });
-
     res.set("Cache-Control", "no-store");
-    res.set("Pragma", "no-cache");
-    return res.status(201).json({ success: true, data: result });
+    return res.status(result.status).json(result.body);
   } catch (error) {
     return next(error);
   }
@@ -62,10 +68,4 @@ async function lookupCep(req, res, next) {
   }
 }
 
-module.exports = {
-  createSchool,
-  listSchools,
-  getSchool,
-  listDiretorias,
-  lookupCep,
-};
+module.exports = { previewSchool, createSchool, listSchools, getSchool, listDiretorias, lookupCep };

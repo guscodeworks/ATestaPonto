@@ -27,6 +27,17 @@ chave em logs ou enviá-la ao frontend.
 
 ## Inicialização
 
+Com JDK 21 no host, a partir de `ponto-escolar`:
+
+```bash
+npm run dev:spring
+```
+
+Esse comando carrega `ponto-escolar/.env`, respeita variáveis já exportadas e
+repassa o ambiente ao Spring. **Não carrega `backend-spring/.env`.** Se `DB_HOST`
+for `mysql-dev`, o launcher usa `127.0.0.1` para o Spring no host; a porta do MySQL
+precisa estar publicada.
+
 Para iniciar separadamente, exportar `INTERNAL_API_SHARED_KEY` e as variáveis
 JDBC `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, então executar:
 

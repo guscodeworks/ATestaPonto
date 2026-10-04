@@ -478,8 +478,8 @@ const acessoIdValidator = withValidation([
 ]);
 
 // ---------------------------------------------------------------------------
-// Escolas (unidades escolares). Aqui só formato e saneamento; escopo por DRE,
-// duplicidade e uso do CEP ficam no service.
+// Consultas de escolas: formato de IDs, CEP e filtros.
+// O escopo é aplicado pelos middlewares; criação e preview são validados no Spring.
 // ---------------------------------------------------------------------------
 
 function cepRule(chain) {
@@ -498,69 +498,6 @@ function cepRule(chain) {
       return true;
     });
 }
-
-// Texto livre opcional, sem escape de HTML: a API só devolve JSON e o service
-// remove caracteres de controle e < >.
-function optionalText(field, max, label) {
-  return body(field)
-    .optional({ values: "falsy" })
-    .isString()
-    .withMessage(`${label} deve ser texto`)
-    .trim()
-    .isLength({ max })
-    .withMessage(`${label} deve ter no maximo ${max} caracteres`);
-}
-
-const createSchoolValidator = withValidation([
-  body("diretoria_ensino_id")
-    .isInt({ min: 1 })
-    .withMessage("diretoria_ensino_id invalido")
-    .toInt(),
-  body("nome")
-    .isString()
-    .withMessage("Nome e obrigatorio")
-    .trim()
-    .isLength({ min: 3, max: 150 })
-    .withMessage("Nome deve ter entre 3 e 150 caracteres")
-    .matches(/^[^<>]*$/)
-    .withMessage("Nome contem caracteres invalidos"),
-  body("codigo_inep")
-    .optional({ values: "falsy" })
-    .customSanitizer((value) => String(value).replace(/\D/g, ""))
-    .matches(/^\d{8}$/)
-    .withMessage("Codigo INEP deve ter 8 digitos"),
-  cepRule(body("cep")),
-  optionalText("logradouro", 255, "Logradouro"),
-  optionalText("numero", 20, "Numero"),
-  optionalText("bairro", 100, "Bairro"),
-  optionalText("cidade", 100, "Cidade"),
-  body("uf")
-    .optional({ values: "falsy" })
-    .trim()
-    .toUpperCase()
-    .matches(/^[A-Z]{2}$/)
-    .withMessage("UF deve ter 2 letras"),
-  body("latitude")
-    .optional({ values: "null" })
-    .isFloat({ min: -90, max: 90 })
-    .withMessage("latitude invalida")
-    .toFloat(),
-  body("longitude")
-    .optional({ values: "null" })
-    .isFloat({ min: -180, max: 180 })
-    .withMessage("longitude invalida")
-    .toFloat(),
-  body("raio_permitido_metros")
-    .optional({ values: "null" })
-    .isInt({ min: 10, max: 1000 })
-    .withMessage("raio_permitido_metros deve ser inteiro entre 10 e 1000")
-    .toInt(),
-  body("endereco_manual_confirmado")
-    .optional({ values: "null" })
-    .isBoolean({ strict: false })
-    .withMessage("endereco_manual_confirmado deve ser true ou false")
-    .toBoolean(true),
-]);
 
 const schoolIdValidator = withValidation([
   param("id").isInt({ min: 1 }).withMessage("ID de escola invalido").toInt(),
@@ -608,7 +545,6 @@ module.exports = {
   passwordRecoveryResetValidator,
   createAcessoValidator,
   acessoIdValidator,
-  createSchoolValidator,
   schoolIdValidator,
   schoolCepParamValidator,
   listSchoolsValidator,

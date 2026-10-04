@@ -461,20 +461,7 @@ const env = {
     10,
     15
   ),
-  // Consulta de CEP (BrasilAPI v2). A URL base fica configurável para testes e
-  // para trocar de provedor sem mexer na regra de negócio; a barra final é removida.
-  BRASILAPI_BASE_URL: getOptionalUrl(
-    "BRASILAPI_BASE_URL",
-    "https://brasilapi.com.br/api"
-  ).replace(/\/+$/, ""),
-  // Tempo máximo de espera pela BrasilAPI. Curto de propósito: o cadastro não
-  // deve ficar preso a um serviço externo (a função serverless também tem limite).
-  BRASILAPI_TIMEOUT_MS: parseInteger(
-    getOptionalVar("BRASILAPI_TIMEOUT_MS", "4000"),
-    "BRASILAPI_TIMEOUT_MS",
-    500,
-    15000
-  ),
+
 };
 
 if (!env.CORS_ORIGINS.includes(new URL(env.GOVBR_REDIRECT_URI).origin)) {

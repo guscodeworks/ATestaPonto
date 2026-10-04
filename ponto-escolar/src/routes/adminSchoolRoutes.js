@@ -3,6 +3,7 @@
 const { Router } = require("express");
 const {
   createSchool,
+  previewSchool,
   listSchools,
   getSchool,
   listDiretorias,
@@ -10,7 +11,6 @@ const {
 } = require("../controllers/adminSchoolController");
 const { sensitiveLimiter } = require("../middlewares/rateLimiters");
 const {
-  createSchoolValidator,
   schoolIdValidator,
   schoolCepParamValidator,
   listSchoolsValidator,
@@ -49,10 +49,15 @@ router.get(
 );
 
 router.post(
+  "/preview",
+  restringirCapacidadeDiretoriaDoBody("escola.criar"),
+  previewSchool
+);
+
+router.post(
   "/",
   exigirCapacidade("escola.criar"),
   sensitiveLimiter,
-  createSchoolValidator,
   restringirCapacidadeDiretoriaDoBody("escola.criar", "diretoria_ensino_id"),
   createSchool
 );
