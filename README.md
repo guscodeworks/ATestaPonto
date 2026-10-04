@@ -7,6 +7,9 @@ O ATestaPonto é um sistema web criado para modernizar o controle de presença d
 > [!NOTE]
 > Este arquivo é o manual prático de instalação e uso. Para a explicação técnica do projeto, consulte o mapa em [`000.md`](./000.md).
 
+Para configurar a autenticação interna entre Node e Spring em cada ambiente,
+consulte [backend-spring/README.md](./backend-spring/README.md).
+
 ## Sobre o Projeto
 
 

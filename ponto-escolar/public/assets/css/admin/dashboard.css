@@ -326,7 +326,9 @@
 }
 
 .dashboard-page #quick-add-school[hidden],
-.dashboard-page .dashboard-school-setup[hidden] {
+.dashboard-page .dashboard-school-setup[hidden],
+.dashboard-page #school-preview-result[hidden],
+.dashboard-page #school-create-confirm[hidden] {
   display: none;
 }
 
@@ -360,8 +362,40 @@
   font-weight: 700;
 }
 
-.dashboard-page .dashboard-school-setup select {
-  width: min(100%, 420px);
+.dashboard-page .dashboard-school-fields,
+.dashboard-page .dashboard-school-preview-data {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 0 20px;
+}
+
+.dashboard-page .dashboard-school-setup .field-input {
+  width: 100%;
+}
+
+.dashboard-page #school-preview-submit {
+  margin-top: 18px;
+}
+
+.dashboard-page #school-create-confirm:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.dashboard-page #school-preview-result {
+  margin-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.dashboard-page .dashboard-school-preview-data dt {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: 12px;
+}
+
+.dashboard-page .dashboard-school-preview-data dd {
+  margin: 4px 0 12px;
+  overflow-wrap: anywhere;
 }
 
 .dashboard-page .dashboard-school-setup-feedback {

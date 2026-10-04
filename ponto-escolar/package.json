@@ -11,6 +11,7 @@
     "start:ponto": "node server.js",
     "start:govbr": "npm --prefix ../gov.br-fake start",
     "dev": "concurrently -n PONTO,GOVBR \"npm run start:ponto\" \"npm run start:govbr\"",
+    "dev:spring": "node src/scripts/startSpringBackend.js",
     "build:client": "node src/scripts/buildClientBundles.js",
     "check:public-assets": "node src/scripts/checkPublicAssetSizes.js",
     "db:init": "node src/scripts/initDatabase.js",

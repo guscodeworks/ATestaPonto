@@ -92,10 +92,7 @@ async function listForEmployeeRegistration(escopoUnidades = []) {
 }
 
 // ---------------------------------------------------------------------------
-// Gestão administrativa de escolas (cadastro e consulta).
-// As colunas de endereço/CEP vêm da migration 20261001_unidades_escolares_endereco;
-// por isso ficam num SELECT próprio e o UNIDADE_SELECT acima (usado no fluxo de
-// ponto) continua funcionando mesmo antes da migration ser aplicada.
+// Consulta administrativa de escolas com os campos do schema existente.
 // ---------------------------------------------------------------------------
 
 const UNIDADE_ADMIN_SELECT = `
@@ -109,48 +106,10 @@ const UNIDADE_ADMIN_FROM = `
   INNER JOIN diretorias_ensino de ON de.id = ue.diretoria_ensino_id
 `;
 
-async function withTransaction(callback) {
-  return database.withTransaction(callback);
-}
-
 async function findAdminById(escolaId, client) {
   return getClient(client).executeOne(
     `SELECT ${UNIDADE_ADMIN_SELECT} ${UNIDADE_ADMIN_FROM} WHERE ue.id = ? LIMIT 1`,
     [escolaId]
-  );
-}
-
-async function findByCodigoInep(client, codigoInep) {
-  return getClient(client).executeOne(
-    "SELECT ue.id FROM unidades_escolares ue WHERE ue.codigo_inep = ? LIMIT 1",
-    [codigoInep]
-  );
-}
-
-// A collation utf8mb4_unicode_ci já ignora caixa e acentos na comparação.
-async function findByNomeNaDiretoria(client, diretoriaId, nome) {
-  return getClient(client).executeOne(
-    "SELECT ue.id FROM unidades_escolares ue WHERE ue.diretoria_ensino_id = ? AND ue.nome = ? LIMIT 1",
-    [diretoriaId, nome]
-  );
-}
-
-async function createSchoolUnit(client, dados) {
-  return getClient(client).execute(
-    `INSERT INTO unidades_escolares
-      (diretoria_ensino_id, nome, codigo_inep, endereco, cidade,
-       latitude, longitude, raio_permitido_metros)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      dados.diretoriaEnsinoId,
-      dados.nome,
-      dados.codigoInep,
-      dados.endereco,
-      dados.cidade,
-      dados.latitude,
-      dados.longitude,
-      dados.raioPermitidoMetros,
-    ]
   );
 }
 
@@ -229,11 +188,7 @@ module.exports = {
   list,
   findByDiretoriaId,
   listForEmployeeRegistration,
-  withTransaction,
   findAdminById,
-  findByCodigoInep,
-  findByNomeNaDiretoria,
-  createSchoolUnit,
   listForAdmin,
   countForAdmin,
 };
