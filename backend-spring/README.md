@@ -88,3 +88,49 @@ curl http://127.0.0.1:8081/health
 
 O cliente interno Node permanece restrito a `/internal/**`; a verificação de health
 é realizada separadamente. O navegador não deve chamar o Spring diretamente.
+
+## Relatórios administrativos — migração incremental
+
+O retrato diário é consultado por `POST /internal/relatorios/diario`, protegido
+pelo mesmo filtro HMAC. Esse POST executa somente SELECT, em transação read-only.
+O Node mantém os endpoints públicos de pontos de hoje, relatório e resumo,
+com sessão, capacidade, resolução territorial e auditoria já existentes.
+
+O body interno contém `data` (`YYYY-MM-DD`), `escopo_global` e
+`unidades_escolares_ids`. O Node produz o escopo a partir dos acessos autorizadores;
+não encaminha escopo informado pelo navegador. Somente SEDUC usa escopo global,
+com lista vazia. Para os demais acessos, a lista contém as escolas autorizadas;
+lista vazia retorna relatório vazio. Campos de escopo ausentes são rejeitados.
+
+O domínio `report` lê o schema existente sem modificar os domínios de DRE,
+funcionários ou vínculos. Mantém linhas por vínculo vigente na data consultada,
+ausentes via LEFT JOIN, indicadores por pessoa e CPF mascarado.
+
+### Hierarquia SEDUC → DRE → Escola (SCRUM-11)
+
+`GET /api/admin/pontos/relatorio/hierarquia` usa a sessão administrativa e a
+capacidade `relatorio.visualizar`. Aceita `data` (padrão: hoje em São Paulo),
+`diretoria_ensino_id` e `unidade_escolar_id` opcionais. IDs devem ser inteiros
+positivos; filtros inválidos retornam 400 e recursos fora do escopo retornam 403.
+Filtros combinados são aplicados por interseção. Não modificam o escopo autorizado.
+
+O Node chama `POST /internal/relatorios/hierarquia` via HMAC e envia também
+`diretorias_ensino_ids`, produzidas pelos acessos que possuem essa capacidade.
+O Spring valida os filtros contra esse escopo e agrega por SQL dentro de uma
+única transação read-only. DRE autorizada sem escolas aparece com totais zero;
+um perfil escolar vê somente as escolas autorizadas, inclusive ao filtrar sua DRE.
+
+A resposta pública mantém o envelope `{success, data}`. `data` contém
+`data_referencia`, `resumo` e `diretorias`. Cada diretoria contém seu ID, nome,
+resumo e `escolas`; cada escola contém ID, nome e resumo. Os resumos incluem
+`total_funcionarios`, `total_ativos`, `presentes`, `ausentes`,
+`taxa_presenca_percent`, `total_vinculos`, `total_escolas` e `total_diretorias`.
+Pessoas são contadas distintamente em cada nível, sem somar os totais filhos;
+presença significa ao menos uma batida no período diário consultado. Assim como
+no contrato diário, `total_ativos` representa pessoas com vínculo vigente na data,
+independentemente do status atual do cadastro. A auditoria continua no logger Node.
+
+Validação local: comparação dos contratos diários, consultas hierárquicas dos
+seis perfis com acessos existentes e rejeição de filtros fora do escopo. Não foram
+criadas batidas para validar presença, múltiplos vínculos ou horários: esses casos
+não possuem dados representativos no ambiente atual.
