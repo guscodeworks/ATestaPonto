@@ -1,33 +1,8 @@
 "use strict";
 
-const pointModel = require("../models/pointModel");
-const { maskCpf } = require("../utils/cpf");
-const {
-  EMPTY_PUNCH_TIME,
-  PUNCH_TYPES,
-  hasPunchTime,
-  normalizeTimeValue,
-  readPunchTimesFromRow,
-} = require("../utils/punch");
-const { BadRequestError } = require("../utils/errors");
+const { requestSpring } = require("../integrations/springBackendClient");
+const { AppError, BadRequestError, ForbiddenError } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
-
-// Ordem do relatório = mesma sequência usada para registrar as batidas.
-const PUNCH_STEPS = [
-  { key: "entrada", tipo: PUNCH_TYPES[0], sequencia: 1 },
-  { key: "saidaAlmoco", tipo: PUNCH_TYPES[1], sequencia: 2 },
-  { key: "voltaAlmoco", tipo: PUNCH_TYPES[2], sequencia: 3 },
-  { key: "saida", tipo: PUNCH_TYPES[3], sequencia: 4 },
-];
-
-// enum `tipo` → sequência lógica. Banco grava RETORNO_ALMOCO; field lógico é
-// voltaAlmoco (bate com o STEP correspondente p/ somar a batida).
-const TIPO_TO_SEQUENCIA = {
-  ENTRADA: 1,
-  SAIDA_ALMOCO: 2,
-  RETORNO_ALMOCO: 3,
-  SAIDA: 4,
-};
 
 // "Hoje" no fuso de São Paulo (independente do fuso do servidor) p/ que o
 // relatório do dia bata com o horário local dos funcionários.
@@ -50,137 +25,137 @@ function resolveReportDate(value) {
   return date;
 }
 
-function toDateTime(date, time) {
-  if (!hasPunchTime(time)) {
-    return {};
+// O escopo vem exclusivamente do middleware, nunca da query/body do navegador.
+function reportScope(escopoUnidades) {
+  const global = escopoUnidades === null;
+  if (!global && (!Array.isArray(escopoUnidades)
+    || escopoUnidades.some(id => !Number.isSafeInteger(Number(id)) || Number(id) <= 0))) {
+    throw new ForbiddenError("Escopo administrativo invalido");
   }
-
-  return `${date} ${normalizeTimeValue(time)}`;
-}
-
-// Cada batida é uma linha própria (id individual); sequência resolve pelo enum `tipo`.
-function buildPunchList(date, punches) {
-  return (Array.isArray(punches) ? punches : [])
-    .filter((row) => row && TIPO_TO_SEQUENCIA[row.tipo])
-    .map((row) => ({
-      id: Number(row.id),
-      tipo: row.tipo,
-      sequencia: TIPO_TO_SEQUENCIA[row.tipo],
-      registrado_em: `${date} ${normalizeTimeValue(row.registrado_em)}`,
-    }))
-    .sort((a, b) => a.sequencia - b.sequencia);
-}
-
-function getEmptyPunchTimes() {
   return {
-    entrada: EMPTY_PUNCH_TIME,
-    saidaAlmoco: EMPTY_PUNCH_TIME,
-    voltaAlmoco: EMPTY_PUNCH_TIME,
-    saida: EMPTY_PUNCH_TIME,
+    escopo_global: global,
+    unidades_escolares_ids: global ? [] : [...new Set(escopoUnidades.map(Number))],
   };
 }
 
-// Status do dia: sem batidas = AUSENTE; com saída = COMPLETO; demais = EM_ANDAMENTO.
-function summarizeEmployeeDay(employee, punches, date) {
-  const times = punches && punches.length
-    ? readPunchTimesFromRow(punches)
-    : getEmptyPunchTimes();
-  const registros = punches && punches.length
-    ? buildPunchList(date, punches)
-    : [];
-  const totalBatidas = registros.length;
-  const status =
-    totalBatidas === 0
-      ? "AUSENTE"
-      : hasPunchTime(times.saida)
-      ? "COMPLETO"
-      : "EM_ANDAMENTO";
-
-  return {
-    id: `${employee.vinculo_funcional_id}-${date}`,
-    vinculo_funcional_id: Number(employee.vinculo_funcional_id),
-    unidade_escolar_id: Number(employee.unidade_escolar_id),
-    unidade_escolar_nome: employee.unidade_escolar_nome,
-    funcionario: {
-      id: employee.id,
-      nome: employee.nome,
-      email: employee.email,
-      cpf: maskCpf(employee.cpf),
-      ativo: Boolean(employee.ativo),
-      cargo_id: employee.cargo_id,
-    },
-    status,
-    total_batidas: totalBatidas,
-    entrada: toDateTime(date, times.entrada),
-    saida: toDateTime(date, times.saida),
-    registros,
-  };
-}
-
-// listRowsByDate já limita o universo aos vínculos vigentes na data consultada.
-function buildSummary(summaries) {
-  const presentes = summaries.filter((item) => item.total_batidas > 0);
-  const ausentes = summaries.filter((item) => item.total_batidas === 0);
-  // Os itens são por vínculo; os indicadores de funcionários continuam por pessoa.
-  const countEmployees = (items) => new Set(items.map((item) => item.funcionario.id)).size;
-  const totalVigentes = countEmployees(summaries);
-  const totalPresentes = countEmployees(presentes);
-
-  return {
-    presentes,
-    ausentes,
-    resumo: {
-      total_funcionarios: countEmployees(summaries),
-      total_ativos: totalVigentes,
-      presentes: totalPresentes,
-      ausentes: totalVigentes - totalPresentes,
-      taxa_presenca_percent:
-        totalVigentes > 0
-          ? Math.round((totalPresentes / totalVigentes) * 100)
-          : 0,
-    },
-  };
-}
-
-// Visão diária nasce em memória (não altera registros durante a consulta).
-async function buildDailySnapshot(date, escopoUnidades = []) {
-  const rows = await pointModel.listRowsByDate(date, escopoUnidades);
-  const byVinculo = new Map();
-  for (const row of rows) {
-    const vinculoId = Number(row.vinculo_funcional_id);
-    if (!byVinculo.has(vinculoId)) {
-      byVinculo.set(vinculoId, {
-        employee: { ...row, id: row.funcionario_id },
-        punches: [],
-      });
+async function requestReport(path, body) {
+  try {
+    const response = await requestSpring(path, { method: "POST", body });
+    if (response.status === 400) {
+      throw new BadRequestError("Data ou escopo de relatorio invalido");
     }
-    if (row.id !== null) {
-      byVinculo.get(vinculoId).punches.push(row);
+    if (response.status === 403) throw new ForbiddenError("Recurso fora do escopo autorizado");
+    if (!response.ok) throw new Error("Resposta interna invalida");
+    const result = await response.json();
+    const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+    if (!isObject(result) || !isObject(result.resumo)) {
+      throw new Error("Resposta interna invalida");
     }
+    if (path === "/internal/relatorios/diario"
+        && (typeof result.date !== "string" || !Array.isArray(result.presentes)
+          || !Array.isArray(result.ausentes) || !Array.isArray(result.relatorio))) {
+      throw new Error("Resposta interna invalida");
+    }
+    if (path === "/internal/relatorios/hierarquia"
+        && (typeof result.data_referencia !== "string" || !Array.isArray(result.diretorias))) {
+      throw new Error("Resposta interna invalida");
+    }
+    return result;
+  } catch (error) {
+    if (error instanceof BadRequestError || error instanceof ForbiddenError) throw error;
+    throw new AppError("Servico de relatorios indisponivel", {
+      statusCode: 502,
+      code: "REPORT_SERVICE_UNAVAILABLE",
+    });
   }
-  const summaries = Array.from(byVinculo.values(), ({ employee, punches }) =>
-    summarizeEmployeeDay(employee, punches, date)
-  );
-  const { presentes, ausentes, resumo } = buildSummary(summaries);
+}
 
-  return {
-    date,
-    total_funcionarios: resumo.total_funcionarios,
-    total_funcionarios_ativos: resumo.total_ativos,
-    presentes,
-    ausentes,
-    relatorio: summaries,
-    resumo,
-  };
+function buildDailySnapshot(date, escopoUnidades = []) {
+  return requestReport("/internal/relatorios/diario", { data: date, ...reportScope(escopoUnidades) });
+}
+
+function filterId(value) {
+  if (value === undefined) return null;
+  if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)
+      || !Number.isSafeInteger(Number(value))) {
+    throw new BadRequestError("Filtro de relatorio invalido");
+  }
+  return Number(value);
+}
+
+async function getHierarchicalReport({ data, diretoria_ensino_id, unidade_escolar_id,
+  adminId, ipOrigem } = {}, escopoUnidades = [], escopo) {
+  const date = resolveReportDate(data);
+  const scope = reportScope(escopoUnidades);
+  if (!escopo || !escopo.temAcesso || scope.escopo_global !== Boolean(escopo.isSeduc)) {
+    throw new ForbiddenError("Escopo administrativo invalido");
+  }
+  const schoolId = filterId(unidade_escolar_id);
+  const departmentId = filterId(diretoria_ensino_id);
+  if (schoolId !== null && !scope.escopo_global && !scope.unidades_escolares_ids.includes(schoolId)) {
+    throw new ForbiddenError("Recurso fora do escopo autorizado");
+  }
+  const result = await requestReport("/internal/relatorios/hierarquia", {
+    data: date,
+    ...scope,
+    diretorias_ensino_ids: scope.escopo_global ? [] : [...escopo.diretoriasPermitidas],
+    diretoria_ensino_id: departmentId,
+    unidade_escolar_id: schoolId,
+  });
+  const summaryFields = [
+    "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
+    "total_vinculos", "total_escolas", "total_diretorias",
+  ];
+  const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+  const isId = value => Number.isSafeInteger(value) && value > 0;
+  const isSummary = value => isObject(value)
+    && summaryFields.every(field => Number.isSafeInteger(value[field]) && value[field] >= 0)
+    && value.taxa_presenca_percent <= 100;
+  const isSchool = school => isObject(school) && isId(school.unidade_escolar_id)
+    && typeof school.unidade_escolar_nome === "string" && isSummary(school.resumo)
+    && (schoolId === null || school.unidade_escolar_id === schoolId)
+    && (scope.escopo_global || scope.unidades_escolares_ids.includes(school.unidade_escolar_id));
+  const isDepartment = department => isObject(department) && isId(department.diretoria_ensino_id)
+    && typeof department.diretoria_ensino_nome === "string" && isSummary(department.resumo)
+    && (departmentId === null || department.diretoria_ensino_id === departmentId)
+    && Array.isArray(department.escolas) && department.escolas.every(isSchool)
+    && (scope.escopo_global || escopo.diretoriasPermitidas.has(department.diretoria_ensino_id)
+      || department.escolas.length > 0);
+  if (!isObject(result) || result.data_referencia !== date || !isSummary(result.resumo)
+      || !Array.isArray(result.diretorias) || !result.diretorias.every(isDepartment)) {
+    throw new AppError("Servico de relatorios indisponivel", {
+      statusCode: 502,
+      code: "REPORT_SERVICE_UNAVAILABLE",
+    });
+  }
+  await registerAuditLog({
+    evento: "relatorio_consultado", adminId, ipOrigem,
+    mensagem: "Administrador consultou relatorio hierarquico de ponto",
+    metadados: { data_referencia: date, diretoria_ensino_id: departmentId, unidade_escolar_id: schoolId },
+  });
+  return result;
 }
 
 async function getTodayPoints({ data } = {}, escopoUnidades = []) {
   const date = resolveReportDate(data);
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
+  const summaryFields = [
+    "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
+  ];
+  if (!snapshot || snapshot.date !== date || !snapshot.resumo
+      || summaryFields.some(field => !Number.isSafeInteger(snapshot.resumo[field])
+        || snapshot.resumo[field] < 0)
+      || snapshot.resumo.taxa_presenca_percent > 100
+      || !Array.isArray(snapshot.presentes) || !Array.isArray(snapshot.ausentes)) {
+    throw new AppError("Servico de relatorios indisponivel", {
+      statusCode: 502,
+      code: "REPORT_SERVICE_UNAVAILABLE",
+    });
+  }
 
   return {
-    data_referencia: snapshot.date,
-    resumo: snapshot.resumo,
+    data_referencia: date,
+    resumo: Object.fromEntries(summaryFields.map(field => [field, snapshot.resumo[field]])),
     presentes: snapshot.presentes,
     ausentes: snapshot.ausentes,
   };
@@ -189,6 +164,39 @@ async function getTodayPoints({ data } = {}, escopoUnidades = []) {
 async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades = []) {
   const date = resolveReportDate(data);
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
+  const summaryFields = [
+    "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
+  ];
+  const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+  const isId = value => Number.isSafeInteger(value) && value > 0;
+  const isTime = value => typeof value === "string"
+    ? value.startsWith(`${date} `) && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+    : isObject(value) && Object.keys(value).length === 0;
+  const isItem = item => isObject(item)
+    && typeof item.id === "string" && isId(item.vinculo_funcional_id)
+    && isId(item.unidade_escolar_id) && typeof item.unidade_escolar_nome === "string"
+    && isObject(item.funcionario) && isId(item.funcionario.id)
+    && typeof item.funcionario.nome === "string"
+    && (item.funcionario.email === null || typeof item.funcionario.email === "string")
+    && typeof item.funcionario.cpf === "string" && typeof item.funcionario.ativo === "boolean"
+    && (item.funcionario.cargo_id === null || isId(item.funcionario.cargo_id))
+    && ["AUSENTE", "EM_ANDAMENTO", "COMPLETO"].includes(item.status)
+    && Number.isSafeInteger(item.total_batidas) && item.total_batidas >= 0
+    && isTime(item.entrada) && isTime(item.saida) && Array.isArray(item.registros)
+    && item.registros.every(punch => isObject(punch) && isId(punch.id)
+      && ["ENTRADA", "SAIDA_ALMOCO", "RETORNO_ALMOCO", "SAIDA"].includes(punch.tipo)
+      && Number.isInteger(punch.sequencia) && punch.sequencia >= 1 && punch.sequencia <= 4
+      && typeof punch.registrado_em === "string" && isTime(punch.registrado_em));
+  if (!snapshot || snapshot.date !== date || !isObject(snapshot.resumo)
+      || summaryFields.some(field => !Number.isSafeInteger(snapshot.resumo[field])
+        || snapshot.resumo[field] < 0)
+      || snapshot.resumo.taxa_presenca_percent > 100
+      || !Array.isArray(snapshot.relatorio) || !snapshot.relatorio.every(isItem)) {
+    throw new AppError("Servico de relatorios indisponivel", {
+      statusCode: 502,
+      code: "REPORT_SERVICE_UNAVAILABLE",
+    });
+  }
 
   await registerAuditLog({
     evento: "relatorio_consultado",
@@ -199,8 +207,8 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades =
   });
 
   return {
-    data_referencia: snapshot.date,
-    resumo: snapshot.resumo,
+    data_referencia: date,
+    resumo: Object.fromEntries(summaryFields.map(field => [field, snapshot.resumo[field]])),
     items: snapshot.relatorio,
   };
 }
@@ -208,20 +216,31 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades =
 async function getDashboardSummary(escopoUnidades = []) {
   const date = getTodayDateInSaoPaulo();
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
+  const summaryFields = [
+    "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
+  ];
+  if (!snapshot || snapshot.date !== date || !snapshot.resumo
+      || summaryFields.some(field => !Number.isSafeInteger(snapshot.resumo[field])
+        || snapshot.resumo[field] < 0)
+      || snapshot.resumo.taxa_presenca_percent > 100) {
+    throw new AppError("Servico de relatorios indisponivel", {
+      statusCode: 502,
+      code: "REPORT_SERVICE_UNAVAILABLE",
+    });
+  }
 
   return {
-    data_referencia: snapshot.date,
-    resumo: snapshot.resumo,
+    data_referencia: date,
+    resumo: Object.fromEntries(summaryFields.map(field => [field, snapshot.resumo[field]])),
   };
 }
 
 module.exports = {
   getTodayDateInSaoPaulo,
   resolveReportDate,
-  buildPunchList,
-  summarizeEmployeeDay,
   buildDailySnapshot,
   getTodayPoints,
   getDailyReport,
   getDashboardSummary,
+  getHierarchicalReport,
 };
