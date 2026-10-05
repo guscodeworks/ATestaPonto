@@ -47,8 +47,24 @@ async function getDashboardSummary(req, res, next) {
   }
 }
 
+async function getHierarchicalReport(req, res, next) {
+  try {
+    const result = await pointReportService.getHierarchicalReport({
+      data: req.query.data,
+      diretoria_ensino_id: req.query.diretoria_ensino_id,
+      unidade_escolar_id: req.query.unidade_escolar_id,
+      adminId: req.auth.id,
+      ipOrigem: getClientIp(req),
+    }, req.escopoUnidades, req.escopo);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   getTodayPoints,
   getDailyReport,
   getDashboardSummary,
+  getHierarchicalReport,
 };

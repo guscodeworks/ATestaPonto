@@ -3,11 +3,19 @@ const {
   getTodayPoints,
   getDailyReport,
   getDashboardSummary,
+  getHierarchicalReport,
 } = require("../controllers/adminPointController");
 const { sensitiveLimiter } = require("../middlewares/rateLimiters");
 const { escopoPorCapacidade } = require("../middlewares/adminScope");
 
 const router = Router();
+
+router.get(
+  "/relatorio/hierarquia",
+  escopoPorCapacidade("relatorio.visualizar"),
+  sensitiveLimiter,
+  getHierarchicalReport
+);
 
 router.get(
   "/hoje",
