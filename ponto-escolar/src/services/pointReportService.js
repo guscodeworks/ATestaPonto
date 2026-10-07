@@ -74,6 +74,86 @@ function buildDailySnapshot(date, escopoUnidades = []) {
   return requestReport("/internal/relatorios/diario", { data: date, ...reportScope(escopoUnidades) });
 }
 
+async function getWeeklyReport({ data } = {}, escopoUnidades = []) {
+  if (data !== undefined && (typeof data !== "string" || !data.trim())) {
+    throw new BadRequestError("Data invalida. Use o formato YYYY-MM-DD");
+  }
+  const date = resolveReportDate(data);
+  const isDate = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number(value.slice(0, 4)) >= 1000
+    && Number.isFinite(Date.parse(`${value}T12:00:00Z`))
+    && new Date(`${value}T12:00:00Z`).toISOString().slice(0, 10) === value;
+  if (!isDate(date)) throw new BadRequestError("Data invalida. Use o formato YYYY-MM-DD");
+  const monday = new Date(`${date}T12:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
+  const dates = Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(monday);
+    day.setUTCDate(day.getUTCDate() + index);
+    return day.toISOString().slice(0, 10);
+  });
+  if (!dates.every(isDate)) throw new BadRequestError("Semana fora do intervalo suportado");
+  const result = await requestReport("/internal/relatorios/semanal", {
+    data: date, ...reportScope(escopoUnidades),
+  });
+  const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
+  const isCount = value => Number.isSafeInteger(value) && value >= 0;
+  const isDay = (day, index) => isObject(day) && isDate(day.data) && day.data === dates[index]
+    && typeof day.futuro === "boolean"
+    && day.futuro === (day.data > result.data_atual) && isObject(day.resumo)
+    && ["total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent"]
+      .every(field => isCount(day.resumo[field]))
+    && day.resumo.total_ativos === day.resumo.total_funcionarios
+    && day.resumo.presentes <= day.resumo.total_funcionarios
+    && day.resumo.ausentes === day.resumo.total_funcionarios - day.resumo.presentes
+    && day.resumo.taxa_presenca_percent <= 100
+    && day.resumo.taxa_presenca_percent === (day.resumo.total_funcionarios === 0 ? 0
+      : Math.round(100 * day.resumo.presentes / day.resumo.total_funcionarios))
+    && (!day.futuro || day.resumo.total_funcionarios === 0);
+  const summary = result.resumo;
+  if (!isObject(result) || !isDate(result.data_referencia) || result.data_referencia !== date
+      || !isDate(result.data_inicio) || result.data_inicio !== dates[0]
+      || !isDate(result.data_fim) || result.data_fim !== dates[6] || !isDate(result.data_atual)
+      || !isObject(summary)
+      || !Array.isArray(result.dias) || result.dias.length !== 7 || !result.dias.every(isDay)
+      || !["total_previstos", "total_presencas", "total_ausencias", "taxa_presenca_percent"]
+        .every(field => isCount(summary[field]))
+      || summary.total_presencas > summary.total_previstos
+      || summary.taxa_presenca_percent > 100
+      || summary.total_previstos !== result.dias.reduce((sum, day) => sum + day.resumo.total_funcionarios, 0)
+      || summary.total_presencas !== result.dias.reduce((sum, day) => sum + day.resumo.presentes, 0)
+      || summary.total_ausencias !== summary.total_previstos - summary.total_presencas
+      || summary.taxa_presenca_percent !== (summary.total_previstos === 0 ? 0
+        : Math.round(100 * summary.total_presencas / summary.total_previstos))) {
+    throw new AppError("Servico de relatorios indisponivel", {
+      statusCode: 502,
+      code: "REPORT_SERVICE_UNAVAILABLE",
+    });
+  }
+  return {
+    data_referencia: result.data_referencia,
+    data_inicio: result.data_inicio,
+    data_fim: result.data_fim,
+    data_atual: result.data_atual,
+    resumo: {
+      total_previstos: summary.total_previstos,
+      total_presencas: summary.total_presencas,
+      total_ausencias: summary.total_ausencias,
+      taxa_presenca_percent: summary.taxa_presenca_percent,
+    },
+    dias: result.dias.map(day => ({
+      data: day.data,
+      futuro: day.futuro,
+      resumo: {
+        total_funcionarios: day.resumo.total_funcionarios,
+        total_ativos: day.resumo.total_ativos,
+        presentes: day.resumo.presentes,
+        ausentes: day.resumo.ausentes,
+        taxa_presenca_percent: day.resumo.taxa_presenca_percent,
+      },
+    })),
+  };
+}
+
 function filterId(value) {
   if (value === undefined) return null;
   if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)
@@ -241,6 +321,7 @@ module.exports = {
   buildDailySnapshot,
   getTodayPoints,
   getDailyReport,
+  getWeeklyReport,
   getDashboardSummary,
   getHierarchicalReport,
 };

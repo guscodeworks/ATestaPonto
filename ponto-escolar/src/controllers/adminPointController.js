@@ -34,6 +34,17 @@ async function getDailyReport(req, res, next) {
   }
 }
 
+async function getWeeklyReport(req, res, next) {
+  try {
+    const result = await pointReportService.getWeeklyReport({
+      data: req.query.data,
+    }, req.escopoUnidades);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getDashboardSummary(req, res, next) {
   try {
     const result = await pointReportService.getDashboardSummary(req.escopoUnidades);
@@ -65,6 +76,7 @@ async function getHierarchicalReport(req, res, next) {
 module.exports = {
   getTodayPoints,
   getDailyReport,
+  getWeeklyReport,
   getDashboardSummary,
   getHierarchicalReport,
 };
