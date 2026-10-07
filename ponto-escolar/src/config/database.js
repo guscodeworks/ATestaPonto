@@ -121,38 +121,21 @@ async function checkConnection() {
   } catch (error) {
     const code = String(error?.code || "");
 
-    if (code === "EAI_AGAIN" || code === "ETIMEDOUT" || code === "ECONNRESET") {
-      throw new DatabaseError(
-        "Falha temporaria ao conectar ao banco de dados.",
-        { transient: true, reason: "TEMPORARY_CONNECTION_FAILURE" }
-      );
-    }
-
-    if (code === "ENOTFOUND") {
-      throw new DatabaseError(
-        "Nao foi possivel resolver o endereco do banco de dados.",
-        { transient: false, reason: "DATABASE_HOST_NOT_FOUND" }
-      );
-    }
-
-    if (code === "ECONNREFUSED") {
-      throw new DatabaseError(
-        "A conexao com o banco de dados foi recusada.",
-        { transient: false, reason: "DATABASE_CONNECTION_REFUSED" }
-      );
-    }
-
-    if (code === "ER_ACCESS_DENIED_ERROR") {
-      throw new DatabaseError(
-        "As credenciais do banco de dados foram recusadas.",
-        { transient: false, reason: "DATABASE_ACCESS_DENIED" }
-      );
-    }
-
-    throw new DatabaseError(
-      "Nao foi possivel validar a conexao com o banco de dados.",
-      { transient: false, reason: "DATABASE_CONNECTION_FAILED" }
-    );
+    const failures = {
+      EAI_AGAIN: ["Falha temporaria ao resolver o hostname do banco de dados.", true, "DATABASE_HOST_NOT_RESOLVED"],
+      ENOTFOUND: ["Nao foi possivel resolver o hostname do banco de dados.", false, "DATABASE_HOST_NOT_FOUND"],
+      ECONNREFUSED: ["A conexao com o banco de dados foi recusada.", false, "DATABASE_CONNECTION_REFUSED"],
+      ETIMEDOUT: ["Tempo limite excedido ao conectar ao banco de dados.", true, "DATABASE_CONNECTION_TIMEOUT"],
+      ECONNRESET: ["A conexao com o banco de dados foi interrompida.", true, "DATABASE_CONNECTION_RESET"],
+      ER_ACCESS_DENIED_ERROR: ["As credenciais do banco de dados foram recusadas.", false, "DATABASE_ACCESS_DENIED"],
+      ER_BAD_DB_ERROR: ["O banco de dados configurado nao existe.", false, "DATABASE_NOT_FOUND"],
+    };
+    const [message, transient, reason] = failures[code] || [
+      "Nao foi possivel validar a conexao com o banco de dados.", false, "DATABASE_CONNECTION_FAILED",
+    ];
+    const context = env.NODE_ENV === "development"
+      ? ` ${JSON.stringify({ DB_HOST: env.DB_HOST, DB_PORT: env.DB_PORT, DB_NAME: env.DB_NAME })}` : "";
+    throw new DatabaseError(message + context, { transient, reason });
   }
 }
 
