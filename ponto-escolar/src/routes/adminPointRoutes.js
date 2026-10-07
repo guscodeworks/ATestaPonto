@@ -2,6 +2,7 @@ const { Router } = require("express");
 const {
   getTodayPoints,
   getDailyReport,
+  getWeeklyReport,
   getDashboardSummary,
   getHierarchicalReport,
 } = require("../controllers/adminPointController");
@@ -9,6 +10,13 @@ const { sensitiveLimiter } = require("../middlewares/rateLimiters");
 const { escopoPorCapacidade } = require("../middlewares/adminScope");
 
 const router = Router();
+
+router.get(
+  "/relatorio/semanal",
+  escopoPorCapacidade("relatorio.visualizar"),
+  sensitiveLimiter,
+  getWeeklyReport
+);
 
 router.get(
   "/relatorio/hierarquia",

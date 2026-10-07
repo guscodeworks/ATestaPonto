@@ -11,19 +11,66 @@ function validarAcessoPaginaRelatorios() {
   return false;
 }
 
+async function carregarRelatorioSemanalAdmin(dataReferencia, options = {}) {
+  try {
+    const query = dataReferencia ? `?data=${encodeURIComponent(dataReferencia)}` : '';
+    const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.pontosRelatorioSemanal}${query}`, {
+      signal: options.signal,
+    });
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    const report = getApiData(payload);
+    if (!report || !Array.isArray(report.dias) || report.dias.length !== 7) {
+      throw new Error('Resposta inválida ao carregar a presença semanal. Tente novamente.');
+    }
+    RELATORIO_SEMANAL = report;
+    RELATORIO_SEMANAL_DATA_ERROR = null;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    RELATORIO_SEMANAL = null;
+    RELATORIO_SEMANAL_DATA_ERROR = error;
+    throw error;
+  }
+}
+
 function renderizarGraficoSemanalRelatorio() {
   const container = document.getElementById('chart-presenca-semanal');
   if (!container) return;
 
-  // Placeholder intencional: o backend atual só expõe relatório diário,
-  // então o agregado semanal ainda não pode ser calculado/exibido.
-  container.innerHTML = `
-    <div class="empty-state" style="padding:8px 0;">
-      <div class="empty-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true"></div>
-      <div class="empty-title">Resumo semanal sem API real</div>
-      <div style="font-size:12px;color:var(--text-300);margin-top:4px;">O backend atual fornece relatorio diario. Agregado semanal fica como pendencia.</div>
-    </div>
-  `;
+  if (RELATORIO_SEMANAL_DATA_ERROR) {
+    const error = RELATORIO_SEMANAL_DATA_ERROR;
+    container.innerHTML = criarEstadoErroDadosAdmin(
+      'Não foi possível carregar a presença semanal', error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    );
+    return;
+  }
+  if (!RELATORIO_SEMANAL) {
+    container.innerHTML = '<div class="empty-state reports-empty-state">Carregando presença semanal...</div>';
+    return;
+  }
+
+  const report = RELATORIO_SEMANAL;
+  const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  const rows = report.dias.map((day, index) => {
+    const summary = day.resumo;
+    const dateLabel = `${day.data.slice(8, 10)}/${day.data.slice(5, 7)}`;
+    const detail = day.futuro ? 'Dia futuro' : summary.total_funcionarios === 0
+      ? 'Nenhum vínculo vigente no escopo'
+      : `${summary.presentes} presentes de ${summary.total_funcionarios}; ${summary.ausentes} sem ponto`;
+    const label = `${labels[index]}, ${dateLabel}: ${detail}`;
+    return `<div class="weekly-chart-day">
+      <div class="chart-bar-item" role="img" aria-label="${escapeHtml(label)}">
+        <span class="chart-bar-label">${labels[index]} ${dateLabel}</span>
+        <div class="chart-bar-track" aria-hidden="true"><div class="chart-bar-fill blue" style="width:${summary.taxa_presenca_percent}%"></div></div>
+        <span class="chart-bar-val" aria-hidden="true">${day.futuro || !summary.total_funcionarios ? '—' : `${summary.taxa_presenca_percent}%`}</span>
+      </div>
+      <div class="reports-panel-meta weekly-chart-detail" aria-hidden="true">${escapeHtml(detail)}</div>
+    </div>`;
+  }).join('');
+  container.innerHTML = `<p class="reports-panel-meta">${escapeHtml(formatarDataReferencia(report.data_inicio))} a ${escapeHtml(formatarDataReferencia(report.data_fim))}</p>
+    ${rows}
+    <p class="reports-panel-meta">Presença por pessoa e por dia. Dias futuros não contam como ausência; o dia atual mostra a situação até o momento da consulta.</p>`;
 }
 
 function renderizarRelatorio() {
