@@ -20,7 +20,7 @@ function renderizarUltimosRegistros() {
   const lista = PONTOS_HOJE.slice(-5).reverse();
 
   if (tbody && !lista.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div></td></tr>`;
   }
 
   if (tbody && lista.length) {
@@ -65,7 +65,7 @@ function renderizarUltimosRegistros() {
           </div>
         </div>
       `;
-    }).join('') : `<div class="empty-state"><div class="empty-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div>`;
+    }).join('') : `<div class="empty-state"><div class="empty-icon"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div>`;
   }
 }
 
@@ -183,7 +183,7 @@ function renderizarAlertas() {
   if (!alertas.length) {
     container.innerHTML = `
       <div class="alert-item blue">
-        <div class="alert-icon"><img src="/assets/icons/info.svg" alt="" aria-hidden="true"></div>
+        <div class="alert-icon"><img src="/icons/info.svg" alt="" aria-hidden="true"></div>
         <div class="alert-content">
           <div class="alert-title">Nenhum alerta com dados atuais</div>
           <div class="alert-desc">Os alertas exibidos aqui dependem das APIs reais de funcionarios e pontos.</div>
@@ -195,7 +195,7 @@ function renderizarAlertas() {
 
   container.innerHTML = alertas.map(a => `
     <div class="alert-item ${a.tipo}">
-      <div class="alert-icon"><img src="/assets/icons/${a.icon}" alt="" aria-hidden="true"></div>
+      <div class="alert-icon"><img src="/icons/${a.icon}" alt="" aria-hidden="true"></div>
       <div class="alert-content">
         <div class="alert-title">${escapeHtml(a.titulo)}</div>
         <div class="alert-desc">${escapeHtml(a.desc)}</div>

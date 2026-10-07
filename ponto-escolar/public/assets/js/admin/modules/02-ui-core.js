@@ -121,10 +121,10 @@ function iniciarTabs() {
 
 function toast(msg, tipo = 'success') {
   const icons = {
-    success: '/assets/icons/circle-check.svg',
-    error: '/assets/icons/circle-x.svg',
-    info: '/assets/icons/info.svg',
-    warning: '/assets/icons/triangle-alert.svg',
+    success: '/icons/circle-check.svg',
+    error: '/icons/circle-x.svg',
+    info: '/icons/info.svg',
+    warning: '/icons/triangle-alert.svg',
   };
   // Aceita os dois IDs de container possíveis, por compatibilidade com
   // diferentes versões do HTML da página.

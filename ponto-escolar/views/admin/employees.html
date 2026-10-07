@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Funcionários</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
   <script src="/assets/js/admin/admin.js" defer></script>
   <link rel="stylesheet" href="/assets/css/bundles/admin.css">
 </head>
@@ -16,7 +16,7 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -32,19 +32,19 @@
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
-      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
       <div class="sidebar-section-label">Funcionários</div>
-      <a href="/admin/funcionarios" class="nav-link active"><span class="nav-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
-      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
+      <a href="/admin/funcionarios" class="nav-link active"><span class="nav-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
       <div class="sidebar-section-label">Ponto</div>
-      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
-      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
       <div class="sidebar-section-label">Sistema</div>
-      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
+      <a href="/admin/configuracoes" class="nav-link"><span class="nav-icon"><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn-logout" type="button">
-        <span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
+        <span class="nav-icon"><img src="/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
       </button>
     </div>
   </aside>
@@ -53,7 +53,7 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
           <span>ATesta<span class="brand-accent">Ponto</span></span>
           <span class="breadcrumb-sep">›</span>
@@ -83,7 +83,7 @@
           <p class="page-subtitle"><span id="total-func">—</span> funcionários no sistema</p>
         </div>
         <a href="/admin/funcionarios/novo" class="ui-btn ui-btn-primary">
-          <img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"> Registrar Funcionário
+          <img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"> Registrar Funcionário
         </a>
       </div>
 
@@ -91,7 +91,7 @@
       <div class="action-bar employees-action-bar fade-in">
         <div class="action-bar-left">
           <div class="search-box">
-            <span class="search-icon"><img src="/assets/icons/search.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+            <span class="search-icon"><img src="/icons/search.svg" alt="" aria-hidden="true" width="18" height="18"></span>
             <input type="search" id="busca-funcionario" placeholder="Buscar por nome ou CPF" aria-label="Buscar funcionários por nome ou CPF" autocomplete="off"/>
           </div>
           <select class="filter-select" id="filtro-status" aria-label="Filtrar funcionários por status">
@@ -154,7 +154,7 @@
         <p id="employee-edit-description">Atualize os dados pessoais e a jornada vinculada ao funcionário.</p>
       </div>
       <button type="button" class="employee-edit-close" id="employee-edit-close" aria-label="Fechar edição">
-        <img src="/assets/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">
+        <img src="/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">
       </button>
     </header>
 
@@ -166,7 +166,7 @@
       </div>
 
       <div class="employee-edit-state employee-edit-error" id="employee-edit-error" role="alert" hidden>
-        <img src="/assets/icons/triangle-alert.svg" alt="" aria-hidden="true" width="30" height="30">
+        <img src="/icons/triangle-alert.svg" alt="" aria-hidden="true" width="30" height="30">
         <strong>Não foi possível abrir a edição</strong>
         <span id="employee-edit-error-message">Tente novamente.</span>
         <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" id="employee-edit-retry">Tentar novamente</button>
@@ -175,7 +175,7 @@
       <form id="employee-edit-form" novalidate hidden>
         <section class="employee-edit-section" aria-labelledby="employee-edit-personal-title">
           <div class="employee-edit-section-heading">
-            <span class="employee-edit-section-icon" aria-hidden="true"><img src="/assets/icons/user.svg" alt="" width="17" height="17"></span>
+            <span class="employee-edit-section-icon" aria-hidden="true"><img src="/icons/user.svg" alt="" width="17" height="17"></span>
             <div>
               <h3 id="employee-edit-personal-title">Dados pessoais</h3>
               <p>O CPF identifica o cadastro e não pode ser alterado.</p>
@@ -215,7 +215,7 @@
 
         <section class="employee-edit-section employee-edit-schedule" aria-labelledby="employee-edit-schedule-title">
           <div class="employee-edit-section-heading">
-            <span class="employee-edit-section-icon" aria-hidden="true"><img src="/assets/icons/clock.svg" alt="" width="17" height="17"></span>
+            <span class="employee-edit-section-icon" aria-hidden="true"><img src="/icons/clock.svg" alt="" width="17" height="17"></span>
             <div>
               <h3 id="employee-edit-schedule-title">Jornada diária</h3>
               <p>Escolha os horários na ordem em que acontecem.</p>
@@ -257,7 +257,7 @@
     <footer class="employee-edit-footer">
       <button type="button" class="ui-btn ui-btn-secondary" id="employee-edit-cancel">Cancelar</button>
       <button type="submit" class="ui-btn ui-btn-primary" id="employee-edit-save" form="employee-edit-form" disabled>
-        <span class="btn-label"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar alterações</span>
+        <span class="btn-label"><img src="/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar alterações</span>
         <span class="spinner" aria-hidden="true"></span>
       </button>
     </footer>
@@ -276,10 +276,10 @@
   >
     <header class="employee-status-header">
       <div class="employee-status-icon" aria-hidden="true">
-        <img id="employee-status-icon" src="/assets/icons/triangle-alert.svg" alt="" width="22" height="22">
+        <img id="employee-status-icon" src="/icons/triangle-alert.svg" alt="" width="22" height="22">
       </div>
       <button type="button" class="employee-status-close" id="employee-status-close" aria-label="Fechar confirmação">
-        <img src="/assets/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">
+        <img src="/icons/x.svg" alt="" aria-hidden="true" width="18" height="18">
       </button>
     </header>
 
@@ -302,7 +302,7 @@
         </div>
 
         <div class="employee-status-consequence" id="employee-status-consequence">
-          <img src="/assets/icons/lock.svg" alt="" aria-hidden="true" width="19" height="19">
+          <img src="/icons/lock.svg" alt="" aria-hidden="true" width="19" height="19">
           <p id="employee-status-consequence-text">
             O funcionário perderá o acesso ao sistema. Todos os registros de ponto serão preservados.
           </p>

@@ -1386,8 +1386,8 @@ dialog.ponto-confirm.is-saida {
     width: 20px;
     height: 20px;
     background: var(--color-primary);
-    -webkit-mask: url("/assets/icons/clock.svg") center / contain no-repeat;
-    mask: url("/assets/icons/clock.svg") center / contain no-repeat;
+    -webkit-mask: url("/icons/clock.svg") center / contain no-repeat;
+    mask: url("/icons/clock.svg") center / contain no-repeat;
     pointer-events: none;
   }
 
@@ -1491,8 +1491,8 @@ dialog.ponto-confirm.is-saida {
     width: 20px;
     height: 20px;
     background: var(--color-primary);
-    -webkit-mask: url("/assets/icons/timer.svg") center / contain no-repeat;
-    mask: url("/assets/icons/timer.svg") center / contain no-repeat;
+    -webkit-mask: url("/icons/timer.svg") center / contain no-repeat;
+    mask: url("/icons/timer.svg") center / contain no-repeat;
   }
 
   .employee-dashboard .journey-card-accent-red {

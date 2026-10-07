@@ -153,7 +153,8 @@ button { font-family: var(--font); cursor: pointer; }
 }
 
 /* Nav */
-.sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; scrollbar-width: none; }
+.sidebar-nav::-webkit-scrollbar { display: none; }
 
 .sidebar-section-label {
   font-size: 10px; font-weight: 700;

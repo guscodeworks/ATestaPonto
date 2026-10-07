@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard - Admin</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
   <script src="/assets/js/admin/admin.js" defer></script>
   <link rel="stylesheet" href="/assets/css/bundles/admin.css">
 </head>
@@ -17,7 +17,7 @@
   <!-- SIDEBAR -->
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -36,34 +36,34 @@
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
       <a href="/admin/dashboard" class="nav-link active">
-        <span class="nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard
+        <span class="nav-icon"><img src="/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard
       </a>
 
       <div class="sidebar-section-label">Funcionários</div>
       <a href="/admin/funcionarios" class="nav-link">
-        <span class="nav-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários
+        <span class="nav-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários
       </a>
       <a href="/admin/funcionarios/novo" class="nav-link">
-        <span class="nav-icon"><img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar
+        <span class="nav-icon"><img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar
       </a>
 
       <div class="sidebar-section-label">Ponto</div>
       <a href="/admin/pontos-do-dia" class="nav-link">
-        <span class="nav-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia
+        <span class="nav-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia
       </a>
       <a href="/admin/relatorios" class="nav-link">
-        <span class="nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios
+        <span class="nav-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios
       </a>
 
       <div class="sidebar-section-label">Sistema</div>
       <a href="/admin/configuracoes" class="nav-link">
-        <span class="nav-icon"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações
+        <span class="nav-icon"><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações
       </a>
     </nav>
 
     <div class="sidebar-footer">
       <button class="btn-logout" type="button">
-        <span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
+        <span class="nav-icon"><img src="/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
       </button>
     </div>
   </aside>
@@ -73,7 +73,7 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
           <span>ATesta<span class="brand-accent">Ponto</span></span>
           <span class="breadcrumb-sep">›</span>
@@ -105,25 +105,25 @@
       <!-- Stat cards -->
       <div class="stat-row">
         <div class="stat-card blue fade-in">
-          <div class="stat-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="stat-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="stat-value" id="stat-total">—</div>
           <div class="stat-label">Funcionários</div>
           <div class="stat-meta">cadastrados</div>
         </div>
         <div class="stat-card green fade-in">
-          <div class="stat-icon"><img src="/assets/icons/circle-check.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="stat-icon"><img src="/icons/circle-check.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="stat-value" id="stat-presentes">—</div>
           <div class="stat-label">Presentes</div>
           <div class="stat-meta">bateram ponto hoje</div>
         </div>
         <div class="stat-card red fade-in">
-          <div class="stat-icon"><img src="/assets/icons/circle-x.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="stat-icon"><img src="/icons/circle-x.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="stat-value" id="stat-ausentes">—</div>
           <div class="stat-label">Ausentes</div>
           <div class="stat-meta">sem registro</div>
         </div>
         <div class="stat-card purple fade-in">
-          <div class="stat-icon"><img src="/assets/icons/trending-up.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="stat-icon"><img src="/icons/trending-up.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="stat-value" id="stat-taxa">—</div>
           <div class="stat-label">Taxa presença</div>
           <div class="stat-meta">hoje</div>
@@ -133,44 +133,44 @@
       <!-- Acesso rápido -->
       <div class="quick-grid fade-in">
         <a href="/admin/funcionarios" class="quick-card blue">
-          <div class="quick-card-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="quick-card-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="quick-card-text">
             <div class="quick-card-title">Funcionários</div>
             <div class="quick-card-desc">Gerenciar equipe</div>
           </div>
-          <span class="quick-card-arrow"><img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+          <span class="quick-card-arrow"><img src="/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
         </a>
         <a href="/admin/funcionarios/novo" class="quick-card purple">
-          <div class="quick-card-icon"><img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="quick-card-icon"><img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="quick-card-text">
             <div class="quick-card-title">Registrar</div>
             <div class="quick-card-desc">Novo funcionário</div>
           </div>
-          <span class="quick-card-arrow"><img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+          <span class="quick-card-arrow"><img src="/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
         </a>
         <button type="button" class="quick-card purple" id="quick-add-school" aria-controls="school-setup" aria-expanded="false" hidden>
-          <span class="quick-card-icon"><img src="/assets/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+          <span class="quick-card-icon"><img src="/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></span>
           <span class="quick-card-text">
             <span class="quick-card-title">Adicionar escola</span>
             <span class="quick-card-desc">Conferir dados da unidade</span>
           </span>
-          <span class="quick-card-arrow"><img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+          <span class="quick-card-arrow"><img src="/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
         </button>
         <a href="/admin/pontos-do-dia" class="quick-card green">
-          <div class="quick-card-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="quick-card-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="quick-card-text">
             <div class="quick-card-title">Pontos do Dia</div>
             <div class="quick-card-desc">Registros de hoje</div>
           </div>
-          <span class="quick-card-arrow"><img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+          <span class="quick-card-arrow"><img src="/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
         </a>
         <a href="/admin/relatorios" class="quick-card amber">
-          <div class="quick-card-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+          <div class="quick-card-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></div>
           <div class="quick-card-text">
             <div class="quick-card-title">Relatórios</div>
             <div class="quick-card-desc">Exportar dados</div>
           </div>
-          <span class="quick-card-arrow"><img src="/assets/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+          <span class="quick-card-arrow"><img src="/icons/arrow-up-right.svg" alt="" aria-hidden="true" width="18" height="18"></span>
         </a>
       </div>
 
