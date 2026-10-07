@@ -16,63 +16,52 @@ const springEnv = {
   ...process.env,
   BRASILAPI_BASE_URL: process.env.BRASILAPI_BASE_URL || "https://brasilapi.com.br",
 };
-// O Spring deste comando roda no host; mysql-dev publica sua porta em localhost.
-if (springEnv.DB_HOST === "mysql-dev") {
-  springEnv.DB_HOST = "127.0.0.1";
-}
-const windows = process.platform === "win32";
-const javaExecutable = windows ? "java.exe" : "java";
-const compilerExecutable = windows ? "javac.exe" : "javac";
-
-function isJava21Jdk(home) {
-  if (!home || !fs.existsSync(path.join(home, "bin", compilerExecutable))) return false;
-  const result = spawnSync(path.join(home, "bin", javaExecutable), ["-version"], {
-    encoding: "utf8",
-    timeout: 5000,
-  });
-  return result.status === 0 && /version "21(?:[."])/.test(result.stderr + result.stdout);
-}
-
-const candidates = [springEnv.JAVA_HOME];
-for (const root of ["/usr/lib/jvm", "/opt/java", "/Library/Java/JavaVirtualMachines"]) {
-  if (!fs.existsSync(root)) continue;
-  for (const entry of fs.readdirSync(root)) {
-    candidates.push(path.join(root, entry), path.join(root, entry, "Contents", "Home"));
-  }
-}
-const javaHome = candidates.find(isJava21Jdk);
-if (!javaHome) {
-  console.error("JDK 21 não encontrado. Configure JAVA_HOME para um JDK 21 válido.");
-  if (fs.existsSync("/.dockerenv")) {
-    console.error("O container node-dev não inclui Java. Execute npm run dev:spring em um terminal do host, fora do container.");
-  }
+// JDK e Maven sao configurados explicitamente, sem inferir SO ou ambiente Docker.
+const javaHome = springEnv.JAVA_HOME;
+const mavenHome = springEnv.MAVEN_HOME;
+if (!javaHome || !mavenHome) {
+  console.error("Configure JAVA_HOME (JDK 21) e MAVEN_HOME (Maven 3) para iniciar o Spring.");
   process.exit(1);
 }
-springEnv.JAVA_HOME = javaHome;
-
-const child = spawn(windows ? "mvnw.cmd" : "./mvnw", ["spring-boot:run"], {
-  cwd: path.resolve(projectRoot, "../backend-spring"),
-  env: springEnv,
-  stdio: "inherit",
-  detached: !windows,
-  shell: windows,
+const javaExecutable = ["java", "java.exe"]
+  .map(name => path.join(javaHome, "bin", name))
+  .find(file => fs.existsSync(file));
+const compilerExists = ["javac", "javac.exe"]
+  .some(name => fs.existsSync(path.join(javaHome, "bin", name)));
+const version = javaExecutable && spawnSync(javaExecutable, ["-version"], {
+  encoding: "utf8", timeout: 5000,
 });
+if (!compilerExists || !version || version.status !== 0
+    || !/version "21(?:[.\"])/.test(version.stderr + version.stdout)) {
+  console.error("JAVA_HOME deve apontar para um JDK 21 valido.");
+  process.exit(1);
+}
+const bootDirectory = path.join(mavenHome, "boot");
+const launcherJars = fs.existsSync(bootDirectory)
+  ? fs.readdirSync(bootDirectory).filter(name => /^plexus-classworlds-.*\.jar$/.test(name)) : [];
+const mavenConfig = path.join(mavenHome, "bin", "m2.conf");
+if (launcherJars.length !== 1 || !fs.existsSync(mavenConfig)) {
+  console.error("MAVEN_HOME deve apontar para uma distribuicao Maven 3 valida.");
+  process.exit(1);
+}
+const springRoot = path.resolve(projectRoot, "..", "backend-spring");
+const child = spawn(javaExecutable, [
+  `-Dmaven.home=${mavenHome}`,
+  `-Dmaven.multiModuleProjectDirectory=${springRoot}`,
+  `-Dclassworlds.conf=${mavenConfig}`,
+  "-classpath", path.join(bootDirectory, launcherJars[0]),
+  "org.codehaus.plexus.classworlds.launcher.Launcher",
+  "spring-boot:run",
+], { cwd: springRoot, env: springEnv, stdio: "inherit", shell: false });
 
-// Encerra também o processo Java iniciado pelo Maven ao pressionar Ctrl+C.
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
-    if (!child.pid) return;
-    try {
-      if (windows) child.kill(signal);
-      else process.kill(-child.pid, signal);
-    } catch (error) {
-      if (error.code !== "ESRCH") console.error("Não foi possível encerrar o Spring.");
-    }
+    if (child.pid && !child.killed) child.kill(signal);
   });
 }
 
 child.on("error", () => {
-  console.error("Não foi possível iniciar o Maven Wrapper do backend-spring.");
+  console.error("Não foi possível iniciar o Maven do backend-spring.");
   process.exitCode = 1;
 });
 child.on("exit", (code, signal) => {
