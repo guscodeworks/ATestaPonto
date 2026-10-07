@@ -54,6 +54,8 @@ let FUNCIONARIOS = [];
 let PONTOS_HOJE = [];
 let AUSENTES_HOJE = [];
 let RELATORIO_PONTOS = [];
+let RELATORIO_SEMANAL = null;
+let RELATORIO_SEMANAL_DATA_ERROR = null;
 let RESUMO_PONTOS = {
   total_funcionarios: 0,
   total_ativos: 0,
@@ -82,6 +84,7 @@ const ADMIN_ENDPOINTS = {
   funcionarios: '/api/admin/funcionarios',
   pontosHoje: '/api/admin/pontos/hoje',
   pontosRelatorio: '/api/admin/pontos/relatorio',
+  pontosRelatorioSemanal: '/api/admin/pontos/relatorio/semanal',
   pontosResumo: '/api/admin/pontos/resumo',
 };
 
@@ -363,6 +366,7 @@ async function carregarDadosAdmin(options = {}) {
   if (includeToday) loaders.push(carregarPontosHojeAdmin(requestOptions));
   if (includeSummary) loaders.push(carregarResumoAdmin(requestOptions));
   if (includeReport) loaders.push(carregarRelatorioAdmin(options.dataReferencia, requestOptions));
+  if (options.includeWeekly === true) loaders.push(carregarRelatorioSemanalAdmin(options.dataReferencia, requestOptions));
 
   try {
     if (!loaders.length) return true;
@@ -425,6 +429,8 @@ async function recarregarDadosAdminTela() {
     // O relatório só é buscado se a tabela correspondente existir no DOM,
     // evitando uma chamada de API desnecessária em telas que não a exibem.
     includeReport: Boolean(document.getElementById('tbody-relatorio')),
+    includeWeekly: temCapacidade('relatorio.visualizar')
+      && Boolean(document.getElementById('chart-presenca-semanal')),
   });
 
   if (typeof renderizarStats === 'function') renderizarStats();

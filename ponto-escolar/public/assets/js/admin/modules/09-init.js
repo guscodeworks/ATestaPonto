@@ -137,14 +137,17 @@
     ));
     const precisaRelatorio = temCapacidade('relatorio.visualizar')
       && Boolean(document.getElementById('tbody-relatorio'));
+    const precisaSemanal = temCapacidade('relatorio.visualizar')
+      && Boolean(document.getElementById('chart-presenca-semanal'));
     const dataOptions = {
       includeEmployees: precisaFuncionarios,
       includeToday: precisaPontosHoje,
       includeSummary: precisaResumo,
       includeReport: precisaRelatorio,
+      includeWeekly: precisaSemanal,
     };
     iniciarRecarregamentoDeDados(dataOptions, paginaListaFuncionarios);
-    if (precisaFuncionarios || precisaPontosHoje || precisaResumo || precisaRelatorio) {
+    if (precisaFuncionarios || precisaPontosHoje || precisaResumo || precisaRelatorio || precisaSemanal) {
       await atualizarDadosDaPagina(dataOptions, paginaListaFuncionarios);
     } else {
       renderizarDadosAdminAtuais();
