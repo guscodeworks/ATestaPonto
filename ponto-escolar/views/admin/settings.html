@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 	  <title>Configurações</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
   <script src="/assets/js/admin/admin.js" defer></script>
   <link rel="stylesheet" href="/assets/css/bundles/admin.css">
 </head>
@@ -16,7 +16,7 @@
 
   <aside class="app-sidebar" id="sidebar">
     <div class="sidebar-brand">
-      <div class="sidebar-brand-mark"><img src="/assets/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-mark"><img src="/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
       <div class="sidebar-brand-text">
         <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
         <span class="sidebar-brand-sub">Administração</span>
@@ -32,19 +32,19 @@
     </div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
-      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/assets/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
+      <a href="/admin/dashboard" class="nav-link"><span class="nav-icon"><img src="/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Dashboard</a>
       <div class="sidebar-section-label">Funcionários</div>
-      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
-      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/assets/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
+      <a href="/admin/funcionarios" class="nav-link"><span class="nav-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários</a>
+      <a href="/admin/funcionarios/novo" class="nav-link"><span class="nav-icon"><img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar</a>
       <div class="sidebar-section-label">Ponto</div>
-      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
-      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/assets/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
+      <a href="/admin/pontos-do-dia" class="nav-link"><span class="nav-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia</a>
+      <a href="/admin/relatorios" class="nav-link"><span class="nav-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios</a>
       <div class="sidebar-section-label">Sistema</div>
-      <a href="/admin/configuracoes" class="nav-link active"><span class="nav-icon"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
+      <a href="/admin/configuracoes" class="nav-link active"><span class="nav-icon"><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações</a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn-logout" type="button">
-        <span class="nav-icon"><img src="/assets/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
+        <span class="nav-icon"><img src="/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
       </button>
     </div>
   </aside>
@@ -53,7 +53,7 @@
 
     <header class="topbar">
       <div class="topbar-left">
-        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/assets/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
         <div class="breadcrumb">
           <span>ATesta<span class="brand-accent">Ponto</span></span>
           <span class="breadcrumb-sep">›</span>
@@ -87,16 +87,16 @@
         <!-- Nav de configurações -->
         <div class="settings-nav">
           <div class="settings-nav-item active" data-panel="panel-perfil" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-            <span><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span> Meu perfil
+            <span><img src="/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span> Meu perfil
           </div>
           <div class="settings-nav-item" data-panel="panel-horarios" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-            <span><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"></span> Horários padrão
+            <span><img src="/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"></span> Horários padrão
           </div>
           <div class="settings-nav-item" data-panel="panel-sistema" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-            <span><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sistema
+            <span><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sistema
           </div>
           <div class="settings-nav-item" data-panel="panel-permissoes" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
-            <span><img src="/assets/icons/shield.svg" alt="" aria-hidden="true" width="18" height="18"></span> Permissões
+            <span><img src="/icons/shield.svg" alt="" aria-hidden="true" width="18" height="18"></span> Permissões
           </div>
         </div>
 
@@ -107,7 +107,7 @@
           <div class="settings-panel" id="panel-perfil">
             <div class="card settings-card">
               <div class="card-header">
-                <div class="card-title"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"> Identidade Gov.br</div>
+                <div class="card-title"><img src="/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"> Identidade Gov.br</div>
               </div>
               <div class="settings-panel-body">
 
@@ -127,14 +127,14 @@
                   <div class="form-field">
                     <label>Nome completo</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/user.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="text" class="field-input" value="" id="cfg-nome" readonly/>
                     </div>
                   </div>
                   <div class="form-field">
                     <label>E-mail</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/mail.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/mail.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="email" class="field-input" value="" id="cfg-email" readonly/>
                     </div>
                   </div>
@@ -147,55 +147,55 @@
           <div class="settings-panel" id="panel-horarios" style="display:none;">
             <div class="card settings-card">
               <div class="card-header">
-                <div class="card-title"><img src="/assets/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"> Horários Padrão do Sistema</div>
+                <div class="card-title"><img src="/icons/clock.svg" alt="" aria-hidden="true" width="18" height="18"> Horários Padrão do Sistema</div>
               </div>
               <div class="settings-panel-body">
                 <div class="form-grid-2">
                   <div class="form-field">
                     <label>Horário de entrada</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="time" class="field-input" value="08:00"/>
                     </div>
                   </div>
                   <div class="form-field">
                     <label>Horário de saída</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="time" class="field-input" value="17:00"/>
                     </div>
                   </div>
                   <div class="form-field">
                     <label>Início do almoço</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="time" class="field-input" value="12:00"/>
                     </div>
                   </div>
                   <div class="form-field">
                     <label>Fim do almoço</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/circle.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="time" class="field-input" value="13:00"/>
                     </div>
                   </div>
                   <div class="form-field">
                     <label>Tolerância de atraso (min)</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="number" class="field-input" value="10" min="0" max="60"/>
                     </div>
                   </div>
                   <div class="form-field">
                     <label>Carga horária diária (h)</label>
                     <div class="input-wrap">
-                      <span class="field-icon"><img src="/assets/icons/clipboard-list.svg" alt="" aria-hidden="true" width="18" height="18"></span>
+                      <span class="field-icon"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true" width="18" height="18"></span>
                       <input type="number" class="field-input" value="8" min="1" max="12"/>
                     </div>
                   </div>
                 </div>
                 <div class="form-actions settings-form-actions">
-                  <button class="ui-btn ui-btn-primary" onclick="toast('Horários salvos!','success')"><img src="/assets/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar horários</button>
+                  <button class="ui-btn ui-btn-primary" onclick="toast('Horários salvos!','success')"><img src="/icons/save.svg" alt="" aria-hidden="true" width="18" height="18"> Salvar horários</button>
                 </div>
               </div>
             </div>
@@ -205,7 +205,7 @@
           <div class="settings-panel" id="panel-sistema" style="display:none;">
             <div class="card settings-card">
               <div class="card-header">
-                <div class="card-title"><img src="/assets/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"> Configurações do Sistema</div>
+                <div class="card-title"><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"> Configurações do Sistema</div>
               </div>
               <div class="settings-panel-body settings-options-list">
 
@@ -261,11 +261,11 @@
           <div class="settings-panel" id="panel-permissoes" style="display:none;">
             <div class="card settings-card">
               <div class="card-header">
-                <div class="card-title"><img src="/assets/icons/shield.svg" alt="" aria-hidden="true" width="18" height="18"> Permissões e Acesso</div>
+                <div class="card-title"><img src="/icons/shield.svg" alt="" aria-hidden="true" width="18" height="18"> Permissões e Acesso</div>
               </div>
               <div class="settings-panel-body">
                 <div class="alert-item blue settings-permissions-alert">
-                  <div class="alert-icon"><img src="/assets/icons/info.svg" alt="" aria-hidden="true" width="18" height="18"></div>
+                  <div class="alert-icon"><img src="/icons/info.svg" alt="" aria-hidden="true" width="18" height="18"></div>
                   <div class="alert-content">
                     <div class="alert-title">Capacidades por perfil</div>
                     <div class="alert-desc">Permissões administrativas configuradas atualmente no sistema.</div>

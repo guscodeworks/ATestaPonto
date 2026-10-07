@@ -24,7 +24,7 @@ function renderizarPontosHoje() {
   const tbodyA = document.getElementById('tbody-ausentes');
   const cardP = document.getElementById('cards-presentes');
   const cardA = document.getElementById('cards-ausentes');
-  const icon = (name) => `<img src="/assets/icons/${name}.svg" alt="" aria-hidden="true" width="18" height="18">`;
+  const icon = (name) => `<img src="/icons/${name}.svg" alt="" aria-hidden="true" width="18" height="18">`;
 
   // Junta cada registro de ponto com seus dados de funcionário e descarta
   // entradas cujo funcionário não pôde ser resolvido (dado inconsistente).

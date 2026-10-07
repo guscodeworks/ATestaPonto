@@ -407,7 +407,7 @@
     border-color: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
     border-radius: var(--radius-btn);
     background-color: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
-    background-image: url("/assets/icons/calendar-days.svg");
+    background-image: url("/icons/calendar-days.svg");
     background-position: right 13px center;
     background-repeat: no-repeat;
     background-size: 18px;
@@ -539,11 +539,11 @@
   }
 
   .employee-report .report-summary-grid > div:first-child::before {
-    background-image: url("/assets/icons/clipboard-list.svg");
+    background-image: url("/icons/clipboard-list.svg");
   }
 
   .employee-report .report-summary-grid > div:last-child::before {
-    background-image: url("/assets/icons/clock.svg");
+    background-image: url("/icons/clock.svg");
     border-color: color-mix(in srgb, var(--color-accent) 15%, var(--color-surface));
     background-color: color-mix(in srgb, var(--color-accent) 9%, var(--color-surface));
     box-shadow: 0 3px 10px rgba(177, 18, 38, 0.07);
@@ -621,7 +621,7 @@
     border: 1px solid color-mix(in srgb, var(--color-primary) 14%, var(--color-surface));
     border-radius: var(--radius-btn);
     background-color: color-mix(in srgb, var(--color-primary) 8%, var(--color-surface));
-    background-image: url("/assets/icons/clipboard-list.svg");
+    background-image: url("/icons/clipboard-list.svg");
     background-position: center;
     background-repeat: no-repeat;
     background-size: 17px;

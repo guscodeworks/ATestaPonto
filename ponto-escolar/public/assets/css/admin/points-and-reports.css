@@ -233,12 +233,12 @@
   width: 42px;
   height: 42px;
   margin-inline: auto;
-  background: center / 24px 24px no-repeat url("/assets/icons/chart-column.svg");
+  background: center / 24px 24px no-repeat url("/icons/chart-column.svg");
   font-size: 0;
 }
 
 .reports-page .reports-results-panel .empty-icon {
-  background-image: url("/assets/icons/clipboard-list.svg");
+  background-image: url("/icons/clipboard-list.svg");
 }
 
 .reports-page .reports-results-panel .data-table {

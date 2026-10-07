@@ -126,7 +126,7 @@ function obterEstadoErroFuncionarios(error) {
 function criarEstadoListaFuncionarios({ icon, title, description, retry = false }) {
   return `
     <div class="employees-list-state" role="status">
-      <div class="empty-icon"><img src="/assets/icons/${icon}.svg" alt="" aria-hidden="true"></div>
+      <div class="empty-icon"><img src="/icons/${icon}.svg" alt="" aria-hidden="true"></div>
       <div class="empty-title">${escapeHtml(title)}</div>
       ${description ? `<div class="employees-state-description">${escapeHtml(description)}</div>` : ''}
       ${retry ? '<button type="button" class="ui-btn ui-btn-secondary ui-btn-sm" data-employee-reload>Tentar novamente</button>' : ''}
@@ -165,7 +165,7 @@ function criarMenuAcoesFuncionario(funcionario) {
       <div class="employee-actions-popover">
         ${podeVisualizar ? `
           <button type="button" data-employee-edit="${Number(funcionario.id)}">
-            <img src="/assets/icons/pencil.svg" alt="" aria-hidden="true"> ${tituloVisualizacao}
+            <img src="/icons/pencil.svg" alt="" aria-hidden="true"> ${tituloVisualizacao}
           </button>
         ` : ''}
         ${podeAlterarStatus ? `
@@ -440,8 +440,8 @@ function configurarModalStatusFuncionario(funcionario, isReactivation) {
     ? 'Confirme quem voltará a acessar o sistema.'
     : 'Confirme os dados antes de suspender o acesso ao sistema.';
   elements.icon.src = isReactivation
-    ? '/assets/icons/circle-check.svg'
-    : '/assets/icons/triangle-alert.svg';
+    ? '/icons/circle-check.svg'
+    : '/icons/triangle-alert.svg';
   elements.avatar.textContent = getIniciais(funcionario.nome);
   elements.name.textContent = funcionario.nome;
   elements.role.textContent = formatarCargoFuncionario(funcionario.cargo);

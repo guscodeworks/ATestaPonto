@@ -362,8 +362,36 @@
     'funcionario_token',
     'funcionario_data',
     'func_nome',
-    'func_cpf'
+    'func_cpf',
+    'funcionario_primeiro_acesso_token',
+    'funcionario_primeiro_acesso_expira_em'
   ]);
+  const tokenDaPagina = sessionStorage.getItem('funcionario_token');
+  const displayOriginal = document.documentElement.style.display;
+
+  function verificarSessaoAtual() {
+    const tokenAtual = sessionStorage.getItem('funcionario_token');
+    if (!tokenAtual) {
+      document.documentElement.style.display = 'none';
+      limparSessaoFuncionario();
+      window.location.replace('/login');
+      return;
+    }
+    if (tokenAtual !== tokenDaPagina) {
+      // Uma página restaurada não pode reutilizar dados/token de outro login.
+      document.documentElement.style.display = 'none';
+      window.location.reload();
+      return;
+    }
+    document.documentElement.style.display = displayOriginal;
+  }
+
+  window.addEventListener('pagehide', () => {
+    document.documentElement.style.display = 'none';
+  });
+  window.addEventListener('pageshow', verificarSessaoAtual);
+  window.addEventListener('focus', verificarSessaoAtual);
+  verificarSessaoAtual();
 
   function getElement(id) {
     return document.getElementById(id);
@@ -401,6 +429,7 @@
 
   function limparSessaoFuncionario() {
     CHAVES_SESSAO.forEach((chave) => sessionStorage.removeItem(chave));
+    document.documentElement.style.display = 'none';
   }
 
   window.FuncionarioShared = Object.freeze({
@@ -427,7 +456,7 @@ const {
 } = window.FuncionarioShared;
 
 if (!funcionarioToken) {
-  window.location.href = '/login';
+  window.location.replace('/login');
 }
 
 const DIAS_SEMANA = [
@@ -462,7 +491,7 @@ const ETAPAS = Object.freeze([
     rotuloCard: 'Entrada',
     botao: 'REGISTRAR ENTRADA',
     confirmacao: 'Registrar entrada?',
-    asset: '/assets/icons/clock.svg'
+    asset: '/icons/clock.svg'
   },
   {
     tipo: 'SAIDA_ALMOCO',
@@ -471,7 +500,7 @@ const ETAPAS = Object.freeze([
     rotuloCard: 'Almoço',
     botao: 'INICIAR ALMOÇO',
     confirmacao: 'Iniciar almoço?',
-    asset: '/assets/icons/timer.svg'
+    asset: '/icons/timer.svg'
   },
   {
     tipo: 'RETORNO_ALMOCO',
@@ -480,7 +509,7 @@ const ETAPAS = Object.freeze([
     rotuloCard: 'Retorno',
     botao: 'RETORNAR DO ALMOÇO',
     confirmacao: 'Retornar do almoço?',
-    asset: '/assets/icons/arrow-up-right.svg'
+    asset: '/icons/arrow-up-right.svg'
   },
   {
     tipo: 'SAIDA',
@@ -489,7 +518,7 @@ const ETAPAS = Object.freeze([
     rotuloCard: 'Saída',
     botao: 'REGISTRAR SAÍDA',
     confirmacao: 'Registrar saída?',
-    asset: '/assets/icons/log-out.svg'
+    asset: '/icons/log-out.svg'
   }
 ]);
 
@@ -655,7 +684,7 @@ function anunciarEstadoBotao(mensagem) {
 function aplicarEstadoBotao({
   estado,
   texto,
-  icone = '/assets/icons/clock.svg',
+  icone = '/icons/clock.svg',
   desabilitado,
   ocupado = false,
   classes = [],
@@ -752,7 +781,7 @@ function criarEtapaJornada(etapa, jornada, ponto, proximaBatida) {
   marker.className = 'journey-step-marker';
 
   const icon = document.createElement('img');
-  icon.src = concluida ? '/assets/icons/check.svg' : etapa.asset;
+  icon.src = concluida ? '/icons/check.svg' : etapa.asset;
   icon.alt = '';
   icon.setAttribute('aria-hidden', 'true');
   marker.appendChild(icon);
@@ -797,7 +826,7 @@ function mostrarEstadoConfirmado() {
   aplicarEstadoBotao({
     estado: 'CONFIRMADO',
     texto: 'REGISTRO CONFIRMADO',
-    icone: '/assets/icons/circle-check.svg',
+    icone: '/icons/circle-check.svg',
     desabilitado: true,
     classes: ['is-success'],
     anuncio: 'Registro confirmado com sucesso.'
@@ -808,7 +837,7 @@ function mostrarEstadoAtualizacaoPendente() {
   aplicarEstadoBotao({
     estado: 'SYNC_PENDING',
     texto: 'ATUALIZE PARA CONTINUAR',
-    icone: '/assets/icons/clock.svg',
+    icone: '/icons/clock.svg',
     desabilitado: true,
     classes: ['is-sync-pending'],
     anuncio: 'Registro confirmado. Atualize o estado antes de continuar.'
@@ -826,7 +855,7 @@ function renderEstado() {
     aplicarEstadoBotao({
       estado: 'ERRO',
       texto: 'INDISPONÍVEL',
-      icone: '/assets/icons/circle-x.svg',
+      icone: '/icons/circle-x.svg',
       desabilitado: true,
       classes: ['is-unavailable']
     });
@@ -843,7 +872,7 @@ function renderEstado() {
     aplicarEstadoBotao({
       estado: 'CONCLUIDA',
       texto: 'JORNADA CONCLUÍDA',
-      icone: '/assets/icons/circle-check.svg',
+      icone: '/icons/circle-check.svg',
       desabilitado: true,
       anuncio: 'Jornada concluída.'
     });
@@ -857,7 +886,7 @@ function renderEstado() {
     aplicarEstadoBotao({
       estado: 'INDISPONIVEL',
       texto: 'INDISPONÍVEL',
-      icone: '/assets/icons/circle-x.svg',
+      icone: '/icons/circle-x.svg',
       desabilitado: true,
       classes: ['is-unavailable'],
       anuncio: 'Próxima ação indisponível.'
@@ -944,7 +973,7 @@ function tratarErroCarregamento(error, { notificar = true } = {}) {
   aplicarEstadoBotao({
     estado: 'ERRO',
     texto: 'INDISPONÍVEL',
-    icone: '/assets/icons/circle-x.svg',
+    icone: '/icons/circle-x.svg',
     desabilitado: true,
     classes: ['is-unavailable'],
     anuncio: mensagem
@@ -1097,7 +1126,7 @@ function recarregarEstadoAposRegistro() {
   aplicarEstadoBotao({
     estado: 'SYNC_PENDING',
     texto: 'ATUALIZANDO...',
-    icone: '/assets/icons/clock.svg',
+    icone: '/icons/clock.svg',
     desabilitado: true,
     ocupado: true,
     classes: ['is-sync-pending', 'is-loading']
@@ -1286,7 +1315,7 @@ function toast(msg, tipo = 'info') {
 
 function sair() {
   limparSessaoFuncionario();
-  window.location.href = '/login';
+  window.location.replace('/login');
 }
 
 function inicializarEventosPonto() {

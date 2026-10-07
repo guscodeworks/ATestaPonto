@@ -57,7 +57,7 @@ label {
   box-sizing: border-box;
   padding-top: clamp(150px, 27vh, 230px);
   overflow: clip;
-  background: url("../img/background-mobile.webp") center / cover no-repeat;
+  background: url("/img/background-mobile.webp") center / cover no-repeat;
 }
 
 /* Mobile: imagem estática de fundo; gradiente/blobs e bolinhas desligados. */
@@ -259,11 +259,11 @@ form {
 }
 
 #identificador {
-  background-image: url("../icons/id-card.svg");
+  background-image: url("/icons/id-card.svg");
 }
 
 #senha {
-  background-image: url("../icons/lock.svg");
+  background-image: url("/icons/lock.svg");
 }
 
 .field-input::placeholder {
@@ -322,7 +322,7 @@ form {
   border: 0;
   border-radius: 7px;
   outline: 0;
-  background: transparent url("../icons/eye.svg") center / 20px no-repeat;
+  background: transparent url("/icons/eye.svg") center / 20px no-repeat;
   font-size: 0;
   cursor: pointer;
 }
@@ -332,7 +332,7 @@ form {
 }
 
 .toggle-pw[aria-label="Ocultar senha"] {
-  background-image: url("../icons/eye-off.svg");
+  background-image: url("/icons/eye-off.svg");
 }
 
 .toggle-pw:focus-visible {
@@ -491,7 +491,7 @@ form {
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
-  background: transparent url("../icons/circle-x.svg") center / contain no-repeat;
+  background: transparent url("/icons/circle-x.svg") center / contain no-repeat;
   filter: brightness(0) invert(1);
 }
 
@@ -542,7 +542,7 @@ form {
     min-height: 100dvh;
     padding: clamp(28px, 6vh, 76px) clamp(24px, 5vw, 64px);
     overflow: visible;
-    background: url("../img/background-desktop.webp") center / cover no-repeat;
+    background: url("/img/background-desktop.webp") center / cover no-repeat;
   }
 
   .login-panel {

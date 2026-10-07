@@ -42,7 +42,7 @@ body.employee-area::before {
   position: fixed;
   z-index: -1;
   inset: 0;
-  background: url("/assets/img/background-mobile.webp") center top / cover no-repeat;
+  background: url("/img/background-mobile.webp") center top / cover no-repeat;
   pointer-events: none;
 }
 
@@ -50,14 +50,14 @@ body.employee-area::before {
    Desktop (>=768px) preserva a regra acima, sem alteracao. */
 @media (max-width: 767px) {
   body.employee-area::before {
-    background: url("/assets/img/background-mobile-employee.webp") center / cover no-repeat;
+    background: url("/img/background-mobile-employee.webp") center / cover no-repeat;
   }
 }
 
 /* Desktop/tablet (>=768px): fundo estático proprio do funcionario. */
 @media (min-width: 768px) {
   body.employee-area::before {
-    background: url("/assets/img/background-desktop-employee.webp") center / cover no-repeat;
+    background: url("/img/background-desktop-employee.webp") center / cover no-repeat;
   }
 }
 
@@ -458,21 +458,21 @@ dialog.employee-modal.show {
   width: 18px;
   height: 18px;
   flex: 0 0 18px;
-  background: center / contain no-repeat url("../../icons/info.svg");
+  background: center / contain no-repeat url("/icons/info.svg");
   color: transparent;
   font-size: 0;
 }
 
 .toast-error .toast-icon {
-  background-image: url("../../icons/circle-x.svg");
+  background-image: url("/icons/circle-x.svg");
 }
 
 .toast-success .toast-icon {
-  background-image: url("../../icons/circle-check.svg");
+  background-image: url("/icons/circle-check.svg");
 }
 
 .toast-warning .toast-icon {
-  background-image: url("../../icons/triangle-alert.svg");
+  background-image: url("/icons/triangle-alert.svg");
 }
 
 .toast-msg {
@@ -751,7 +751,7 @@ dialog.employee-modal.show {
   }
 
   body.employee-area::before {
-    background: url("/assets/img/background-desktop-employee.webp") center top / cover no-repeat;
+    background: url("/img/background-desktop-employee.webp") center top / cover no-repeat;
     opacity: 0.9;
   }
 

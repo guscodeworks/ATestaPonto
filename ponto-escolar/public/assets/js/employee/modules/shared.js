@@ -10,8 +10,36 @@
     'funcionario_token',
     'funcionario_data',
     'func_nome',
-    'func_cpf'
+    'func_cpf',
+    'funcionario_primeiro_acesso_token',
+    'funcionario_primeiro_acesso_expira_em'
   ]);
+  const tokenDaPagina = sessionStorage.getItem('funcionario_token');
+  const displayOriginal = document.documentElement.style.display;
+
+  function verificarSessaoAtual() {
+    const tokenAtual = sessionStorage.getItem('funcionario_token');
+    if (!tokenAtual) {
+      document.documentElement.style.display = 'none';
+      limparSessaoFuncionario();
+      window.location.replace('/login');
+      return;
+    }
+    if (tokenAtual !== tokenDaPagina) {
+      // Uma página restaurada não pode reutilizar dados/token de outro login.
+      document.documentElement.style.display = 'none';
+      window.location.reload();
+      return;
+    }
+    document.documentElement.style.display = displayOriginal;
+  }
+
+  window.addEventListener('pagehide', () => {
+    document.documentElement.style.display = 'none';
+  });
+  window.addEventListener('pageshow', verificarSessaoAtual);
+  window.addEventListener('focus', verificarSessaoAtual);
+  verificarSessaoAtual();
 
   function getElement(id) {
     return document.getElementById(id);
@@ -49,6 +77,7 @@
 
   function limparSessaoFuncionario() {
     CHAVES_SESSAO.forEach((chave) => sessionStorage.removeItem(chave));
+    document.documentElement.style.display = 'none';
   }
 
   window.FuncionarioShared = Object.freeze({
