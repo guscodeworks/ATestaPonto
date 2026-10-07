@@ -2,7 +2,7 @@
 
 const { getGovbrConfig } = require("../config/govbr");
 const adminUserModel = require("../models/adminUserModel");
-const { readAdminIdentity } = require("./adminIdentityService");
+const { readAdminIdentity, readAdminForLogin } = require("./adminIdentityService");
 
 // Autorização fica interna: o provedor (Gov.br) nunca define perfil admin aqui.
 function verificarSeUsuarioGovbrEhAdmin(userInfo) {
@@ -18,10 +18,10 @@ function verificarSeUsuarioGovbrEhAdmin(userInfo) {
   );
 }
 
-// Resolve no banco a identidade administrativa associada ao CPF autenticado
+// Resolve no Spring a identidade administrativa associada ao CPF autenticado
 // pelo Gov.br. A decisão de autorização permanece interna ao Ponto Escolar.
 async function obterAdminParaLoginGovbr(cpf) {
-  return adminUserModel.findByCpf(cpf);
+  return readAdminForLogin(cpf);
 }
 
 async function registrarUltimoLoginAdmin(adminId) {

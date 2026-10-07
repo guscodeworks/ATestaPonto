@@ -2,6 +2,8 @@ package br.com.atestaponto.auth.admin.controller;
 
 import br.com.atestaponto.auth.admin.dto.AdminContextRequest;
 import br.com.atestaponto.auth.admin.dto.AdminContextResponse;
+import br.com.atestaponto.auth.admin.dto.AdminLoginRequest;
+import br.com.atestaponto.auth.admin.dto.AdminLoginResponse;
 import br.com.atestaponto.auth.admin.service.AdminContextService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,5 +28,10 @@ public class AdminContextController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador administrativo invalido");
         }
         return service.read(request.admin_id());
+    }
+
+    @PostMapping("/login")
+    public AdminLoginResponse lookupLogin(@RequestBody AdminLoginRequest request) {
+        return service.lookupLogin(request.cpf());
     }
 }
