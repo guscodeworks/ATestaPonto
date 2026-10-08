@@ -14,8 +14,10 @@ const {
   podeAlterar,
 } = require("../middlewares/adminScope");
 const { registerAuditLog } = require("./auditLogService");
+const educationDepartmentService = require("./educationDepartmentService");
 const { maskCpf, normalizeCpf } = require("../utils/cpf");
 const {
+  AppError,
   BadRequestError,
   NotFoundError,
   ForbiddenError,
@@ -170,22 +172,48 @@ async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId, client) {
   }
 
   if (perfil === PERFIL_DIRETORIA) {
-    const diretoria = client
-      ? await educationDepartmentModel.findByIdForUpdate(client, diretoriaId)
-      : await educationDepartmentModel.findById(diretoriaId);
+    let diretoria;
+
+    if (client) {
+      diretoria = await educationDepartmentModel.findByIdForUpdate(
+        client,
+        diretoriaId
+      );
+    } else {
+      const response = await educationDepartmentService.findById(diretoriaId);
+
+      if (response.status === 404) {
+        throw new NotFoundError("Diretoria de ensino nao encontrada");
+      }
+
+      if (response.status !== 200) {
+        throw new AppError("Servico de diretorias indisponivel", {
+          statusCode: 502,
+          code: "EDUCATION_DEPARTMENT_SERVICE_UNAVAILABLE",
+        });
+      }
+
+      diretoria = response.body;
+    }
+
     if (!diretoria) {
       throw new NotFoundError("Diretoria de ensino nao encontrada");
     }
-    return { educationDepartmentId: Number(diretoria.id) };
+
+    return {
+      educationDepartmentId: Number(diretoria.id),
+    };
   }
 
   if (PERFIS_ESCOLARES.has(perfil)) {
     const unidade = client
       ? await schoolUnitModel.findByIdForUpdate(client, unidadeId)
       : await schoolUnitModel.findById(unidadeId);
+
     if (!unidade) {
       throw new NotFoundError("Unidade escolar nao encontrada");
     }
+
     return {
       schoolUnitId: Number(unidade.id),
       educationDepartmentId: Number(unidade.diretoria_ensino_id),
@@ -198,6 +226,7 @@ async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId, client) {
 function calcularEspecificidadeAcesso(acesso, recursoAlvo) {
   const unidadeAlvo = Number(recursoAlvo && recursoAlvo.schoolUnitId);
   const unidadeAcesso = Number(acesso && acesso.unidade_escolar_id);
+
   if (
     Number.isInteger(unidadeAlvo) &&
     unidadeAlvo > 0 &&
@@ -209,7 +238,10 @@ function calcularEspecificidadeAcesso(acesso, recursoAlvo) {
   const diretoriaAlvo = Number(
     recursoAlvo && recursoAlvo.educationDepartmentId
   );
-  const diretoriaAcesso = Number(acesso && acesso.diretoria_ensino_id);
+  const diretoriaAcesso = Number(
+    acesso && acesso.diretoria_ensino_id
+  );
+
   if (
     Number.isInteger(diretoriaAlvo) &&
     diretoriaAlvo > 0 &&
@@ -218,9 +250,12 @@ function calcularEspecificidadeAcesso(acesso, recursoAlvo) {
     return 2;
   }
 
-  const perfilAcesso = String((acesso && acesso.perfil) || "")
+  const perfilAcesso = String(
+    (acesso && acesso.perfil) || ""
+  )
     .trim()
     .toUpperCase();
+
   return perfilAcesso === PERFIL_SEDUC ? 1 : 0;
 }
 
@@ -288,10 +323,23 @@ async function listConcessionOptions(acessos) {
 
   const precisaDiretorias = candidatos.includes(PERFIL_DIRETORIA);
   const precisaUnidades = candidatos.some((perfil) => PERFIS_ESCOLARES.has(perfil));
-  const [diretorias, unidades] = await Promise.all([
-    precisaDiretorias ? educationDepartmentModel.list() : [],
-    precisaUnidades ? schoolUnitModel.list() : [],
-  ]);
+  const [diretoriasResponse, unidades] = await Promise.all([
+  precisaDiretorias
+    ? educationDepartmentService.list()
+    : { status: 200, body: [] },
+  precisaUnidades ? schoolUnitModel.list() : [],
+]);
+
+if (diretoriasResponse.status !== 200) {
+  throw new AppError("Servico de diretorias indisponivel", {
+    statusCode: 502,
+    code: "EDUCATION_DEPARTMENT_SERVICE_UNAVAILABLE",
+  });
+}
+
+const diretorias = Array.isArray(diretoriasResponse.body)
+  ? diretoriasResponse.body
+  : [];
 
   return {
     perfis: candidatos.flatMap((perfil) => {

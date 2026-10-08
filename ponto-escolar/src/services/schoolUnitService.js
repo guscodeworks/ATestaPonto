@@ -1,11 +1,11 @@
 "use strict";
 
 const schoolUnitModel = require("../models/schoolUnitModel");
-const educationDepartmentModel = require("../models/educationDepartmentModel");
+const educationDepartmentService = require("./educationDepartmentService");
 const cepService = require("./cepService");
 const { buildEscopo } = require("../middlewares/adminScope");
 const { filtrarAcessosPorCapacidade } = require("../utils/adminCapabilities");
-const { NotFoundError } = require("../utils/errors");
+const { AppError, NotFoundError } = require("../utils/errors");
 
 // Consultas administrativas de escolas; criação e preview usam adminSchoolService.
 const CAPACIDADE_CRIAR = "escola.criar";
@@ -62,13 +62,36 @@ async function getSchoolUnit(escolaId) {
 
 // DREs onde o administrador pode cadastrar (alimenta o seletor do formulário).
 async function listDiretoriasParaCadastro(acessos) {
-  const autorizadores = filtrarAcessosPorCapacidade(acessos, CAPACIDADE_CRIAR);
-  const escopo = buildEscopo(autorizadores);
-  if (!escopo.temAcesso) return [];
+  const autorizadores = filtrarAcessosPorCapacidade(
+    acessos,
+    CAPACIDADE_CRIAR
+  );
 
-  const ativas = await educationDepartmentModel.list({ ativo: true });
+  const escopo = buildEscopo(autorizadores);
+
+  if (!escopo.temAcesso) {
+    return [];
+  }
+
+  const response = await educationDepartmentService.list(true);
+
+  if (response.status !== 200) {
+    throw new AppError("Servico de diretorias indisponivel", {
+      statusCode: 502,
+      code: "EDUCATION_DEPARTMENT_SERVICE_UNAVAILABLE",
+    });
+  }
+
+  const ativas = Array.isArray(response.body)
+    ? response.body
+    : [];
+
   return ativas
-    .filter((d) => escopo.isSeduc || escopo.diretoriasPermitidas.has(Number(d.id)))
+    .filter(
+      (d) =>
+        escopo.isSeduc ||
+        escopo.diretoriasPermitidas.has(Number(d.id))
+    )
     .map((d) => ({
       id: Number(d.id),
       nome: d.nome,
