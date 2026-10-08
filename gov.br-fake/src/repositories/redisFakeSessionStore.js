@@ -7,7 +7,6 @@ const {
   getRedisClient
 } = require('../config/redis');
 const {
-  FakeSessionStore,
   createSessionRecord,
   normalizeStoredSession,
   validateSessionId
@@ -36,9 +35,8 @@ function deserializeSession(value) {
   throw new TypeError('Redis returned invalid fake session data.');
 }
 
-class RedisFakeSessionStore extends FakeSessionStore {
+class RedisFakeSessionStore {
   constructor() {
-    super();
     this.client = getRedisClient();
   }
 

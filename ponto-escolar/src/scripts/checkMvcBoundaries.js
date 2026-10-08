@@ -20,7 +20,6 @@ const runtimeLayerDirs = new Set([
 // pela camada de models (ver regra abaixo).
 const dbConfigFiles = new Set([
   "src/config/database.js",
-  "src/config/legacyDb.js",
 ]);
 
 function toPosix(filePath) {

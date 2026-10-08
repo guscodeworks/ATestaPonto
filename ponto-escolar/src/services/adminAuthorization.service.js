@@ -1,27 +1,12 @@
 "use strict";
 
-const { getGovbrConfig } = require("../config/govbr");
 const adminUserModel = require("../models/adminUserModel");
-const { readAdminIdentity } = require("./adminIdentityService");
+const { readAdminIdentity, readAdminForLogin } = require("./adminIdentityService");
 
-// Autorização fica interna: o provedor (Gov.br) nunca define perfil admin aqui.
-function verificarSeUsuarioGovbrEhAdmin(userInfo) {
-  const { adminSubs, adminEmails } = getGovbrConfig();
-  const userSub = String((userInfo && userInfo.sub) || "").trim();
-  const userEmail = String((userInfo && userInfo.email) || "")
-    .trim()
-    .toLowerCase();
-
-  return Boolean(
-    (userSub && adminSubs.includes(userSub)) ||
-      (userEmail && adminEmails.includes(userEmail))
-  );
-}
-
-// Resolve no banco a identidade administrativa associada ao CPF autenticado
+// Resolve no Spring a identidade administrativa associada ao CPF autenticado
 // pelo Gov.br. A decisão de autorização permanece interna ao Ponto Escolar.
 async function obterAdminParaLoginGovbr(cpf) {
-  return adminUserModel.findByCpf(cpf);
+  return readAdminForLogin(cpf);
 }
 
 async function registrarUltimoLoginAdmin(adminId) {
@@ -35,7 +20,6 @@ async function obterContextoAutorizacaoAdmin(adminId) {
 }
 
 module.exports = {
-  verificarSeUsuarioGovbrEhAdmin,
   obterAdminParaLoginGovbr,
   registrarUltimoLoginAdmin,
   obterContextoAutorizacaoAdmin,

@@ -87,4 +87,30 @@ async function readAdminIdentity(adminId) {
   }
 }
 
-module.exports = { readAdminIdentity };
+async function readAdminForLogin(cpf) {
+  try {
+    const response = await requestSpring("/internal/auth/admin/login", {
+      method: "POST",
+      body: { cpf },
+    });
+    if (!response.ok) throw new Error("Leitura administrativa indisponivel");
+    const result = await response.json();
+    if (!isObject(result)) throw new Error("Contrato invalido");
+    if (result.admin === null) return null;
+
+    const admin = result.admin;
+    if (!isObject(admin) || !isId(admin.id) || admin.ativo !== true
+        || typeof admin.nome !== "string"
+        || !(admin.email === null || typeof admin.email === "string")) {
+      throw new Error("Contrato invalido");
+    }
+    return { id: admin.id, nome: admin.nome, email: admin.email, ativo: 1 };
+  } catch {
+    // Falhas internas nunca autorizam login nem fazem fallback para o MySQL Node.
+    throw new AppError("Servico de identidade administrativa indisponivel", {
+      statusCode: 502, code: "ADMIN_IDENTITY_SERVICE_UNAVAILABLE",
+    });
+  }
+}
+
+module.exports = { readAdminIdentity, readAdminForLogin };

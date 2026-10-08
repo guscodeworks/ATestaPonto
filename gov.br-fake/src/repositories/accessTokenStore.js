@@ -2,26 +2,6 @@
 
 const AccessToken = require('../models/AccessToken');
 
-class AccessTokenStore {
-  async saveAccessToken(_token, _accessToken) {
-    throw new Error(
-      'AccessTokenStore.saveAccessToken must be implemented.'
-    );
-  }
-
-  async getAccessToken(_token) {
-    throw new Error(
-      'AccessTokenStore.getAccessToken must be implemented.'
-    );
-  }
-
-  async deleteAccessToken(_token) {
-    throw new Error(
-      'AccessTokenStore.deleteAccessToken must be implemented.'
-    );
-  }
-}
-
 function validateAccessToken(token) {
   const normalizedToken = String(token || '').trim();
   if (!normalizedToken) {
@@ -79,7 +59,6 @@ function serializeAccessToken(accessToken) {
 }
 
 module.exports = {
-  AccessTokenStore,
   getAccessTokenTtlMs,
   normalizeAccessToken,
   serializeAccessToken,

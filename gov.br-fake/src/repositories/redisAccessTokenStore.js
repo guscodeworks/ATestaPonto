@@ -7,7 +7,6 @@ const {
   getRedisClient
 } = require('../config/redis');
 const {
-  AccessTokenStore,
   getAccessTokenTtlMs,
   normalizeAccessToken,
   serializeAccessToken,
@@ -37,9 +36,8 @@ function deserializeAccessToken(value) {
   throw new TypeError('Redis returned invalid access token data.');
 }
 
-class RedisAccessTokenStore extends AccessTokenStore {
+class RedisAccessTokenStore {
   constructor() {
-    super();
     this.client = getRedisClient();
   }
 

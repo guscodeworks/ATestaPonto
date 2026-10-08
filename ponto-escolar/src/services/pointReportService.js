@@ -216,16 +216,20 @@ async function getHierarchicalReport({ data, diretoria_ensino_id, unidade_escola
   return result;
 }
 
+const DAILY_SUMMARY_FIELDS = [
+  "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
+];
+
+function isValidDailySummary(summary) {
+  return summary !== null && typeof summary === "object" && !Array.isArray(summary)
+    && DAILY_SUMMARY_FIELDS.every(field => Number.isSafeInteger(summary[field]) && summary[field] >= 0)
+    && summary.taxa_presenca_percent <= 100;
+}
+
 async function getTodayPoints({ data } = {}, escopoUnidades = []) {
   const date = resolveReportDate(data);
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
-  const summaryFields = [
-    "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
-  ];
-  if (!snapshot || snapshot.date !== date || !snapshot.resumo
-      || summaryFields.some(field => !Number.isSafeInteger(snapshot.resumo[field])
-        || snapshot.resumo[field] < 0)
-      || snapshot.resumo.taxa_presenca_percent > 100
+  if (!snapshot || snapshot.date !== date || !isValidDailySummary(snapshot.resumo)
       || !Array.isArray(snapshot.presentes) || !Array.isArray(snapshot.ausentes)) {
     throw new AppError("Servico de relatorios indisponivel", {
       statusCode: 502,
@@ -235,7 +239,7 @@ async function getTodayPoints({ data } = {}, escopoUnidades = []) {
 
   return {
     data_referencia: date,
-    resumo: Object.fromEntries(summaryFields.map(field => [field, snapshot.resumo[field]])),
+    resumo: Object.fromEntries(DAILY_SUMMARY_FIELDS.map(field => [field, snapshot.resumo[field]])),
     presentes: snapshot.presentes,
     ausentes: snapshot.ausentes,
   };
@@ -244,9 +248,6 @@ async function getTodayPoints({ data } = {}, escopoUnidades = []) {
 async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades = []) {
   const date = resolveReportDate(data);
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
-  const summaryFields = [
-    "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
-  ];
   const isObject = value => value !== null && typeof value === "object" && !Array.isArray(value);
   const isId = value => Number.isSafeInteger(value) && value > 0;
   const isTime = value => typeof value === "string"
@@ -267,10 +268,7 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades =
       && ["ENTRADA", "SAIDA_ALMOCO", "RETORNO_ALMOCO", "SAIDA"].includes(punch.tipo)
       && Number.isInteger(punch.sequencia) && punch.sequencia >= 1 && punch.sequencia <= 4
       && typeof punch.registrado_em === "string" && isTime(punch.registrado_em));
-  if (!snapshot || snapshot.date !== date || !isObject(snapshot.resumo)
-      || summaryFields.some(field => !Number.isSafeInteger(snapshot.resumo[field])
-        || snapshot.resumo[field] < 0)
-      || snapshot.resumo.taxa_presenca_percent > 100
+  if (!snapshot || snapshot.date !== date || !isValidDailySummary(snapshot.resumo)
       || !Array.isArray(snapshot.relatorio) || !snapshot.relatorio.every(isItem)) {
     throw new AppError("Servico de relatorios indisponivel", {
       statusCode: 502,
@@ -288,7 +286,7 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades =
 
   return {
     data_referencia: date,
-    resumo: Object.fromEntries(summaryFields.map(field => [field, snapshot.resumo[field]])),
+    resumo: Object.fromEntries(DAILY_SUMMARY_FIELDS.map(field => [field, snapshot.resumo[field]])),
     items: snapshot.relatorio,
   };
 }
@@ -296,13 +294,7 @@ async function getDailyReport({ data, adminId, ipOrigem } = {}, escopoUnidades =
 async function getDashboardSummary(escopoUnidades = []) {
   const date = getTodayDateInSaoPaulo();
   const snapshot = await buildDailySnapshot(date, escopoUnidades);
-  const summaryFields = [
-    "total_funcionarios", "total_ativos", "presentes", "ausentes", "taxa_presenca_percent",
-  ];
-  if (!snapshot || snapshot.date !== date || !snapshot.resumo
-      || summaryFields.some(field => !Number.isSafeInteger(snapshot.resumo[field])
-        || snapshot.resumo[field] < 0)
-      || snapshot.resumo.taxa_presenca_percent > 100) {
+  if (!snapshot || snapshot.date !== date || !isValidDailySummary(snapshot.resumo)) {
     throw new AppError("Servico de relatorios indisponivel", {
       statusCode: 502,
       code: "REPORT_SERVICE_UNAVAILABLE",
@@ -311,7 +303,7 @@ async function getDashboardSummary(escopoUnidades = []) {
 
   return {
     data_referencia: date,
-    resumo: Object.fromEntries(summaryFields.map(field => [field, snapshot.resumo[field]])),
+    resumo: Object.fromEntries(DAILY_SUMMARY_FIELDS.map(field => [field, snapshot.resumo[field]])),
   };
 }
 

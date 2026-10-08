@@ -2,20 +2,6 @@
 
 const AuthCode = require('../models/AuthCode');
 
-class AuthCodeStore {
-  async saveAuthorizationCode(_code, _authCode) {
-    throw new Error(
-      'AuthCodeStore.saveAuthorizationCode must be implemented.'
-    );
-  }
-
-  async consumeAuthorizationCode(_code) {
-    throw new Error(
-      'AuthCodeStore.consumeAuthorizationCode must be implemented.'
-    );
-  }
-}
-
 function validateAuthorizationCode(code) {
   const normalizedCode = String(code || '').trim();
   if (!normalizedCode) {
@@ -81,7 +67,6 @@ function serializeAuthCode(authCode) {
 }
 
 module.exports = {
-  AuthCodeStore,
   getAuthorizationCodeTtlMs,
   normalizeAuthCode,
   serializeAuthCode,

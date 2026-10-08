@@ -7,7 +7,6 @@ const {
   getRedisClient
 } = require('../config/redis');
 const {
-  AuthCodeStore,
   getAuthorizationCodeTtlMs,
   normalizeAuthCode,
   serializeAuthCode,
@@ -37,9 +36,8 @@ function deserializeAuthCode(value) {
   throw new TypeError('Redis returned invalid authorization code data.');
 }
 
-class RedisAuthCodeStore extends AuthCodeStore {
+class RedisAuthCodeStore {
   constructor() {
-    super();
     this.client = getRedisClient();
   }
 

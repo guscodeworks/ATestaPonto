@@ -2,6 +2,7 @@ package br.com.atestaponto.auth.admin.repository;
 
 import br.com.atestaponto.auth.admin.dto.AdminContextResponse.Access;
 import br.com.atestaponto.auth.admin.dto.AdminContextResponse.Admin;
+import br.com.atestaponto.auth.admin.dto.AdminLoginResponse;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -30,6 +31,12 @@ public class AdminContextRepository {
               AND (data_fim IS NULL OR data_fim >= CURRENT_DATE)
             ORDER BY criado_em DESC
             """;
+    private static final String FIND_ACTIVE_ADMIN_BY_CPF = """
+            SELECT id, nome, email, ativo
+            FROM usuarios_administrativos
+            WHERE cpf = ? AND ativo = 1
+            LIMIT 1
+            """;
 
     private final JdbcTemplate jdbc;
 
@@ -51,6 +58,20 @@ public class AdminContextRepository {
                 rs.getObject("ultimo_login_em", LocalDateTime.class),
                 rs.getObject("criado_em", LocalDateTime.class),
                 rs.getObject("atualizado_em", LocalDateTime.class)));
+        return rows.stream().findFirst();
+    }
+
+    public Optional<AdminLoginResponse.Admin> findActiveByCpf(String cpf) {
+        List<AdminLoginResponse.Admin> rows = jdbc.query(connection -> {
+            if (!connection.isReadOnly()) {
+                throw new SQLException("A leitura administrativa exige conexao somente leitura");
+            }
+            PreparedStatement statement = connection.prepareStatement(FIND_ACTIVE_ADMIN_BY_CPF);
+            statement.setString(1, cpf);
+            statement.setQueryTimeout(3);
+            return statement;
+        }, (rs, index) -> new AdminLoginResponse.Admin(rs.getLong("id"),
+                rs.getString("nome"), rs.getString("email"), rs.getBoolean("ativo")));
         return rows.stream().findFirst();
     }
 

@@ -2,12 +2,11 @@
 
 const memoryStore = require('./memoryStore');
 const {
-  AccessTokenStore,
   normalizeAccessToken,
   validateAccessToken
 } = require('./accessTokenStore');
 
-class MemoryAccessTokenStore extends AccessTokenStore {
+class MemoryAccessTokenStore {
   async saveAccessToken(token, accessToken) {
     const normalizedToken = validateAccessToken(token);
     const record = normalizeAccessToken(accessToken);

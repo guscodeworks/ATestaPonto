@@ -155,8 +155,8 @@ O simulador Gov.br tem seu próprio arquivo `.env.example`. Em ambiente de desen
 | `GOVBR_FAKE_PORT` | Porta do simulador Gov.br. Padrão: `4000`. |
 | `GOVBR_FAKE_CLIENT_ID` | ID do cliente do simulador. Padrão: `ponto-escolar`. |
 | `GOVBR_FAKE_CLIENT_SECRET` | Segredo do cliente usado no fluxo local. Deve coincidir com o valor do `ponto-escolar`. |
-| `GOVBR_FAKE_ADMIN_SUB` | Identificador fictício retornado pelo simulador. Deve constar em `ADMIN_GOVBR_SUBS`. |
-| `GOVBR_FAKE_ADMIN_EMAIL` | E-mail fictício retornado pelo simulador. Deve constar em `ADMIN_GOVBR_EMAILS`, se a autorização for por e-mail. |
+| `GOVBR_FAKE_ADMIN_SUB` | Identificador fictício retornado pelo simulador. O login usa o CPF do userinfo para consultar um cadastro administrativo ativo no Spring. |
+| `GOVBR_FAKE_ADMIN_EMAIL` | E-mail fictício retornado pelo simulador; não concede autorização administrativa. |
 
 > [!NOTE]
 > O simulador Gov.br é apenas para uso em desenvolvimento local. Em produção real, ele deve ser substituído pelo Gov.br oficial.
