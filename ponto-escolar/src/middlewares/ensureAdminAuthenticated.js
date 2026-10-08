@@ -1,8 +1,6 @@
 "use strict";
 
-const {
-  obterContextoAutorizacaoAdmin,
-} = require("../services/adminAuthorization.service");
+const { revalidateAdminContext } = require("./revalidateAdminContext");
 
 /**
  * Protege paginas admin: Gov.br autentica, ATestaPonto autoriza.
@@ -20,8 +18,8 @@ function ensureAdminAuthenticated(req, res, next) {
   }
 
   // Busca o administrativo real e seus acessos via service para revalidar a sessão.
-  obterContextoAutorizacaoAdmin(adminSession.id)
-    .then(({ admin: adminFromDb, acessos }) => {
+  revalidateAdminContext(req, adminSession.id)
+    .then((adminFromDb) => {
       if (!adminFromDb) {
         return res.redirect("/auth/govbr/login");
       }
@@ -29,25 +27,6 @@ function ensureAdminAuthenticated(req, res, next) {
       if (!adminFromDb.ativo) {
         return res.redirect("/auth/govbr/login");
       }
-
-      // Admin válido - define req.user com dados reais do banco.
-      // usuarios_administrativos não possui funcionario_id nem govbr_sub
-      // (cpf-keyed); apenas campos reais são expostos.
-      req.user = {
-        id: adminFromDb.id,
-        email: adminFromDb.email,
-        nome: adminFromDb.nome,
-        ultimoLoginEm: adminFromDb.ultimo_login_em,
-        criadoEm: adminFromDb.criado_em,
-        atualizadoEm: adminFromDb.atualizado_em,
-        ativo: adminFromDb.ativo,
-      };
-
-      // Disponibiliza os acessos ativos no request
-      req.acessos = acessos || [];
-
-      // Determina o contexto/perfil aplicável (primeiro acesso ativo por padrão)
-      req.contextoAdmin = acessos && acessos.length > 0 ? acessos[0] : null;
 
       return next();
     })
