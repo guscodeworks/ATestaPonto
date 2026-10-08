@@ -1,19 +1,5 @@
 'use strict';
 
-class FakeSessionStore {
-  async saveSession(_sessionId, _sessionData) {
-    throw new Error('FakeSessionStore.saveSession must be implemented.');
-  }
-
-  async getSession(_sessionId) {
-    throw new Error('FakeSessionStore.getSession must be implemented.');
-  }
-
-  async deleteSession(_sessionId) {
-    throw new Error('FakeSessionStore.deleteSession must be implemented.');
-  }
-}
-
 function validateSessionId(sessionId) {
   if (typeof sessionId !== 'string' || sessionId.length === 0) {
     throw new TypeError('Fake session ID must be a non-empty string.');
@@ -53,7 +39,6 @@ function createSessionRecord(sessionData, ttlMs) {
 }
 
 module.exports = {
-  FakeSessionStore,
   createSessionRecord,
   normalizeStoredSession,
   validateSessionId

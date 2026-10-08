@@ -2,12 +2,11 @@
 
 const memoryStore = require('./memoryStore');
 const {
-  AuthCodeStore,
   normalizeAuthCode,
   validateAuthorizationCode
 } = require('./authCodeStore');
 
-class MemoryAuthCodeStore extends AuthCodeStore {
+class MemoryAuthCodeStore {
   async saveAuthorizationCode(code, authCode) {
     const normalizedCode = validateAuthorizationCode(code);
     const record = normalizeAuthCode(authCode);

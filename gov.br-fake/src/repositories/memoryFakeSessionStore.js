@@ -3,13 +3,12 @@
 const { env } = require('../config/env');
 const memoryStore = require('./memoryStore');
 const {
-  FakeSessionStore,
   createSessionRecord,
   normalizeStoredSession,
   validateSessionId
 } = require('./fakeSessionStore');
 
-class MemoryFakeSessionStore extends FakeSessionStore {
+class MemoryFakeSessionStore {
   async saveSession(sessionId, sessionData) {
     const validatedSessionId = validateSessionId(sessionId);
     const record = createSessionRecord(sessionData, env.fakeSessionTtlMs);
