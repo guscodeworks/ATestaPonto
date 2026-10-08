@@ -252,6 +252,7 @@ function renderizarConferenciaEscola(dados, criada = false) {
   lista.replaceChildren();
   campos.forEach(([rotulo, valor]) => {
     const item = document.createElement('div');
+    if (rotulo === 'Nome' || rotulo === 'Endereço') item.className = 'school-preview-wide';
     const termo = document.createElement('dt');
     const conteudo = document.createElement('dd');
     termo.textContent = rotulo;
@@ -259,6 +260,8 @@ function renderizarConferenciaEscola(dados, criada = false) {
     item.append(termo, conteudo);
     lista.appendChild(item);
   });
+  resultado.dataset.state = criada ? 'success'
+    : (dados.latitude == null || dados.longitude == null ? 'warning' : 'ready');
   titulo.textContent = criada ? 'Escola criada' : 'Dados para conferência';
   document.getElementById('school-preview-location').textContent = criada
     ? 'Endereço e coordenadas retornados após a criação.'
@@ -267,6 +270,7 @@ function renderizarConferenciaEscola(dados, criada = false) {
       : 'Confira nome, DRE, INEP, endereço, cidade, coordenadas e raio antes de confirmar.');
   if (criada) {
     atualizarBotaoConfirmacaoEscola();
+    document.getElementById('school-setup-feedback').dataset.state = 'success';
     document.getElementById('school-setup-feedback').textContent = 'Escola criada com sucesso.';
     document.getElementById('school-setup-notice').textContent = 'Os dados acima são os retornados pelo cadastro da escola.';
   }
@@ -276,11 +280,16 @@ function renderizarConferenciaEscola(dados, criada = false) {
 
 // Preview e confirmacao usam somente a API Node da mesma origem.
 async function iniciarAcaoAdicionarEscola() {
-  const acao = document.getElementById('quick-add-school');
   const painel = document.getElementById('school-setup');
   const fechar = document.getElementById('school-setup-close');
   const introducao = document.getElementById('school-setup-intro');
   const diretoria = document.getElementById('school-setup-dre');
+  const cep = document.getElementById('school-setup-cep');
+  const erroCep = document.getElementById('school-cep-error');
+  const inep = document.getElementById('school-setup-inep');
+  const erroInep = document.getElementById('school-inep-error');
+  const raio = document.getElementById('school-setup-radius');
+  const erroRaio = document.getElementById('school-radius-error');
   const feedback = document.getElementById('school-setup-feedback');
   const form = document.getElementById('school-preview-form');
   const consultar = document.getElementById('school-preview-submit');
@@ -289,9 +298,8 @@ async function iniciarAcaoAdicionarEscola() {
   const localizacao = document.getElementById('school-preview-location');
   const confirmar = document.getElementById('school-create-confirm');
   const aviso = document.getElementById('school-setup-notice');
-  if (!acao || !painel || !fechar || !introducao || !diretoria || !feedback
+  if (!painel || !fechar || !introducao || !diretoria || !cep || !erroCep || !inep || !erroInep || !raio || !erroRaio || !feedback
     || !form || !consultar || !resultado || !dadosPreview || !localizacao || !confirmar || !aviso) return;
-  acao.hidden = true;
   painel.hidden = true;
   if (!temCapacidade('escola.criar')) return;
 
@@ -299,13 +307,108 @@ async function iniciarAcaoAdicionarEscola() {
   let dadosOriginaisPreview = null;
   let criacaoEmAndamento = false;
 
+  function atualizarDisponibilidadePreview() {
+    consultar.disabled = !diretoria.value || !/^[0-9]{5}-[0-9]{3}$/.test(cep.value)
+      || !inep.validity.valid || !raio.validity.valid || Boolean(requisicaoPreview) || criacaoEmAndamento;
+  }
+
+  function atualizarCep(mostrarErro) {
+    const cursor = cep.selectionStart;
+    const digitosAntes = cep.value.slice(0, cursor ?? cep.value.length).replace(/[^0-9]/g, '').length;
+    const digitos = cep.value.replace(/[^0-9]/g, '').slice(0, 8);
+    cep.value = digitos.length > 5 ? `${digitos.slice(0, 5)}-${digitos.slice(5)}` : digitos;
+    if (cursor != null) {
+      const posicao = Math.min(digitosAntes + (digitosAntes > 5 ? 1 : 0), cep.value.length);
+      cep.setSelectionRange(posicao, posicao);
+    }
+    const valido = digitos.length === 8;
+    const mensagem = valido ? '' : 'Informe um CEP com 8 dígitos.';
+    cep.setCustomValidity(mensagem);
+    erroCep.textContent = mostrarErro ? mensagem : '';
+    cep.setAttribute('aria-invalid', String(mostrarErro && !valido));
+    atualizarDisponibilidadePreview();
+  }
+
+  cep.addEventListener('beforeinput', (event) => {
+    const inicio = cep.selectionStart;
+    if (inicio == null || inicio !== cep.selectionEnd) return;
+    // Ao apagar junto à máscara, remova também o dígito adjacente.
+    if (event.inputType === 'deleteContentBackward' && cep.value[inicio - 1] === '-') {
+      cep.setSelectionRange(inicio - 2, inicio);
+    } else if (event.inputType === 'deleteContentForward' && cep.value[inicio] === '-') {
+      cep.setSelectionRange(inicio, inicio + 2);
+    }
+  });
+  cep.addEventListener('input', () => atualizarCep(true));
+  cep.addEventListener('blur', () => atualizarCep(true));
+  function atualizarInep(mostrarErro) {
+    const cursor = inep.selectionStart;
+    const posicao = inep.value.slice(0, cursor ?? inep.value.length).replace(/[^0-9]/g, '').length;
+    inep.value = inep.value.replace(/[^0-9]/g, '').slice(0, 8);
+    if (cursor != null) inep.setSelectionRange(Math.min(posicao, inep.value.length), Math.min(posicao, inep.value.length));
+    inep.setCustomValidity('');
+    const invalido = inep.validity.patternMismatch;
+    const mensagem = invalido ? 'Informe os 8 dígitos do código INEP ou deixe o campo vazio.' : '';
+    inep.setCustomValidity(mensagem);
+    erroInep.textContent = mostrarErro ? mensagem : '';
+    inep.setAttribute('aria-invalid', String(mostrarErro && invalido));
+    atualizarDisponibilidadePreview();
+  }
+  inep.addEventListener('input', () => atualizarInep(true));
+  inep.addEventListener('blur', () => atualizarInep(true));
+  function atualizarRaio(mostrarErro) {
+    raio.setCustomValidity('');
+    let mensagem = '';
+    if (raio.validity.badInput || (raio.value && !/^[0-9]+$/.test(raio.value))) {
+      mensagem = 'Use apenas números inteiros, sem sinais ou casas decimais.';
+    } else if (!raio.value) {
+      mensagem = 'Informe o raio permitido em metros.';
+    } else if (raio.validity.rangeUnderflow) {
+      mensagem = 'O raio mínimo permitido é 10 metros.';
+    } else if (raio.validity.rangeOverflow) {
+      mensagem = 'O raio máximo permitido é 1.000 metros.';
+    }
+    raio.setCustomValidity(mensagem);
+    erroRaio.textContent = mostrarErro ? mensagem : '';
+    raio.setAttribute('aria-invalid', String(mostrarErro && Boolean(mensagem)));
+    atualizarDisponibilidadePreview();
+  }
+  function bloquearEntradaRaio(event) {
+    event.preventDefault();
+    const mensagem = 'Use apenas números inteiros, sem sinais ou casas decimais.';
+    raio.setCustomValidity(mensagem);
+    erroRaio.textContent = mensagem;
+    raio.setAttribute('aria-invalid', 'true');
+    atualizarDisponibilidadePreview();
+  }
+  raio.addEventListener('beforeinput', (event) => {
+    if (event.data && !/^[0-9]+$/.test(event.data)) bloquearEntradaRaio(event);
+  });
+  raio.addEventListener('paste', (event) => {
+    if (event.clipboardData && !/^[0-9]+$/.test(event.clipboardData.getData('text'))) {
+      bloquearEntradaRaio(event);
+    }
+  });
+  raio.addEventListener('input', () => atualizarRaio(true));
+  raio.addEventListener('blur', () => atualizarRaio(true));
+
+  [cep, inep].forEach((campo) => {
+    campo.addEventListener('paste', (event) => {
+      if (!event.clipboardData) return;
+      event.preventDefault();
+      const digitos = event.clipboardData.getData('text').replace(/[^0-9]/g, '');
+      campo.setRangeText(digitos, campo.selectionStart ?? 0, campo.selectionEnd ?? campo.value.length, 'end');
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  });
+
   function dadosFormulario() {
     return {
       nome: document.getElementById('school-setup-name').value,
       diretoria_ensino_id: Number(diretoria.value),
-      cep: document.getElementById('school-setup-cep').value,
-      codigo_inep: document.getElementById('school-setup-inep').value || null,
-      raio_permitido_metros: Number(document.getElementById('school-setup-radius').value),
+      cep: cep.value.replace(/[^0-9]/g, ''),
+      codigo_inep: inep.value || null,
+      raio_permitido_metros: raio.valueAsNumber,
     };
   }
 
@@ -318,13 +421,17 @@ async function iniciarAcaoAdicionarEscola() {
     resultado.hidden = true;
     dadosPreview.replaceChildren();
     localizacao.textContent = '';
-    consultar.disabled = !diretoria.value;
+    atualizarDisponibilidadePreview();
     consultar.textContent = 'Consultar preview';
     form.removeAttribute('aria-busy');
     aviso.textContent = 'A escola será criada somente após a confirmação. O endereço e as coordenadas serão consultados novamente.';
   }
 
   function preencherDiretorias(itens) {
+    const ajuda = document.getElementById('school-dre-help');
+    if (ajuda) ajuda.textContent = itens.length === 1
+      ? 'Preenchida automaticamente: única DRE autorizada para seu acesso.'
+      : (itens.length > 1 ? 'Selecione uma das DREs autorizadas para seu acesso.' : '');
     diretoria.replaceChildren();
     itens.forEach(({ id, nome }) => {
       const opcao = document.createElement('option');
@@ -335,12 +442,14 @@ async function iniciarAcaoAdicionarEscola() {
     if (itens.length === 0) {
       diretoria.disabled = true;
       consultar.disabled = true;
+      feedback.dataset.state = 'error';
       feedback.textContent = 'Nenhuma diretoria autorizada está disponível.';
       return;
     }
     diretoria.value = String(itens[0].id);
     diretoria.disabled = itens.length === 1;
-    consultar.disabled = false;
+    atualizarDisponibilidadePreview();
+    feedback.dataset.state = 'info';
     feedback.textContent = 'A escola ficará vinculada a uma das DREs autorizadas para seu acesso.';
   }
 
@@ -348,11 +457,11 @@ async function iniciarAcaoAdicionarEscola() {
     if (!temCapacidade('escola.criar') || criacaoEmAndamento) return;
     limparPreview();
     painel.hidden = false;
-    acao.setAttribute('aria-expanded', 'true');
     introducao.textContent = 'Selecione uma diretoria de ensino autorizada para vincular a escola.';
     diretoria.disabled = true;
     diretoria.replaceChildren();
     consultar.disabled = true;
+    feedback.dataset.state = 'loading';
     feedback.textContent = 'Carregando diretorias autorizadas...';
     try {
       const dados = getApiData(await adminApiFetch('/api/admin/escolas/diretorias'));
@@ -363,20 +472,24 @@ async function iniciarAcaoAdicionarEscola() {
       ));
       if (!diretoria.disabled && !painel.hidden) diretoria.focus();
     } catch (_erro) {
+      feedback.dataset.state = 'error';
       feedback.textContent = 'Não foi possível carregar as DREs autorizadas.';
     }
   }
 
   if (!temCapacidade('escola.criar')) return;
-  acao.hidden = false;
   form.addEventListener('input', () => {
     if (criacaoEmAndamento) return;
     limparPreview();
+    feedback.dataset.state = 'info';
     feedback.textContent = 'Consulte o preview para conferir os dados atuais.';
   });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!temCapacidade('escola.criar') || requisicaoPreview || criacaoEmAndamento) return;
+    atualizarCep(true);
+    atualizarInep(true);
+    atualizarRaio(true);
     if (!form.reportValidity() || !diretoria.value) return;
     limparPreview();
     const controller = new AbortController();
@@ -384,6 +497,7 @@ async function iniciarAcaoAdicionarEscola() {
     consultar.disabled = true;
     consultar.textContent = 'Consultando...';
     form.setAttribute('aria-busy', 'true');
+    feedback.dataset.state = 'loading';
     feedback.textContent = 'Validando dados e consultando o CEP...';
     const dadosOriginais = Object.freeze(dadosFormulario());
     try {
@@ -398,16 +512,18 @@ async function iniciarAcaoAdicionarEscola() {
       const localizacaoCompleta = dados.latitude != null && dados.longitude != null;
       dadosOriginaisPreview = localizacaoCompleta ? dadosOriginais : null;
       atualizarBotaoConfirmacaoEscola({ visivel: temCapacidade('escola.criar'), habilitado: localizacaoCompleta });
+      feedback.dataset.state = localizacaoCompleta ? 'success' : 'warning';
       feedback.textContent = 'Preview disponível para conferência. Nenhuma escola foi criada.';
     } catch (error) {
       if (requisicaoPreview !== controller || error.name === 'AbortError') return;
+      feedback.dataset.state = 'error';
       feedback.textContent = error.status === 400 || error.status === 404
         ? (error.payload?.detail || error.message)
         : error.message;
     } finally {
       if (requisicaoPreview === controller) {
         requisicaoPreview = null;
-        consultar.disabled = !diretoria.value;
+        atualizarDisponibilidadePreview();
         consultar.textContent = 'Consultar preview';
         form.removeAttribute('aria-busy');
       }
@@ -417,6 +533,7 @@ async function iniciarAcaoAdicionarEscola() {
     if (!temCapacidade('escola.criar') || criacaoEmAndamento || !dadosOriginaisPreview) return;
     if (JSON.stringify(dadosFormulario()) !== JSON.stringify(dadosOriginaisPreview)) {
       limparPreview();
+      feedback.dataset.state = 'error';
       feedback.textContent = 'O formulário mudou. Consulte o preview novamente antes de confirmar.';
       return;
     }
@@ -424,11 +541,12 @@ async function iniciarAcaoAdicionarEscola() {
     const dadosOriginais = dadosOriginaisPreview;
     dadosOriginaisPreview = null;
     criacaoEmAndamento = true;
-    const controles = [...form.querySelectorAll('input, select, button'), fechar, acao];
+    const controles = [...form.querySelectorAll('input, select, button'), fechar];
     const estadosAnteriores = controles.map(controle => controle.disabled);
     controles.forEach(controle => { controle.disabled = true; });
     atualizarBotaoConfirmacaoEscola({ visivel: true, emAndamento: true });
     form.setAttribute('aria-busy', 'true');
+    feedback.dataset.state = 'loading';
     feedback.textContent = 'Criando escola. Aguarde a resposta antes de sair desta tela.';
     let criada = false;
     try {
@@ -447,12 +565,15 @@ async function iniciarAcaoAdicionarEscola() {
           renderizarConferenciaEscola(dados, true);
         } else {
           resultado.hidden = true;
+          feedback.dataset.state = 'info';
           feedback.textContent = 'Escola criada, mas não foi possível exibir os dados retornados. Confira o cadastro antes de qualquer novo envio.';
         }
       } else {
+        feedback.dataset.state = 'error';
         feedback.textContent = mensagemErroCriacaoEscola(response.status, payload);
       }
     } catch (_error) {
+      feedback.dataset.state = 'error';
       feedback.textContent = mensagemErroCriacaoEscola(0);
     } finally {
       criacaoEmAndamento = false;
@@ -462,20 +583,11 @@ async function iniciarAcaoAdicionarEscola() {
       atualizarBotaoConfirmacaoEscola({ visivel: !criada && temCapacidade('escola.criar') });
     }
   });
-  acao.addEventListener('click', () => {
-    if (criacaoEmAndamento) return;
-    if (painel.hidden) abrirPainel();
-    else {
-      limparPreview();
-      painel.hidden = true;
-      acao.setAttribute('aria-expanded', 'false');
-    }
-  });
   fechar.addEventListener('click', () => {
-    if (criacaoEmAndamento) return;
-    limparPreview();
-    painel.hidden = true;
-    acao.setAttribute('aria-expanded', 'false');
-    acao.focus();
+    if (!criacaoEmAndamento) window.location.assign('/admin/dashboard');
   });
+  atualizarRaio(false);
+  atualizarInep(false);
+  atualizarCep(false);
+  await abrirPainel();
 }
