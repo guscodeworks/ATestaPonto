@@ -253,34 +253,6 @@ function validateCorsOrigins(rawOrigins, isProduction) {
   return Object.freeze(origins.map((origin) => origin === "*" ? origin : new URL(origin).origin));
 }
 
-function getList(name) {
-  return getOptionalVar(name)
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function validateAdminEmails(emails) {
-  return emails.map((email) => {
-    const normalized = email.toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
-      throwEnvError(`"${email}" in ADMIN_GOVBR_EMAILS is not a valid email`);
-    }
-    return normalized;
-  });
-}
-
-// Regra de negócio: o sistema precisa de pelo menos uma forma de
-// identificar quem é administrador (por sub do gov.br ou por e-mail);
-// sem isso, ninguém conseguiria ser reconhecido como admin no login.
-function requireAtLeastOneAdminIdentifier(adminSubs, adminEmails) {
-  if (adminSubs.length === 0 && adminEmails.length === 0) {
-    throwEnvError(
-      '"ADMIN_GOVBR_SUBS" or "ADMIN_GOVBR_EMAILS" must include at least one value'
-    );
-  }
-}
-
 const NODE_ENV = getOptionalVar("NODE_ENV", "development").toLowerCase();
 const IS_PRODUCTION = NODE_ENV === "production";
 
@@ -348,13 +320,6 @@ const appBaseUrl = getOptionalUrl("APP_BASE_URL", "http://127.0.0.1:3000");
 if (jwtSecret === sessionSecret) {
   throwEnvError('"JWT_SECRET" and "SESSION_SECRET" must be different');
 }
-
-const adminSubs = Object.freeze(getList("ADMIN_GOVBR_SUBS"));
-const adminEmails = Object.freeze(
-  validateAdminEmails(getList("ADMIN_GOVBR_EMAILS"))
-);
-
-requireAtLeastOneAdminIdentifier(adminSubs, adminEmails);
 
 const env = {
   NODE_ENV,
@@ -443,8 +408,6 @@ const env = {
   GOVBR_CLIENT_ID: getRequiredVar("GOVBR_CLIENT_ID"),
   GOVBR_CLIENT_SECRET: getRequiredVar("GOVBR_CLIENT_SECRET"),
   GOVBR_REDIRECT_URI: getGovbrRedirectUri(),
-  ADMIN_GOVBR_SUBS: adminSubs,
-  ADMIN_GOVBR_EMAILS: adminEmails,
   MAIL_ENABLED: mailEnabled,
   SMTP_HOST: smtpHost,
   SMTP_PORT: smtpPort,
