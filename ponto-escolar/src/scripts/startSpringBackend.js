@@ -2,20 +2,25 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const net = require("node:net");
 const { spawn, spawnSync } = require("node:child_process");
 
 const projectRoot = path.resolve(__dirname, "../..");
-require("dotenv").config({ path: path.join(projectRoot, ".env"), quiet: true });
+const springRoot = path.resolve(projectRoot, "..", "backend-spring");
+const springEnv = { ...process.env };
+// Precedência: ambiente externo > .env do Spring > .env do Node (valores compartilhados).
+require("dotenv").config({
+  path: [path.join(springRoot, ".env"), path.join(projectRoot, ".env")],
+  processEnv: springEnv,
+  quiet: true,
+});
+springEnv.BRASILAPI_BASE_URL ||= "https://brasilapi.com.br";
 
-if (Buffer.byteLength(process.env.INTERNAL_API_SHARED_KEY || "", "utf8") < 32) {
-  console.error("Configure INTERNAL_API_SHARED_KEY no .env com pelo menos 32 bytes.");
+if (Buffer.byteLength(springEnv.INTERNAL_API_SHARED_KEY || "", "utf8") < 32) {
+  console.error("Configure INTERNAL_API_SHARED_KEY no ambiente ou .env com pelo menos 32 bytes.");
   process.exit(1);
 }
 
-const springEnv = {
-  ...process.env,
-  BRASILAPI_BASE_URL: process.env.BRASILAPI_BASE_URL || "https://brasilapi.com.br",
-};
 // JDK e Maven sao configurados explicitamente, sem inferir SO ou ambiente Docker.
 const javaHome = springEnv.JAVA_HOME;
 const mavenHome = springEnv.MAVEN_HOME;
@@ -44,26 +49,53 @@ if (launcherJars.length !== 1 || !fs.existsSync(mavenConfig)) {
   console.error("MAVEN_HOME deve apontar para uma distribuicao Maven 3 valida.");
   process.exit(1);
 }
-const springRoot = path.resolve(projectRoot, "..", "backend-spring");
-const child = spawn(javaExecutable, [
-  `-Dmaven.home=${mavenHome}`,
-  `-Dmaven.multiModuleProjectDirectory=${springRoot}`,
-  `-Dclassworlds.conf=${mavenConfig}`,
-  "-classpath", path.join(bootDirectory, launcherJars[0]),
-  "org.codehaus.plexus.classworlds.launcher.Launcher",
-  "spring-boot:run",
-], { cwd: springRoot, env: springEnv, stdio: "inherit", shell: false });
+async function startSpring() {
+  const port = Number(springEnv.SERVER_PORT || 8081);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error("SERVER_PORT deve ser uma porta valida entre 1 e 65535.");
+    process.exitCode = 1;
+    return;
+  }
+  try {
+    await new Promise((resolve, reject) => {
+      const probe = net.createServer();
+      probe.once("error", reject);
+      probe.listen({ port, host: springEnv.SERVER_ADDRESS }, () => probe.close(resolve));
+    });
+  } catch (error) {
+    console.error(error.code === "EADDRINUSE"
+      ? `Porta ${port} ocupada. Libere a porta antes de executar npm run dev:spring; nenhum processo foi encerrado.`
+      : `Nao foi possivel verificar a porta ${port} (${error.code || "erro de rede"}).`);
+    process.exitCode = 1;
+    return;
+  }
 
-for (const signal of ["SIGINT", "SIGTERM"]) {
-  process.on(signal, () => {
-    if (child.pid && !child.killed) child.kill(signal);
+  const child = spawn(javaExecutable, [
+    `-Dmaven.home=${mavenHome}`,
+    `-Dmaven.multiModuleProjectDirectory=${springRoot}`,
+    `-Dclassworlds.conf=${mavenConfig}`,
+    "-classpath", path.join(bootDirectory, launcherJars[0]),
+    "org.codehaus.plexus.classworlds.launcher.Launcher",
+    "spring-boot:run",
+  ], { cwd: springRoot, env: springEnv, stdio: "inherit", shell: false });
+
+  for (const signal of ["SIGINT", "SIGTERM"]) {
+    process.on(signal, () => {
+      if (child.pid && !child.killed) child.kill(signal);
+    });
+  }
+
+  child.on("error", () => {
+    console.error("Não foi possível iniciar o Maven do backend-spring.");
+    process.exitCode = 1;
   });
+  child.on("exit", (code, signal) => {
+    process.exitCode = code ?? (signal === "SIGINT" ? 130 : 1);
+  });
+
 }
 
-child.on("error", () => {
-  console.error("Não foi possível iniciar o Maven do backend-spring.");
+startSpring().catch(() => {
+  console.error("Nao foi possivel iniciar o backend-spring.");
   process.exitCode = 1;
-});
-child.on("exit", (code, signal) => {
-  process.exitCode = code ?? (signal === "SIGINT" ? 130 : 1);
 });
