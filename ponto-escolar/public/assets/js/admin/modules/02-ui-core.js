@@ -56,12 +56,27 @@ function iniciarSidebar() {
   };
 
   toggleBtn.addEventListener('click', () => atualizarEstado(!sidebar.classList.contains('open')));
+  sidebar.querySelector('#nav-register-school')?.addEventListener('click', () => atualizarEstado(false));
   overlay.addEventListener('click', () => {
     atualizarEstado(false);
   });
 }
 
 function aplicarCapacidadesNaNavegacaoAdmin() {
+  const inicio = document.querySelector('#sidebar a[href="/admin/dashboard"]');
+  if (inicio && temCapacidade('escola.criar') && !document.getElementById('nav-register-school')) {
+    const link = document.createElement('a');
+    link.id = 'nav-register-school';
+    link.className = 'nav-link';
+    link.href = '/admin/escolas/nova';
+    if (window.location.pathname === '/admin/escolas/nova') {
+      link.classList.add('active');
+      link.setAttribute('aria-current', 'page');
+    }
+    link.innerHTML = '<span class="nav-icon"><img src="/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar Escola';
+    inicio.insertAdjacentElement('afterend', link);
+  }
+
   const itensPorCapacidade = [
     ['#sidebar a[href="/admin/funcionarios"], .quick-grid a[href="/admin/funcionarios"]', 'funcionario.listar'],
     ['#sidebar a[href="/admin/funcionarios/novo"], .quick-grid a[href="/admin/funcionarios/novo"]', 'funcionario.criar'],
