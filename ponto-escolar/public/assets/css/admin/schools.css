@@ -1,0 +1,222 @@
+.schools-page {
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.schools-page-header,
+.schools-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.schools-page-header {
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.schools-page-header .page-subtitle,
+.schools-list-header .ui-panel-subtitle {
+  margin: 4px 0 0;
+}
+
+.schools-page-header .ui-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+
+.schools-list-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.schools-filters {
+  padding: 16px;
+  border-bottom: 1px solid var(--admin-border, var(--border-light));
+}
+
+.schools-filter-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(130px, 0.8fr) minmax(180px, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.schools-filter-form label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.schools-filter-form [hidden],
+.schools-page [hidden] {
+  display: none !important;
+}
+
+.schools-filter-form .ui-btn {
+  min-height: 42px;
+}
+
+.schools-feedback {
+  padding: 0 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.schools-feedback:not(:empty) {
+  padding-block: 12px;
+}
+
+.schools-feedback[data-state="error"] {
+  color: var(--color-accent);
+}
+
+.schools-feedback[data-state="loading"] {
+  color: var(--color-primary);
+}
+
+.schools-feedback[data-state="empty"] {
+  color: var(--color-text-muted);
+}
+
+.schools-desktop-table {
+  margin: 0 16px 16px;
+}
+
+.schools-desktop-table .data-table {
+  min-width: 720px;
+}
+
+.schools-desktop-table .data-table td:first-child {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.schools-status {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-full);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.schools-status.is-active {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+}
+
+.schools-status.is-inactive {
+  color: var(--color-text-muted);
+  background: color-mix(in srgb, var(--color-text) 7%, var(--color-surface));
+}
+
+.schools-mobile-list {
+  display: none;
+}
+
+.schools-state {
+  display: grid;
+  min-height: 180px;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  text-align: center;
+}
+
+.schools-state p {
+  max-width: 440px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.schools-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 16px 16px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.schools-mobile-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--admin-border, var(--border-light));
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--admin-shadow, var(--shadow-sm));
+}
+
+.schools-mobile-card + .schools-mobile-card {
+  margin-top: 10px;
+}
+
+.schools-mobile-card h3 {
+  margin: 0 0 8px;
+  color: var(--color-text);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.schools-mobile-card p {
+  margin: 4px 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .schools-filter-form {
+    grid-template-columns: minmax(0, 1fr) minmax(130px, 0.7fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .schools-page-header,
+  .schools-list-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .schools-filter-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .schools-filter-form .ui-btn {
+    width: 100%;
+  }
+
+  .schools-desktop-table {
+    display: none;
+  }
+
+  .schools-mobile-list {
+    display: block;
+    padding: 0 14px 14px;
+  }
+
+  .schools-pagination {
+    gap: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .schools-page *,
+  .schools-page *::before,
+  .schools-page *::after {
+    scroll-behavior: auto;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

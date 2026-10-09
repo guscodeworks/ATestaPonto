@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-admin-session="pending">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Escolas - Admin</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+  <script src="/assets/js/admin/admin.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/bundles/admin.css">
+  <link rel="stylesheet" href="/assets/css/admin/schools.css">
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div class="app-wrap">
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark"><img src="/img/atestaponto-symbol.png" alt="" aria-hidden="true" width="18" height="18"></div>
+      <div class="sidebar-brand-text">
+        <span class="sidebar-brand-name">ATesta<span class="brand-accent">Ponto</span></span>
+        <span class="sidebar-brand-sub">Administração</span>
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="sidebar-user-avatar" id="sb-avatar">--</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-user-name" id="sb-name">Administrador</div>
+        <div class="sidebar-user-role" id="sb-role">Administrador</div>
+      </div>
+      <div class="sidebar-admin-badge">ADMIN</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="/admin/dashboard" class="nav-link">
+        <span class="nav-icon"><img src="/icons/layout-dashboard.svg" alt="" aria-hidden="true" width="18" height="18"></span> Overview
+      </a>
+      <div class="sidebar-section-label">Funcionários</div>
+      <a href="/admin/funcionarios" class="nav-link">
+        <span class="nav-icon"><img src="/icons/users.svg" alt="" aria-hidden="true" width="18" height="18"></span> Funcionários
+      </a>
+      <a href="/admin/funcionarios/novo" class="nav-link">
+        <span class="nav-icon"><img src="/icons/user-plus.svg" alt="" aria-hidden="true" width="18" height="18"></span> Registrar
+      </a>
+      <div class="sidebar-section-label">Ponto</div>
+      <a href="/admin/pontos-do-dia" class="nav-link">
+        <span class="nav-icon"><img src="/icons/timer.svg" alt="" aria-hidden="true" width="18" height="18"></span> Pontos do Dia
+      </a>
+      <a href="/admin/relatorios" class="nav-link">
+        <span class="nav-icon"><img src="/icons/chart-column.svg" alt="" aria-hidden="true" width="18" height="18"></span> Relatórios
+      </a>
+      <div class="sidebar-section-label">Sistema</div>
+      <a href="/admin/configuracoes" class="nav-link">
+        <span class="nav-icon"><img src="/icons/settings.svg" alt="" aria-hidden="true" width="18" height="18"></span> Configurações
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" type="button">
+        <span class="nav-icon"><img src="/icons/log-out.svg" alt="" aria-hidden="true" width="18" height="18"></span> Sair do sistema
+      </button>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Abrir menu de navegacao" aria-controls="sidebar" aria-expanded="false"><img src="/icons/menu.svg" alt="" aria-hidden="true" width="18" height="18"></button>
+        <div class="breadcrumb">
+          <span>ATesta<span class="brand-accent">Ponto</span></span>
+          <span class="breadcrumb-sep">›</span>
+          <span class="breadcrumb-current">Escolas</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-clock">
+          <div class="topbar-time" id="topbar-time">--:--</div>
+          <div class="topbar-date" id="topbar-date"></div>
+        </div>
+        <div class="topbar-user" onclick="window.location.href='/admin/configuracoes'" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+          <div class="topbar-avatar" id="admin-avatar">--</div>
+          <div class="topbar-user-info">
+            <span class="topbar-user-name" id="admin-firstname">Administrador</span>
+            <span class="topbar-user-role" id="admin-role">Administrador</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-content schools-page" id="schools-page">
+      <div class="page-header schools-page-header">
+        <div>
+          <h1 class="page-title">Escolas</h1>
+          <p class="page-subtitle">Unidades escolares disponíveis no seu escopo de acesso</p>
+        </div>
+        <a class="ui-btn ui-btn-primary" id="school-create-link" href="/admin/escolas/nova" hidden>
+          <img src="/icons/school.svg" alt="" aria-hidden="true" width="18" height="18">
+          Registrar escola
+        </a>
+      </div>
+
+      <section class="ui-panel schools-list-panel" aria-labelledby="schools-list-title">
+        <div class="ui-panel-header schools-list-header">
+          <div>
+            <h2 class="ui-panel-title" id="schools-list-title">Unidades escolares</h2>
+            <p class="ui-panel-subtitle" id="schools-total" aria-live="polite">Carregando escolas...</p>
+          </div>
+        </div>
+        <div class="schools-filters">
+          <form id="schools-filter-form" class="schools-filter-form">
+            <label class="schools-search" for="schools-query">
+              <span>Buscar escola ou INEP</span>
+              <input class="field-input no-icon" id="schools-query" name="q" type="search" maxlength="120" placeholder="Digite o nome ou código INEP">
+            </label>
+            <label for="schools-status">
+              <span>Status</span>
+              <select class="field-input no-icon" id="schools-status" name="ativa">
+                <option value="">Todas</option>
+                <option value="true">Ativas</option>
+                <option value="false">Inativas</option>
+              </select>
+            </label>
+            <label for="schools-dre" id="schools-dre-filter" hidden>
+              <span>Diretoria de ensino</span>
+              <select class="field-input no-icon" id="schools-dre" name="diretoria_ensino_id">
+                <option value="">Todas as DREs autorizadas</option>
+              </select>
+            </label>
+            <button class="ui-btn ui-btn-secondary" id="schools-search-submit" type="submit">Buscar</button>
+          </form>
+        </div>
+        <div class="schools-feedback" id="schools-feedback" role="status" aria-live="polite"></div>
+        <div class="schools-desktop-table table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th scope="col">Escola</th>
+                <th scope="col">Diretoria de ensino</th>
+                <th scope="col">Cidade</th>
+                <th scope="col">Código INEP</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="schools-table-body"></tbody>
+          </table>
+        </div>
+        <div class="schools-mobile-list" id="schools-cards" aria-live="polite"></div>
+        <nav class="schools-pagination" id="schools-pagination" aria-label="Paginação da lista de escolas">
+          <button class="ui-btn ui-btn-secondary ui-btn-sm" id="schools-prev" type="button" disabled>Anterior</button>
+          <span id="schools-page-label" aria-live="polite">Página 1</span>
+          <button class="ui-btn ui-btn-secondary ui-btn-sm" id="schools-next" type="button" disabled>Próxima</button>
+        </nav>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="toast-stack" id="toast-stack"></div>
+</body>
+</html>
