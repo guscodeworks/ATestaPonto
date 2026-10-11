@@ -64,6 +64,19 @@ function iniciarSidebar() {
 
 function aplicarCapacidadesNaNavegacaoAdmin() {
   const inicio = document.querySelector('#sidebar a[href="/admin/dashboard"]');
+  if (inicio && temCapacidade('escola.listar') && !document.getElementById('nav-schools')) {
+    const link = document.createElement('a');
+    link.id = 'nav-schools';
+    link.className = 'nav-link';
+    link.href = '/admin/escolas';
+    if (window.location.pathname === '/admin/escolas') {
+      link.classList.add('active');
+      link.setAttribute('aria-current', 'page');
+    }
+    link.innerHTML = '<span class="nav-icon"><img src="/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></span> Escolas';
+    inicio.insertAdjacentElement('afterend', link);
+  }
+
   if (inicio && temCapacidade('escola.criar') && !document.getElementById('nav-register-school')) {
     const link = document.createElement('a');
     link.id = 'nav-register-school';
@@ -78,6 +91,8 @@ function aplicarCapacidadesNaNavegacaoAdmin() {
   }
 
   const itensPorCapacidade = [
+    ['#sidebar a[href="/admin/escolas"]', 'escola.listar'],
+    ['#sidebar a[href="/admin/escolas/nova"]', 'escola.criar'],
     ['#sidebar a[href="/admin/funcionarios"], .quick-grid a[href="/admin/funcionarios"]', 'funcionario.listar'],
     ['#sidebar a[href="/admin/funcionarios/novo"], .quick-grid a[href="/admin/funcionarios/novo"]', 'funcionario.criar'],
     ['#sidebar a[href="/admin/pontos-do-dia"], .quick-grid a[href="/admin/pontos-do-dia"], .dashboard-records-panel a[href="/admin/pontos-do-dia"]', 'ponto.hoje.visualizar'],

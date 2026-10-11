@@ -49,7 +49,7 @@
 }
 
 @media (max-width: 480px) {
-  .dashboard-page .stat-row { grid-template-columns: 1fr; gap: 10px; }
+  .dashboard-page .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .dashboard-page .stat-card { min-height: auto; padding: 18px 18px 16px; }
   .dashboard-page .stat-icon { width: 40px; height: 40px; margin-bottom: 10px; }
   .dashboard-page .stat-value { font-size: 26px; }

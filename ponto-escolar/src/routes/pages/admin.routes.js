@@ -21,6 +21,7 @@ function createAdminPagesRouter({ sendView }) {
     "admin/register-employee.html"
   );
   const registrarEscolaPage = renderAdminView(sendView, "admin/register-school.html");
+  const escolasPage = renderAdminView(sendView, "admin/schools.html");
   const pontosPage = renderAdminView(sendView, "admin/daily-points.html");
   const relatoriosPage = renderAdminView(sendView, "admin/reports.html");
   const configuracoesPage = renderAdminView(
@@ -35,6 +36,12 @@ function createAdminPagesRouter({ sendView }) {
   router.get("/admin", requireAdmin, redirectTo("/admin/dashboard"));
   router.get("/admin/index", requireAdmin, redirectTo("/admin/dashboard"));
   router.get("/admin/dashboard", requireAdmin, dashboardPage);
+  router.get(
+    "/admin/escolas",
+    requireAdmin,
+    escopoPorCapacidade("escola.listar"),
+    escolasPage
+  );
   router.get(
     "/admin/escolas/nova",
     requireAdmin,

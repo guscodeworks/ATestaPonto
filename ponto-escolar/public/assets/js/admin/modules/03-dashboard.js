@@ -24,9 +24,7 @@ function renderizarUltimosRegistros() {
   }
 
   if (tbody && lista.length) {
-    tbody.innerHTML = lista.map(p => {
-      // Prioriza os dados atualizados de FUNCIONARIOS; usa o funcionário
-      // embutido no próprio registro de ponto apenas como fallback.
+    const rows = lista.map((p) => {
       const func = getFuncionarioPorId(p.funcionarioId) || p.funcionario;
       if (!func) return '';
       return `
@@ -46,15 +44,21 @@ function renderizarUltimosRegistros() {
         </tr>
       `;
     }).join('');
+    tbody.innerHTML = rows;
   }
 
   if (cardsMobile) {
-    // Versão compacta da mesma lista, exibida no layout mobile.
-    cardsMobile.innerHTML = lista.length ? lista.map(p => {
-      const func = getFuncionarioPorId(p.funcionarioId) || p.funcionario;
-      if (!func) return '';
-      return `
-        <div class="func-card-item">
+    // Versão compacta da mesma lista, exibida no layout mobile, montada em
+    // um fragmento para reduzir reflow e melhor usar o DOM em telas pequenas.
+    if (lista.length) {
+      const fragment = document.createDocumentFragment();
+      lista.forEach((p) => {
+        const func = getFuncionarioPorId(p.funcionarioId) || p.funcionario;
+        if (!func) return;
+
+        const item = document.createElement('div');
+        item.className = 'func-card-item';
+        item.innerHTML = `
           <div class="func-card-avatar">${getIniciais(func.nome)}</div>
           <div class="func-card-info">
             <div class="func-card-name">${escapeHtml(func.nome)}</div>
@@ -63,9 +67,13 @@ function renderizarUltimosRegistros() {
               <span class="badge mobile-point-status ${p.status==='completo'?'badge-ok':'badge-info'}">${p.status==='completo'?'Completo':'Em andamento'}</span>
             </div>
           </div>
-        </div>
-      `;
-    }).join('') : `<div class="empty-state"><div class="empty-icon"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div>`;
+        `;
+        fragment.appendChild(item);
+      });
+      cardsMobile.replaceChildren(fragment);
+    } else {
+      cardsMobile.innerHTML = `<div class="empty-state"><div class="empty-icon"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum registro hoje</div></div>`;
+    }
   }
 }
 
@@ -228,6 +236,27 @@ function mensagemErroCriacaoEscola(status, payload) {
       || 'Já existe uma escola com dados conflitantes nesta diretoria de ensino.';
   }
   return 'Não foi possível determinar se a criação foi concluída. A escola pode ter sido criada. Verifique a lista de escolas antes de tentar novamente, para evitar um cadastro duplicado.';
+}
+
+function mensagemErroPreviewEscola(error) {
+  if (error?.status === 400) {
+    return error.payload?.error?.details?.[0]?.message
+      || error.payload?.detail
+      || error.message
+      || 'Revise os dados informados.';
+  }
+  if (error?.code === 'CEP_NAO_ENCONTRADO') {
+    return 'CEP não encontrado. Confira os oito dígitos e tente novamente.';
+  }
+  if (error?.status === 404) {
+    return error.payload?.detail || error.message
+      || 'CEP ou diretoria não encontrados. Confira os dados e tente novamente.';
+  }
+  if ([502, 503, 504].includes(Number(error?.status))
+    || String(error?.code || '').startsWith('CEP_')) {
+    return 'Não foi possível consultar o CEP agora. Tente novamente em instantes; nenhuma escola foi criada.';
+  }
+  return error?.message || 'Não foi possível consultar os dados da escola. Tente novamente.';
 }
 
 function renderizarConferenciaEscola(dados, criada = false) {
@@ -517,9 +546,7 @@ async function iniciarAcaoAdicionarEscola() {
     } catch (error) {
       if (requisicaoPreview !== controller || error.name === 'AbortError') return;
       feedback.dataset.state = 'error';
-      feedback.textContent = error.status === 400 || error.status === 404
-        ? (error.payload?.detail || error.message)
-        : error.message;
+      feedback.textContent = mensagemErroPreviewEscola(error);
     } finally {
       if (requisicaoPreview === controller) {
         requisicaoPreview = null;
@@ -584,7 +611,11 @@ async function iniciarAcaoAdicionarEscola() {
     }
   });
   fechar.addEventListener('click', () => {
-    if (!criacaoEmAndamento) window.location.assign('/admin/dashboard');
+    if (!criacaoEmAndamento) {
+      window.location.assign(
+        temCapacidade('escola.listar') ? '/admin/escolas' : '/admin/dashboard'
+      );
+    }
   });
   atualizarRaio(false);
   atualizarInep(false);
