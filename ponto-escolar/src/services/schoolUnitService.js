@@ -1,5 +1,6 @@
 "use strict";
 
+const { requestSpring } = require("../integrations/springBackendClient");
 const schoolUnitModel = require("../models/schoolUnitModel");
 const educationDepartmentService = require("./educationDepartmentService");
 const cepService = require("./cepService");
@@ -30,25 +31,36 @@ function mapSchoolUnit(linha) {
 async function listSchoolUnits(query = {}, escopoUnidades = []) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
-  const offset = (page - 1) * limit;
-
-  const filtros = {
-    escopoUnidades,
-    diretoriaId: query.diretoria_ensino_id ? Number(query.diretoria_ensino_id) : undefined,
-    ativa:
-      query.ativa === undefined || query.ativa === ""
-        ? undefined
-        : query.ativa === true || query.ativa === "true" || query.ativa === "1",
-    q: String(query.q || "").trim(),
-  };
-
-  const totalRow = await schoolUnitModel.countForAdmin(filtros);
-  const linhas = await schoolUnitModel.listForAdmin({ ...filtros, limit, offset });
-
-  return {
-    items: linhas.map(mapSchoolUnit),
-    pagination: { page, limit, total: Number(totalRow?.total || 0) },
-  };
+  const ids = escopoUnidades === null ? null : Array.isArray(escopoUnidades)
+    ? [...new Set(escopoUnidades.map(Number))].filter(id => Number.isSafeInteger(id) && id > 0)
+    : [];
+  if (ids !== null && ids.length === 0) {
+    return { items: [], pagination: { page, limit, total: 0 } };
+  }
+  const diretoriaId = Number(query.diretoria_ensino_id);
+  try {
+    const response = await requestSpring("/internal/escolas/listagem", {
+      method: "POST",
+      body: {
+        escopo_global: ids === null,
+        unidades_escolares_ids: ids || [],
+        diretoria_ensino_id: Number.isSafeInteger(diretoriaId) && diretoriaId > 0 ? diretoriaId : null,
+        ativa: query.ativa === undefined || query.ativa === "" ? null
+          : query.ativa === true || query.ativa === "true" || query.ativa === "1",
+        q: String(query.q || "").trim(),
+        page,
+        limit,
+      },
+    });
+    if (response.status !== 200) throw new Error("Falha na listagem interna");
+    const result = await response.json();
+    return { items: result.items.map(mapSchoolUnit), pagination: result.pagination };
+  } catch (_error) {
+    throw new AppError("Servico de escolas indisponivel", {
+      statusCode: 502,
+      code: "SCHOOL_SERVICE_UNAVAILABLE",
+    });
+  }
 }
 
 // O escopo da unidade já foi validado pelo middleware da rota.
