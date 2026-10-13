@@ -1,5 +1,7 @@
 package br.com.atestaponto.school.repository;
 
+import br.com.atestaponto.school.dto.SchoolListRequest;
+import br.com.atestaponto.school.dto.SchoolListResponse;
 import br.com.atestaponto.school.dto.SchoolResponse;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -7,11 +9,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.dao.DataRetrievalFailureException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -52,6 +61,78 @@ public class SchoolRepository {
 
     public List<SchoolResponse> listByEducationDepartment(long educationDepartmentId) {
         return querySchools(LIST_BY_EDUCATION_DEPARTMENT, educationDepartmentId);
+    }
+
+    public SchoolListResponse listForAdmin(SchoolListRequest request) {
+        if (!Boolean.TRUE.equals(request.escopo_global()) && request.unidades_escolares_ids().isEmpty()) {
+            return new SchoolListResponse(List.of(),
+                    new SchoolListResponse.Pagination(request.page(), request.limit(), 0));
+        }
+        List<String> conditions = new ArrayList<>();
+        List<Object> parameters = new ArrayList<>();
+        if (!Boolean.TRUE.equals(request.escopo_global())) {
+            conditions.add("ue.id IN (" + String.join(",", Collections.nCopies(
+                    request.unidades_escolares_ids().size(), "?")) + ")");
+            parameters.addAll(request.unidades_escolares_ids());
+        }
+        if (request.diretoria_ensino_id() != null) {
+            conditions.add("ue.diretoria_ensino_id = ?");
+            parameters.add(request.diretoria_ensino_id());
+        }
+        if (request.ativa() != null) {
+            conditions.add("ue.ativa = ?");
+            parameters.add(request.ativa());
+        }
+        if (request.q() != null && !request.q().isBlank()) {
+            String term = "%" + request.q().strip().replace("\\", "\\\\")
+                    .replace("%", "\\%").replace("_", "\\_") + "%";
+            conditions.add("(ue.nome LIKE ? OR ue.codigo_inep LIKE ?)");
+            parameters.add(term);
+            parameters.add(term);
+        }
+        String from = " FROM unidades_escolares ue INNER JOIN diretorias_ensino de"
+                + " ON de.id = ue.diretoria_ensino_id"
+                + (conditions.isEmpty() ? "" : " WHERE " + String.join(" AND ", conditions));
+        long total = queryAdmin("SELECT COUNT(*)" + from, parameters,
+                (row, index) -> row.getLong(1)).getFirst();
+        parameters.add(request.limit());
+        parameters.add((request.page() - 1) * request.limit());
+        List<SchoolListResponse.Item> items = queryAdmin("""
+                SELECT ue.id, ue.diretoria_ensino_id, de.nome AS diretoria_ensino_nome,
+                       ue.nome, ue.codigo_inep, ue.endereco, ue.cidade, ue.latitude, ue.longitude,
+                       ue.raio_permitido_metros, ue.ativa, ue.criado_em, ue.atualizado_em
+                """ + from + " ORDER BY ue.nome ASC, ue.id ASC LIMIT ? OFFSET ?", parameters,
+                (row, index) -> new SchoolListResponse.Item(row.getLong("id"),
+                        row.getLong("diretoria_ensino_id"), row.getString("diretoria_ensino_nome"),
+                        row.getString("nome"), row.getString("codigo_inep"), row.getString("endereco"),
+                        row.getString("cidade"), row.getBigDecimal("latitude"), row.getBigDecimal("longitude"),
+                        row.getInt("raio_permitido_metros"), row.getBoolean("ativa"),
+                        adminTimestamp(row, "criado_em"), adminTimestamp(row, "atualizado_em")));
+        return new SchoolListResponse(items,
+                new SchoolListResponse.Pagination(request.page(), request.limit(), total));
+    }
+
+    private <T> List<T> queryAdmin(String sql, List<Object> parameters, RowMapper<T> mapper) {
+        return jdbcTemplate.query(connection -> {
+            if (!connection.isReadOnly()) {
+                throw new SQLException("A consulta exige uma conexao somente leitura");
+            }
+            PreparedStatement statement = connection.prepareStatement(sql);
+            for (int index = 0; index < parameters.size(); index++) {
+                statement.setObject(index + 1, parameters.get(index));
+            }
+            statement.setQueryTimeout(3);
+            return statement;
+        }, mapper);
+    }
+
+    private static final DateTimeFormatter ADMIN_TIMESTAMP = new DateTimeFormatterBuilder()
+            .appendInstant(3).toFormatter();
+
+    private String adminTimestamp(ResultSet row, String column) throws SQLException {
+        // O contrato Node interpreta os campos do banco como UTC e serializa milissegundos.
+        LocalDateTime value = row.getObject(column, LocalDateTime.class);
+        return value == null ? null : ADMIN_TIMESTAMP.format(value.toInstant(ZoneOffset.UTC));
     }
 
     public boolean existsByNameInEducationDepartment(long departmentId, String normalizedName) {

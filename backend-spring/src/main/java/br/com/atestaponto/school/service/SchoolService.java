@@ -4,6 +4,8 @@ import br.com.atestaponto.address.dto.AddressResponse;
 import br.com.atestaponto.address.service.AddressService;
 import br.com.atestaponto.educationdepartment.dto.EducationDepartmentResponse;
 import br.com.atestaponto.educationdepartment.service.EducationDepartmentService;
+import br.com.atestaponto.school.dto.SchoolListRequest;
+import br.com.atestaponto.school.dto.SchoolListResponse;
 import br.com.atestaponto.school.dto.SchoolPreviewRequest;
 import br.com.atestaponto.school.dto.SchoolPreviewResponse;
 import br.com.atestaponto.school.dto.SchoolResponse;
@@ -13,9 +15,9 @@ import java.util.List;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -132,6 +134,17 @@ public class SchoolService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Endereco do CEP indisponivel");
         }
         return normalized;
+    }
+
+    @Transactional(readOnly = true)
+    public SchoolListResponse listForAdmin(SchoolListRequest request) {
+        if (Boolean.TRUE.equals(request.escopo_global()) && !request.unidades_escolares_ids().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escopo contraditorio");
+        }
+        if (request.page() - 1 > Long.MAX_VALUE / request.limit()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pagina invalida");
+        }
+        return repository.listForAdmin(request);
     }
 
     @Transactional(readOnly = true)
