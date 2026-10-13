@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "start:ponto": "node server.js",
-    "start:govbr": "npm --prefix ../gov.br-fake start",
+    "start:govbr": "npm --prefix ../atesta-id start",
     "dev": "concurrently -n PONTO,GOVBR \"npm run start:ponto\" \"npm run start:govbr\"",
     "dev:spring": "node src/scripts/startSpringBackend.js",
     "dev:check": "node src/scripts/checkDatabaseConnection.js",
