@@ -7,8 +7,7 @@ const CAPACIDADES_ESCOLA_CONSULTA = Object.freeze([
   "escola.visualizar",
 ]);
 
-// Cadastro de escola: somente ADMIN_SEDUC (qualquer DRE) e ADMIN_DIRETORIA
-// (apenas a própria DRE, validado em adminScope). Perfis escolares não recebem.
+// Cadastro de escola: somente ADMIN_DIRETORIA, na própria DRE (validado em adminScope).
 const CAPACIDADES_ESCOLA_CADASTRO = Object.freeze(["escola.criar"]);
 
 const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
@@ -75,7 +74,6 @@ const CAPACIDADES_SECRETARIA_COM_QR = Object.freeze([
 const CAPACIDADES_POR_PERFIL = Object.freeze({
   ADMIN_SEDUC: Object.freeze([
     ...CAPACIDADES_ADMINISTRATIVAS,
-    ...CAPACIDADES_ESCOLA_CADASTRO,
   ]),
   ADMIN_DIRETORIA: Object.freeze([
     ...CAPACIDADES_ADMINISTRATIVAS,
