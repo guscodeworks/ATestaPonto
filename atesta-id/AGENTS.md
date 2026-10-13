@@ -1,4 +1,4 @@
-# AGENTS.md — gov.br-fake
+# AGENTS.md — atesta-id
 
 Complementa as regras gerais do AGENTS.md da raiz para o simulador técnico local.
 
