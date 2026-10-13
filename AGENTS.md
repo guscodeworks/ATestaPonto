@@ -6,9 +6,9 @@ Estas regras se aplicam a todo o repositório. Leia também os AGENTS.md da past
 alvo; eles acrescentam instruções específicas ao seu escopo. Instruções explícitas
 do usuário prevalecem. Identifique o projeto e leia o código relevante antes de editar.
 
-- `ponto-escolar/`: sistema principal e gateway público Node.js.
+- `atesta-gateway/`: sistema principal e gateway público Node.js.
 - `backend-spring/`: backend Java 21 + Spring Boot em migração gradual.
-- `gov.br-fake/`: simulador técnico de autenticação; não é produção.
+- `atesta-id/`: simulador técnico de autenticação; não é produção.
 
 Não misture código, lógica ou dados do simulador com o sistema real. Alterações
 em mais de um projeto devem ser necessárias ao escopo solicitado.

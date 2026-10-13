@@ -1,4 +1,4 @@
-# AGENTS.md — ponto-escolar
+# AGENTS.md — atesta-gateway
 
 Complementa as regras gerais do AGENTS.md da raiz para o sistema principal Node.js.
 
