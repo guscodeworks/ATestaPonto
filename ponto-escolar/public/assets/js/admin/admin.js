@@ -6,7 +6,7 @@
   const modules = [
     '00-state.js', '01-helpers.js', '02-ui-core.js', '03-dashboard.js',
     '04-employees.js', '05-points.js', '06-reports.js', '07-register.js',
-    '08-settings-login.js', '10-schools.js', '09-init.js', 'mobile-check.js', 'settings.js',
+    '08-settings-login.js', '10-schools.js', '11-departments.js', '09-init.js', 'mobile-check.js', 'settings.js',
   ];
 
   const urls = ['/assets/js/shared/loading.js', ...modules].map((module) =>
