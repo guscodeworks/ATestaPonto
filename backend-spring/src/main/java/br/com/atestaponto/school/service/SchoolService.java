@@ -9,6 +9,8 @@ import br.com.atestaponto.school.dto.SchoolListResponse;
 import br.com.atestaponto.school.dto.SchoolPreviewRequest;
 import br.com.atestaponto.school.dto.SchoolPreviewResponse;
 import br.com.atestaponto.school.dto.SchoolResponse;
+import br.com.atestaponto.school.dto.SchoolScopeResponse;
+import br.com.atestaponto.school.dto.SchoolRegistrationRequest;
 import br.com.atestaponto.school.repository.SchoolRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -153,6 +155,42 @@ public class SchoolService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de diretoria invalido");
         }
         return repository.listByEducationDepartment(educationDepartmentId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SchoolScopeResponse> listForScope(Long educationDepartmentId) {
+        if (educationDepartmentId == null || educationDepartmentId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de diretoria invalido");
+        }
+        return repository.listForScope(educationDepartmentId);
+    }
+
+    @Transactional(readOnly = true)
+    public SchoolScopeResponse findForScope(Long id) {
+        requireSchoolId(id);
+        return repository.findForScope(id).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Unidade escolar nao encontrada"));
+    }
+
+    @Transactional(readOnly = true)
+    public SchoolListResponse.Item findForAdmin(Long id) {
+        requireSchoolId(id);
+        return repository.findForAdmin(id).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Escola nao encontrada"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<SchoolRegistrationRequest.Item> listForRegistration(SchoolRegistrationRequest request) {
+        if (Boolean.TRUE.equals(request.escopo_global()) && !request.unidades_escolares_ids().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escopo contraditorio");
+        }
+        return repository.listForRegistration(request);
+    }
+
+    private void requireSchoolId(Long id) {
+        if (id == null || id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de escola invalido");
+        }
     }
 
     @Transactional(readOnly = true)

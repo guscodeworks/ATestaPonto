@@ -3,6 +3,8 @@ package br.com.atestaponto.school.repository;
 import br.com.atestaponto.school.dto.SchoolListRequest;
 import br.com.atestaponto.school.dto.SchoolListResponse;
 import br.com.atestaponto.school.dto.SchoolResponse;
+import br.com.atestaponto.school.dto.SchoolScopeResponse;
+import br.com.atestaponto.school.dto.SchoolRegistrationRequest;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -102,14 +104,68 @@ public class SchoolRepository {
                        ue.nome, ue.codigo_inep, ue.endereco, ue.cidade, ue.latitude, ue.longitude,
                        ue.raio_permitido_metros, ue.ativa, ue.criado_em, ue.atualizado_em
                 """ + from + " ORDER BY ue.nome ASC, ue.id ASC LIMIT ? OFFSET ?", parameters,
-                (row, index) -> new SchoolListResponse.Item(row.getLong("id"),
-                        row.getLong("diretoria_ensino_id"), row.getString("diretoria_ensino_nome"),
-                        row.getString("nome"), row.getString("codigo_inep"), row.getString("endereco"),
-                        row.getString("cidade"), row.getBigDecimal("latitude"), row.getBigDecimal("longitude"),
-                        row.getInt("raio_permitido_metros"), row.getBoolean("ativa"),
-                        adminTimestamp(row, "criado_em"), adminTimestamp(row, "atualizado_em")));
+                this::mapAdminSchool);
         return new SchoolListResponse(items,
                 new SchoolListResponse.Pagination(request.page(), request.limit(), total));
+    }
+
+    private SchoolListResponse.Item mapAdminSchool(ResultSet row, int index) throws SQLException {
+        return new SchoolListResponse.Item(row.getLong("id"),
+                row.getLong("diretoria_ensino_id"), row.getString("diretoria_ensino_nome"),
+                row.getString("nome"), row.getString("codigo_inep"), row.getString("endereco"),
+                row.getString("cidade"), row.getBigDecimal("latitude"), row.getBigDecimal("longitude"),
+                row.getInt("raio_permitido_metros"), row.getBoolean("ativa"),
+                adminTimestamp(row, "criado_em"), adminTimestamp(row, "atualizado_em"));
+    }
+
+    public Optional<SchoolListResponse.Item> findForAdmin(long id) {
+        return queryAdmin("""
+                SELECT ue.id, ue.diretoria_ensino_id, de.nome AS diretoria_ensino_nome,
+                       ue.nome, ue.codigo_inep, ue.endereco, ue.cidade, ue.latitude, ue.longitude,
+                       ue.raio_permitido_metros, ue.ativa, ue.criado_em, ue.atualizado_em
+                FROM unidades_escolares ue
+                INNER JOIN diretorias_ensino de ON de.id = ue.diretoria_ensino_id
+                WHERE ue.id = ? LIMIT 1
+                """, List.of(id), this::mapAdminSchool).stream().findFirst();
+    }
+
+    private static final String SCOPE_SELECT = """
+            SELECT id, diretoria_ensino_id, nome, latitude, longitude, raio_permitido_metros,
+                   ativa, codigo_inep, endereco, cidade, criado_em, atualizado_em
+            FROM unidades_escolares
+            """;
+
+    public Optional<SchoolScopeResponse> findForScope(long id) {
+        return queryAdmin(SCOPE_SELECT + " WHERE id = ? LIMIT 1", List.of(id),
+                this::mapScopeSchool).stream().findFirst();
+    }
+
+    public List<SchoolScopeResponse> listForScope(long educationDepartmentId) {
+        return queryAdmin(SCOPE_SELECT + " WHERE diretoria_ensino_id = ? ORDER BY nome ASC",
+                List.of(educationDepartmentId), this::mapScopeSchool);
+    }
+
+    private SchoolScopeResponse mapScopeSchool(ResultSet row, int index) throws SQLException {
+        return new SchoolScopeResponse(row.getLong("id"), row.getLong("diretoria_ensino_id"),
+                row.getString("nome"), row.getBigDecimal("latitude"), row.getBigDecimal("longitude"),
+                row.getInt("raio_permitido_metros"), row.getBoolean("ativa"),
+                row.getString("codigo_inep"), row.getString("endereco"), row.getString("cidade"),
+                adminTimestamp(row, "criado_em"), adminTimestamp(row, "atualizado_em"));
+    }
+
+    public List<SchoolRegistrationRequest.Item> listForRegistration(SchoolRegistrationRequest request) {
+        if (!Boolean.TRUE.equals(request.escopo_global()) && request.unidades_escolares_ids().isEmpty()) {
+            return List.of();
+        }
+        List<Object> parameters = new ArrayList<>();
+        String filter = "";
+        if (!Boolean.TRUE.equals(request.escopo_global())) {
+            parameters.addAll(request.unidades_escolares_ids());
+            filter = " WHERE id IN (" + String.join(",", Collections.nCopies(parameters.size(), "?")) + ")";
+        }
+        return queryAdmin("SELECT id, nome FROM unidades_escolares" + filter + " ORDER BY nome ASC, id ASC",
+                parameters, (row, index) -> new SchoolRegistrationRequest.Item(
+                        row.getLong("id"), row.getString("nome")));
     }
 
     private <T> List<T> queryAdmin(String sql, List<Object> parameters, RowMapper<T> mapper) {

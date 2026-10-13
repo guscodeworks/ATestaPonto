@@ -1,20 +1,20 @@
 "use strict";
 
 const employmentLinkModel = require("../models/employmentLinkModel");
-const schoolUnitModel = require("../models/schoolUnitModel");
+const schoolReadService = require("./schoolReadService");
 
 // Consultas necessárias para resolver escopo administrativo a partir dos
 // vínculos e unidades reais persistidos no banco.
 async function listarUnidadesPorDiretoria(diretoriaId) {
-  return schoolUnitModel.findByDiretoriaId(diretoriaId);
+  return schoolReadService.listByEducationDepartment(diretoriaId);
 }
 
 async function listarUnidadesParaCadastro(escopoUnidades) {
-  return schoolUnitModel.listForEmployeeRegistration(escopoUnidades);
+  return schoolReadService.listForRegistration(escopoUnidades);
 }
 
 async function buscarUnidadePorId(unidadeId) {
-  return schoolUnitModel.findById(unidadeId);
+  return schoolReadService.findById(unidadeId);
 }
 
 async function buscarVinculoAtivoDoFuncionario(funcionarioId) {
