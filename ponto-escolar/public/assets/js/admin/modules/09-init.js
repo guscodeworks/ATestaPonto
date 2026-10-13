@@ -114,6 +114,7 @@
     aplicarCapacidadesNosPaineisAdmin();
     if (existe('#school-preview-form')) iniciarAcaoAdicionarEscola();
     if (existe('#schools-page')) inicializarListaEscolas();
+    if (existe('#departments-page')) inicializarDiretorias();
     if (existe('#admin-avatar,#admin-firstname,#admin-role,#sb-avatar,#sb-name,#sb-role')) renderizarPerfil();
     if (existe('.btn-logout')) iniciarLogoutAdmin();
     if (existe('#menu-toggle') && existe('#sidebar')) iniciarSidebar();

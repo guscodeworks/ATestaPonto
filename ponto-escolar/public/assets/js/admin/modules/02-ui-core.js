@@ -64,6 +64,18 @@ function iniciarSidebar() {
 
 function aplicarCapacidadesNaNavegacaoAdmin() {
   const inicio = document.querySelector('#sidebar a[href="/admin/dashboard"]');
+  if (inicio && temCapacidade('diretoria.gerenciar') && !document.getElementById('nav-departments')) {
+    const link = document.createElement('a');
+    link.id = 'nav-departments';
+    link.className = 'nav-link';
+    link.href = '/admin/diretorias';
+    if (window.location.pathname === link.pathname) {
+      link.classList.add('active');
+      link.setAttribute('aria-current', 'page');
+    }
+    link.innerHTML = '<span class="nav-icon"><img src="/icons/school.svg" alt="" aria-hidden="true" width="18" height="18"></span> Diretorias de Ensino';
+    inicio.insertAdjacentElement('afterend', link);
+  }
   if (inicio && temCapacidade('escola.listar') && !document.getElementById('nav-schools')) {
     const link = document.createElement('a');
     link.id = 'nav-schools';
