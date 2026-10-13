@@ -12,7 +12,7 @@ function validarAcessoPaginaPontosHoje() {
     return false;
   }
 
-  if (!temCapacidade('relatorio.visualizar')) {
+  if (!temCapacidade('relatorio.hierarquico.visualizar')) {
     pagina.querySelector('a[href="/admin/relatorios"]')?.remove();
   }
 
@@ -125,6 +125,6 @@ function renderizarPontosHoje() {
   // Prioriza os totais já calculados pela API; usa o tamanho das listas
   // locais como fallback caso o resumo não esteja disponível.
   const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
-  set('count-presentes', RESUMO_PONTOS.presentes || lista.length);
-  set('count-ausentes', RESUMO_PONTOS.ausentes || ausentes.length);
+  set('count-presentes', RESUMO_HOJE?.presentes ?? lista.length);
+  set('count-ausentes', RESUMO_HOJE?.ausentes ?? ausentes.length);
 }

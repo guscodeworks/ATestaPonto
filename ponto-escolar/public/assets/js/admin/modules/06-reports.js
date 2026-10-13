@@ -4,11 +4,65 @@
 
 function validarAcessoPaginaRelatorios() {
   const pagina = document.querySelector('.reports-page');
-  if (!pagina || temCapacidade('relatorio.visualizar')) return true;
+  if (!pagina) return true;
+  if (temCapacidade('relatorio.hierarquico.visualizar')) {
+    if (!temCapacidade('relatorio.visualizar')) {
+      pagina.querySelectorAll('#relatorio-nominal, .reports-export-actions, .reports-filter-panel')
+        .forEach(elemento => elemento.remove());
+    }
+    return true;
+  }
 
   pagina.remove();
   window.location.replace('/admin/dashboard');
   return false;
+}
+
+async function carregarRelatorioHierarquicoAdmin(dataReferencia, options = {}) {
+  try {
+    const query = dataReferencia ? `?data=${encodeURIComponent(dataReferencia)}` : '';
+    const payload = await adminApiFetch(`${ADMIN_ENDPOINTS.pontosRelatorioHierarquia}${query}`, {
+      signal: options.signal,
+    });
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    const report = getApiData(payload);
+    if (!report || !Array.isArray(report.diretorias)) throw new Error('Resposta inválida ao carregar os indicadores.');
+    RELATORIO_HIERARQUICO = report;
+    RELATORIO_HIERARQUICO_DATA_ERROR = null;
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error;
+    if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
+    RELATORIO_HIERARQUICO = null;
+    RELATORIO_HIERARQUICO_DATA_ERROR = error;
+    throw error;
+  }
+}
+
+function renderizarRelatorioHierarquico() {
+  const tbody = document.getElementById('tbody-relatorio-hierarquico');
+  if (!tbody || !temCapacidade('relatorio.hierarquico.visualizar')) return;
+  if (RELATORIO_HIERARQUICO_DATA_ERROR) {
+    const error = RELATORIO_HIERARQUICO_DATA_ERROR;
+    tbody.innerHTML = `<tr><td colspan="5">${criarEstadoErroDadosAdmin(
+      'Não foi possível carregar os indicadores', error.message,
+      ![401, 403].includes(Number(error.status || 0))
+    )}</td></tr>`;
+    return;
+  }
+  if (!RELATORIO_HIERARQUICO) return;
+  const report = RELATORIO_HIERARQUICO;
+  const date = document.getElementById('hierarquia-data');
+  if (date) date.textContent = formatarDataReferencia(report.data_referencia);
+  const row = (name, summary, department) => `<tr>
+    <th scope="row">${department ? `<strong>${escapeHtml(name)}</strong>` : escapeHtml(name)}</th>
+    <td>${escapeHtml(String(summary.total_funcionarios))}</td>
+    <td>${escapeHtml(String(summary.presentes))}</td>
+    <td>${escapeHtml(String(summary.ausentes))}</td>
+    <td>${escapeHtml(String(summary.taxa_presenca_percent))}%</td></tr>`;
+  tbody.innerHTML = report.diretorias.map(department =>
+    row(department.diretoria_ensino_nome, department.resumo, true)
+    + department.escolas.map(school => row(school.unidade_escolar_nome, school.resumo, false)).join('')
+  ).join('') || '<tr><td colspan="5"><div class="empty-state">Nenhuma DRE ou escola no escopo autorizado.</div></td></tr>';
 }
 
 async function carregarRelatorioSemanalAdmin(dataReferencia, options = {}) {
@@ -74,40 +128,29 @@ function renderizarGraficoSemanalRelatorio() {
 }
 
 function renderizarRelatorio() {
+  renderizarRelatorioHierarquico();
   const tbody = document.getElementById('tbody-relatorio');
   const elData = document.getElementById('relatorio-data');
   const elPres = document.getElementById('relatorio-presentes');
   const elAus = document.getElementById('relatorio-ausentes');
   const elGerado = document.getElementById('relatorio-gerado-por');
-  const error = RELATORIO_DATA_ERROR || FUNCIONARIOS_DATA_ERROR || RESUMO_DATA_ERROR;
-  // Se o relatório vindo da API estiver vazio, monta uma versão local a
-  // partir de FUNCIONARIOS + PONTOS_HOJE, marcando como 'ausente' quem
-  // não tiver batido ponto — garante que a tabela nunca fique vazia por
-  // falta de dados de relatório específico.
-  const itens = RELATORIO_PONTOS.length ? RELATORIO_PONTOS : FUNCIONARIOS.map((func) => {
-    const ponto = PONTOS_HOJE.find(x => Number(x.funcionarioId) === Number(func.id));
-    return ponto || {
-      id: `${func.id}-ausente`,
-      funcionarioId: func.id,
-      funcionario: func,
-      entrada: null,
-      pausa: null,
-      retorno: null,
-      saida: null,
-      status: 'ausente',
-    };
-  });
+  const detalhado = temCapacidade('relatorio.visualizar');
+  const resumo = detalhado ? RESUMO_RELATORIO : RESUMO_PONTOS;
+  const error = detalhado ? RELATORIO_DATA_ERROR || FUNCIONARIOS_DATA_ERROR : RESUMO_DATA_ERROR;
+  // A listagem de funcionários pode ter escopo maior que o relatório nominal.
+  // Somente o endpoint do relatório define as pessoas que podem aparecer aqui.
+  const itens = RELATORIO_PONTOS;
 
   if (elData) elData.textContent = error
     ? '—'
     : formatarDataReferencia(DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS);
-  if (elPres) elPres.textContent = error ? '—' : RESUMO_PONTOS.presentes || PONTOS_HOJE.length;
-  if (elAus) elAus.textContent = error ? '—' : RESUMO_PONTOS.ausentes || getFuncionariosSemPonto().length;
+  if (elPres) elPres.textContent = error ? '—' : resumo?.presentes ?? 0;
+  if (elAus) elAus.textContent = error ? '—' : resumo?.ausentes ?? 0;
   if (elGerado) elGerado.textContent = ADMIN.nome;
 
   renderizarGraficoSemanalRelatorio();
 
-  if (!tbody) return;
+  if (!tbody || !detalhado) return;
 
   if (error) {
     const state = criarEstadoErroDadosAdmin(

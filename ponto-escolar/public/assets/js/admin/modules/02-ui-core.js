@@ -96,7 +96,7 @@ function aplicarCapacidadesNaNavegacaoAdmin() {
     ['#sidebar a[href="/admin/funcionarios"], .quick-grid a[href="/admin/funcionarios"]', 'funcionario.listar'],
     ['#sidebar a[href="/admin/funcionarios/novo"], .quick-grid a[href="/admin/funcionarios/novo"]', 'funcionario.criar'],
     ['#sidebar a[href="/admin/pontos-do-dia"], .quick-grid a[href="/admin/pontos-do-dia"], .dashboard-records-panel a[href="/admin/pontos-do-dia"]', 'ponto.hoje.visualizar'],
-    ['#sidebar a[href="/admin/relatorios"], .quick-grid a[href="/admin/relatorios"]', 'relatorio.visualizar'],
+    ['#sidebar a[href="/admin/relatorios"], .quick-grid a[href="/admin/relatorios"]', 'relatorio.hierarquico.visualizar'],
   ];
 
   itensPorCapacidade.forEach(([seletor, capacidade]) => {
@@ -107,9 +107,10 @@ function aplicarCapacidadesNaNavegacaoAdmin() {
 
 function aplicarCapacidadesNosPaineisAdmin() {
   const paineisPorCapacidade = [
-    ['.dashboard-page .stat-card.blue', 'funcionario.listar'],
+    ['.dashboard-page .stat-card.blue', 'ponto.resumo.visualizar'],
     ['.dashboard-page .stat-card.green, .dashboard-page .stat-card.red, .dashboard-page .stat-card.purple', 'ponto.resumo.visualizar'],
-    ['.dashboard-records-panel, .dashboard-presence-panel, .dashboard-alerts-panel', 'ponto.hoje.visualizar'],
+    ['.dashboard-records-panel, .dashboard-alerts-panel', 'ponto.hoje.visualizar'],
+    ['.dashboard-presence-panel', 'ponto.resumo.visualizar'],
   ];
 
   paineisPorCapacidade.forEach(([seletor, capacidade]) => {

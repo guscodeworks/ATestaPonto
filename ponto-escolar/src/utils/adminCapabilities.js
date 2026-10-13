@@ -7,8 +7,7 @@ const CAPACIDADES_ESCOLA_CONSULTA = Object.freeze([
   "escola.visualizar",
 ]);
 
-// Cadastro de escola: somente ADMIN_SEDUC (qualquer DRE) e ADMIN_DIRETORIA
-// (apenas a própria DRE, validado em adminScope). Perfis escolares não recebem.
+// Cadastro de escola: somente ADMIN_DIRETORIA, na própria DRE (validado em adminScope).
 const CAPACIDADES_ESCOLA_CADASTRO = Object.freeze(["escola.criar"]);
 
 const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
@@ -21,6 +20,7 @@ const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
   "ponto.hoje.visualizar",
   "ponto.resumo.visualizar",
   "relatorio.visualizar",
+  "relatorio.hierarquico.visualizar",
   "acesso.listar",
   "acesso.proprio.visualizar",
   "acesso.visualizar",
@@ -40,6 +40,7 @@ const CAPACIDADES_SECRETARIA = Object.freeze([
   "ponto.hoje.visualizar",
   "ponto.resumo.visualizar",
   "relatorio.visualizar",
+  "relatorio.hierarquico.visualizar",
   "acesso.proprio.visualizar",
   "cargo.listar",
 ]);
@@ -51,6 +52,7 @@ const CAPACIDADES_COORDENADOR = Object.freeze([
   "ponto.hoje.visualizar",
   "ponto.resumo.visualizar",
   "relatorio.visualizar",
+  "relatorio.hierarquico.visualizar",
   "acesso.proprio.visualizar",
   "cargo.listar",
 ]);
@@ -74,8 +76,11 @@ const CAPACIDADES_SECRETARIA_COM_QR = Object.freeze([
 // QR é administrado apenas por perfis escolares com uma unidade própria.
 const CAPACIDADES_POR_PERFIL = Object.freeze({
   ADMIN_SEDUC: Object.freeze([
-    ...CAPACIDADES_ADMINISTRATIVAS,
-    ...CAPACIDADES_ESCOLA_CADASTRO,
+    ...CAPACIDADES_ADMINISTRATIVAS.filter((capacidade) =>
+      !capacidade.startsWith("funcionario.")
+      && capacidade !== "ponto.hoje.visualizar"
+      && capacidade !== "relatorio.visualizar"
+    ),
   ]),
   ADMIN_DIRETORIA: Object.freeze([
     ...CAPACIDADES_ADMINISTRATIVAS,

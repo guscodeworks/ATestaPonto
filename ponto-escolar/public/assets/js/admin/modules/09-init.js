@@ -34,7 +34,7 @@
     if (existe('#lista-alertas')) renderizarAlertas();
     if (existe('#tbody-funcionarios,#cards-funcionarios')) renderizarFuncionarios();
     if (existe('#tbody-presentes,#tbody-ausentes,#cards-presentes,#cards-ausentes')) renderizarPontosHoje();
-    if (existe('#tbody-relatorio')) renderizarRelatorio();
+    if (existe('#tbody-relatorio,#tbody-relatorio-hierarquico')) renderizarRelatorio();
   }
 
   async function atualizarDadosDaPagina(options, paginaListaFuncionarios) {
@@ -139,7 +139,9 @@
     ));
     const precisaRelatorio = temCapacidade('relatorio.visualizar')
       && Boolean(document.getElementById('tbody-relatorio'));
-    const precisaSemanal = temCapacidade('relatorio.visualizar')
+    const precisaHierarquia = temCapacidade('relatorio.hierarquico.visualizar')
+      && Boolean(document.getElementById('tbody-relatorio-hierarquico'));
+    const precisaSemanal = temCapacidade('relatorio.hierarquico.visualizar')
       && Boolean(document.getElementById('chart-presenca-semanal'));
     const dataOptions = {
       includeEmployees: precisaFuncionarios,
@@ -147,9 +149,10 @@
       includeSummary: precisaResumo,
       includeReport: precisaRelatorio,
       includeWeekly: precisaSemanal,
+      includeHierarchy: precisaHierarquia,
     };
     iniciarRecarregamentoDeDados(dataOptions, paginaListaFuncionarios);
-    if (precisaFuncionarios || precisaPontosHoje || precisaResumo || precisaRelatorio || precisaSemanal) {
+    if (precisaFuncionarios || precisaPontosHoje || precisaResumo || precisaRelatorio || precisaSemanal || precisaHierarquia) {
       await atualizarDadosDaPagina(dataOptions, paginaListaFuncionarios);
     } else {
       renderizarDadosAdminAtuais();
