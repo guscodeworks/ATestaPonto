@@ -1,100 +1,22 @@
 "use strict";
 
 const bcrypt = require("bcrypt");
-const crypto = require("node:crypto");
+const { requestSpring } = require("../integrations/springBackendClient");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
 const employeeModel = require("../models/employeeModel");
 const loginModel = require("../models/loginModel");
-const pointModel = require("../models/pointModel");
 const employmentLinkModel = require("../models/employmentLinkModel");
-const schoolUnitModel = require("../models/schoolUnitModel");
-const {
-  isWithinRadius, validateCoordinates,
-  MAX_GPS_ACCURACY_METERS, MAX_GPS_AGE_MS, MAX_GPS_FUTURE_MS,
-} = require("../utils/location");
 const { isValidCpf, maskCpf, normalizeCpf } = require("../utils/cpf");
+const { PUNCH_TYPES } = require("../utils/punch");
 const {
-  EMPTY_PUNCH_TIME,
-  PUNCH_TYPES,
-  readPunchTimesFromRow,
-  resolveNextPunch,
-} = require("../utils/punch");
-const {
+  AppError,
   BadRequestError,
-  ConflictError,
   ForbiddenError,
-  NotFoundError,
   UnauthorizedError,
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 const { buildCredentialVersion } = require("./authService");
-
-// Fuso da escola p/ separar dias de ponto, independente do fuso do servidor.
-function getSaoPauloDateTime(referenceDate = new Date()) {
-  const formatter = new Intl.DateTimeFormat("sv-SE", {
-    timeZone: "America/Sao_Paulo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(referenceDate);
-  const map = {};
-  parts.forEach((part) => {
-    map[part.type] = part.value;
-  });
-
-  return {
-    date: `${map.year}-${map.month}-${map.day}`,
-    time: `${map.hour}:${map.minute}:${map.second}`,
-    dateTime: `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute}:${map.second}`,
-  };
-}
-
-// Geolocalização da unidade do vínculo ativo (fail-fast, fora da transação).
-async function resolveUnidadeGeolocation(funcionarioId) {
-  const vinculo = await employmentLinkModel.findActiveByFuncionarioId(funcionarioId);
-  if (!vinculo) {
-    throw new NotFoundError("Funcionario sem vinculo ativo");
-  }
-
-  const geolocation = await schoolUnitModel.findGeolocationByVinculo(
-    vinculo.id
-  );
-  if (!geolocation) {
-    throw new NotFoundError("Unidade escolar do vinculo nao encontrada");
-  }
-
-  return { vinculoId: vinculo.id, geolocation };
-}
-
-function validateDistanceAgainst(geolocation, latitude, longitude, accuracy) {
-  const distanceCheck = isWithinRadius(
-    { latitude: geolocation.latitude, longitude: geolocation.longitude },
-    { latitude, longitude },
-    geolocation.raio_permitido_metros,
-    accuracy
-  );
-
-  if (
-    !Number.isFinite(distanceCheck.distanceMeters)
-  ) {
-    throw new ForbiddenError("Geolocalizacao da unidade nao configurada corretamente. Contate a administracao.");
-  }
-
-  if (!distanceCheck.isWithin) {
-    throw new ForbiddenError(
-      "A localizacao e sua margem de precisao devem estar dentro da area permitida da escola."
-    );
-  }
-
-  return distanceCheck;
-}
 
 function mapFuncionario(funcionario) {
   return {
@@ -105,212 +27,87 @@ function mapFuncionario(funcionario) {
   };
 }
 
-function mapTimeOrNull(value) {
-  const normalized = String(value || "").trim().slice(0, 8);
-  if (!/^\d{2}:\d{2}:\d{2}$/.test(normalized)) {
-    return null;
-  }
-  return normalized === EMPTY_PUNCH_TIME ? null : normalized;
+function unavailable() {
+  return new AppError("Servico de ponto indisponivel", {
+    statusCode: 502, code: "PUNCH_SERVICE_UNAVAILABLE",
+  });
 }
 
-function mapRequiredScheduleTime(value) {
-  const normalized = String(value || "").trim().slice(0, 8);
-  if (!/^\d{2}:\d{2}:\d{2}$/.test(normalized)) {
-    throw new Error("Jornada do funcionario incompleta");
+async function requestPunch(operation, body, project) {
+  let response;
+  let result;
+  try {
+    response = await requestSpring(`/internal/ponto/${operation}`, { method: "POST", body });
+    result = await response.json();
+  } catch (_error) {
+    throw unavailable();
   }
-  return normalized;
-}
-
-const HISTORY_MONTH_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/;
-
-function resolveHistoryPeriod(rawMonth, referenceDate = new Date()) {
-  const currentMonth = getSaoPauloDateTime(referenceDate).date.slice(0, 7);
-  const month = rawMonth === undefined ? currentMonth : rawMonth;
-
-  if (typeof month !== "string") {
-    throw new BadRequestError("mes deve usar o formato YYYY-MM");
-  }
-
-  const match = HISTORY_MONTH_PATTERN.exec(month);
-  if (!match) {
-    throw new BadRequestError("mes deve usar o formato YYYY-MM");
-  }
-
-  const year = Number(match[1]);
-  const monthNumber = Number(match[2]);
-  if (year < 1000 || year > 9999) {
-    throw new BadRequestError("mes deve conter um ano valido");
-  }
-
-  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
-  return {
-    month,
-    startDate: `${month}-01`,
-    endDate: `${month}-${String(lastDay).padStart(2, "0")}`,
-  };
-}
-
-function mapDateReference(value) {
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
-    return value.slice(0, 10);
-  }
-
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    const year = value.getUTCFullYear();
-    const month = String(value.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(value.getUTCDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
-
-  throw new Error("Data de referencia invalida no historico de ponto");
-}
-
-function timeToSeconds(value) {
-  if (!value) {
-    return null;
-  }
-
-  const [hours, minutes, seconds] = value.split(":").map(Number);
-  return hours * 3600 + minutes * 60 + seconds;
-}
-
-// Agrupa batidas do mês por data_referencia → shape diário p/ o cliente.
-function mapHistoryDay(date, punches) {
-  const times = readPunchTimesFromRow(punches);
-  const entrada = mapTimeOrNull(times.entrada);
-  const saidaAlmoco = mapTimeOrNull(times.saidaAlmoco);
-  const retornoAlmoco = mapTimeOrNull(times.voltaAlmoco);
-  const saida = mapTimeOrNull(times.saida);
-  const seconds = [entrada, saidaAlmoco, retornoAlmoco, saida].map(
-    timeToSeconds
-  );
-  const isComplete =
-    seconds.every(Number.isFinite) &&
-    seconds[0] < seconds[1] &&
-    seconds[1] < seconds[2] &&
-    seconds[2] < seconds[3];
-  const totalSeconds = isComplete
-    ? seconds[1] - seconds[0] + (seconds[3] - seconds[2])
-    : null;
-
-  return {
-    data_referencia: mapDateReference(date),
-    entrada,
-    saida_almoco: saidaAlmoco,
-    retorno_almoco: retornoAlmoco,
-    saida,
-    total_minutos: isComplete ? Math.floor(totalSeconds / 60) : null,
-    status: isComplete ? "COMPLETO" : "INCOMPLETO",
-  };
-}
-
-// Registros mensais do funcionário identificado pelo JWT.
-async function getPunchHistory(funcionarioId, rawMonth, referenceDate = new Date()) {
-  const safeFuncionarioId = Number(funcionarioId);
-  if (!Number.isInteger(safeFuncionarioId) || safeFuncionarioId < 1) {
-    throw new UnauthorizedError("Sessao do funcionario invalida");
-  }
-
-  const period = resolveHistoryPeriod(rawMonth, referenceDate);
-  const rows = await pointModel.listByEmployeeAndDateRange(
-    safeFuncionarioId,
-    period.startDate,
-    period.endDate
-  );
-
-  // Transferências no mesmo dia não podem combinar jornadas de vínculos diferentes.
-  const byDate = new Map();
-  for (const row of rows) {
-    const key = `${mapDateReference(row.data_referencia)}:${row.vinculo_funcional_id}`;
-    if (!byDate.has(key)) {
-      byDate.set(key, []);
+  if (!response.ok) {
+    const codes = { BAD_REQUEST: 400, UNAUTHORIZED: 401, FORBIDDEN: 403,
+      NOT_FOUND: 404, CONFLICT: 409, VALIDATION_ERROR: 422, INTERNAL_ERROR: 500 };
+    if (result && codes[result.code] === response.status && typeof result.message === "string") {
+      throw new AppError(result.message, { statusCode: response.status, code: result.code });
     }
-    byDate.get(key).push(row);
+    throw unavailable();
   }
-  const records = Array.from(byDate.entries())
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([, punches]) => ({
-      ...mapHistoryDay(punches[0].data_referencia, punches),
-      vinculo_funcional_id: Number(punches[0].vinculo_funcional_id),
-      unidade_escolar_id: Number(punches[0].unidade_escolar_id),
-      unidade_escolar_nome: punches[0].unidade_escolar_nome,
-    }));
-  const completeRecords = records.filter(
-    (record) => record.status === "COMPLETO"
-  );
-
-  return {
-    periodo: period.month,
-    resumo: {
-      dias_com_registro: new Set(records.map((record) => record.data_referencia)).size,
-      jornadas_completas: completeRecords.length,
-      jornadas_incompletas: records.length - completeRecords.length,
-      total_minutos: completeRecords.reduce(
-        (total, record) => total + record.total_minutos,
-        0
-      ),
-    },
-    registros: records,
-  };
+  try {
+    return project(result);
+  } catch (_error) {
+    throw unavailable();
+  }
 }
 
-// Estado autoritativo da jornada do funcionário autenticado no dia atual.
-async function getTodayPunch(funcionarioId, referenceDate = new Date()) {
-  const safeFuncionarioId = Number(funcionarioId);
-  if (!Number.isInteger(safeFuncionarioId) || safeFuncionarioId < 1) {
-    throw new UnauthorizedError("Sessao do funcionario invalida");
+function publicTimes(value, nullable = true) {
+  const { entrada, saida_almoco, retorno_almoco, saida } = value;
+  for (const time of [entrada, saida_almoco, retorno_almoco, saida]) {
+    if (!(nullable && time === null) && (typeof time !== "string" || !/^\d{2}:\d{2}:\d{2}$/.test(time))) {
+      throw unavailable();
+    }
   }
+  return { entrada, saida_almoco, retorno_almoco, saida };
+}
 
-  const funcionario = await employeeModel.findForPunchDashboardById(
-    safeFuncionarioId
-  );
-  if (!funcionario) {
-    throw new NotFoundError("Funcionario nao encontrado");
-  }
-  if (!funcionario.ativo) {
-    throw new ForbiddenError("Funcionario inativo");
-  }
+function getTodayPunch(funcionarioId, referenceDate) {
+  return requestPunch("hoje", {
+    funcionario_id: Number(funcionarioId), referencia: referenceDate?.toISOString(),
+  }, (result) => {
+    const { funcionario, jornada, ponto, proxima_batida, jornada_concluida } = result;
+    if (typeof funcionario.nome !== "string" || typeof funcionario.cargo !== "string"
+        || typeof ponto.data_referencia !== "string" || typeof jornada_concluida !== "boolean"
+        || !(proxima_batida === null || PUNCH_TYPES.includes(proxima_batida))) throw unavailable();
+    return {
+      funcionario: { nome: funcionario.nome, cargo: funcionario.cargo },
+      jornada: publicTimes(jornada, false),
+      ponto: { data_referencia: ponto.data_referencia, ...publicTimes(ponto) },
+      proxima_batida, jornada_concluida,
+    };
+  });
+}
 
-  // Jornada vem do vínculo ativo (via LATERAL/LEFT JOIN). Sem vínculo ativo o
-  // funcionário existe mas lv.* vem NULL → sinaliza "sem vínculo ativo"
-  // (consistente com registerPunch), não "não encontrado".
-  if (
-    !funcionario.entrada ||
-    !funcionario.saida_almoco ||
-    !funcionario.retorno_almoco ||
-    !funcionario.saida ||
-    !funcionario.cargo
-  ) {
-    throw new NotFoundError("Funcionario sem vinculo ativo");
-  }
-
-  const { vinculoId } = await resolveUnidadeGeolocation(safeFuncionarioId);
-  const { date } = getSaoPauloDateTime(referenceDate);
-  const punchRows = await pointModel.findByEmployeeAndDate(vinculoId, date);
-  const punchTimes = readPunchTimesFromRow(punchRows);
-  const nextPunch = resolveNextPunch(punchTimes);
-
-  return {
-    funcionario: {
-      nome: funcionario.nome,
-      cargo: funcionario.cargo,
-    },
-    jornada: {
-      entrada: mapRequiredScheduleTime(funcionario.entrada),
-      saida_almoco: mapRequiredScheduleTime(funcionario.saida_almoco),
-      retorno_almoco: mapRequiredScheduleTime(funcionario.retorno_almoco),
-      saida: mapRequiredScheduleTime(funcionario.saida),
-    },
-    ponto: {
-      data_referencia: date,
-      entrada: mapTimeOrNull(punchTimes.entrada),
-      saida_almoco: mapTimeOrNull(punchTimes.saidaAlmoco),
-      retorno_almoco: mapTimeOrNull(punchTimes.voltaAlmoco),
-      saida: mapTimeOrNull(punchTimes.saida),
-    },
-    proxima_batida: nextPunch ? nextPunch.type : null,
-    jornada_concluida: nextPunch === null,
-  };
+function getPunchHistory(funcionarioId, rawMonth, referenceDate) {
+  return requestPunch("historico", {
+    funcionario_id: Number(funcionarioId), mes: rawMonth, referencia: referenceDate?.toISOString(),
+  }, (result) => {
+    const { periodo, resumo, registros } = result;
+    const { dias_com_registro, jornadas_completas, jornadas_incompletas, total_minutos } = resumo;
+    if (typeof periodo !== "string" || !Array.isArray(registros)
+        || ![dias_com_registro, jornadas_completas, jornadas_incompletas, total_minutos]
+          .every(value => Number.isInteger(value) && value >= 0)) throw unavailable();
+    return {
+      periodo,
+      resumo: { dias_com_registro, jornadas_completas, jornadas_incompletas, total_minutos },
+      registros: registros.map((row) => {
+        const { data_referencia, total_minutos, status, vinculo_funcional_id,
+          unidade_escolar_id, unidade_escolar_nome } = row;
+        if (typeof data_referencia !== "string" || typeof unidade_escolar_nome !== "string"
+            || ![vinculo_funcional_id, unidade_escolar_id].every(id => Number.isInteger(id) && id > 0)
+            || !(total_minutos === null || (Number.isInteger(total_minutos) && total_minutos >= 0))
+            || !["COMPLETO", "INCOMPLETO"].includes(status)) throw unavailable();
+        return { data_referencia, ...publicTimes(row), total_minutos, status,
+          vinculo_funcional_id, unidade_escolar_id, unidade_escolar_nome };
+      }),
+    };
+  });
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -485,178 +282,42 @@ async function loginFuncionario(
   };
 }
 
-// Mantém a sequência de batidas no service (fora do controller).
 async function registerPunch(
   { funcionarioId, latitude, longitude, accuracy, timestamp, chaveIdempotencia },
   { ipOrigem, userAgent } = {}
 ) {
-  const safeLatitude = latitude;
-  const safeLongitude = longitude;
-  if (typeof chaveIdempotencia !== "string" ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(chaveIdempotencia)) {
-    throw new BadRequestError("chaveIdempotencia deve ser um UUID v4");
-  }
-  const actionKey = chaveIdempotencia.toLowerCase();
-
-  if (!Number.isFinite(safeLatitude) || !Number.isFinite(safeLongitude) ||
-      !validateCoordinates(safeLatitude, safeLongitude).isValid) {
-    throw new BadRequestError("Localizacao invalida para registro de ponto");
-  }
-
-  // Hash legado só permite replay de ações A03 já confirmadas, nunca novas batidas.
-  const requestData = accuracy === undefined && timestamp === undefined
-    ? [safeLatitude, safeLongitude]
-    : [safeLatitude, safeLongitude, accuracy, timestamp];
-  const requestHash = crypto.createHash("sha256")
-    .update(JSON.stringify(requestData)).digest("hex");
-
-  try {
-    // Leitura+decisão+escrita da batida numa transação com FOR UPDATE no vínculo
-    // ativo e nas batidas do dia, p/ evitar corrida (ex: duas "entradas" no mesmo
-    // dia). Chave de negócio = `vinculo_funcional_id` (não funcionario_id).
-    const result = await pointModel.withTransaction(async (tx) => {
-      const funcionario = await employeeModel.findForPunchRegisterByIdForUpdate(
-        tx,
-        funcionarioId
-      );
-
-      const previous = await pointModel.findIdempotencyForUpdate(tx, funcionarioId, actionKey);
-      if (previous) {
-        if (previous.requisicao_hash !== requestHash) {
-          throw new ConflictError("Chave de idempotencia ja usada com outros dados");
-        }
-        return {
-          replayed: true,
-          response: typeof previous.resposta === "string"
-            ? JSON.parse(previous.resposta) : previous.resposta,
-        };
-      }
-
-      if (!funcionario) {
-        throw new NotFoundError("Funcionario nao encontrado");
-      }
-
-      if (!funcionario.ativo) {
-        throw new ForbiddenError("Funcionario inativo");
-      }
-
-      if (!Number.isFinite(accuracy) || accuracy <= 0 || accuracy > MAX_GPS_ACCURACY_METERS ||
-          !Number.isSafeInteger(timestamp) || timestamp <= 0) {
-        throw new BadRequestError("Leitura GPS exige precisao maior que zero e de ate 100 metros, com timestamp em milissegundos.");
-      }
-
-      // Nova ação: mantém o lock do vínculo e valida a localização na mesma tx.
-      const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
-        tx,
-        funcionarioId
-      );
-      if (!vinculo) {
-        throw new NotFoundError("Funcionario sem vinculo ativo");
-      }
-
-      const geolocation = await schoolUnitModel.findGeolocationByVinculo(vinculo.id, tx);
-      if (!geolocation) {
-        throw new NotFoundError("Unidade escolar do vinculo nao encontrada");
-      }
-      const distanceCheck = validateDistanceAgainst(geolocation, safeLatitude, safeLongitude, accuracy);
-      const { date, time, dateTime } = getSaoPauloDateTime(new Date());
-
-      const existingPunches = await pointModel.findByEmployeeAndDateForUpdate(
-        tx,
-        vinculo.id,
-        date
-      );
-
-      // Após os locks, só novas ações precisam de leitura recente. Replay não grava.
-      const readingAge = Date.now() - timestamp;
-      if (readingAge > MAX_GPS_AGE_MS || readingAge < -MAX_GPS_FUTURE_MS) {
-        throw new BadRequestError("Leitura GPS vencida ou com horario futuro. Atualize a localizacao e confira o relogio do aparelho.");
-      }
-
-      let rowId = null;
-      let sequence = 1;
-      let type = PUNCH_TYPES[0];
-
-      if (existingPunches.length === 0) {
-        // Primeira batida do dia: cria a linha ENTRADA (1 linha/batida; as
-        // demais virão pelas próximas batidas via replacePunchRow).
-        const insertResult = await pointModel.createFirstPunch(tx, {
-          vinculoFuncionalId: vinculo.id,
-          date,
-          time,
-          emptyTime: EMPTY_PUNCH_TIME,
-        });
-        rowId = Number(insertResult.insertId);
-      } else {
-        const times = readPunchTimesFromRow(existingPunches);
-        const nextPunch = resolveNextPunch(times);
-
-        // null = 4 batidas do dia já registradas (impede 5ª batida).
-        if (!nextPunch) {
-          throw new ConflictError("Funcionario ja realizou 4 batidas hoje");
-        }
-
-        sequence = nextPunch.sequence;
-        type = nextPunch.type;
-        times[nextPunch.field] = time;
-
-        // Persiste como sua própria linha (idempotência via UNIQUE(vinculo, data, tipo)).
-        await pointModel.replacePunchRow(tx, {
-          vinculoFuncionalId: vinculo.id,
-          date,
-          times,
-        });
-
-        // Recupera o id da linha recém-gravada p/ a resposta.
-        const updated = await pointModel.findByEmployeeAndDateForUpdate(
-          tx,
-          vinculo.id,
-          date
-        );
-        const matched = (updated || []).find((row) => row.tipo === type);
-        rowId = matched ? Number(matched.id) : null;
-      }
-
-      const response = {
-        ponto: {
-          id: rowId,
-          sequencia: sequence,
-          tipo: type,
-          registrado_em: dateTime,
-          distancia_metros: distanceCheck.distanceMeters,
-        },
-        funcionario: mapFuncionario(funcionario),
-      };
-      await pointModel.saveIdempotency(tx, funcionarioId, actionKey, requestHash, response);
-      return { replayed: false, response };
-    });
-
-    if (result.replayed) return result.response;
-    const punch = result.response;
-    await registerAuditLog({
-      evento: "batida_ponto_realizada",
-      funcionarioId: punch.funcionario.id,
-      mensagem: "Batida de ponto registrada com sucesso",
-      ipOrigem,
-      metadados: {
-        sequencia: punch.ponto.sequencia,
-        tipo: punch.ponto.tipo,
-        distancia_metros: punch.ponto.distancia_metros,
-        latitude: safeLatitude,
-        longitude: safeLongitude,
-        user_agent: userAgent,
-      },
-    });
-
-    return punch;
-  } catch (error) {
-    // Rede de segurança contra corrida que escape do FOR UPDATE (ex: criar a
-    // linha do dia pela primeira vez) → constraint vira msg de negócio amigável.
-    if (error.code === "ER_DUP_ENTRY") {
-      throw new ConflictError("Registro duplicado de ponto detectado");
-    }
-    throw error;
-  }
+  // O Spring calcula o hash sobre estes bytes para preservar o replay legado.
+  const reading = accuracy === undefined && timestamp === undefined
+    ? [latitude, longitude] : [latitude, longitude, accuracy, timestamp];
+  const result = await requestPunch("registrar", {
+    funcionario_id: Number(funcionarioId), chave_idempotencia: chaveIdempotencia,
+    leitura_json: JSON.stringify(reading),
+  }, (result) => {
+    const { replayed, response: { ponto, funcionario } } = result;
+    const { id, sequencia, tipo, registrado_em, distancia_metros } = ponto;
+    if (typeof replayed !== "boolean" || !(id === null || (Number.isInteger(id) && id > 0))
+        || !Number.isInteger(sequencia) || sequencia < 1 || sequencia > 4
+        || tipo !== PUNCH_TYPES[sequencia - 1] || typeof registrado_em !== "string"
+        || !Number.isFinite(distancia_metros) || distancia_metros < 0
+        || funcionario.id !== Number(funcionarioId) || typeof funcionario.nome !== "string"
+        || !(funcionario.email === null || typeof funcionario.email === "string")
+        || typeof funcionario.cpf !== "string" || !/^\*{3}\.\*{3}\.\*{3}-(?:\d{2}|\*{2})$/.test(funcionario.cpf)) throw unavailable();
+    return { replayed, response: {
+      ponto: { id, sequencia, tipo, registrado_em, distancia_metros },
+      funcionario: { id: funcionario.id, nome: funcionario.nome, email: funcionario.email, cpf: funcionario.cpf },
+    } };
+  });
+  if (result.replayed) return result.response;
+  const punch = result.response;
+  await registerAuditLog({
+    evento: "batida_ponto_realizada", funcionarioId: punch.funcionario.id,
+    mensagem: "Batida de ponto registrada com sucesso", ipOrigem,
+    metadados: {
+      sequencia: punch.ponto.sequencia, tipo: punch.ponto.tipo,
+      distancia_metros: punch.ponto.distancia_metros, latitude, longitude, user_agent: userAgent,
+    },
+  });
+  return punch;
 }
 
 module.exports = {
