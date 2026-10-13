@@ -70,10 +70,13 @@ em mais de um projeto devem ser necessárias ao escopo solicitado.
   Não mova, exclua ou una worktrees por iniciativa própria.
 - Os caminhos acima descrevem a organização local; não os use como configuração
   ou caminhos fixos no código da aplicação.
-- Confirme os módulos presentes em cada checkout antes de referenciar caminhos.
-  O principal já usa `atesta-gateway/` e `atesta-id/`; as worktrees auxiliares
-  ainda usam `ponto-escolar/` e `gov.br-fake/`. Não renomeie módulos nem
-  replique renomeações entre branches automaticamente.
+- Os nomes definitivos no principal e nas worktrees existentes são
+  `atesta-gateway/`, `atesta-id/` e `backend-spring/`.
+  Confirme os caminhos do checkout antes de executar comandos; não use os nomes antigos.
+- Preserve os nomes dos containers e serviços Docker existentes, incluindo `node-dev`
+  e `mysql-dev`. O provedor local é executado em `node-dev`, sem container separado.
+  Preserve as portas 3000 (gateway), 4000 (ATestaID) e 8081 (Spring), os volumes
+  e as configurações de OAuth/OIDC, HMAC, sessão, banco e Redis.
 
 ## Desenvolvimento paralelo
 
