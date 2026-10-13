@@ -20,6 +20,7 @@ const CAPACIDADES_ADMINISTRATIVAS = Object.freeze([
   "ponto.hoje.visualizar",
   "ponto.resumo.visualizar",
   "relatorio.visualizar",
+  "relatorio.hierarquico.visualizar",
   "acesso.listar",
   "acesso.proprio.visualizar",
   "acesso.visualizar",
@@ -39,6 +40,7 @@ const CAPACIDADES_SECRETARIA = Object.freeze([
   "ponto.hoje.visualizar",
   "ponto.resumo.visualizar",
   "relatorio.visualizar",
+  "relatorio.hierarquico.visualizar",
   "acesso.proprio.visualizar",
   "cargo.listar",
 ]);
@@ -50,6 +52,7 @@ const CAPACIDADES_COORDENADOR = Object.freeze([
   "ponto.hoje.visualizar",
   "ponto.resumo.visualizar",
   "relatorio.visualizar",
+  "relatorio.hierarquico.visualizar",
   "acesso.proprio.visualizar",
   "cargo.listar",
 ]);
@@ -73,7 +76,11 @@ const CAPACIDADES_SECRETARIA_COM_QR = Object.freeze([
 // QR é administrado apenas por perfis escolares com uma unidade própria.
 const CAPACIDADES_POR_PERFIL = Object.freeze({
   ADMIN_SEDUC: Object.freeze([
-    ...CAPACIDADES_ADMINISTRATIVAS,
+    ...CAPACIDADES_ADMINISTRATIVAS.filter((capacidade) =>
+      !capacidade.startsWith("funcionario.")
+      && capacidade !== "ponto.hoje.visualizar"
+      && capacidade !== "relatorio.visualizar"
+    ),
   ]),
   ADMIN_DIRETORIA: Object.freeze([
     ...CAPACIDADES_ADMINISTRATIVAS,

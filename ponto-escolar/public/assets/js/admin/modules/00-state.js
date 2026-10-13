@@ -54,6 +54,10 @@ let FUNCIONARIOS = [];
 let PONTOS_HOJE = [];
 let AUSENTES_HOJE = [];
 let RELATORIO_PONTOS = [];
+let RESUMO_RELATORIO = null;
+let RESUMO_HOJE = null;
+let RELATORIO_HIERARQUICO = null;
+let RELATORIO_HIERARQUICO_DATA_ERROR = null;
 let RELATORIO_SEMANAL = null;
 let RELATORIO_SEMANAL_DATA_ERROR = null;
 let RESUMO_PONTOS = {
@@ -84,6 +88,7 @@ const ADMIN_ENDPOINTS = {
   funcionarios: '/api/admin/funcionarios',
   pontosHoje: '/api/admin/pontos/hoje',
   pontosRelatorio: '/api/admin/pontos/relatorio',
+  pontosRelatorioHierarquia: '/api/admin/pontos/relatorio/hierarquia',
   pontosRelatorioSemanal: '/api/admin/pontos/relatorio/semanal',
   pontosResumo: '/api/admin/pontos/resumo',
 };
@@ -281,7 +286,7 @@ async function carregarPontosHojeAdmin(options = {}) {
     if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
 
     DATA_REFERENCIA_PONTOS = data?.data_referencia || null;
-    RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+    RESUMO_HOJE = normalizarResumoApi(data?.resumo);
     PONTOS_HOJE = Array.isArray(data?.presentes)
       ? data.presentes.map(normalizarResumoPontoApi)
       : [];
@@ -332,7 +337,7 @@ async function carregarRelatorioAdmin(dataReferencia, options = {}) {
     if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
 
     DATA_REFERENCIA_RELATORIO = data?.data_referencia || null;
-    RESUMO_PONTOS = normalizarResumoApi(data?.resumo);
+    RESUMO_RELATORIO = normalizarResumoApi(data?.resumo);
     RELATORIO_PONTOS = Array.isArray(data?.items)
       ? data.items.map(normalizarResumoPontoApi)
       : [];
@@ -355,10 +360,10 @@ async function carregarDadosAdmin(options = {}) {
 
   // Cada seção da tela é opcional e independente, permitindo que telas
   // diferentes chamem essa função pedindo só os dados que precisam.
-  const includeEmployees = options.includeEmployees !== false;
-  const includeToday = options.includeToday !== false;
-  const includeSummary = options.includeSummary === true;
-  const includeReport = options.includeReport === true;
+  const includeEmployees = temCapacidade('funcionario.listar') && options.includeEmployees !== false;
+  const includeToday = temCapacidade('ponto.hoje.visualizar') && options.includeToday !== false;
+  const includeSummary = temCapacidade('ponto.resumo.visualizar') && options.includeSummary === true;
+  const includeReport = temCapacidade('relatorio.visualizar') && options.includeReport === true;
   const loaders = [];
 
   const requestOptions = { signal: controller.signal, requestId };
@@ -366,7 +371,8 @@ async function carregarDadosAdmin(options = {}) {
   if (includeToday) loaders.push(carregarPontosHojeAdmin(requestOptions));
   if (includeSummary) loaders.push(carregarResumoAdmin(requestOptions));
   if (includeReport) loaders.push(carregarRelatorioAdmin(options.dataReferencia, requestOptions));
-  if (options.includeWeekly === true) loaders.push(carregarRelatorioSemanalAdmin(options.dataReferencia, requestOptions));
+  if (temCapacidade('relatorio.hierarquico.visualizar') && options.includeHierarchy === true) loaders.push(carregarRelatorioHierarquicoAdmin(options.dataReferencia, requestOptions));
+  if (temCapacidade('relatorio.hierarquico.visualizar') && options.includeWeekly === true) loaders.push(carregarRelatorioSemanalAdmin(options.dataReferencia, requestOptions));
 
   try {
     if (!loaders.length) return true;
@@ -429,7 +435,8 @@ async function recarregarDadosAdminTela() {
     // O relatório só é buscado se a tabela correspondente existir no DOM,
     // evitando uma chamada de API desnecessária em telas que não a exibem.
     includeReport: Boolean(document.getElementById('tbody-relatorio')),
-    includeWeekly: temCapacidade('relatorio.visualizar')
+    includeHierarchy: Boolean(document.getElementById('tbody-relatorio-hierarquico')),
+    includeWeekly: temCapacidade('relatorio.hierarquico.visualizar')
       && Boolean(document.getElementById('chart-presenca-semanal')),
   });
 
