@@ -66,9 +66,9 @@ function createAdminPagesRouter({ sendView }) {
     redirectTo("/admin/funcionarios/novo")
   );
 
-  router.get("/admin/pontos", requireAdmin, pontosPage);
-  router.get("/admin/pontos-do-dia", requireAdmin, pontosPage);
-  router.get("/admin/relatorios", requireAdmin, relatoriosPage);
+  router.get("/admin/pontos", requireAdmin, escopoPorCapacidade("ponto.hoje.visualizar"), pontosPage);
+  router.get("/admin/pontos-do-dia", requireAdmin, escopoPorCapacidade("ponto.hoje.visualizar"), pontosPage);
+  router.get("/admin/relatorios", requireAdmin, escopoPorCapacidade("relatorio.hierarquico.visualizar"), relatoriosPage);
 
   router.get("/admin/configuracoes", requireAdmin, configuracoesPage);
 

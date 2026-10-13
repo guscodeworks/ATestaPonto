@@ -213,7 +213,22 @@ async function getHierarchicalReport({ data, diretoria_ensino_id, unidade_escola
     mensagem: "Administrador consultou relatorio hierarquico de ponto",
     metadados: { data_referencia: date, diretoria_ensino_id: departmentId, unidade_escolar_id: schoolId },
   });
-  return result;
+  // A resposta pública agregada nunca repassa campos nominais extras do Spring.
+  const summary = value => Object.fromEntries(summaryFields.map(field => [field, value[field]]));
+  return {
+    data_referencia: result.data_referencia,
+    resumo: summary(result.resumo),
+    diretorias: result.diretorias.map(department => ({
+      diretoria_ensino_id: department.diretoria_ensino_id,
+      diretoria_ensino_nome: department.diretoria_ensino_nome,
+      resumo: summary(department.resumo),
+      escolas: department.escolas.map(school => ({
+        unidade_escolar_id: school.unidade_escolar_id,
+        unidade_escolar_nome: school.unidade_escolar_nome,
+        resumo: summary(school.resumo),
+      })),
+    })),
+  };
 }
 
 const DAILY_SUMMARY_FIELDS = [

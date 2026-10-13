@@ -22,7 +22,6 @@ public class PunchRepository {
     public record Location(BigDecimal latitude, BigDecimal longitude, Integer radius) {}
     public record Previous(String hash, String response) {}
     public record Row(long linkId, String date, String type, String time, long schoolId, String schoolName) {}
-
     private final JdbcTemplate jdbc;
     public PunchRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
@@ -41,7 +40,6 @@ public class PunchRepository {
     private <T> List<T> query(String sql, boolean lock, RowMapper<T> mapper, Object... parameters) {
         return jdbc.query(connection -> prepare(connection, sql, lock, parameters), mapper);
     }
-
     private <T> T first(List<T> rows) { return rows.isEmpty() ? null : rows.getFirst(); }
 
     public Employee lockEmployee(long id) {
@@ -50,9 +48,9 @@ public class PunchRepository {
                         r.getString("cpf"), r.getBoolean("ativo")), id));
     }
 
-    public Previous lockIdempotency(long id, String key) {
+    public Previous lockIdempotency(long employeeId, String key) {
         return first(query("SELECT requisicao_hash, resposta FROM ponto_idempotencia WHERE funcionario_id = ? AND chave = ? FOR UPDATE",
-                true, (r, n) -> new Previous(r.getString("requisicao_hash"), r.getString("resposta")), id, key));
+                true, (r, n) -> new Previous(r.getString("requisicao_hash"), r.getString("resposta")), employeeId, key));
     }
 
     public Long activeLink(long employeeId, boolean lock) {
@@ -110,7 +108,7 @@ public class PunchRepository {
 
     public long insert(long linkId, LocalDate date, String type, String dateTime) {
         GeneratedKeyHolder keys = new GeneratedKeyHolder();
-        // Insere apenas a nova batida; a chave unica nunca deve sobrescrever uma batida existente.
+        // A chave unica protege a nova batida sem sobrescrever horarios anteriores.
         int count = jdbc.update(connection -> prepare(connection,
                 "INSERT INTO registro_de_pontos (vinculo_funcional_id, data_referencia, tipo, registrado_em) VALUES (?, ?, ?, ?)",
                 true, linkId, date.toString(), type, dateTime), keys);

@@ -530,17 +530,14 @@ function restringirCapacidadeUnidadeDoParametro(capacidade, paramName = "id") {
 // Valida escopo via vínculo ativo do funcionário (resolvido no backend).
 function restringirEscopoFuncionario(paramName = "id") {
   return async function (req, _res, next) {
-    const escopo = req.escopo || buildEscopo(req.acessos);
+    const escopo = buildEscopo(
+      filtrarAcessosPorCapacidade(req.acessos, "funcionario.visualizar")
+    );
 
     if (!escopo.temAcesso) {
       return next(
         new ForbiddenError("Administrador sem acessos administrativos ativos")
       );
-    }
-
-    // SEDUC opera livremente sobre qualquer funcionário.
-    if (escopo.isSeduc) {
-      return next();
     }
 
     const funcionarioId = Number(req.params[paramName]);
@@ -633,17 +630,14 @@ function restringirEscopoUnidadeDoBody(field = "unidade_escolar_id") {
 // Reativação: escopo via vínculo mais recente, base para o novo vínculo ativo.
 function restringirEscopoFuncionarioReativacao(paramName = "id") {
   return async function (req, _res, next) {
-    const escopo = req.escopo || buildEscopo(req.acessos);
+    const escopo = buildEscopo(
+      filtrarAcessosPorCapacidade(req.acessos, "funcionario.reativar")
+    );
 
     if (!escopo.temAcesso) {
       return next(
         new ForbiddenError("Administrador sem acessos administrativos ativos")
       );
-    }
-
-    // SEDUC opera livremente sobre qualquer funcionário.
-    if (escopo.isSeduc) {
-      return next();
     }
 
     const funcionarioId = Number(req.params[paramName]);

@@ -5,7 +5,6 @@ import java.util.List;
 
 public final class PunchResponse {
     private PunchResponse() {}
-
     public record Registration(boolean replayed, JsonNode response) {}
     public record Registered(Punch ponto, Employee funcionario) {}
     public record Punch(long id, int sequencia, String tipo, String registrado_em, double distancia_metros) {}

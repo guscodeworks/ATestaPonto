@@ -7,9 +7,9 @@ import br.com.atestaponto.punch.repository.PunchRepository.Row;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.nio.charset.StandardCharsets;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
@@ -35,7 +35,6 @@ public class PunchService {
     private static final long MAX_SAFE_INTEGER = 9007199254740991L;
     private final PunchRepository repository;
     private final ObjectMapper json;
-
     public PunchService(PunchRepository repository, ObjectMapper json) {
         this.repository = repository;
         this.json = json;
@@ -49,7 +48,6 @@ public class PunchService {
         }
         return id.longValue();
     }
-
     private PunchException badRequest(String message) { return new PunchException(400, "BAD_REQUEST", message); }
     private PunchException forbidden(String message) { return new PunchException(403, "FORBIDDEN", message); }
     private PunchException notFound(String message) { return new PunchException(404, "NOT_FOUND", message); }
@@ -96,12 +94,11 @@ public class PunchService {
         if (linkId == null) throw notFound("Funcionario sem vinculo ativo");
         var location = repository.location(linkId);
         if (location == null) throw notFound("Unidade escolar do vinculo nao encontrada");
-        double distance = distance(location, reading.get(0).doubleValue(), reading.get(1).doubleValue(),
-                reading.get(2).doubleValue());
+        double distance = distance(location, reading.get(0).doubleValue(), reading.get(1).doubleValue(), reading.get(2).doubleValue());
         var now = Instant.now().atZone(BRASILIA);
         LocalDate date = now.toLocalDate();
         List<Row> rows = repository.day(linkId, date, true);
-        // Replay retorna antes desta regra; novas acoes revalidam o GPS depois de adquirir os locks.
+        // So novas acoes validam a idade do GPS, depois de adquirir todos os locks.
         long age = Instant.now().toEpochMilli() - reading.get(3).longValue();
         if (age > 60000 || age < -5000) {
             throw badRequest("Leitura GPS vencida ou com horario futuro. Atualize a localizacao e confira o relogio do aparelho.");
@@ -115,25 +112,19 @@ public class PunchService {
                 new PunchResponse.Punch(id, next + 1, TYPES.get(next), dateTime, distance),
                 new PunchResponse.Employee(employee.id(), employee.nome(), employee.email(),
                         cpf.length() == 11 ? "***.***.***-" + cpf.substring(9) : "***.***.***-**"));
-        JsonNode responseJson = json.valueToTree(response);
-        repository.saveIdempotency(employeeId, key, hash, responseJson.toString());
-        return new PunchResponse.Registration(false, responseJson);
+        JsonNode result = json.valueToTree(response);
+        repository.saveIdempotency(employeeId, key, hash, result.toString());
+        return new PunchResponse.Registration(false, result);
     }
 
     private String sha256(String value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
-                    .digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException error) {
-            throw new IllegalStateException(error);
-        }
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
     }
-
     private boolean coordinate(JsonNode value, double bound) {
-        return value != null && value.isNumber() && Double.isFinite(value.doubleValue())
-                && Math.abs(value.doubleValue()) <= bound;
+        return value != null && value.isNumber() && Double.isFinite(value.doubleValue()) && Math.abs(value.doubleValue()) <= bound;
     }
-
     private double distance(PunchRepository.Location location, double latitude, double longitude, double accuracy) {
         if (location.latitude() == null || location.longitude() == null || location.radius() == null
                 || !Double.isFinite(location.latitude().doubleValue()) || Math.abs(location.latitude().doubleValue()) > 90
@@ -157,19 +148,22 @@ public class PunchService {
     private LocalDate referenceDate(PunchRequest request) {
         return (request.referencia() == null ? Instant.now() : request.referencia()).atZone(BRASILIA).toLocalDate();
     }
-
     private String[] times(List<Row> rows) {
-        String[] result = new String[4];
+        String[] times = new String[4];
         for (Row row : rows) {
             int index = TYPES.indexOf(row.type());
-            if (index >= 0 && row.time() != null && !row.time().equals("00:00:00")) result[index] = row.time();
+            if (index >= 0 && row.time() != null && !row.time().equals("00:00:00")) times[index] = row.time();
         }
-        return result;
+        return times;
     }
-
     private int next(String[] times) {
         for (int i = 0; i < times.length; i++) if (times[i] == null) return i;
         return 4;
+    }
+    private String scheduleTime(String value) {
+        String time = value.strip().substring(0, Math.min(value.strip().length(), 8));
+        if (!time.matches("[0-9]{2}:[0-9]{2}:[0-9]{2}")) throw new IllegalStateException("Jornada do funcionario incompleta");
+        return time;
     }
 
     @Transactional(readOnly = true)
@@ -189,9 +183,9 @@ public class PunchService {
         String[] times = times(repository.day(linkId, date, false));
         int next = next(times);
         return new PunchResponse.Today(new PunchResponse.EmployeeSummary(employee.nome(), employee.cargo()),
-                new PunchResponse.Schedule(employee.entrada(), employee.saidaAlmoco(), employee.retornoAlmoco(), employee.saida()),
-                new PunchResponse.Day(date.toString(), times[0], times[1], times[2], times[3]),
-                next == 4 ? null : TYPES.get(next), next == 4);
+                new PunchResponse.Schedule(scheduleTime(employee.entrada()), scheduleTime(employee.saidaAlmoco()),
+                        scheduleTime(employee.retornoAlmoco()), scheduleTime(employee.saida())),
+                new PunchResponse.Day(date.toString(), times[0], times[1], times[2], times[3]), next == 4 ? null : TYPES.get(next), next == 4);
     }
 
     @Transactional(readOnly = true)
@@ -209,7 +203,7 @@ public class PunchService {
         }
         YearMonth period = YearMonth.parse(month);
         List<Row> rows = repository.history(employeeId, period.atDay(1), period.atEndOfMonth());
-        // Mantem a ordenacao legada por chave textual e nunca mistura vinculos no mesmo dia.
+        // A chave textual preserva a ordem antiga e separa transferencias no mesmo dia.
         var groups = new TreeMap<String, List<Row>>();
         for (Row row : rows) groups.computeIfAbsent(row.date() + ":" + row.linkId(), key -> new ArrayList<>()).add(row);
         List<PunchResponse.HistoryDay> records = new ArrayList<>();

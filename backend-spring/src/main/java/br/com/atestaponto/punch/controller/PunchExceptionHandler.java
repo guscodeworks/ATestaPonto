@@ -1,8 +1,8 @@
 package br.com.atestaponto.punch.controller;
 
 import br.com.atestaponto.punch.service.PunchException;
-import java.util.Map;
 import java.sql.SQLException;
+import java.util.Map;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
@@ -17,17 +17,14 @@ public class PunchExceptionHandler {
     public ResponseEntity<?> business(PunchException error) {
         return ResponseEntity.status(error.status()).body(Map.of("code", error.code(), "message", error.getMessage()));
     }
-
     @ExceptionHandler(DuplicateKeyException.class)
     public ResponseEntity<?> duplicate(DuplicateKeyException error) {
         return business(new PunchException(409, "CONFLICT", "Registro duplicado de ponto detectado"));
     }
-
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<?> invalid(HttpMessageNotReadableException error) {
         return business(new PunchException(400, "BAD_REQUEST", "Invalid JSON payload"));
     }
-
     @ExceptionHandler({DataAccessException.class, TransactionException.class})
     public ResponseEntity<?> database(Exception error) {
         Throwable cause = error;
@@ -40,13 +37,11 @@ public class PunchExceptionHandler {
                     return business(new PunchException(409, "CONFLICT", "Record is referenced by other resources"));
                 case 1406, 1292:
                     return business(new PunchException(422, "VALIDATION_ERROR", "Provided data is invalid or too long"));
-                default:
-                    break;
+                default: break;
             }
         }
         return unexpected(error);
     }
-
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> unexpected(Exception error) {
         return business(new PunchException(500, "INTERNAL_ERROR", "Internal server error"));

@@ -8,7 +8,7 @@ function obterDadosExportacaoRelatorio() {
     throw new Error('O relatório não foi carregado. Atualize os dados antes de exportar.');
   }
 
-  const resumo = RESUMO_PONTOS || {};
+  const resumo = RESUMO_RELATORIO || {};
   return {
     data: DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS || '',
     periodo: formatarDataReferencia(DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS),

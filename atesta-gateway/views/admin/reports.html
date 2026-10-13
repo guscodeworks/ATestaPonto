@@ -82,7 +82,7 @@
       <div class="page-header-row fade-in reports-page-header">
         <div>
           <h1 class="page-title">Relatórios</h1>
-          <p class="page-subtitle">Frequência completa e histórico de pontos</p>
+          <p class="page-subtitle">Indicadores por DRE e escola e frequência no escopo autorizado</p>
         </div>
         <div class="action-bar no-print reports-export-actions">
           <div class="action-bar-right">
@@ -154,8 +154,22 @@
         </div>
       </div>
 
+      <!-- Indicadores agregados: sem nomes ou registros individuais. -->
+      <section class="ui-panel fade-in reports-results-panel" id="relatorio-hierarquico" aria-labelledby="titulo-hierarquia">
+        <div class="ui-panel-header">
+          <h2 class="ui-panel-title" id="titulo-hierarquia">Indicadores por DRE e escola</h2>
+          <span class="reports-panel-meta" id="hierarquia-data">Hoje</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" aria-label="Frequência agregada por DRE e escola">
+            <thead><tr><th scope="col">DRE / escola</th><th scope="col">Funcionários</th><th scope="col">Presentes</th><th scope="col">Ausentes</th><th scope="col">Presença</th></tr></thead>
+            <tbody id="tbody-relatorio-hierarquico"><tr><td colspan="5">Carregando indicadores...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
       <!-- Tabela completa -->
-      <div class="ui-panel fade-in reports-results-panel">
+      <div class="ui-panel fade-in reports-results-panel" id="relatorio-nominal">
         <div class="ui-panel-header">
           <div class="ui-panel-title"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true" width="18" height="18"> Registro completo de frequência</div>
           <span class="reports-panel-meta">Todos os funcionários</span>
