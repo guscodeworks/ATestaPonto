@@ -13,14 +13,14 @@ const router = Router();
 
 router.get(
   "/relatorio/semanal",
-  escopoPorCapacidade("relatorio.visualizar"),
+  escopoPorCapacidade("relatorio.hierarquico.visualizar"),
   sensitiveLimiter,
   getWeeklyReport
 );
 
 router.get(
   "/relatorio/hierarquia",
-  escopoPorCapacidade("relatorio.visualizar"),
+  escopoPorCapacidade("relatorio.hierarquico.visualizar"),
   sensitiveLimiter,
   getHierarchicalReport
 );
