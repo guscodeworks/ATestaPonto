@@ -2,7 +2,7 @@
 
 const { Router } = require("express");
 const requireAdmin = require("../../middlewares/ensureAdminAuthenticated");
-const { escopoPorCapacidade } = require("../../middlewares/adminScope");
+const { escopoPorCapacidade, exigirCapacidade } = require("../../middlewares/adminScope");
 
 function renderAdminView(sendView, viewPath) {
   return (_req, res) => sendView(res, viewPath);
@@ -36,6 +36,8 @@ function createAdminPagesRouter({ sendView }) {
   router.get("/admin", requireAdmin, redirectTo("/admin/dashboard"));
   router.get("/admin/index", requireAdmin, redirectTo("/admin/dashboard"));
   router.get("/admin/dashboard", requireAdmin, dashboardPage);
+  router.get("/admin/diretorias", requireAdmin, exigirCapacidade("diretoria.gerenciar"),
+    renderAdminView(sendView, "admin/departments.html"));
   router.get(
     "/admin/escolas",
     requireAdmin,

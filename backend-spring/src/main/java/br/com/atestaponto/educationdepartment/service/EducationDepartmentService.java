@@ -5,10 +5,12 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import br.com.atestaponto.educationdepartment.dto.EducationDepartmentResponse;
+import br.com.atestaponto.educationdepartment.dto.EducationDepartmentRequest;
 import br.com.atestaponto.educationdepartment.repository.EducationDepartmentRepository;
 
 @Service
@@ -18,6 +20,38 @@ public class EducationDepartmentService {
 
     public EducationDepartmentService(EducationDepartmentRepository repository) {
         this.repository = repository;
+    }
+
+    @Transactional
+    public EducationDepartmentResponse create(EducationDepartmentRequest request) {
+        long id = repository.create(request);
+        return repository.findForUpdate(id).orElseThrow();
+    }
+
+    @Transactional
+    public EducationDepartmentResponse update(Long id, EducationDepartmentRequest request) {
+        requireForUpdate(id);
+        repository.update(id, request);
+        return repository.findForUpdate(id).orElseThrow();
+    }
+
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    public EducationDepartmentResponse changeStatus(Long id, boolean active) {
+        requireForUpdate(id);
+        if (!active && repository.hasDependenciesForDeactivation(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A DRE possui escolas ativas, vinculos funcionais nao encerrados ou acessos administrativos vigentes");
+        }
+        repository.changeStatus(id, active);
+        return repository.findForUpdate(id).orElseThrow();
+    }
+
+    private void requireForUpdate(Long id) {
+        if (id == null || id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de diretoria invalido");
+        }
+        repository.findForUpdate(id).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Diretoria de ensino nao encontrada"));
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
