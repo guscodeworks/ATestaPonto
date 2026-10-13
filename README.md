@@ -12,9 +12,9 @@ Sistema web para controle de presença de funcionários em ambiente escolar, com
 O sistema registra batidas de ponto de funcionários através de autenticação combinada com geolocalização e leitura de QR Code, garantindo presença física na unidade escolar.
 
 **Arquitetura:**
-- **ponto-escolar**: gateway Node.js (servidor principal, autenticação, sessão, RBAC)
+- **atesta-gateway**: gateway Node.js (servidor principal, autenticação, sessão, RBAC)
 - **backend-spring**: backend Java 21 + Spring Boot (em migração gradual via Strangler Pattern)
-- **gov.br-fake**: simulador OAuth/OIDC para desenvolvimento local
+- **atesta-id**: simulador OAuth/OIDC para desenvolvimento local
 
 **Perfis de acesso:**
 - **Funcionário**: registra ponto via login + QR Code + geolocalização
@@ -74,7 +74,7 @@ cd ATestaPonto
 ### Passo 2 — Instalar as dependências do servidor principal
 
 ```bash
-cd ponto-escolar
+cd atesta-gateway
 npm install
 ```
 ![instalando_dependencias_ponto](docs/img/passo%202/instalando_dependencias.PNG)
@@ -84,7 +84,7 @@ Este comando lê o arquivo `package.json` e baixa automaticamente todas as bibli
 ### Passo 3 — Instalar as dependências do simulador Gov.br
 
 ```bash
-cd ../gov.br-fake
+cd ../atesta-id
 npm install
 ```
 ![instalando_dependencias_do_gov](docs/img/passo%203/instalando_depedencias_gov.PNG)
@@ -98,12 +98,12 @@ CREATE DATABASE ponto_escolar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 > [!TIP]
-> O nome `ponto_escolar` é o padrão definido no arquivo `.env.example` atual do `ponto-escolar`. Você pode mudar o nome, mas lembre-se de atualizar `DB_NAME` também.
+> O nome `ponto_escolar` é o padrão definido no arquivo `.env.example` atual do `atesta-gateway`. Você pode mudar o nome, mas lembre-se de atualizar `DB_NAME` também.
 
 ### Passo 5 — Inicializar as tabelas do banco de dados
 
 ```bash
-cd ../ponto-escolar
+cd ../atesta-gateway
 npm run db:init
 ```
 
@@ -116,12 +116,12 @@ Este comando cria automaticamente todas as tabelas necessárias no banco de dado
 
 O projeto usa arquivos `.env` para armazenar todas as configurações importantes. Esses arquivos nunca devem ser compartilhados publicamente, pois contêm informações sensíveis.
 
-### Configurar o arquivo `.env` do ponto-escolar
+### Configurar o arquivo `.env` do atesta-gateway
 
 1. Copie o arquivo `.env.example` para `.env`:
 
 ```bash
-cd ponto-escolar
+cd atesta-gateway
 cp .env.example .env
 ```
 
@@ -158,16 +158,16 @@ cp .env.example .env
 | `GOVBR_TOKEN_URL` | URL de token do Gov.br (simulador em dev). | `http://127.0.0.1:4000/fake-govbr/token` |
 | `GOVBR_USERINFO_URL` | URL de userinfo do Gov.br (simulador em dev). | `http://127.0.0.1:4000/fake-govbr/userinfo` |
 | `GOVBR_CLIENT_ID` | ID do cliente OAuth. | `ponto-escolar` |
-| `GOVBR_CLIENT_SECRET` | Segredo do cliente OAuth (deve coincidir com gov.br-fake). | |
+| `GOVBR_CLIENT_SECRET` | Segredo do cliente OAuth (deve coincidir com atesta-id). | |
 | `GOVBR_REDIRECT_URI` | URI de callback OAuth. | `http://127.0.0.1:3000/auth/govbr/callback` |
 | `SPRING_BACKEND_URL` | URL do backend Spring (se for executá-lo). | `http://127.0.0.1:8081` |
 
-### Configurar o arquivo `.env` do gov.br-fake
+### Configurar o arquivo `.env` do atesta-id
 
 1. Copie o arquivo `.env.example` para `.env`:
 
 ```bash
-cd ../gov.br-fake
+cd ../atesta-id
 cp .env.example .env
 ```
 
@@ -179,7 +179,7 @@ cp .env.example .env
 |---|---|---|
 | `NODE_ENV` | Ambiente de execução. | `development` |
 | `GOVBR_FAKE_CLIENT_ID` | ID do cliente (deve coincidir com ponto-escolar). | `ponto-escolar` |
-| `GOVBR_FAKE_CLIENT_SECRET` | Segredo do cliente (deve coincidir com ponto-escolar). | Use o mesmo valor gerado para o ponto-escolar |
+| `GOVBR_FAKE_CLIENT_SECRET` | Segredo do cliente (deve coincidir com atesta-gateway). | Use o mesmo valor gerado para o atesta-gateway |
 | `GOVBR_FAKE_ADMIN_LOGIN` | Login de teste para administrador. | `adminlocal` |
 | `GOVBR_FAKE_ADMIN_PASSWORD` | Senha de teste para administrador. | `senhaSegura123` |
 | `GOVBR_FAKE_ADMIN_SUB` | CPF do administrador (deve existir no banco). | `12345678900` |
@@ -189,7 +189,7 @@ cp .env.example .env
 | Variável | Descrição | Padrão |
 |---|---|---|
 | `GOVBR_FAKE_PORT` | Porta do simulador Gov.br. | `4000` |
-| `PONTO_ESCOLAR_REDIRECT_URI` | URI de callback do ponto-escolar. | `http://127.0.0.1:3000/auth/govbr/callback` |
+| `PONTO_ESCOLAR_REDIRECT_URI` | URI de callback do atesta-gateway. | `http://127.0.0.1:3000/auth/govbr/callback` |
 
 > [!IMPORTANT]
 > O `GOVBR_FAKE_ADMIN_SUB` (CPF) deve corresponder a um usuário administrativo ativo cadastrado no banco de dados para que o login funcione.
@@ -209,22 +209,22 @@ cp .env.example .env
 
 | Variável | Descrição |
 |---|---|
-| `DB_HOST` | Endereço do MySQL (igual ao ponto-escolar). |
+| `DB_HOST` | Endereço do MySQL (igual ao atesta-gateway). |
 | `DB_PORT` | Porta do MySQL. |
-| `DB_USER` | Usuário do banco (igual ao ponto-escolar). |
-| `DB_PASSWORD` | Senha do banco (igual ao ponto-escolar). |
-| `DB_NAME` | Nome do banco (igual ao ponto-escolar). |
-| `INTERNAL_API_SHARED_KEY` | Mesma chave configurada no ponto-escolar. |
+| `DB_USER` | Usuário do banco (igual ao atesta-gateway). |
+| `DB_PASSWORD` | Senha do banco (igual ao atesta-gateway). |
+| `DB_NAME` | Nome do banco (igual ao atesta-gateway). |
+| `INTERNAL_API_SHARED_KEY` | Mesma chave configurada no atesta-gateway. |
 
 > [!NOTE]
-> Para executar o Spring via `npm run dev:spring` do ponto-escolar, não é necessário criar o `.env` do Spring. O comando usa as variáveis do ambiente Node. Consulte [backend-spring/README.md](./backend-spring/README.md) para detalhes.
+> Para executar o Spring via `npm run dev:spring` do atesta-gateway, não é necessário criar o `.env` do Spring. O comando usa as variáveis do ambiente Node. Consulte [backend-spring/README.md](./backend-spring/README.md) para detalhes.
 
 ## Como Executar
 
 ### Opção 1 — Iniciar tudo de uma vez (recomendado)
 
 ```bash
-cd ponto-escolar
+cd atesta-gateway
 npm run dev
 ```
 
@@ -236,13 +236,13 @@ Abra dois terminais diferentes:
 
 ```bash
 # Terminal 1 — Servidor principal
-cd ponto-escolar
+cd atesta-gateway
 npm start
 ```
 
 ```bash
 # Terminal 2 — Simulador Gov.br
-cd gov.br-fake
+cd atesta-id
 npm start
 ```
 
@@ -342,7 +342,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 
 ## Comandos Disponíveis
 
-### Comandos do ponto-escolar
+### Comandos do atesta-gateway
 
 | Comando | Descrição |
 |---|---|
@@ -353,7 +353,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 | `npm run db:run` | Executa arquivo SQL específico |
 | `npm test` | Executa testes automatizados |
 
-### Comandos do gov.br-fake
+### Comandos do atesta-id
 
 | Comando | Descrição |
 |---|---|
@@ -387,7 +387,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
    ```bash
    node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
    ```
-2. Adicione no `.env` do ponto-escolar
+2. Adicione no `.env` do atesta-gateway
 
 ### Erro: "Login administrativo falhou"
 
@@ -396,7 +396,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 **Solução:**
 1. Verifique se `GOVBR_FAKE_ADMIN_SUB` (CPF) existe na tabela `usuarios_administrativos`
 2. Verifique se existe acesso ativo em `acessos_administrativos` para esse usuário
-3. Confirme que `GOVBR_FAKE_CLIENT_SECRET` é idêntico em ponto-escolar e gov.br-fake
+3. Confirme que `GOVBR_FAKE_CLIENT_SECRET` é idêntico em atesta-gateway e atesta-id
 
 ### Erro: "Funcionário não consegue registrar ponto"
 
@@ -420,7 +420,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
    node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
    ```
 2. Configure o **mesmo valor** em:
-   - `ponto-escolar/.env` → `INTERNAL_API_SHARED_KEY`
+   - `atesta-gateway/.env` → `INTERNAL_API_SHARED_KEY`
    - `backend-spring/.env` → `INTERNAL_API_SHARED_KEY` (se iniciar Spring manualmente)
 
 ## Estrutura Mínima para Execução
