@@ -1,172 +1,95 @@
 "use strict";
 
-const database = require("../config/database");
+const { requestSpring } = require("../integrations/springBackendClient");
+const { AppError, BadRequestError, ForbiddenError, NotFoundError,
+  ConflictError, ValidationError } = require("../utils/errors");
 
-function getClient(client) {
-  return client || database;
+function unavailable() {
+  return new AppError("Servico de acessos administrativos indisponivel", {
+    statusCode: 502, code: "ADMIN_ACCESS_SERVICE_UNAVAILABLE",
+  });
 }
 
-// acessos_administrativos liga perfil (ENUM) a diretoria_ensino_id/unidade_escolar_id
-// (ambas FK NULL), com status (default 'PENDENTE') e data_inicio NOT NULL.
-// CHECK chk_acessos_escopo enforça perfil <-> diretoria/unidade; o Service
-// valida cedo (defense-in-depth), mas o CHECK é a garantia real do banco.
-
-async function withTransaction(callback) {
-  return database.withTransaction(callback);
-}
-
-const ACESSO_DETAIL_SELECT = `
-  aa.id, aa.usuario_administrativo_id, aa.perfil, aa.diretoria_ensino_id,
-  aa.unidade_escolar_id, aa.status, aa.data_inicio, aa.data_fim,
-  aa.concedido_por_acesso_id, aa.criado_em, aa.atualizado_em,
-  ua.cpf AS usuario_cpf, ua.nome AS usuario_nome, ua.email AS usuario_email,
-  ua.ativo AS usuario_ativo,
-  de.nome AS diretoria_ensino_nome,
-  ue.nome AS unidade_escolar_nome,
-  ue.diretoria_ensino_id AS unidade_diretoria_ensino_id
-`;
-
-const ACESSO_DETAIL_JOINS = `
-  FROM acessos_administrativos aa
-  INNER JOIN usuarios_administrativos ua ON ua.id = aa.usuario_administrativo_id
-  LEFT JOIN diretorias_ensino de ON de.id = aa.diretoria_ensino_id
-  LEFT JOIN unidades_escolares ue ON ue.id = aa.unidade_escolar_id
-`;
-
-// Dentro da transação, após criar/resolver a identidade admin. data_inicio é
-// NOT NULL: COALESCE(?, CURDATE()) aplica a data ou o default do banco.
-async function createAcesso(
-  client,
-  {
-    adminUserId,
-    perfil,
-    educationDepartmentId = null,
-    schoolUnitId = null,
-    status,
-    dataInicio = null,
-    dataFim = null,
-    concedidoPorAcessoId = null,
+async function request(operation, body, project) {
+  let response;
+  let result;
+  try {
+    response = await requestSpring(`/internal/acessos-administrativos/${operation}`, { method: "POST", body });
+    result = await response.json();
+  } catch (_error) { throw unavailable(); }
+  if (!response.ok) {
+    const codes = { BAD_REQUEST: 400, FORBIDDEN: 403, NOT_FOUND: 404,
+      CONFLICT: 409, VALIDATION_ERROR: 422, INTERNAL_ERROR: 500 };
+    if (result && codes[result.code] === response.status && typeof result.message === "string") {
+      const ErrorType = { BAD_REQUEST: BadRequestError, FORBIDDEN: ForbiddenError,
+        NOT_FOUND: NotFoundError, CONFLICT: ConflictError, VALIDATION_ERROR: ValidationError }[result.code];
+      if (ErrorType) throw new ErrorType(result.message);
+      throw new AppError(result.message, { statusCode: response.status, code: result.code });
+    }
+    throw unavailable();
   }
-) {
-  return getClient(client).execute(
-    `INSERT INTO acessos_administrativos
-      (usuario_administrativo_id, perfil, diretoria_ensino_id, unidade_escolar_id, status, data_inicio, data_fim, concedido_por_acesso_id)
-     VALUES (?, ?, ?, ?, ?, COALESCE(?, CURDATE()), ?, ?)`,
-    [
-      adminUserId,
-      perfil,
-      educationDepartmentId,
-      schoolUnitId,
-      status,
-      dataInicio,
-      dataFim,
-      concedidoPorAcessoId,
-    ]
-  );
+  try { return project(result); } catch (_error) { throw unavailable(); }
 }
 
-async function findById(acessoId, client) {
-  return getClient(client).executeOne(
-    `SELECT ${ACESSO_DETAIL_SELECT} ${ACESSO_DETAIL_JOINS} WHERE aa.id = ? LIMIT 1`,
-    [acessoId]
-  );
+const ROW_FIELDS = ["id", "usuario_administrativo_id", "perfil", "diretoria_ensino_id",
+  "unidade_escolar_id", "status", "data_inicio", "data_fim", "concedido_por_acesso_id",
+  "criado_em", "atualizado_em", "usuario_cpf", "usuario_nome", "usuario_email", "usuario_ativo",
+  "diretoria_ensino_nome", "unidade_escolar_nome", "unidade_diretoria_ensino_id"];
+const validId = value => Number.isSafeInteger(value) && value > 0;
+function accessRow(row) {
+  if (!row || !validId(row.id) || !validId(row.usuario_administrativo_id)
+      || typeof row.perfil !== "string" || typeof row.status !== "string"
+      || typeof row.usuario_nome !== "string" || typeof row.usuario_ativo !== "boolean"
+      || typeof row.usuario_cpf !== "string" || !/^\*{3}\.\*{3}\.\*{3}-(?:\d{2}|\*{2})$/.test(row.usuario_cpf)
+      || ![row.diretoria_ensino_id, row.unidade_escolar_id, row.concedido_por_acesso_id,
+        row.unidade_diretoria_ensino_id].every(id => id === null || validId(id))
+      || ![row.data_inicio, row.data_fim, row.criado_em, row.atualizado_em, row.usuario_email,
+        row.diretoria_ensino_nome, row.unidade_escolar_nome].every(value => value === null || typeof value === "string")) throw unavailable();
+  return Object.fromEntries(ROW_FIELDS.map(field => [field, row[field]]));
 }
 
-// A linha autorizadora permanece bloqueada até o commit da mutação que ela permite.
-async function findActiveAuthorizerByIdForUpdate(client, acessoId, adminUserId) {
-  return getClient(client).executeOne(
-    `SELECT aa.id, aa.usuario_administrativo_id, aa.perfil,
-            aa.diretoria_ensino_id, aa.unidade_escolar_id
-     FROM acessos_administrativos aa
-     INNER JOIN usuarios_administrativos ua ON ua.id = aa.usuario_administrativo_id
-     WHERE aa.id = ? AND aa.usuario_administrativo_id = ?
-       AND ua.ativo = 1 AND aa.status = 'ATIVO'
-       AND (aa.data_inicio IS NULL OR aa.data_inicio <= CURRENT_DATE)
-       AND (aa.data_fim IS NULL OR aa.data_fim >= CURRENT_DATE)
-     LIMIT 1 FOR UPDATE`,
-    [acessoId, adminUserId]
-  );
+function findById(acessoId) {
+  return request("consultar", { id: Number(acessoId) }, result => result.acesso === null ? null : accessRow(result.acesso));
 }
 
-// Ciclo de vida = transição de status, nunca exclusão (preserva linha/histórico).
-// O status de origem torna o UPDATE atômico: uma transição concorrente faz a
-// operação afetar zero linhas, em vez de sobrescrever o estado mais recente.
-async function updateStatus(acessoId, statusAtual, novoStatus, client) {
-  return getClient(client).execute(
-    "UPDATE acessos_administrativos SET status = ? WHERE id = ? AND status = ?",
-    [novoStatus, acessoId, statusAtual]
-  );
+function listAcessos({ escopo, escopoUnidades, limit, offset }) {
+  const allowed = Boolean(escopo?.temAcesso);
+  const ids = values => [...new Set([...values].map(Number).filter(validId))];
+  return request("listar", {
+    global: allowed && Boolean(escopo.isSeduc),
+    diretorias: allowed ? ids(escopo.diretoriasPermitidas || []) : [],
+    unidades: allowed ? ids(Array.isArray(escopoUnidades) ? escopoUnidades : escopo.unidadesPermitidas || []) : [],
+    limit, offset,
+  }, result => {
+    if (!Array.isArray(result.items) || !Number.isSafeInteger(result.total) || result.total < 0) throw unavailable();
+    return { items: result.items.map(accessRow), total: result.total };
+  });
 }
 
-// WHERE de escopo p/ listagens: SEDUC não filtra; demais perfis veem só acessos
-// cuja diretoria ou unidade está no seu escopo. Retorna { clause, params }.
-function buildEscopoFilter(escopo, escopoUnidades) {
-  if (escopo && escopo.temAcesso && escopo.isSeduc) {
-    return { clause: "", params: [] };
-  }
-
-  if (!escopo || !escopo.temAcesso) {
-    return { clause: " WHERE 1=0", params: [] };
-  }
-
-  const diretorias = [...(escopo.diretoriasPermitidas || [])];
-  const unidades = Array.isArray(escopoUnidades)
-    ? escopoUnidades
-    : [...(escopo.unidadesPermitidas || [])];
-
-  const unitIds = new Set(unidades.map(Number).filter((n) => Number.isInteger(n) && n > 0));
-  const dirIds = new Set(diretorias.map(Number).filter((n) => Number.isInteger(n) && n > 0));
-
-  const conditions = [];
-  const params = [];
-
-  if (dirIds.size > 0) {
-    const placeholders = [...dirIds].map(() => "?").join(", ");
-    conditions.push(`aa.diretoria_ensino_id IN (${placeholders})`);
-    params.push(...dirIds);
-  }
-  if (unitIds.size > 0) {
-    const placeholders = [...unitIds].map(() => "?").join(", ");
-    conditions.push(`aa.unidade_escolar_id IN (${placeholders})`);
-    params.push(...unitIds);
-  }
-
-  if (conditions.length === 0) {
-    // Escopo restrito sem diretorias/unidades enumeradas: nada a listar.
-    return { clause: " WHERE 1=0", params: [] };
-  }
-
-  return { clause: ` WHERE ${conditions.join(" OR ")}`, params };
+function createAcesso(body) {
+  return request("conceder", body, result => {
+    if (typeof result.criou_identidade !== "boolean") throw unavailable();
+    return { acesso: accessRow(result.acesso), criou_identidade: result.criou_identidade };
+  });
+}
+function updateStatus(body) { return request("alterar-status", body, accessRow); }
+function resolveResource(body) {
+  return request("recurso", body, result => {
+    if (!result || !(result.educationDepartmentId === null || validId(result.educationDepartmentId))
+        || !(result.schoolUnitId === null || validId(result.schoolUnitId))) throw unavailable();
+    return { educationDepartmentId: result.educationDepartmentId, schoolUnitId: result.schoolUnitId };
+  });
+}
+function listResources(body) {
+  return request("recursos", body, result => {
+    if (!Array.isArray(result.diretorias) || !Array.isArray(result.unidades)) throw unavailable();
+    const project = row => {
+      if (!validId(row.id) || typeof row.nome !== "string"
+          || !(row.diretoria_ensino_id === null || validId(row.diretoria_ensino_id))) throw unavailable();
+      return { id: row.id, nome: row.nome, diretoria_ensino_id: row.diretoria_ensino_id };
+    };
+    return { diretorias: result.diretorias.map(project), unidades: result.unidades.map(project) };
+  });
 }
 
-async function listAcessos({ escopo, escopoUnidades, limit, offset } = {}, client) {
-  const { clause, params } = buildEscopoFilter(escopo, escopoUnidades);
-
-  return getClient(client).execute(
-    `SELECT ${ACESSO_DETAIL_SELECT} ${ACESSO_DETAIL_JOINS}${clause}
-     ORDER BY aa.criado_em DESC, aa.id DESC
-     LIMIT ? OFFSET ?`,
-    [...params, String(Number(limit)), String(Number(offset))]
-  );
-}
-
-// Total no escopo (para paginação).
-async function countAcessos({ escopo, escopoUnidades } = {}, client) {
-  const { clause, params } = buildEscopoFilter(escopo, escopoUnidades);
-
-  const row = await getClient(client).executeOne(
-    `SELECT COUNT(*) AS total FROM acessos_administrativos aa${clause}`,
-    params
-  );
-  return Number(row && row.total) || 0;
-}
-
-module.exports = {
-  withTransaction,
-  createAcesso,
-  findById,
-  findActiveAuthorizerByIdForUpdate,
-  updateStatus,
-  listAcessos,
-  countAcessos,
-};
+module.exports = { findById, listAcessos, createAcesso, updateStatus, resolveResource, listResources };

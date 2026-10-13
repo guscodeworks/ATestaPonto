@@ -1,9 +1,6 @@
 "use strict";
 
 const adminAccessModel = require("../models/adminAccessModel");
-const adminUserModel = require("../models/adminUserModel");
-const educationDepartmentModel = require("../models/educationDepartmentModel");
-const schoolUnitModel = require("../models/schoolUnitModel");
 const {
   PERFIL_SEDUC,
   PERFIL_DIRETORIA,
@@ -14,10 +11,8 @@ const {
   podeAlterar,
 } = require("../middlewares/adminScope");
 const { registerAuditLog } = require("./auditLogService");
-const educationDepartmentService = require("./educationDepartmentService");
-const { maskCpf, normalizeCpf } = require("../utils/cpf");
+const { normalizeCpf } = require("../utils/cpf");
 const {
-  AppError,
   BadRequestError,
   NotFoundError,
   ForbiddenError,
@@ -65,7 +60,7 @@ function mapAcesso(acesso, extras = {}) {
     criado_em: acesso.criado_em,
     atualizado_em: acesso.atualizado_em,
     usuario: {
-      cpf: maskCpf(acesso.usuario_cpf),
+      cpf: acesso.usuario_cpf,
       nome: acesso.usuario_nome,
       email: acesso.usuario_email,
       ativo: Boolean(acesso.usuario_ativo),
@@ -166,61 +161,8 @@ function validarConsistenciaPerfil(perfil, diretoriaId, unidadeId) {
 
 // Resolve o recurso real antes da autorização. Para unidade, inclui a diretoria
 // obtida no backend para que um acesso ADMIN_DIRETORIA possa cobri-la.
-async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId, client) {
-  if (perfil === PERFIL_SEDUC) {
-    return {};
-  }
-
-  if (perfil === PERFIL_DIRETORIA) {
-    let diretoria;
-
-    if (client) {
-      diretoria = await educationDepartmentModel.findByIdForUpdate(
-        client,
-        diretoriaId
-      );
-    } else {
-      const response = await educationDepartmentService.findById(diretoriaId);
-
-      if (response.status === 404) {
-        throw new NotFoundError("Diretoria de ensino nao encontrada");
-      }
-
-      if (response.status !== 200) {
-        throw new AppError("Servico de diretorias indisponivel", {
-          statusCode: 502,
-          code: "EDUCATION_DEPARTMENT_SERVICE_UNAVAILABLE",
-        });
-      }
-
-      diretoria = response.body;
-    }
-
-    if (!diretoria) {
-      throw new NotFoundError("Diretoria de ensino nao encontrada");
-    }
-
-    return {
-      educationDepartmentId: Number(diretoria.id),
-    };
-  }
-
-  if (PERFIS_ESCOLARES.has(perfil)) {
-    const unidade = client
-      ? await schoolUnitModel.findByIdForUpdate(client, unidadeId)
-      : await schoolUnitModel.findById(unidadeId);
-
-    if (!unidade) {
-      throw new NotFoundError("Unidade escolar nao encontrada");
-    }
-
-    return {
-      schoolUnitId: Number(unidade.id),
-      educationDepartmentId: Number(unidade.diretoria_ensino_id),
-    };
-  }
-
-  throw new BadRequestError("perfil invalido");
+async function resolverRecursoAlvo(perfil, diretoriaId, unidadeId) {
+  return adminAccessModel.resolveResource({ perfil, diretoriaId, unidadeId });
 }
 
 function calcularEspecificidadeAcesso(acesso, recursoAlvo) {
@@ -323,23 +265,9 @@ async function listConcessionOptions(acessos) {
 
   const precisaDiretorias = candidatos.includes(PERFIL_DIRETORIA);
   const precisaUnidades = candidatos.some((perfil) => PERFIS_ESCOLARES.has(perfil));
-  const [diretoriasResponse, unidades] = await Promise.all([
-  precisaDiretorias
-    ? educationDepartmentService.list()
-    : { status: 200, body: [] },
-  precisaUnidades ? schoolUnitModel.list() : [],
-]);
-
-if (diretoriasResponse.status !== 200) {
-  throw new AppError("Servico de diretorias indisponivel", {
-    statusCode: 502,
-    code: "EDUCATION_DEPARTMENT_SERVICE_UNAVAILABLE",
+  const { diretorias, unidades } = await adminAccessModel.listResources({
+    diretorias: precisaDiretorias, unidades: precisaUnidades,
   });
-}
-
-const diretorias = Array.isArray(diretoriasResponse.body)
-  ? diretoriasResponse.body
-  : [];
 
   return {
     perfis: candidatos.flatMap((perfil) => {
@@ -385,49 +313,6 @@ async function autorizarConcessao(perfil, diretoriaId, unidadeId, acessos) {
   return acessoConcedente;
 }
 
-// Revalida a linha persistida, bloqueada pela transação, antes de qualquer escrita.
-// A matriz de capacidade/delegação e o escopo são os mesmos do pré-filtro.
-async function revalidarAcessoAutorizador(
-  tx,
-  { acessoId, adminId, capacidade, perfilAlvo, diretoriaId, unidadeId, podeAutorizar }
-) {
-  const operadorId = Number(adminId);
-  const autorizadorId = Number(acessoId);
-  if (!Number.isSafeInteger(operadorId) || operadorId < 1 ||
-      !Number.isSafeInteger(autorizadorId) || autorizadorId < 1) {
-    throw new ForbiddenError("Acesso autorizador invalido");
-  }
-
-  const acesso = await adminAccessModel.findActiveAuthorizerByIdForUpdate(
-    tx,
-    autorizadorId,
-    operadorId
-  );
-  if (!acesso) {
-    throw new ForbiddenError("Acesso autorizador nao esta mais ativo ou vigente");
-  }
-
-  let recursoAlvo;
-  try {
-    recursoAlvo = await resolverRecursoAlvo(perfilAlvo, diretoriaId, unidadeId, tx);
-  } catch (error) {
-    if (!(error instanceof NotFoundError) && !(error instanceof BadRequestError)) {
-      throw error;
-    }
-    throw new ForbiddenError("Escopo do acesso administrativo invalido");
-  }
-
-  if (!resolverAcessoAutorizador(
-    [acesso],
-    capacidade,
-    perfilAlvo,
-    recursoAlvo,
-    podeAutorizar
-  )) {
-    throw new ForbiddenError("Acesso autorizador sem capacidade ou escopo suficiente");
-  }
-}
-
 // Concessão: find-or-create da identidade admin + acesso na mesma transação.
 async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
   const cpf = normalizeCpf(body && body.cpf);
@@ -471,65 +356,15 @@ async function createAcesso(body, { adminId, ipOrigem, acessos } = {}) {
 
   const nome = body && body.nome !== undefined ? String(body.nome).trim() : null;
   const email =
-    body && body.email !== undefined
+    body && body.email != null
       ? String(body.email).trim().toLowerCase()
       : null;
 
-  const { acessoId, criouIdentidade } =
-    await adminAccessModel.withTransaction(async (tx) => {
-      await revalidarAcessoAutorizador(tx, {
-        acessoId: concedidoPorAcessoId,
-        adminId,
-        capacidade: "acesso.conceder",
-        perfilAlvo: perfil,
-        diretoriaId,
-        unidadeId,
-        podeAutorizar: podeConceder,
-      });
-
-      let usuario = await adminUserModel.findByCpf(cpf, tx);
-      let criouIdentidadeFlag = false;
-
-      if (!usuario) {
-        // find-or-create da identidade admin (keyed por CPF próprio).
-        if (!nome) {
-          throw new BadRequestError(
-            "nome e obrigatorio para novo usuario administrativo"
-          );
-        }
-        await adminUserModel.create(tx, {
-          cpf,
-          nome,
-          email,
-          ativo: true,
-        });
-        usuario = await adminUserModel.findByCpf(cpf, tx);
-        if (!usuario) {
-          throw new Error("Falha ao obter o usuario administrativo criado");
-        }
-        criouIdentidadeFlag = true;
-      }
-
-      const adminUserId = Number(usuario.id);
-      const insert = await adminAccessModel.createAcesso(tx, {
-        adminUserId,
-        perfil,
-        educationDepartmentId: diretoriaId,
-        schoolUnitId: unidadeId,
-        status,
-        dataInicio,
-        dataFim,
-        concedidoPorAcessoId,
-      });
-      const acessoIdNum = Number(insert.insertId);
-      if (!Number.isInteger(acessoIdNum) || acessoIdNum < 1) {
-        throw new Error("Falha ao obter o ID do acesso criado");
-      }
-
-      return { acessoId: acessoIdNum, criouIdentidade: criouIdentidadeFlag };
-    });
-
-  const acesso = await adminAccessModel.findById(acessoId);
+  const { acesso, criou_identidade: criouIdentidade } = await adminAccessModel.createAcesso({
+    adminId: Number(adminId), acessoAutorizadorId: concedidoPorAcessoId,
+    cpf, nome, email, perfil, diretoriaId, unidadeId, status, dataInicio, dataFim,
+  });
+  const acessoId = acesso.id;
 
   await registerAuditLog({
     evento: "acesso_administrativo_concedido",
@@ -559,15 +394,8 @@ async function listAcessos(query = {}, { escopo, escopoUnidades, acessos, adminI
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
   const offset = (page - 1) * limit;
 
-  const total = await adminAccessModel.countAcessos({
-    escopo,
-    escopoUnidades,
-  });
-  const rows = await adminAccessModel.listAcessos({
-    escopo,
-    escopoUnidades,
-    limit,
-    offset,
+  const { total, items: rows } = await adminAccessModel.listAcessos({
+    escopo, escopoUnidades, limit, offset,
   });
 
   return {
@@ -726,36 +554,10 @@ async function alterarStatus(acessoId, acao, { adminId, ipOrigem, acessos } = {}
   const deStatus = statusAtual;
   const paraStatus = regra.para;
 
-  await adminAccessModel.withTransaction(async (tx) => {
-    const alvoAtual = await adminAccessModel.findById(acessoId, tx);
-    if (!alvoAtual) {
-      throw new NotFoundError("Acesso administrativo nao encontrado");
-    }
-    await revalidarAcessoAutorizador(tx, {
-      acessoId: acessoAutorizador.id,
-      adminId,
-      capacidade: `acesso.${acaoNorm}`,
-      perfilAlvo: String(alvoAtual.perfil || "").trim().toUpperCase(),
-      diretoriaId: alvoAtual.diretoria_ensino_id,
-      unidadeId: alvoAtual.unidade_escolar_id,
-      podeAutorizar: podeAlterar,
-    });
-
-    const result = await adminAccessModel.updateStatus(
-      acessoId,
-      deStatus,
-      paraStatus,
-      tx
-    );
-    if (Number(result && result.affectedRows) !== 1) {
-      throw new ConflictError(
-        "Status do acesso foi alterado por outra operacao; atualize e tente novamente"
-      );
-    }
+  const atualizado = await adminAccessModel.updateStatus({
+    acessoId: Number(acessoId), adminId: Number(adminId),
+    acessoAutorizadorId: Number(acessoAutorizador.id), acao: acaoNorm, statusAtual: deStatus,
   });
-
-  // Recarrega pós-update para refletir status/atualizado_em no payload.
-  const atualizado = await adminAccessModel.findById(acessoId);
 
   await registerAuditLog({
     evento: `acesso_administrativo_${acaoNorm}`,
