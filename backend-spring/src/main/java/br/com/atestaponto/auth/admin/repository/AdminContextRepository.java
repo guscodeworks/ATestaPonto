@@ -44,6 +44,12 @@ public class AdminContextRepository {
         this.jdbc = jdbc;
     }
 
+    public int updateLastLogin(long adminId) {
+        return jdbc.update(
+                "UPDATE usuarios_administrativos SET ultimo_login_em = CURRENT_TIMESTAMP WHERE id = ?",
+                adminId);
+    }
+
     public Optional<Admin> findById(long id) {
         List<Admin> rows = jdbc.query(connection -> {
             if (!connection.isReadOnly()) {

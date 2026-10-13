@@ -113,4 +113,24 @@ async function readAdminForLogin(cpf) {
   }
 }
 
-module.exports = { readAdminIdentity, readAdminForLogin };
+async function updateLastLogin(adminId) {
+  if (!isId(adminId)) throw new BadRequestError("Identificador administrativo invalido");
+  try {
+    const response = await requestSpring("/internal/auth/admin/last-login", {
+      method: "POST",
+      body: { admin_id: adminId },
+    });
+    if (response.status !== 200) throw new Error("Persistencia administrativa indisponivel");
+    const affectedRows = await response.json();
+    if (!Number.isSafeInteger(affectedRows) || affectedRows < 0 || affectedRows > 1) {
+      throw new Error("Contrato invalido");
+    }
+    return { affectedRows };
+  } catch {
+    throw new AppError("Servico de identidade administrativa indisponivel", {
+      statusCode: 502, code: "ADMIN_IDENTITY_SERVICE_UNAVAILABLE",
+    });
+  }
+}
+
+module.exports = { readAdminIdentity, readAdminForLogin, updateLastLogin };

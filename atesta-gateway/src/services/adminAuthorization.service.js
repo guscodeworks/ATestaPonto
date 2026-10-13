@@ -1,7 +1,6 @@
 "use strict";
 
-const adminUserModel = require("../models/adminUserModel");
-const { readAdminIdentity, readAdminForLogin } = require("./adminIdentityService");
+const { readAdminIdentity, readAdminForLogin, updateLastLogin } = require("./adminIdentityService");
 
 // Resolve no Spring a identidade administrativa associada ao CPF autenticado
 // pelo Gov.br. A decisão de autorização permanece interna ao Ponto Escolar.
@@ -10,7 +9,7 @@ async function obterAdminParaLoginGovbr(cpf) {
 }
 
 async function registrarUltimoLoginAdmin(adminId) {
-  return adminUserModel.updateLastLogin(adminId);
+  return updateLastLogin(adminId);
 }
 
 // Revalida identidade/acessos no Spring; sessao, RBAC e escopo permanecem no Node.
