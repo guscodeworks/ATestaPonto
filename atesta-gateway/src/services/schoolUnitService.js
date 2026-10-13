@@ -1,7 +1,7 @@
 "use strict";
 
 const { requestSpring } = require("../integrations/springBackendClient");
-const schoolUnitModel = require("../models/schoolUnitModel");
+const schoolReadService = require("./schoolReadService");
 const educationDepartmentService = require("./educationDepartmentService");
 const cepService = require("./cepService");
 const { buildEscopo } = require("../middlewares/adminScope");
@@ -65,7 +65,7 @@ async function listSchoolUnits(query = {}, escopoUnidades = []) {
 
 // O escopo da unidade já foi validado pelo middleware da rota.
 async function getSchoolUnit(escolaId) {
-  const linha = await schoolUnitModel.findAdminById(escolaId);
+  const linha = await schoolReadService.findById(escolaId, true);
   if (!linha) {
     throw new NotFoundError("Escola nao encontrada");
   }
