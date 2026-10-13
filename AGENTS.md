@@ -6,9 +6,9 @@ Estas regras se aplicam a todo o repositório. Leia também os AGENTS.md da past
 alvo; eles acrescentam instruções específicas ao seu escopo. Instruções explícitas
 do usuário prevalecem. Identifique o projeto e leia o código relevante antes de editar.
 
-- `ponto-escolar/`: sistema principal e gateway público Node.js.
+- `atesta-gateway/`: sistema principal e gateway público Node.js.
 - `backend-spring/`: backend Java 21 + Spring Boot em migração gradual.
-- `gov.br-fake/`: simulador técnico de autenticação; não é produção.
+- `atesta-id/`: simulador técnico de autenticação; não é produção.
 
 Não misture código, lógica ou dados do simulador com o sistema real. Alterações
 em mais de um projeto devem ser necessárias ao escopo solicitado.
@@ -49,6 +49,31 @@ em mais de um projeto devem ser necessárias ao escopo solicitado.
   usa o endereço configurado no ambiente/.env; containers na mesma Docker network
   podem usar DNS do serviço/container; produção usa o hostname do provedor.
 - Nunca implemente fallback automático entre host local e hostname Docker.
+
+## Diretório principal e worktrees existentes
+
+- Diretório principal: `/home/gusta/Documentos/GitHub/ATestaPonto`. Não o mova.
+- Worktrees auxiliares existentes em
+  `/home/gusta/Documentos/GitHub/.atestaponto-worktrees/`:
+  - `ATestaPonto-admin-access/`
+  - `ATestaPonto-admin-rbac/`
+  - `ATestaPonto-school-rbac/`
+  - `ATestaPonto-seduc-rbac/`
+  - `ATestaPonto-spring-punch/`
+- Reutilize o diretório de trabalho existente e confira sua branch e seu status.
+  Se a tarefa indicar uma worktree existente, trabalhe nela, sem copiar alterações
+  de outras branches nem trocar de branch com alterações pendentes.
+- Não crie clones ou worktrees automaticamente, inclusive para isolamento.
+  Uma nova criação exige solicitação explícita do usuário; se nenhum diretório
+  existente atender à tarefa, informe o bloqueio antes de criar outro.
+- Preserve arquivos modificados, não rastreados e processos em execução.
+  Não mova, exclua ou una worktrees por iniciativa própria.
+- Os caminhos acima descrevem a organização local; não os use como configuração
+  ou caminhos fixos no código da aplicação.
+- Confirme os módulos presentes em cada checkout antes de referenciar caminhos.
+  O principal já usa `atesta-gateway/` e `atesta-id/`; as worktrees auxiliares
+  ainda usam `ponto-escolar/` e `gov.br-fake/`. Não renomeie módulos nem
+  replique renomeações entre branches automaticamente.
 
 ## Desenvolvimento paralelo
 
