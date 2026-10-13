@@ -14,6 +14,24 @@ require("dotenv").config({
   processEnv: springEnv,
   quiet: true,
 });
+// Habilitacao e namespace pertencem ao gateway; o endereco do Spring pode ser distinto.
+const gatewayEnv = { ...process.env };
+require("dotenv").config({
+  path: path.join(projectRoot, ".env"),
+  processEnv: gatewayEnv,
+  quiet: true,
+});
+springEnv.REDIS_ENABLED = String(gatewayEnv.REDIS_ENABLED ?? "false").trim().toLowerCase();
+springEnv.REDIS_NAMESPACE = String(gatewayEnv.REDIS_NAMESPACE
+  ?? (String(gatewayEnv.NODE_ENV ?? "development").trim().toLowerCase() === "production"
+    ? "atestaponto:production" : "atestaponto:local")).trim();
+springEnv.REDIS_HOST = String(springEnv.REDIS_HOST || gatewayEnv.REDIS_HOST || "").trim();
+springEnv.REDIS_PORT = String(springEnv.REDIS_PORT || gatewayEnv.REDIS_PORT || "6379").trim();
+if (!["true", "false"].includes(springEnv.REDIS_ENABLED)
+    || (springEnv.REDIS_ENABLED === "true" && !springEnv.REDIS_HOST)) {
+  console.error("Configure REDIS_ENABLED no gateway e REDIS_HOST acessivel pelo Spring no host.");
+  process.exit(1);
+}
 springEnv.BRASILAPI_BASE_URL ||= "https://brasilapi.com.br";
 
 if (Buffer.byteLength(springEnv.INTERNAL_API_SHARED_KEY || "", "utf8") < 32) {
