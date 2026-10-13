@@ -34,4 +34,9 @@ public class AdminContextController {
     public AdminLoginResponse lookupLogin(@RequestBody AdminLoginRequest request) {
         return service.lookupLogin(request.cpf());
     }
+
+    @PostMapping("/last-login")
+    public int updateLastLogin(@RequestBody AdminContextRequest request) {
+        return service.updateLastLogin(request.admin_id());
+    }
 }

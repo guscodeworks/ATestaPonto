@@ -34,4 +34,12 @@ public class AdminContextService {
         // Preserva a comparacao original: sem trim, normalizacao ou nova regra de CPF.
         return new AdminLoginResponse(repository.findActiveByCpf(cpf).orElse(null));
     }
+
+    @Transactional
+    public int updateLastLogin(Long adminId) {
+        if (adminId == null || adminId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador administrativo invalido");
+        }
+        return repository.updateLastLogin(adminId);
+    }
 }
