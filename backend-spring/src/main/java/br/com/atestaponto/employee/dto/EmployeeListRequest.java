@@ -1,6 +1,6 @@
 package br.com.atestaponto.employee.dto;
 
-import br.com.atestaponto.report.dto.DailyReportSchoolIdDeserializer;
+import br.com.atestaponto.json.StrictIntegerDeserializer;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -12,7 +12,7 @@ import java.util.List;
 
 public record EmployeeListRequest(
         @NotNull Boolean escopo_global,
-        @JsonDeserialize(contentUsing = DailyReportSchoolIdDeserializer.class)
+        @JsonDeserialize(contentUsing = StrictIntegerDeserializer.class)
         @NotNull List<@NotNull @Positive Long> unidades_escolares_ids,
         Boolean ativo,
         @Pattern(regexp = "^(|FUNCIONARIO|INSPETOR|PROFESSOR)$") String cargo,
