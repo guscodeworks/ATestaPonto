@@ -1,6 +1,6 @@
 "use strict";
 
-const employmentLinkModel = require("../models/employmentLinkModel");
+const employmentLinkReadService = require("./employmentLinkReadService");
 const schoolReadService = require("./schoolReadService");
 
 // Consultas necessárias para resolver escopo administrativo a partir dos
@@ -18,17 +18,17 @@ async function buscarUnidadePorId(unidadeId) {
 }
 
 async function buscarVinculoAtivoDoFuncionario(funcionarioId) {
-  return employmentLinkModel.findActiveByFuncionarioIdWithDetails(
+  return employmentLinkReadService.findActiveByEmployeeId(
     funcionarioId
   );
 }
 
 async function buscarVinculoVisivelDoFuncionario(funcionarioId) {
-  return employmentLinkModel.findForAdminEmployeeView(funcionarioId);
+  return employmentLinkReadService.findVisibleForAdminByEmployeeId(funcionarioId);
 }
 
 async function buscarVinculoMaisRecenteDoFuncionario(funcionarioId) {
-  return employmentLinkModel.findLatestByFuncionarioIdWithDetails(
+  return employmentLinkReadService.findLatestByEmployeeId(
     funcionarioId
   );
 }
