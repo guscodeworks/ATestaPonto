@@ -35,6 +35,12 @@ function ensureAdminApiAuthenticated(req, _res, next) {
         );
       }
 
+      if (!Array.isArray(req.acessos) || req.acessos.length === 0) {
+        return next(
+          new ForbiddenError("Administrativo sem acessos administrativos ativos")
+        );
+      }
+
       req.auth = {
         id: adminFromDb.id,
         nome: adminFromDb.nome || "",

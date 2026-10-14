@@ -28,6 +28,10 @@ function ensureAdminAuthenticated(req, res, next) {
         return res.redirect("/auth/govbr/login");
       }
 
+      if (!Array.isArray(req.acessos) || req.acessos.length === 0) {
+        return res.redirect("/auth/govbr/login");
+      }
+
       return next();
     })
     .catch((error) => {
