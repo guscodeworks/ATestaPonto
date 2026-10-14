@@ -1,5 +1,6 @@
 package br.com.atestaponto.school.dto;
 
+import br.com.atestaponto.json.StrictIntegerDeserializer;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import jakarta.validation.constraints.Max;
