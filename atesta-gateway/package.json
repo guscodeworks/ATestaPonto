@@ -33,7 +33,6 @@
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.23.1",
     "nodemailer": "^10.0.16",
-    "qrcode": "^1.5.4",
     "redis": "^6.3.0"
   },
   "overrides": {
