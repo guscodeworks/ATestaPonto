@@ -6,13 +6,6 @@ function getClient(client) {
   return client || database;
 }
 
-async function listCargos() {
-  return database.execute(
-    "SELECT id, cargo, ativo FROM cargos ORDER BY cargo ASC",
-    []
-  );
-}
-
 // cargo é UNIQUE; ignora horários na assinatura.
 async function createCargo(client, { cargo } = {}) {
   return getClient(client).execute(
@@ -30,7 +23,6 @@ async function findByNomeForUpdate(client, cargo) {
 }
 
 module.exports = {
-  listCargos,
   createCargo,
   findByNomeForUpdate,
 };
