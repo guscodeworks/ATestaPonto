@@ -6,6 +6,7 @@
 const authCodes = new Map();
 const accessTokens = new Map();
 const fakeLoginSessions = new Map();
+const pendingAuthorizeRequests = new Map();
 
 // Suporta tanto registros com método `isExpired` (ex.: instâncias de AccessToken/AuthCode)
 // quanto objetos simples com `expiresAt`, permitindo reaproveitar a mesma limpeza
@@ -39,6 +40,7 @@ function cleanupExpiredRecords() {
   deleteExpiredFromMap(authCodes, now);
   deleteExpiredFromMap(accessTokens, now);
   deleteExpiredFromMap(fakeLoginSessions, now);
+  deleteExpiredFromMap(pendingAuthorizeRequests, now);
 }
 
 // Agenda a limpeza periódica em background. `unref()` evita que este timer, sozinho,
@@ -96,6 +98,7 @@ module.exports = {
   authCodes,
   accessTokens,
   fakeLoginSessions,
+  pendingAuthorizeRequests,
   cleanupExpiredRecords,
   startCleanup,
   saveAuthCode,
