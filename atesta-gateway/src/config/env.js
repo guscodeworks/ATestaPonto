@@ -376,7 +376,6 @@ const env = {
   ),
   SESSION_SECRET: sessionSecret,
   ADMIN_SESSION_TTL_MS: adminSessionTtlMs,
-  SCHOOL_UNIT_CODE: getOptionalVar("SCHOOL_UNIT_CODE", "DEFAULT") || "DEFAULT",
 
   POINT_RATE_LIMIT_WINDOW_MS: parseInteger(
     getOptionalVar("POINT_RATE_LIMIT_WINDOW_MS", String(5 * 60 * 1000)),
