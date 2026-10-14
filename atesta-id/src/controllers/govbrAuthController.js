@@ -8,7 +8,7 @@ const { registerAccessToken, findUserInfoByAccessToken } = require('../services/
 const { validateS256 } = require('../services/pkceService');
 const fakeUserService = require('../services/fakeUserService');
 const memoryStore = require('../repositories/memoryStore');
-const pendingAuthorizeStore = require('../repositories/redisPendingAuthorizeStore');
+const pendingAuthorizeStore = require('../repositories/pendingAuthorizeStore');
 const {
   createFakeSessionStore
 } = require('../repositories/fakeSessionStoreFactory');
