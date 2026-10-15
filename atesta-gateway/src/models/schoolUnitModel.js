@@ -22,14 +22,6 @@ async function findById(escolaId, client) {
   );
 }
 
-// Trava a escola para alteração dentro de uma transação.
-async function findByIdForUpdate(client, escolaId) {
-  return getClient(client).executeOne(
-    `SELECT ${UNIDADE_SELECT} FROM unidades_escolares ue WHERE ue.id = ? LIMIT 1 FOR UPDATE`,
-    [escolaId]
-  );
-}
-
 // Escola do vínculo (via vinculos_funcionais.unidade_escolar_id); uso: geolocalização no ponto.
 async function findByVinculo(vinculoId, client) {
   return getClient(client).executeOne(
@@ -181,7 +173,6 @@ async function countForAdmin(filtros = {}, client) {
 
 module.exports = {
   findById,
-  findByIdForUpdate,
   findByVinculo,
   findGeolocationById,
   findGeolocationByVinculo,
