@@ -1,29 +1,20 @@
-# AGENTS.md — atesta-id
+## Purpose
 
-Complementa as regras gerais do AGENTS.md da raiz para o simulador técnico local.
+- ATestaID é um simulador local OAuth para identidades fictícias, não o Gov.br oficial nem um serviço de produção.
 
-## Papel e limites
+## Commands
 
-- Ambiente de demonstração, estudo e apresentação; não substitui o Gov.br real
-  nem deve ser utilizado em produção.
-- Simula autenticação e dados básicos via userinfo. Não decide permissão admin,
-  acesso ao dashboard ou RBAC do Ponto Escolar.
-- Não colete ou armazene CPF, dados pessoais ou credenciais reais.
-- Não se apresente como serviço oficial em ambiente público nem use identidade
-  visual de forma que induza essa interpretação.
-- Não copie regras internas do sistema principal para o simulador.
+- Em `atesta-id/`, `npm run check` verifica a sintaxe de `server.js`.
+- `npm test` executa os testes existentes; use quando pertinente, após conferir seus efeitos colaterais.
+- `npm start` inicia o simulador local com a configuração do ambiente.
 
-## OAuth simulado
+## Constraints
 
-- Preserve validações do fluxo OAuth. Access token é emitido somente pelo
-  endpoint de token; nunca o envie pela URL.
-- Fluxo: Ponto Escolar inicia OAuth, simulador autentica e devolve code;
-  Ponto Escolar troca code por token, consulta userinfo e decide autorização.
-- `Gerenciar pontos` deve iniciar o fluxo no Ponto Escolar usando
-  `PONTO_ESCOLAR_START_URL` configurada, com caminho `/auth/govbr/login`.
-  Nunca chame o callback diretamente nem fixe host ou porta.
-- Ponto Escolar controla state, codeVerifier, codeChallenge, sessão temporária
-  e validação do callback.
-- Preserve as rotas existentes do simulador (incluindo authorize, token e
-  userinfo); não altere o fluxo principal sem solicitação explícita.
-- Não crie rotas ou regras fake que substituam a autorização do sistema real.
+- Preserve Authorization Code, PKCE S256, `state`, code de uso único, emissão pelo endpoint de token, `userinfo`, cookies e validação de cliente.
+- Autorização administrativa, RBAC e dashboard pertencem ao gateway/Spring; não crie atalhos que substituam essa autorização.
+- Não use, colete ou armazene credenciais ou dados pessoais reais; não exponha o simulador publicamente de forma que pareça um serviço oficial.
+- Use URLs configuráveis: `Gerenciar pontos` inicia o fluxo por `PONTO_ESCOLAR_START_URL` em `/auth/govbr/login`; não chame o callback diretamente nem fixe host ou porta.
+
+## Done when
+
+- Fluxo preservado: gateway inicia OAuth, simulador autentica e devolve code; gateway troca code por token, consulta userinfo e decide autorização.

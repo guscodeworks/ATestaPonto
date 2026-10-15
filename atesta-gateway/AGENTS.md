@@ -1,43 +1,20 @@
-# AGENTS.md — atesta-gateway
+## Repo layout
 
-Complementa as regras gerais do AGENTS.md da raiz para o sistema principal Node.js.
+- Node.js 24, npm e CommonJS (`require`/`module.exports`).
+- Em `src/`: routes definem endpoints; controllers tratam HTTP; services concentram regras; models acessam dados; middlewares protegem sessão, RBAC e escopo.
 
-## Estrutura Node
+## Commands
 
-- Preserve CommonJS (`require`/`module.exports`); não migre para ESM sem solicitação.
-- Routes definem endpoints e middlewares; controllers encaminham HTTP aos services.
-- Models existentes executam SQL; middlewares protegem sessão, RBAC e escopo;
-  utils guardam funções reutilizáveis.
-- Reutilize o cliente Spring existente para chamadas assinadas. Valide respostas
-  internas e projete explicitamente os campos públicos antes de responder ao navegador.
-- Não duplique dashboard nem altere frontend ou QR Code fora da tarefa solicitada.
+- Em `atesta-gateway/`, `npm run dev:check` verifica a conexão com `SELECT 1`, usando a configuração real.
+- `npm run mvc:check` verifica limites entre camadas MVC quando essas camadas forem alteradas.
+- `npm run build:client` regenera bundles apenas quando suas fontes forem alteradas.
 
-## Autenticação administrativa
+## Constraints
 
-- Sessão administrativa é criada internamente após autenticação Gov.br/OIDC e
-  autorização pelo cadastro administrativo e acessos ativos do sistema.
-- Preserve `req.session.admin`, validação de `state`, PKCE, callback e revalidação
-  administrativa. Não substitua autorização por presença de token ou perfil do provedor.
-- Fluxo: `/admin/dashboard` exige sessão; `/auth/govbr/login` inicia OAuth;
-  `/auth/govbr/callback` troca code, consulta userinfo e resolve o administrativo;
-  `/auth/govbr/logout` encerra a sessão.
-- Não crie `isAdmin` fake, usuário fake no fluxo real ou tela de escolha de perfil.
-- Simulador pode ser usado por configuração em demonstrações. A troca para Gov.br
-  real não deve introduzir lógica fake no sistema principal.
-- Login pode escrever último login e sessão/Redis. Não o use como validação
-  somente leitura sem autorização para esses efeitos.
+- Preserve `req.session.admin`, OAuth `state`/PKCE, callback e revalidação do cadastro administrativo e acessos ativos; dashboard exige sessão administrativa autorizada.
+- Mantenha ponto separado do fluxo administrativo: preserve identificação, elegibilidade, acesso local/QR, sequência de marcações e proteção contra duplicidade.
+- Reutilize o cliente Spring existente para chamadas HMAC; valide respostas internas e projete os campos públicos antes de responder ao navegador.
 
-## Funcionário e ponto
+## Done when
 
-- Funcionário não acessa dashboard administrativo nem usa o fluxo admin Gov.br.
-- Rotas de ponto permanecem separadas das rotas administrativas.
-- Preserve identificação e elegibilidade do funcionário, validação de acesso
-  local/QR, sequência de marcações e proteção contra duplicidade antes de registrar ponto.
-- Funcionário não define cargo, perfil ou permissões críticas pelo navegador.
-
-## Configuração e diagnóstico
-
-- Reutilize `src/config/env.js` e `src/config/database.js` para a configuração real.
-- `npm run dev:check` verifica a conexão usando somente SELECT 1; não inicializa schema.
-- Não remapeie DB_HOST no launcher Spring. Configuração de Java/Maven e banco
-  pertence ao ambiente, sem inferência automática de Docker ou fallback de hosts.
+- Selecione verificações conforme a mudança; antes de executar testes, confira acesso ao banco e efeitos colaterais. `npm test` não é uma etapa obrigatória.
