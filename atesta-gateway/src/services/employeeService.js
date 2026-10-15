@@ -261,28 +261,22 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
 async function listEmployees(query = {}, escopoUnidades = []) {
   const page = Math.max(Number(query.page || 1), 1);
   const limit = Math.min(Math.max(Number(query.limit || 20), 1), 100);
-  const offset = (page - 1) * limit;
   // Express 5 expõe req.query por getter; normaliza novamente na regra de negócio.
   const ativo = normalizeActiveFilter(query.ativo);
   const cargo = String(query.cargo || "").trim().toUpperCase();
   const q = String(query.q || "").trim();
 
-  const totalRows = await employeeModel.countEmployees({ ativo, cargo, q }, escopoUnidades);
-  const employees = await employeeModel.listEmployees({
+  const result = await employeeReadService.listEmployees({
     ativo,
     cargo,
     q,
+    page,
     limit,
-    offset,
   }, escopoUnidades);
 
   return {
-    items: employees.map(mapListedEmployee),
-    pagination: {
-      page,
-      limit,
-      total: Number(totalRows?.total || 0),
-    },
+    items: result.items.map(mapListedEmployee),
+    pagination: result.pagination,
   };
 }
 
@@ -290,7 +284,7 @@ async function getEmployee(employeeId, vinculoAutorizadoId) {
   if (!Number.isSafeInteger(vinculoAutorizadoId) || vinculoAutorizadoId < 1) {
     throw new NotFoundError("Funcionario nao encontrado");
   }
-  const employee = await employeeModel.findAdminEmployeeById(
+  const employee = await employeeReadService.findAdminEmployeeById(
     employeeId,
     vinculoAutorizadoId
   );

@@ -144,28 +144,6 @@ async function findActiveByFuncionarioIdForUpdate(client, funcionarioId) {
   );
 }
 
-// Vínculo ativo + cargo + unidade + diretoria (fluxo de ponto/dashboard).
-async function findActiveByFuncionarioIdWithDetails(funcionarioId, client) {
-  return getClient(client).executeOne(
-    `SELECT ${VINCULO_WITH_DETAILS_SELECT} ${VINCULO_WITH_DETAILS_JOINS} WHERE v.funcionario_id = ? AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1`,
-    [funcionarioId]
-  );
-}
-
-// Mesmo criterio da lista administrativa: ativo usa vinculo ativo; inativo,
-// o historico mais recente. Nunca autoriza um ativo pelo escopo de um ex-vinculo.
-async function findForAdminEmployeeView(funcionarioId, client) {
-  return getClient(client).executeOne(
-    `SELECT ${VINCULO_WITH_DETAILS_SELECT} ${VINCULO_WITH_DETAILS_JOINS}
-     INNER JOIN funcionarios f ON f.id = v.funcionario_id
-     WHERE v.funcionario_id = ?
-       AND ((f.ativo = 1 AND v.status = 'ATIVO') OR
-            (f.ativo = 0 AND v.status <> 'ATIVO'))
-     ORDER BY v.id DESC LIMIT 1`,
-    [funcionarioId]
-  );
-}
-
 // Vínculo + detalhes por id (ex.: a partir de vinculo_funcional_id em pontos).
 async function findByIdWithDetails(vinculoId, client) {
   return getClient(client).executeOne(
@@ -191,8 +169,6 @@ module.exports = {
   findByFuncionarioId,
   findActiveByFuncionarioId,
   findActiveByFuncionarioIdForUpdate,
-  findActiveByFuncionarioIdWithDetails,
-  findForAdminEmployeeView,
   findByIdWithDetails,
   findLatestByFuncionarioIdWithDetails,
 };
