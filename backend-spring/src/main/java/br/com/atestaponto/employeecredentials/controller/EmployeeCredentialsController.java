@@ -15,6 +15,26 @@ public class EmployeeCredentialsController {
 
     public EmployeeCredentialsController(EmployeeCredentialsService service) { this.service = service; }
 
+    @PostMapping("/login")
+    public EmployeeCredentialsResponse.Authentication login(@RequestBody EmployeeCredentialsRequest.Login request) {
+        return service.login(request);
+    }
+
+    @PostMapping("/validacao-token")
+    public EmployeeCredentialsResponse.Authentication tokenValidation(@RequestBody EmployeeCredentialsRequest.EmployeeId request) {
+        return service.tokenValidation(request);
+    }
+
+    @PostMapping("/vinculo-ativo")
+    public EmployeeCredentialsResponse.LoginLink activeLink(@RequestBody EmployeeCredentialsRequest.EmployeeId request) {
+        return service.activeLink(request);
+    }
+
+    @PostMapping("/ultimo-login")
+    public EmployeeCredentialsResponse.Change lastLogin(@RequestBody EmployeeCredentialsRequest.EmployeeId request) {
+        return service.lastLogin(request);
+    }
+
     @PostMapping("/recuperacao")
     public EmployeeCredentialsResponse.Recovery recovery(@RequestBody EmployeeCredentialsRequest.Recovery request) {
         return service.recovery(request);

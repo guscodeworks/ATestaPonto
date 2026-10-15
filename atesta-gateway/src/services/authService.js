@@ -1,6 +1,6 @@
 "use strict";
 
-const employeeModel = require("../models/employeeModel");
+const { findTokenEmployee } = require("./employeeCredentialsService");
 const crypto = require("node:crypto");
 const env = require("../config/env");
 const { UnauthorizedError } = require("../utils/errors");
@@ -20,7 +20,7 @@ async function findUserByToken(funcionarioId, credentialVersion) {
   if (typeof credentialVersion !== "string" || !/^[a-f0-9]{64}$/.test(credentialVersion)) {
     throw new UnauthorizedError("Sessao invalidada. Faca login novamente.");
   }
-  const funcionario = await employeeModel.findForTokenValidationById(funcionarioId);
+  const funcionario = await findTokenEmployee(funcionarioId);
   if (!funcionario) return null;
 
   const expected = Buffer.from(buildCredentialVersion(funcionario), "hex");

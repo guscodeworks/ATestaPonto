@@ -84,50 +84,6 @@ async function findForPunchDashboardById(employeeId) {
   );
 }
 
-async function findForPunchLoginByCpf(cpf) {
-  // A base antiga guarda o hash em funcionarios/login. Mantemos a leitura
-  // enquanto a migração completa para login_funcionario não foi executada.
-  if (!(await hasModernLoginTable())) {
-    return database.executeOne(
-      "SELECT f.id, f.cpf, f.nome, f.email, COALESCE(l.senha, f.senha) AS senha_hash, f.primeiro_acesso, f.ativo FROM funcionarios f LEFT JOIN login l ON l.id = f.login_id WHERE f.cpf = ? AND f.ativo = 1 LIMIT 1",
-      [cpf]
-    );
-  }
-
-  return database.executeOne(
-    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.cpf = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
-    [cpf]
-  );
-}
-
-async function findForPunchLoginByEmail(email) {
-  if (!(await hasModernLoginTable())) {
-    return database.executeOne(
-      "SELECT f.id, f.cpf, f.nome, f.email, COALESCE(l.senha, f.senha) AS senha_hash, f.primeiro_acesso, f.ativo FROM funcionarios f LEFT JOIN login l ON l.id = f.login_id WHERE f.email = ? AND f.ativo = 1 LIMIT 1",
-      [email]
-    );
-  }
-
-  return database.executeOne(
-    "SELECT f.id, f.cpf, f.nome, f.email, lf.senha_hash, lf.primeiro_acesso, f.ativo FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.email = ? AND f.ativo = 1 AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP) LIMIT 1",
-    [email]
-  );
-}
-
-// Mesma fonte da credencial usada no login; consulta a cada requisição, sem cache.
-async function findForTokenValidationById(funcionarioId) {
-  if (!(await hasModernLoginTable())) {
-    return database.executeOne(
-      "SELECT f.id, f.cpf, f.nome, f.email, f.ativo, COALESCE(l.senha, f.senha) AS senha_hash FROM funcionarios f LEFT JOIN login l ON l.id = f.login_id WHERE f.id = ? LIMIT 1",
-      [funcionarioId]
-    );
-  }
-  return database.executeOne(
-    "SELECT f.id, f.cpf, f.nome, f.email, f.ativo, lf.senha_hash FROM funcionarios f INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
-    [funcionarioId]
-  );
-}
-
 async function hasModernLoginTable() {
   const table = await database.executeOne(
     "SELECT 1 AS found FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'login_funcionario' LIMIT 1"
@@ -248,9 +204,6 @@ module.exports = {
   findById,
   findForPunchDashboardById,
   findForPunchRegisterByIdForUpdate,
-  findForPunchLoginByCpf,
-  findForPunchLoginByEmail,
-  findForTokenValidationById,
   hasModernLoginTable,
   findForPasswordRecoveryByCpf,
   updatePasswordForRecovery,
