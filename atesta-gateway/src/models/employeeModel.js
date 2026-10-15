@@ -71,15 +71,6 @@ async function findById(employeeId, client) {
   );
 }
 
-async function findAdminEmployeeByIdForUpdate(client, employeeId) {
-  return getClient(client).executeOne(
-    "SELECT f.id, f.nome, f.cpf, f.email, f.telefone, lv.cargo_id, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida FROM funcionarios f LEFT JOIN LATERAL (" +
-      ACTIVE_VINCULO_LATERAL +
-      ") lv ON TRUE WHERE f.id = ? LIMIT 1 FOR UPDATE",
-    [employeeId]
-  );
-}
-
 // Trava o cadastro antes de atualizar campos que afetam login/ativação.
 async function findByIdForUpdate(client, employeeId) {
   return getClient(client).executeOne(
@@ -208,14 +199,6 @@ async function findCpfConflictForUpdate(client, cpf, excludedEmployeeId) {
   );
 }
 
-// Análogo a findCpfConflictForUpdate para e-mail.
-async function findEmailConflictForUpdate(client, email, excludedEmployeeId) {
-  return getClient(client).executeOne(
-    "SELECT id FROM funcionarios WHERE email = ? AND id <> ? LIMIT 1 FOR UPDATE",
-    [email, excludedEmployeeId]
-  );
-}
-
 async function listForPointReport(escopoUnidades = []) {
   const { clause, params } = buildEscopoUnidadeFilter(escopoUnidades);
   return database.execute(
@@ -235,17 +218,6 @@ async function createEmployee(
   return getClient(client).execute(
     "INSERT INTO funcionarios (cpf, email, nome, telefone, ativo) VALUES (?, ?, ?, ?, ?)",
     [cpf, email, nome, telefone, ativo ? 1 : 0]
-  );
-}
-
-async function updateAdminEmployee(
-  client,
-  employeeId,
-  { nome, email, telefone }
-) {
-  return getClient(client).execute(
-    "UPDATE funcionarios SET nome = ?, email = ?, telefone = ? WHERE id = ?",
-    [nome, email, telefone, employeeId]
   );
 }
 
@@ -302,7 +274,6 @@ async function findEmployeeActivationById(client, employeeId) {
 module.exports = {
   withTransaction,
   findById,
-  findAdminEmployeeByIdForUpdate,
   findByIdForUpdate,
   findForPunchDashboardById,
   findForPunchRegisterByIdForUpdate,
@@ -315,10 +286,8 @@ module.exports = {
   findByCpfForUpdate,
   findByEmailForUpdate,
   findCpfConflictForUpdate,
-  findEmailConflictForUpdate,
   listForPointReport,
   createEmployee,
-  updateAdminEmployee,
   updateEmployee,
   updateEmployeeActivation,
   findEmployeeActivationById,
