@@ -15,7 +15,7 @@ const router = Router();
 // Confirma o que foi levantado no router pai: authenticateFuncionario protege
 // as rotas de registro de ponto neste nível, garantindo req.auth.id disponível
 // nos controllers.
-router.post('/login', loginLimiter, funcionarioLoginValidator, loginFuncionario);
+router.post('/login', loginLimiter, funcionarioLoginValidator, employeeQrAccessSession, requireCurrentQrSchoolUnitContext, loginFuncionario);
 router.post('/primeiro-acesso/trocar-senha', sensitiveLimiter, passwordRecoveryResetValidator, changeFirstAccessPassword);
 router.use('/recuperar-senha', passwordRecoverySession);
 router.post('/recuperar-senha/solicitar', passwordRecoveryLimiter, passwordRecoveryRequestValidator, requestRecovery);

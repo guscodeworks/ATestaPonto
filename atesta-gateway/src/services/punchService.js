@@ -4,9 +4,7 @@ const bcrypt = require("bcrypt");
 const { requestSpring } = require("../integrations/springBackendClient");
 const jwt = require("jsonwebtoken");
 const env = require("../config/env");
-const employeeModel = require("../models/employeeModel");
-const loginModel = require("../models/loginModel");
-const employmentLinkModel = require("../models/employmentLinkModel");
+const { findLoginEmployee, findLoginLink, updateLastLogin } = require("./employeeCredentialsService");
 const { isValidCpf, maskCpf, normalizeCpf } = require("../utils/cpf");
 const { PUNCH_TYPES } = require("../utils/punch");
 const {
@@ -17,6 +15,7 @@ const {
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 const { buildCredentialVersion } = require("./authService");
+const { createFirstAccessToken } = require("./firstAccessTokenService");
 
 function mapFuncionario(funcionario) {
   return {
@@ -147,14 +146,6 @@ function resolveLogin(body = {}) {
   };
 }
 
-async function findFuncionarioForLogin({ cpf, email }) {
-  if (email) {
-    return employeeModel.findForPunchLoginByEmail(email);
-  }
-
-  return employeeModel.findForPunchLoginByCpf(cpf);
-}
-
 function isFirstAccess(value) {
   return value === true || value === 1 || value === "1";
 }
@@ -175,7 +166,7 @@ async function loginFuncionario(
     throw new ForbiddenError("Contexto de QR Code invalido");
   }
 
-  const funcionario = await findFuncionarioForLogin(login);
+  const funcionario = await findLoginEmployee(login);
   const senhaCorreta = await bcrypt.compare(
     login.senha,
     String(funcionario?.senha_hash || INVALID_PASSWORD_HASH)
@@ -200,10 +191,8 @@ async function loginFuncionario(
   // ultimo_login_em (não marca sessão inválida como login bem-sucedido).
   // O banco legado não possui vínculos funcionais. Nele, a flag ativo do
   // funcionário já é a regra disponível para autorizar o acesso.
-  if (await employeeModel.hasModernLoginTable()) {
-    const vinculoAtivo = await employmentLinkModel.findActiveByFuncionarioId(
-      funcionario.id
-    );
+  const { modern, vinculo: vinculoAtivo } = await findLoginLink(funcionario.id);
+  if (modern) {
     if (!vinculoAtivo) {
       await registerAuditLog({
         evento: "funcionario_login_invalido",
@@ -255,7 +244,7 @@ async function loginFuncionario(
     };
   }
 
-  await loginModel.updateLastLogin(funcionario.id);
+  await updateLastLogin(funcionario.id, modern);
 
   const tokenPayload = {
     sub: String(funcionario.id),
