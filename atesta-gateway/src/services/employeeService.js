@@ -13,6 +13,7 @@ const {
 const { registerAuditLog } = require("./auditLogService");
 const employeeModel = require("../models/employeeModel");
 const employeeCreateService = require("./employeeCreateService");
+const employeeReadService = require("./employeeReadService");
 const loginModel = require("../models/loginModel");
 const employeeEditService = require("./employeeEditService");
 const employmentLinkModel = require("../models/employmentLinkModel");
