@@ -12,7 +12,7 @@ const {
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
 const employeeModel = require("../models/employeeModel");
-const employeeReadService = require("./employeeReadService");
+const employeeCreateService = require("./employeeCreateService");
 const loginModel = require("../models/loginModel");
 const roleModel = require("../models/roleModel");
 const employmentLinkModel = require("../models/employmentLinkModel");
@@ -215,91 +215,27 @@ async function createEmployee(body, { adminId, ipOrigem } = {}) {
     env.BCRYPT_SALT_ROUNDS
   );
 
-  // Transação cobre duplicidade, cargo, login e funcionário como uma unidade.
-  const createdIds = await employeeModel.withTransaction(async (tx) => {
-    const cpfExists = await employeeModel.findByCpfForUpdate(tx, cpf);
-    if (cpfExists?.id) {
-      throw new ConflictError("CPF ja cadastrado");
-    }
-
-    const emailExists = await employeeModel.findByEmailForUpdate(tx, email);
-    if (emailExists?.id) {
-      throw new ConflictError("Email ja cadastrado");
-    }
-
-    // unidade obrigatória: confirma existência p/ falhar cedo com msg de negócio
-    // em vez de estourar a FK no INSERT do vínculo.
-    const unidade = await schoolUnitModel.findByIdForUpdate(
-      tx,
-      schoolUnitId
-    );
-    if (!unidade) {
-      throw new NotFoundError("Unidade escolar nao encontrada");
-    }
-
-    // cargo: reutiliza o row existente ou cria um novo (UNIQUE/compartilhada).
-    const cargoId = await findOrCreateCargo(tx, cargoSchedule.cargo);
-
-    const result = await employeeModel.createEmployee(tx, {
-      cpf,
-      nome,
-      email,
-      telefone,
-      ativo,
-      cargoId,
-    });
-    const funcionarioId = Number(result.insertId);
-    if (!Number.isInteger(funcionarioId) || funcionarioId < 1) {
-      throw new Error("Falha ao obter o ID do funcionario criado");
-    }
-
-    await loginModel.createLogin(tx, { funcionarioId, senhaHash });
-    // Vínculo na mesma transação; rollback desfaz funcionário, login e cargo juntos.
-    const vinculoResult = await employmentLinkModel.createVinculo(tx, {
-      funcionarioId,
-      schoolUnitId,
-      cargoId,
-      entrada: cargoSchedule.entrada,
-      saidaAlmoco: cargoSchedule.saidaAlmoco,
-      retornoAlmoco: cargoSchedule.retornoAlmoco,
-      saida: cargoSchedule.saida,
-    });
-    if (!ativo) {
-      await employmentLinkModel.encerrarVinculo(tx, vinculoResult.insertId);
-    }
-
-    return { funcionarioId, cargoId };
+  // O Spring cria funcionário, credencial e vínculo na mesma transação.
+  // Senha temporária e hash são gerados no gateway; efeitos externos seguem aqui.
+  const created = await employeeCreateService.createEmployee({
+    nome,
+    cpf,
+    email,
+    telefone,
+    ativo,
+    unidadeEscolarId: schoolUnitId,
+    cargo: cargoSchedule.cargo,
+    entrada: cargoSchedule.entrada,
+    saidaAlmoco: cargoSchedule.saidaAlmoco,
+    retornoAlmoco: cargoSchedule.retornoAlmoco,
+    saida: cargoSchedule.saida,
+    senhaHash,
   });
-
-  let created;
-  try {
-    created = await employeeModel.findById(createdIds.funcionarioId);
-  } catch (error) {
-    logger.warn("Cadastro concluido, mas a leitura complementar falhou", {
-      error,
-      funcionarioId: createdIds.funcionarioId,
-    });
-  }
-
-  if (!created) {
-    created = {
-      id: createdIds.funcionarioId,
-      cpf,
-      nome,
-      email,
-      telefone,
-      ativo,
-      criado_em: null,
-      primeiro_acesso: true,
-      cargo_id: createdIds.cargoId,
-      cargo_nome: cargoSchedule.cargo,
-    };
-  }
 
   await registerAuditLog({
     evento: "funcionario_cadastrado",
     adminId,
-    funcionarioId: createdIds.funcionarioId,
+    funcionarioId: created.id,
     mensagem: "Cadastro de funcionario realizado",
     ipOrigem,
     metadados: {
