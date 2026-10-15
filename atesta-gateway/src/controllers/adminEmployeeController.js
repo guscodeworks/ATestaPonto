@@ -97,7 +97,7 @@ async function deactivateEmployee(req, res, next) {
     const result = await employeeService.deactivateEmployee(
       employeeId,
       req.body.confirmacao,
-      getAuditContext(req)
+      { ...getAuditContext(req), vinculoAutorizado: req.vinculoAutorizado }
     );
 
     return res.status(200).json({

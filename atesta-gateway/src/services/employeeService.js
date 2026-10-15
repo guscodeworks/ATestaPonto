@@ -7,17 +7,14 @@ const { logger } = require("../utils/logger");
 const { formatCpf, maskCpf } = require("../utils/cpf");
 const {
   BadRequestError,
-  ConflictError,
   NotFoundError,
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
-const employeeModel = require("../models/employeeModel");
+const employeeActivationService = require("./employeeActivationService");
 const employeeCreateService = require("./employeeCreateService");
 const employeeReadService = require("./employeeReadService");
 const loginModel = require("../models/loginModel");
 const employeeEditService = require("./employeeEditService");
-const employmentLinkModel = require("../models/employmentLinkModel");
-const schoolUnitModel = require("../models/schoolUnitModel");
 const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
@@ -303,88 +300,12 @@ async function changeEmployeeActivation(
     );
   }
 
-  const updated = await employeeModel.withTransaction(async (tx) => {
-    const existing = await employeeModel.findByIdForUpdate(tx, employeeId);
-    if (!existing) {
-      throw new NotFoundError("Funcionario nao encontrado");
-    }
-
-    if (Boolean(existing.ativo) === ativo) {
-      throw new ConflictError(
-        ativo
-          ? "Funcionario ja esta ativo"
-          : "Funcionario ja esta inativo"
-      );
-    }
-
-    const result = await employeeModel.updateEmployeeActivation(
-      tx,
-      employeeId,
-      ativo
-    );
-    if (!result.affectedRows) {
-      throw new Error("Falha ao atualizar o status do funcionario");
-    }
-
-    // A flag e o vínculo mudam atomicamente; vínculos encerrados são históricos.
-    if (!ativo) {
-      const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
-        tx,
-        employeeId
-      );
-      if (vinculo) {
-        await employmentLinkModel.encerrarVinculo(tx, vinculo.id);
-      }
-    } else {
-      const ativoExistente = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
-        tx, employeeId
-      );
-      if (ativoExistente) {
-        throw new ConflictError("Funcionario inativo possui vinculo ativo; regularize o cadastro");
-      }
-      const ultimo = await employmentLinkModel.findLatestByFuncionarioIdWithDetails(
-        employeeId, tx
-      );
-      if (!ultimo || Number(ultimo.id) !== vinculoAutorizado?.id) {
-        throw new ConflictError("Vinculo de reativacao alterado ou ausente; atualize e tente novamente");
-      }
-      const vinculo = await employmentLinkModel.getByIdForUpdate(tx, ultimo.id);
-      if (!vinculo || vinculo.status !== "ENCERRADO") {
-        throw new ConflictError("Reativacao exige um vinculo anterior encerrado");
-      }
-      const unidade = await schoolUnitModel.findByIdForUpdate(tx, vinculo.unidade_escolar_id);
-      if (!unidade || !Boolean(unidade.ativa)) {
-        throw new ConflictError("Unidade escolar ausente ou inativa para reativacao");
-      }
-      if (Number(unidade.id) !== vinculoAutorizado.unidadeEscolarId ||
-          Number(unidade.diretoria_ensino_id) !== vinculoAutorizado.diretoriaEnsinoId) {
-        throw new ConflictError("Escopo da unidade alterado; atualize e tente novamente");
-      }
-      const jornada = readCargoSchedule({ ...vinculo, cargo: ultimo.cargo });
-      // A matricula pertence ao periodo funcional encerrado. O novo vinculo
-      // nasce sem matricula para preservar o historico e respeitar a UNIQUE
-      // (unidade_escolar_id, matricula).
-      await employmentLinkModel.createVinculo(tx, {
-        funcionarioId: employeeId,
-        schoolUnitId: unidade.id,
-        cargoId: vinculo.cargo_id,
-        entrada: jornada.entrada,
-        saidaAlmoco: jornada.saidaAlmoco,
-        retornoAlmoco: jornada.retornoAlmoco,
-        saida: jornada.saida,
-      });
-    }
-
-    const status = await employeeModel.findEmployeeActivationById(
-      tx,
-      employeeId
-    );
-    if (!status) {
-      throw new Error("Falha ao consultar o status atualizado do funcionario");
-    }
-
-    return status;
-  });
+  const updated = await employeeActivationService.changeEmployeeActivation(
+    employeeId,
+    ativo,
+    confirmation,
+    vinculoAutorizado
+  );
 
   await registerAuditLog({
     evento: ativo ? "funcionario_ativado" : "funcionario_desativado",

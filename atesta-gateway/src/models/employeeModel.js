@@ -4,10 +4,6 @@ function getClient(client) {
   return client || database;
 }
 
-async function withTransaction(callback) {
-  return database.withTransaction(callback);
-}
-
 // Vínculo ATIVO mais recente por funcionário; LATERAL + LIMIT 1 evita duplicar linhas.
 const ACTIVE_VINCULO_LATERAL = `
   SELECT v.cargo_id, c.cargo, v.unidade_escolar_id,
@@ -67,14 +63,6 @@ async function findById(employeeId, client) {
     "SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.desativado_em, f.criado_em, f.atualizado_em, lv.cargo_id, c.cargo AS cargo_nome, lf.primeiro_acesso FROM funcionarios f LEFT JOIN LATERAL (" +
       ACTIVE_VINCULO_LATERAL +
       ") lv ON TRUE LEFT JOIN cargos c ON c.id = lv.cargo_id LEFT JOIN login_funcionario lf ON lf.funcionario_id = f.id WHERE f.id = ? LIMIT 1",
-    [employeeId]
-  );
-}
-
-// Trava o cadastro antes de atualizar campos que afetam login/ativação.
-async function findByIdForUpdate(client, employeeId) {
-  return getClient(client).executeOne(
-    "SELECT id, cpf, email, nome, telefone, ativo, desativado_em FROM funcionarios WHERE id = ? LIMIT 1 FOR UPDATE",
     [employeeId]
   );
 }
@@ -256,25 +244,8 @@ async function updateEmployee(client, employeeId, fields) {
   };
 }
 
-async function updateEmployeeActivation(client, employeeId, ativo) {
-  const activeValue = ativo ? 1 : 0;
-  return getClient(client).execute(
-    "UPDATE funcionarios SET ativo = ?, desativado_em = IF(? = 1, NULL, CURRENT_TIMESTAMP) WHERE id = ?",
-    [activeValue, activeValue, employeeId]
-  );
-}
-
-async function findEmployeeActivationById(client, employeeId) {
-  return getClient(client).executeOne(
-    "SELECT id, ativo, desativado_em FROM funcionarios WHERE id = ? LIMIT 1",
-    [employeeId]
-  );
-}
-
 module.exports = {
-  withTransaction,
   findById,
-  findByIdForUpdate,
   findForPunchDashboardById,
   findForPunchRegisterByIdForUpdate,
   findForPunchLoginByCpf,
@@ -289,6 +260,4 @@ module.exports = {
   listForPointReport,
   createEmployee,
   updateEmployee,
-  updateEmployeeActivation,
-  findEmployeeActivationById,
 };
