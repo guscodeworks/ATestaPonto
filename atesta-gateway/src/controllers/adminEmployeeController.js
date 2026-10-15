@@ -79,7 +79,7 @@ async function updateEmployee(req, res, next) {
     const result = await employeeService.updateEmployee(
       employeeId,
       req.body,
-      getAuditContext(req)
+      { ...getAuditContext(req), vinculoAutorizado: req.vinculoAutorizado }
     );
 
     return res.status(200).json({

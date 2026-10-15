@@ -14,25 +14,13 @@ const { registerAuditLog } = require("./auditLogService");
 const employeeModel = require("../models/employeeModel");
 const employeeCreateService = require("./employeeCreateService");
 const loginModel = require("../models/loginModel");
-const roleModel = require("../models/roleModel");
+const employeeEditService = require("./employeeEditService");
 const employmentLinkModel = require("../models/employmentLinkModel");
 const schoolUnitModel = require("../models/schoolUnitModel");
 const { sendEmployeeWelcomeEmail } = require("./emailService");
 
 const CARGO_TYPES = new Set(["FUNCIONARIO", "INSPETOR", "PROFESSOR"]);
 
-// Edição aceita o mesmo conjunto do cadastro.
-const EDITABLE_CARGO_TYPES = CARGO_TYPES;
-const EDITABLE_EMPLOYEE_FIELDS = new Set([
-  "nome",
-  "email",
-  "telefone",
-  "cargo",
-  "entrada",
-  "saida_almoco",
-  "retorno_almoco",
-  "saida",
-]);
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
 
 // CPF mascarado na saída; só usado internamente para lógica.
@@ -179,22 +167,6 @@ function normalizeUnidadeEscolarId(value) {
   return id;
 }
 
-// `cargo` é UNIQUE/compartilhada: reutiliza o row existente. Roda na transação
-// com FOR UPDATE p/ que dois cadastros concorrentes do mesmo cargo sejam determinísticos.
-async function findOrCreateCargo(client, cargo) {
-  const existing = await roleModel.findByNomeForUpdate(client, cargo);
-  if (existing) {
-    return Number(existing.id);
-  }
-
-  const insert = await roleModel.createCargo(client, { cargo });
-  const cargoId = Number(insert.insertId);
-  if (!Number.isInteger(cargoId) || cargoId < 1) {
-    throw new Error("Falha ao obter o ID do cargo criado");
-  }
-  return cargoId;
-}
-
 // Cria funcionário + login juntos: evita credencial sem cadastro ativo.
 async function createEmployee(body, { adminId, ipOrigem } = {}) {
   const nome = String(body.nome || "").trim();
@@ -297,152 +269,8 @@ async function getEmployee(employeeId, vinculoAutorizadoId) {
   };
 }
 
-function resolveEditableEmployee(body, existing) {
-  const fields = Object.keys(body || {});
-  if (
-    fields.length === 0 ||
-    fields.some((field) => !EDITABLE_EMPLOYEE_FIELDS.has(field))
-  ) {
-    throw new BadRequestError("Campos de atualizacao invalidos");
-  }
-
-  const cargo = String(
-    body.cargo !== undefined ? body.cargo : existing.cargo
-  )
-    .trim()
-    .toUpperCase();
-  if (!EDITABLE_CARGO_TYPES.has(cargo)) {
-    throw new BadRequestError("cargo invalido");
-  }
-
-  const sourceTimes = {
-    entrada: body.entrada !== undefined ? body.entrada : existing.entrada,
-    saidaAlmoco:
-      body.saida_almoco !== undefined
-        ? body.saida_almoco
-        : existing.saida_almoco,
-    retornoAlmoco:
-      body.retorno_almoco !== undefined
-        ? body.retorno_almoco
-        : existing.retorno_almoco,
-    saida: body.saida !== undefined ? body.saida : existing.saida,
-  };
-  const times = Object.fromEntries(
-    Object.entries(sourceTimes).map(([field, value]) => [
-      field,
-      String(value || "").trim(),
-    ])
-  );
-
-  if (Object.values(times).some((time) => !TIME_PATTERN.test(time))) {
-    throw new BadRequestError("Horarios do cargo invalidos");
-  }
-
-  const orderedTimes = [
-    times.entrada,
-    times.saidaAlmoco,
-    times.retornoAlmoco,
-    times.saida,
-  ].map((time) => {
-    const [hours, minutes, seconds = "0"] = time.split(":");
-    return Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
-  });
-  if (
-    !orderedTimes.every(
-      (time, index) => index === 0 || orderedTimes[index - 1] < time
-    )
-  ) {
-    throw new BadRequestError(
-      "Horarios devem seguir entrada < saida_almoco < retorno_almoco < saida"
-    );
-  }
-
-  const toDatabaseTime = (time) => (time.length === 5 ? `${time}:00` : time);
-  return {
-    nome:
-      body.nome !== undefined
-        ? String(body.nome).trim()
-        : String(existing.nome),
-    email:
-      body.email !== undefined
-        ? String(body.email).trim().toLowerCase()
-        : String(existing.email).trim().toLowerCase(),
-    telefone:
-      body.telefone !== undefined
-        ? String(body.telefone || "").replace(/\D/g, "") || null
-        : existing.telefone || null,
-    cargoSchedule: {
-      cargo,
-      entrada: toDatabaseTime(times.entrada),
-      saidaAlmoco: toDatabaseTime(times.saidaAlmoco),
-      retornoAlmoco: toDatabaseTime(times.retornoAlmoco),
-      saida: toDatabaseTime(times.saida),
-    },
-  };
-}
-
-/**
- * Atualiza o funcionario e seu cargo exclusivo como uma unica operacao atomica.
- */
-async function updateEmployee(employeeId, body, { adminId, ipOrigem } = {}) {
-  const updated = await employeeModel.withTransaction(async (tx) => {
-    const existing = await employeeModel.findAdminEmployeeByIdForUpdate(
-      tx,
-      employeeId
-    );
-    if (!existing) {
-      throw new NotFoundError("Funcionario nao encontrado");
-    }
-
-    // Jornada/cargo vivem no vínculo ativo (cargos é UNIQUE/compartilhada, não
-    // por funcionário). Sem vínculo ativo não há onde editar a jornada. Nunca
-    // renomeia o row de cargos (afetaria outros funcionários) — re-aponta o
-    // vínculo p/ o cargo-alvo (find-or-create pelo nome).
-    const vinculo = await employmentLinkModel.findActiveByFuncionarioIdForUpdate(
-      tx,
-      employeeId
-    );
-    if (!vinculo) {
-      throw new ConflictError("Funcionario sem vinculo ativo para editar");
-    }
-
-    const edits = resolveEditableEmployee(body, existing);
-    const emailExists = await employeeModel.findEmailConflictForUpdate(
-      tx,
-      edits.email,
-      employeeId
-    );
-    if (emailExists) {
-      throw new ConflictError("Email ja cadastrado");
-    }
-
-    // Sem guard em affectedRows: o UPDATE do mysql2 devolve linhas ALTERADAS (não
-    // "matched"), então uma edição no-op (jornada repetida) daria 0 → falso "não encontrado".
-    await employeeModel.updateAdminEmployee(tx, employeeId, edits);
-
-    // Re-aponta o vínculo ao cargo-alvo (find-or-create pelo nome) e sobrescreve a jornada.
-    const cargoId = await findOrCreateCargo(tx, edits.cargoSchedule.cargo);
-    await employmentLinkModel.update(tx, vinculo.id, {
-      cargoId,
-      entrada: edits.cargoSchedule.entrada,
-      saidaAlmoco: edits.cargoSchedule.saidaAlmoco,
-      retornoAlmoco: edits.cargoSchedule.retornoAlmoco,
-      saida: edits.cargoSchedule.saida,
-    });
-
-    return {
-      ...existing,
-      cargo_id: cargoId,
-      nome: edits.nome,
-      email: edits.email,
-      telefone: edits.telefone,
-      cargo: edits.cargoSchedule.cargo,
-      entrada: edits.cargoSchedule.entrada,
-      saida_almoco: edits.cargoSchedule.saidaAlmoco,
-      retorno_almoco: edits.cargoSchedule.retornoAlmoco,
-      saida: edits.cargoSchedule.saida,
-    };
-  });
+async function updateEmployee(employeeId, body, { adminId, ipOrigem, vinculoAutorizado } = {}) {
+  const updated = await employeeEditService.updateEmployee(employeeId, body, vinculoAutorizado);
 
   await registerAuditLog({
     evento: "funcionario_alterado",
