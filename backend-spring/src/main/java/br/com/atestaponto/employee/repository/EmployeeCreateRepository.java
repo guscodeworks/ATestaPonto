@@ -48,6 +48,11 @@ public class EmployeeCreateRepository {
                 (row, index) -> row.getLong("id"), unitId).isEmpty();
     }
 
+    public boolean lockAuthorizedSchoolUnit(long unitId, long departmentId) {
+        return !jdbc.query("SELECT id FROM unidades_escolares WHERE id = ? AND diretoria_ensino_id = ? FOR UPDATE",
+                (row, index) -> row.getLong("id"), unitId, departmentId).isEmpty();
+    }
+
     public long findOrCreateCargo(String cargo) {
         // INSERT IGNORE deixa o índice UNIQUE resolver corridas sem atualizar cargo existente.
         jdbc.update("INSERT IGNORE INTO cargos (cargo) VALUES (?)", cargo);

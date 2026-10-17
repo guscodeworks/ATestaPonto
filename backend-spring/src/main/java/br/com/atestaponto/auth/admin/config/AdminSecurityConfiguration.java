@@ -2,6 +2,8 @@ package br.com.atestaponto.auth.admin.config;
 
 import br.com.atestaponto.auth.admin.controller.PublicAdminAuthController.AdminPrincipal;
 import br.com.atestaponto.auth.admin.service.PublicAdminAuthorization;
+import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +19,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Configuration
@@ -41,10 +44,16 @@ public class AdminSecurityConfiguration {
     @Bean
     @Order(2)
     public SecurityFilterChain publicAdminSecurity(HttpSecurity http,
-            HttpSessionSecurityContextRepository contexts, PublicAdminAuthorization authorization) throws Exception {
+            HttpSessionSecurityContextRepository contexts, PublicAdminAuthorization authorization,
+            PublicEmployeeAuthorization employees, ObjectMapper json,
+            @org.springframework.beans.factory.annotation.Value("${admin.govbr.redirect-uri}") String redirectUri) throws Exception {
+        var callback = java.net.URI.create(redirectUri);
+        String origin = callback.getScheme() + "://" + callback.getRawAuthority();
         return http.securityContext(c -> c.securityContextRepository(contexts))
                 .requestCache(c -> c.disable())
-                .csrf(c -> c.ignoringRequestMatchers("/auth/govbr/logout"))
+                .csrf(c -> c.ignoringRequestMatchers("/auth/govbr/logout")
+                        // O frontend existente nao envia token CSRF; exige origem configurada para estas APIs.
+                        .ignoringRequestMatchers(request -> employeeApi(request) && sameOrigin(request, origin)))
                 .logout(c -> c.disable())
                 .authorizeHttpRequests(a -> a
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
@@ -55,8 +64,12 @@ public class AdminSecurityConfiguration {
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e.authenticationEntryPoint((request, response, failure) -> {
-                    if (request.getServletPath().startsWith("/api/")) response.sendError(401);
+                    if (employeeApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
+                    else if (request.getServletPath().startsWith("/api/")) response.sendError(401);
                     else response.sendRedirect("/auth/govbr/login");
+                }).accessDeniedHandler((request, response, failure) -> {
+                    if (employeeApi(request)) PublicAdminApiErrors.write(response, json, 403, "FORBIDDEN", "Forbidden");
+                    else response.sendError(403);
                 }))
                 .addFilterAfter(new OncePerRequestFilter() {
                     @Override
@@ -73,13 +86,30 @@ public class AdminSecurityConfiguration {
                             } catch (RuntimeException denied) {
                                 if (session != null) session.invalidate();
                                 SecurityContextHolder.clearContext();
-                                if (request.getServletPath().startsWith("/api/")) response.sendError(401);
+                                if (employeeApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
+                                else if (request.getServletPath().startsWith("/api/")) response.sendError(401);
                                 else response.sendRedirect("/auth/govbr/login");
                                 return;
                             }
                         }
                         chain.doFilter(request, response);
                     }
-                }, SecurityContextHolderFilter.class).build();
+                }, SecurityContextHolderFilter.class)
+                .addFilterAfter(new PublicEmployeeAuthorizationFilter(employees, json), AuthorizationFilter.class)
+                .build();
+    }
+
+    private static boolean employeeApi(HttpServletRequest request) {
+        String path = request.getServletPath();
+        return path.equals("/api/admin/funcionarios") || path.startsWith("/api/admin/funcionarios/");
+    }
+
+    private static boolean sameOrigin(HttpServletRequest request, String origin) {
+        String source = request.getHeader("Origin");
+        if (source == null) source = request.getHeader("Referer");
+        try {
+            var uri = java.net.URI.create(source == null ? "" : source);
+            return uri.getUserInfo() == null && origin.equals(uri.getScheme() + "://" + uri.getRawAuthority());
+        } catch (IllegalArgumentException invalid) { return false; }
     }
 }
