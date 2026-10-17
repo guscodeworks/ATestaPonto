@@ -23,9 +23,17 @@ public class AdminContextService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identificador administrativo invalido");
         }
         var admin = repository.findById(adminId).orElse(null);
-        // Perfis, capacidades e escopo continuam sendo interpretados exclusivamente pelo Node.
+        // A interpretacao de perfis e escopo pertence a camada de autorizacao.
         var accesses = admin == null || !admin.ativo()
                 ? List.<AdminContextResponse.Access>of() : repository.findActiveAccesses(adminId);
+        return new AdminContextResponse(admin, accesses);
+    }
+
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public AdminContextResponse readForUpdate(long adminId) {
+        var admin = repository.findByIdForUpdate(adminId).orElse(null);
+        var accesses = admin == null || !admin.ativo()
+                ? List.<AdminContextResponse.Access>of() : repository.findActiveAccessesForUpdate(adminId);
         return new AdminContextResponse(admin, accesses);
     }
 

@@ -53,7 +53,7 @@ public class AdminSecurityConfiguration {
                 .requestCache(c -> c.disable())
                 .csrf(c -> c.ignoringRequestMatchers("/auth/govbr/logout")
                         // O frontend existente nao envia token CSRF; exige origem configurada para estas APIs.
-                        .ignoringRequestMatchers(request -> employeeApi(request) && sameOrigin(request, origin)))
+                        .ignoringRequestMatchers(request -> publicApi(request) && sameOrigin(request, origin)))
                 .logout(c -> c.disable())
                 .authorizeHttpRequests(a -> a
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
@@ -64,11 +64,11 @@ public class AdminSecurityConfiguration {
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e.authenticationEntryPoint((request, response, failure) -> {
-                    if (employeeApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
+                    if (publicApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
                     else if (request.getServletPath().startsWith("/api/")) response.sendError(401);
                     else response.sendRedirect("/auth/govbr/login");
                 }).accessDeniedHandler((request, response, failure) -> {
-                    if (employeeApi(request)) PublicAdminApiErrors.write(response, json, 403, "FORBIDDEN", "Forbidden");
+                    if (publicApi(request)) PublicAdminApiErrors.write(response, json, 403, "FORBIDDEN", "Forbidden");
                     else response.sendError(403);
                 }))
                 .addFilterAfter(new OncePerRequestFilter() {
@@ -86,7 +86,7 @@ public class AdminSecurityConfiguration {
                             } catch (RuntimeException denied) {
                                 if (session != null) session.invalidate();
                                 SecurityContextHolder.clearContext();
-                                if (employeeApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
+                                if (publicApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
                                 else if (request.getServletPath().startsWith("/api/")) response.sendError(401);
                                 else response.sendRedirect("/auth/govbr/login");
                                 return;
@@ -99,9 +99,10 @@ public class AdminSecurityConfiguration {
                 .build();
     }
 
-    private static boolean employeeApi(HttpServletRequest request) {
+    private static boolean publicApi(HttpServletRequest request) {
         String path = request.getServletPath();
-        return path.equals("/api/admin/funcionarios") || path.startsWith("/api/admin/funcionarios/");
+        return java.util.List.of("/api/admin/funcionarios", "/api/admin/escolas", "/api/admin/diretorias")
+                .stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
     }
 
     private static boolean sameOrigin(HttpServletRequest request, String origin) {
