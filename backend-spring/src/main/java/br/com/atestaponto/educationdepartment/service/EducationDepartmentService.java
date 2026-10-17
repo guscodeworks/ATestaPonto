@@ -24,20 +24,38 @@ public class EducationDepartmentService {
 
     @Transactional
     public EducationDepartmentResponse create(EducationDepartmentRequest request) {
+        return createAuthorized(request, () -> {});
+    }
+
+    @Transactional
+    public EducationDepartmentResponse createAuthorized(EducationDepartmentRequest request, Runnable reauthorize) {
+        reauthorize.run();
         long id = repository.create(request);
         return repository.findForUpdate(id).orElseThrow();
     }
 
     @Transactional
     public EducationDepartmentResponse update(Long id, EducationDepartmentRequest request) {
+        return updateAuthorized(id, request, () -> {});
+    }
+
+    @Transactional
+    public EducationDepartmentResponse updateAuthorized(Long id, EducationDepartmentRequest request, Runnable reauthorize) {
         requireForUpdate(id);
+        reauthorize.run();
         repository.update(id, request);
         return repository.findForUpdate(id).orElseThrow();
     }
 
     @Transactional(isolation = Isolation.REPEATABLE_READ)
     public EducationDepartmentResponse changeStatus(Long id, boolean active) {
+        return changeStatusAuthorized(id, active, () -> {});
+    }
+
+    @Transactional(isolation = Isolation.REPEATABLE_READ)
+    public EducationDepartmentResponse changeStatusAuthorized(Long id, boolean active, Runnable reauthorize) {
         requireForUpdate(id);
+        reauthorize.run();
         if (!active && repository.hasDependenciesForDeactivation(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "A DRE possui escolas ativas, vinculos funcionais nao encerrados ou acessos administrativos vigentes");

@@ -14,7 +14,14 @@ public class PublicAdminAuthorization {
     }
 
     public AdminContextResponse requireActive(long id) {
-        var context = admins.read(id);
+        return requireValid(admins.read(id), id);
+    }
+
+    public AdminContextResponse requireActiveForUpdate(long id) {
+        return requireValid(admins.readForUpdate(id), id);
+    }
+
+    private AdminContextResponse requireValid(AdminContextResponse context, long id) {
         if (context.admin() == null || !context.admin().ativo() || context.acessos().isEmpty()
                 || context.acessos().stream().anyMatch(access -> !validAccess(access, id))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso administrativo indisponivel");

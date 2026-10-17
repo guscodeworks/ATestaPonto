@@ -81,6 +81,10 @@ public class SchoolService {
     }
 
     public SchoolResponse create(SchoolPreviewRequest request) {
+        return createAuthorized(request, () -> {});
+    }
+
+    public SchoolResponse createAuthorized(SchoolPreviewRequest request, Runnable reauthorize) {
         // Reexecuta a validacao e a consulta BrasilAPI; nunca recebe coordenadas/endereco do cliente.
         SchoolPreviewResponse school = preview(request);
         if (school.latitude() == null || school.longitude() == null) {
@@ -94,6 +98,8 @@ public class SchoolService {
             return creationTransaction.execute(status -> {
                 // O bloqueio da DRE permanece ate commit/rollback; nenhuma chamada externa ocorre aqui.
                 educationDepartmentService.requireActiveForSchoolCreation(school.diretoriaEnsinoId());
+                // Revalida a permissao publica apos a consulta externa e o bloqueio da DRE.
+                reauthorize.run();
                 if (repository.existsByNameInEducationDepartment(school.diretoriaEnsinoId(), school.nome())) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT,
                             "Ja existe escola com este nome na diretoria de ensino");

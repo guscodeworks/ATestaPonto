@@ -51,11 +51,19 @@ public class AdminContextRepository {
     }
 
     public Optional<Admin> findById(long id) {
+        return findById(id, false);
+    }
+
+    public Optional<Admin> findByIdForUpdate(long id) {
+        return findById(id, true);
+    }
+
+    private Optional<Admin> findById(long id, boolean forUpdate) {
         List<Admin> rows = jdbc.query(connection -> {
-            if (!connection.isReadOnly()) {
-                throw new SQLException("A leitura administrativa exige conexao somente leitura");
+            if (connection.isReadOnly() == forUpdate) {
+                throw new SQLException("Conexao incompativel com a leitura administrativa");
             }
-            PreparedStatement statement = connection.prepareStatement(FIND_ADMIN);
+            PreparedStatement statement = connection.prepareStatement(FIND_ADMIN + (forUpdate ? " FOR UPDATE" : ""));
             statement.setLong(1, id);
             statement.setQueryTimeout(3);
             return statement;
@@ -82,11 +90,19 @@ public class AdminContextRepository {
     }
 
     public List<Access> findActiveAccesses(long adminId) {
+        return findActiveAccesses(adminId, false);
+    }
+
+    public List<Access> findActiveAccessesForUpdate(long adminId) {
+        return findActiveAccesses(adminId, true);
+    }
+
+    private List<Access> findActiveAccesses(long adminId, boolean forUpdate) {
         return jdbc.query(connection -> {
-            if (!connection.isReadOnly()) {
-                throw new SQLException("A leitura administrativa exige conexao somente leitura");
+            if (connection.isReadOnly() == forUpdate) {
+                throw new SQLException("Conexao incompativel com a leitura administrativa");
             }
-            PreparedStatement statement = connection.prepareStatement(FIND_ACTIVE_ACCESSES);
+            PreparedStatement statement = connection.prepareStatement(FIND_ACTIVE_ACCESSES + (forUpdate ? " FOR UPDATE" : ""));
             statement.setLong(1, adminId);
             statement.setQueryTimeout(3);
             return statement;
