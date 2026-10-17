@@ -25,9 +25,20 @@ public class EmployeeCreateService {
     }
 
     public EmployeeCreateResponse create(EmployeeCreateRequest request) {
+        return create(request, null);
+    }
+
+    public EmployeeCreateResponse createAuthorized(EmployeeCreateRequest request, Long departmentId) {
+        if (departmentId == null || departmentId <= 0) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Escopo da unidade invalido");
+        }
+        return create(request, departmentId);
+    }
+
+    private EmployeeCreateResponse create(EmployeeCreateRequest request, Long departmentId) {
         validate(request);
         try {
-            return creationTransaction.execute(status -> createAtomically(request));
+            return creationTransaction.execute(status -> createAtomically(request, departmentId));
         } catch (DuplicateKeyException error) {
             // Os índices UNIQUE são a última barreira contra cadastros concorrentes.
             if (repository.existsByCpf(request.cpf())) {
@@ -40,14 +51,17 @@ public class EmployeeCreateService {
         }
     }
 
-    private EmployeeCreateResponse createAtomically(EmployeeCreateRequest request) {
+    private EmployeeCreateResponse createAtomically(EmployeeCreateRequest request, Long departmentId) {
         if (repository.existsByCpfForUpdate(request.cpf())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "CPF ja cadastrado");
         }
         if (repository.existsByEmailForUpdate(request.email())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email ja cadastrado");
         }
-        if (!repository.lockExistingSchoolUnit(request.unidadeEscolarId())) {
+        if (departmentId != null && !repository.lockAuthorizedSchoolUnit(request.unidadeEscolarId(), departmentId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Escopo da unidade alterado; atualize e tente novamente");
+        }
+        if (departmentId == null && !repository.lockExistingSchoolUnit(request.unidadeEscolarId())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Unidade escolar nao encontrada");
         }
 
@@ -64,7 +78,7 @@ public class EmployeeCreateService {
         return repository.findCreatedEmployee(employeeId);
     }
 
-    private void validate(EmployeeCreateRequest request) {
+    public void validate(EmployeeCreateRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dados do funcionario invalidos");
         }
