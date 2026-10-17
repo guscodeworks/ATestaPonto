@@ -17,6 +17,14 @@ public class PublicAdminAuthorization {
         return requireValid(admins.read(id), id);
     }
 
+    public AdminContextResponse requireApiSession(long id) {
+        var context = admins.read(id);
+        if (context.admin() == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Administrativo nao encontrado no sistema");
+        if (!context.admin().ativo()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Administrativo inativo");
+        if (context.acessos().isEmpty()) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Administrativo sem acessos administrativos ativos");
+        return requireValid(context, id);
+    }
+
     public AdminContextResponse requireActiveForUpdate(long id) {
         return requireValid(admins.readForUpdate(id), id);
     }
