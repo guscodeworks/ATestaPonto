@@ -3,6 +3,7 @@ package br.com.atestaponto.auth.admin.config;
 import br.com.atestaponto.auth.admin.controller.PublicAdminAuthController.AdminPrincipal;
 import br.com.atestaponto.auth.admin.service.PublicAdminAuthorization;
 import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization;
+import br.com.atestaponto.auth.admin.service.PublicAdminRateLimit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -45,7 +46,7 @@ public class AdminSecurityConfiguration {
     @Order(2)
     public SecurityFilterChain publicAdminSecurity(HttpSecurity http,
             HttpSessionSecurityContextRepository contexts, PublicAdminAuthorization authorization,
-            PublicEmployeeAuthorization employees, ObjectMapper json,
+            PublicEmployeeAuthorization employees, PublicAdminRateLimit limits, ObjectMapper json,
             @org.springframework.beans.factory.annotation.Value("${admin.govbr.redirect-uri}") String redirectUri) throws Exception {
         var callback = java.net.URI.create(redirectUri);
         String origin = callback.getScheme() + "://" + callback.getRawAuthority();
@@ -71,6 +72,7 @@ public class AdminSecurityConfiguration {
                     if (publicApi(request)) PublicAdminApiErrors.write(response, json, 403, "FORBIDDEN", "Forbidden");
                     else response.sendError(403);
                 }))
+                .addFilterAfter(new PublicAccessApiFilter(limits, json), SecurityContextHolderFilter.class)
                 .addFilterAfter(new OncePerRequestFilter() {
                     @Override
                     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -94,14 +96,15 @@ public class AdminSecurityConfiguration {
                         }
                         chain.doFilter(request, response);
                     }
-                }, SecurityContextHolderFilter.class)
+                }, PublicAccessApiFilter.class)
                 .addFilterAfter(new PublicEmployeeAuthorizationFilter(employees, json), AuthorizationFilter.class)
                 .build();
     }
 
     private static boolean publicApi(HttpServletRequest request) {
         String path = request.getServletPath();
-        return java.util.List.of("/api/admin/funcionarios", "/api/admin/escolas", "/api/admin/diretorias")
+        return java.util.List.of("/api/admin/funcionarios", "/api/admin/escolas", "/api/admin/diretorias",
+                        "/api/admin/acessos", "/api/admin/cargos", "/api/admin/qr-tokens")
                 .stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
     }
 
