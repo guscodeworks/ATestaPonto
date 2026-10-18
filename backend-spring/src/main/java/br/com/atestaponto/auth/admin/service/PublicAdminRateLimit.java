@@ -15,7 +15,9 @@ import redis.clients.jedis.JedisPooled;
 
 @Service
 public class PublicAdminRateLimit {
-    public record Reservation(long hits, long ttl) {}
+    public record Reservation(long hits, long ttl, String generation) {
+        public Reservation(long hits, long ttl) { this(hits, ttl, ""); }
+    }
     private record LocalCounter(long hits, long expires) {}
     private static final long WINDOW_MS = 900_000;
     // Mesmo hash/TTL do Express: cotas continuam compartilhadas durante a migracao.
@@ -25,7 +27,7 @@ public class PublicAdminRateLimit {
               redis.call('HSET', KEYS[1], 'hits', 0, 'generation', now[1] .. ':' .. now[2])
             end
             if redis.call('PTTL', KEYS[1]) < 0 then redis.call('PEXPIRE', KEYS[1], ARGV[1]) end
-            return {redis.call('HINCRBY', KEYS[1], 'hits', 1), redis.call('PTTL', KEYS[1])}
+            return {redis.call('HINCRBY', KEYS[1], 'hits', 1), redis.call('PTTL', KEYS[1]), redis.call('HGET', KEYS[1], 'generation')}
             """;
     private final ObjectProvider<JedisPooled> redis;
     private final ObjectMapper json;
@@ -54,26 +56,70 @@ public class PublicAdminRateLimit {
 
     public int ipLimit() { return ipLimit; }
 
-    public Reservation increment(String name, Object subject) {
+    public Reservation increment(String name, Object subject) { return increment(name, subject, WINDOW_MS); }
+
+    public Reservation increment(String name, Object subject, long windowMs) {
         String key = prefix + name + ":" + digest(subject);
-        if (local) return incrementLocal(key);
+        if (local) return incrementLocal(key, windowMs);
         JedisPooled client = redis.getIfAvailable();
         if (client == null) throw new IllegalStateException("Redis de rate limit indisponivel");
-        Object response = client.eval(INCREMENT, List.of(key), List.of(Long.toString(WINDOW_MS)));
-        if (!(response instanceof List<?> values) || values.size() != 2
+        Object response = client.eval(INCREMENT, List.of(key), List.of(Long.toString(windowMs)));
+        if (!(response instanceof List<?> values) || values.size() != 3
                 || !(values.get(0) instanceof Long hits) || hits < 1
-                || !(values.get(1) instanceof Long ttl) || ttl < 0) throw new IllegalStateException("Estado de rate limit invalido");
-        return new Reservation(hits, ttl);
+                || !(values.get(1) instanceof Long ttl) || ttl < 0
+                || !(values.get(2) instanceof String generation)) throw new IllegalStateException("Estado de rate limit invalido");
+        return new Reservation(hits, ttl, generation);
     }
 
-    private synchronized Reservation incrementLocal(String key) {
+    private synchronized Reservation incrementLocal(String key, long windowMs) {
         long now = System.currentTimeMillis();
         counters.values().removeIf(value -> value.expires() <= now);
         LocalCounter previous = counters.get(key);
         if (previous == null && counters.size() >= 10000) throw new IllegalStateException("Limite do armazenamento local atingido");
-        var value = previous == null ? new LocalCounter(1, now + WINDOW_MS) : new LocalCounter(previous.hits() + 1, previous.expires());
+        var value = previous == null ? new LocalCounter(1, now + windowMs) : new LocalCounter(previous.hits() + 1, previous.expires());
         counters.put(key, value);
-        return new Reservation(value.hits(), value.expires() - now);
+        return new Reservation(value.hits(), value.expires() - now, Long.toString(value.expires()));
+    }
+
+    public synchronized Reservation current(String name, Object subject) {
+        String key = prefix + name + ":" + digest(subject);
+        if (local) {
+            var value = counters.get(key);
+            long now = System.currentTimeMillis();
+            return value == null || value.expires() <= now ? new Reservation(0, 0, "")
+                    : new Reservation(value.hits(), value.expires() - now, Long.toString(value.expires()));
+        }
+        JedisPooled client = redis.getIfAvailable();
+        if (client == null) throw new IllegalStateException("Redis de rate limit indisponivel");
+        Object result = client.eval("""
+                local hits = tonumber(redis.call('HGET', KEYS[1], 'hits') or '0')
+                local ttl = redis.call('PTTL', KEYS[1])
+                if ttl == -1 then redis.call('PEXPIRE', KEYS[1], ARGV[1]); ttl = tonumber(ARGV[1]) end
+                return {hits, math.max(0, ttl)}
+                """, List.of(key), List.of(Long.toString(WINDOW_MS)));
+        if (!(result instanceof List<?> values) || values.size() != 2) throw new IllegalStateException("Estado de rate limit invalido");
+        long hits = ((Number) values.get(0)).longValue(), ttl = ((Number) values.get(1)).longValue();
+        if (hits < 0 || hits > 9007199254740991L || ttl < 0) throw new IllegalStateException("Estado de rate limit invalido");
+        return new Reservation(hits, ttl, "");
+    }
+
+    public synchronized void refund(String name, Object subject, Reservation reservation) {
+        String key = prefix + name + ":" + digest(subject);
+        if (local) {
+            var value = counters.get(key);
+            if (value != null && Long.toString(value.expires()).equals(reservation.generation()) && value.hits() > 0)
+                counters.put(key, new LocalCounter(value.hits() - 1, value.expires()));
+            return;
+        }
+        JedisPooled client = redis.getIfAvailable();
+        if (client == null) throw new IllegalStateException("Redis de rate limit indisponivel");
+        client.eval("""
+                if redis.call('HGET', KEYS[1], 'generation') == ARGV[1]
+                  and tonumber(redis.call('HGET', KEYS[1], 'hits') or '0') > 0 then
+                    return redis.call('HINCRBY', KEYS[1], 'hits', -1)
+                end
+                return 0
+                """, List.of(key), List.of(reservation.generation()));
     }
 
     private String digest(Object subject) {

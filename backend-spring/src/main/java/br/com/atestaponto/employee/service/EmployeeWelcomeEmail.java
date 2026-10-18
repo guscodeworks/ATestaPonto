@@ -46,6 +46,21 @@ public class EmployeeWelcomeEmail {
         loginUrl = base.resolve("/ponto/acessar").toString();
     }
 
+    public void sendRecovery(String name, String email, String code) {
+        if (sender == null) return;
+        try {
+            var message = new SimpleMailMessage();
+            message.setFrom(from);
+            message.setTo(email);
+            message.setSubject("Código para redefinir sua senha - ATesta Ponto");
+            message.setText("Olá, " + name + "!\n\nSeu código para redefinir a senha é: " + code
+                    + "\n\nEle vence em 15 minutos. Se você não solicitou esta alteração, ignore este e-mail.");
+            sender.send(message);
+        } catch (RuntimeException failure) {
+            LOG.error("Falha ao enviar código de recuperação de senha");
+        }
+    }
+
     public Map<String, Object> send(String name, String email, String password) {
         if (sender == null) return Map.of("enviado", false, "motivo", "desativado");
         try {
