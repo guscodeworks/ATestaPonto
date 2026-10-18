@@ -562,3 +562,170 @@ Grupos: rbac,race-revoke,race-status,rollback,qr,hmac.
 | PASSOU | cleanup | Somente MySQL/Redis temporarios removidos; Spring/cliente SQL/Gov.br encerrados |
 
 Totais: PASSOU=110; FALHOU=0; BLOQUEADO=0.
+
+## Rodada UTC 2026-10-18T01:13:07.720945+00:00
+
+Grupos: contracts,rbac,csrf,sessions,qr,abuse.
+
+| Resultado | Grupo | Cenario |
+|---|---|---|
+| PASSOU | infra | Java 21 + JAR Spring real + MySQL 8.4 tmpfs + Redis 7 temporarios + Gov.br simulado |
+| PASSOU | infra | Authorization Code/PKCE real no Spring e renovacao de sessao dos perfis ficticios |
+| PASSOU | contracts | Anonimo recebe 401 JSON: /api/admin/acessos |
+| PASSOU | contracts | Anonimo recebe 401 JSON: /api/admin/acessos/meu |
+| PASSOU | contracts | Anonimo recebe 401 JSON: /api/admin/acessos/capacidades |
+| PASSOU | contracts | Anonimo recebe 401 JSON: /api/admin/acessos/opcoes-concessao |
+| PASSOU | contracts | Anonimo recebe 401 JSON: /api/admin/acessos/101 |
+| PASSOU | contracts | Anonimo recebe 401 JSON: /api/admin/cargos |
+| PASSOU | contracts | Anonimo recebe 401 JSON: /api/admin/qr-tokens |
+| PASSOU | contracts | Listagem/total e territorio reais: admin ficticio 1 |
+| PASSOU | contracts | Projecao de campos, CPF mascarado e acoes: admin ficticio 1 |
+| PASSOU | contracts | Listagem/total e territorio reais: admin ficticio 2 |
+| PASSOU | contracts | Projecao de campos, CPF mascarado e acoes: admin ficticio 2 |
+| PASSOU | contracts | Listagem/total e territorio reais: admin ficticio 3 |
+| PASSOU | contracts | Projecao de campos, CPF mascarado e acoes: admin ficticio 3 |
+| PASSOU | contracts | Listagem/total e territorio reais: admin ficticio 4 |
+| PASSOU | contracts | Projecao de campos, CPF mascarado e acoes: admin ficticio 4 |
+| PASSOU | contracts | Listagem/total e territorio reais: admin ficticio 8 |
+| PASSOU | contracts | Projecao de campos, CPF mascarado e acoes: admin ficticio 8 |
+| PASSOU | contracts | Listagem/total e territorio reais: admin ficticio 13 |
+| PASSOU | contracts | Projecao de campos, CPF mascarado e acoes: admin ficticio 13 |
+| PASSOU | contracts | Listagem/total e territorio reais: admin ficticio 17 |
+| PASSOU | contracts | Projecao de campos, CPF mascarado e acoes: admin ficticio 17 |
+| PASSOU | contracts | Paginacao sem sobreposicao |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 1 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 1 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 2 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 2 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 3 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 3 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 5 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 5 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 6 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 6 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 7 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 7 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 8 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 8 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 13 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 13 |
+| PASSOU | contracts | Acessos proprios nao expoem terceiros: 17 |
+| PASSOU | contracts | Cargos: lista direta e booleano real 17 |
+| PASSOU | contracts | Capacidades completas e ordem iguais ao Express |
+| PASSOU | contracts | Validacao publica: /api/admin/acessos/0 |
+| PASSOU | contracts | Validacao publica: /api/admin/acessos/nope |
+| PASSOU | contracts | Validacao publica: /api/admin/acessos?page=0&limit=101 |
+| PASSOU | contracts | Validacao publica: /api/admin/acessos?ativo=x&cargo=x |
+| PASSOU | contracts | Consulta cruzada e inexistente indistinguiveis |
+| PASSOU | rbac | Delegacao 2 -> ADMIN_SEDUC: negada |
+| PASSOU | rbac | Delegacao 2 -> ADMIN_DIRETORIA: permitida |
+| PASSOU | rbac | Delegacao 2 -> DIRETOR: negada |
+| PASSOU | rbac | Delegacao 2 -> VICE_DIRETOR: negada |
+| PASSOU | rbac | Delegacao 2 -> SECRETARIA: permitida |
+| PASSOU | rbac | Delegacao 2 -> COORDENADOR: permitida |
+| PASSOU | rbac | Delegacao 3 -> ADMIN_SEDUC: negada |
+| PASSOU | rbac | Delegacao 3 -> ADMIN_DIRETORIA: negada |
+| PASSOU | rbac | Delegacao 3 -> DIRETOR: permitida |
+| PASSOU | rbac | Delegacao 3 -> VICE_DIRETOR: permitida |
+| PASSOU | rbac | Delegacao 3 -> SECRETARIA: permitida |
+| PASSOU | rbac | Delegacao 3 -> COORDENADOR: permitida |
+| PASSOU | rbac | Delegacao 1 -> ADMIN_SEDUC: negada |
+| PASSOU | rbac | Delegacao 1 -> ADMIN_DIRETORIA: negada |
+| PASSOU | rbac | Delegacao 1 -> DIRETOR: negada |
+| PASSOU | rbac | Delegacao 1 -> VICE_DIRETOR: negada |
+| PASSOU | rbac | Delegacao 1 -> SECRETARIA: permitida |
+| PASSOU | rbac | Delegacao 1 -> COORDENADOR: permitida |
+| PASSOU | rbac | Delegacao 5 -> ADMIN_SEDUC: negada |
+| PASSOU | rbac | Delegacao 5 -> ADMIN_DIRETORIA: negada |
+| PASSOU | rbac | Delegacao 5 -> DIRETOR: negada |
+| PASSOU | rbac | Delegacao 5 -> VICE_DIRETOR: negada |
+| PASSOU | rbac | Delegacao 5 -> SECRETARIA: permitida |
+| PASSOU | rbac | Delegacao 5 -> COORDENADOR: permitida |
+| PASSOU | rbac | Delegacao 6 -> ADMIN_SEDUC: negada |
+| PASSOU | rbac | Delegacao 6 -> ADMIN_DIRETORIA: negada |
+| PASSOU | rbac | Delegacao 6 -> DIRETOR: negada |
+| PASSOU | rbac | Delegacao 6 -> VICE_DIRETOR: negada |
+| PASSOU | rbac | Delegacao 6 -> SECRETARIA: negada |
+| PASSOU | rbac | Delegacao 6 -> COORDENADOR: negada |
+| PASSOU | rbac | Delegacao 7 -> ADMIN_SEDUC: negada |
+| PASSOU | rbac | Delegacao 7 -> ADMIN_DIRETORIA: negada |
+| PASSOU | rbac | Delegacao 7 -> DIRETOR: negada |
+| PASSOU | rbac | Delegacao 7 -> VICE_DIRETOR: negada |
+| PASSOU | rbac | Delegacao 7 -> SECRETARIA: negada |
+| PASSOU | rbac | Delegacao 7 -> COORDENADOR: negada |
+| PASSOU | rbac | Leituras por capacidade negadas para perfil sem gestao 6 |
+| PASSOU | rbac | Leituras por capacidade negadas para perfil sem gestao 7 |
+| PASSOU | rbac | Concessao cruzada/combinar capacidades e escopos negado: 1 |
+| PASSOU | rbac | Concessao cruzada/combinar capacidades e escopos negado: 3 |
+| PASSOU | rbac | Concessao cruzada/combinar capacidades e escopos negado: 4 |
+| PASSOU | rbac | Concessao cruzada/combinar capacidades e escopos negado: 17 |
+| PASSOU | rbac | Autopromocao/elevacao por concessao recusadas |
+| PASSOU | rbac | DRE do mesmo acesso autoriza alteracao; escola de outro acesso sem capacidade nao autoriza |
+| PASSOU | rbac | SEDUC altera direcao abaixo dele sem poder conceder DIRETOR |
+| PASSOU | rbac | Opcoes sem elevacao nem recursos vazios 1 |
+| PASSOU | rbac | Opcoes filtradas pelo territorio do mesmo acesso 1 |
+| PASSOU | rbac | Opcoes sem elevacao nem recursos vazios 2 |
+| PASSOU | rbac | Opcoes filtradas pelo territorio do mesmo acesso 2 |
+| PASSOU | rbac | Opcoes sem elevacao nem recursos vazios 3 |
+| PASSOU | rbac | Opcoes filtradas pelo territorio do mesmo acesso 3 |
+| PASSOU | rbac | Opcoes sem elevacao nem recursos vazios 5 |
+| PASSOU | rbac | Opcoes filtradas pelo territorio do mesmo acesso 5 |
+| PASSOU | rbac | Opcoes sem elevacao nem recursos vazios 8 |
+| PASSOU | rbac | Opcoes filtradas pelo territorio do mesmo acesso 8 |
+| PASSOU | rbac | Opcoes sem elevacao nem recursos vazios 13 |
+| PASSOU | rbac | Opcoes filtradas pelo territorio do mesmo acesso 13 |
+| PASSOU | rbac | Opcoes sem elevacao nem recursos vazios 17 |
+| PASSOU | rbac | Opcoes filtradas pelo territorio do mesmo acesso 17 |
+| PASSOU | csrf | CSRF POST /api/admin/acessos, origem ausente |
+| PASSOU | csrf | CSRF POST /api/admin/acessos, origem null |
+| PASSOU | csrf | CSRF POST /api/admin/acessos, origem https://evil.invalid |
+| PASSOU | csrf | CSRF POST /api/admin/acessos, origem http://127.0.0.1:41715.evil |
+| PASSOU | csrf | CSRF PATCH /api/admin/acessos/101/suspender, origem ausente |
+| PASSOU | csrf | CSRF PATCH /api/admin/acessos/101/suspender, origem null |
+| PASSOU | csrf | CSRF PATCH /api/admin/acessos/101/suspender, origem https://evil.invalid |
+| PASSOU | csrf | CSRF PATCH /api/admin/acessos/101/suspender, origem http://127.0.0.1:41715.evil |
+| PASSOU | csrf | CSRF POST /api/admin/qr-tokens, origem ausente |
+| PASSOU | csrf | CSRF POST /api/admin/qr-tokens, origem null |
+| PASSOU | csrf | CSRF POST /api/admin/qr-tokens, origem https://evil.invalid |
+| PASSOU | csrf | CSRF POST /api/admin/qr-tokens, origem http://127.0.0.1:41715.evil |
+| PASSOU | csrf | CSRF sem escrita ou auditoria de sucesso |
+| PASSOU | csrf | Referer de mesma origem preservado |
+| PASSOU | sessions | Login fail-closed: sem acesso/futuro/inativo/expirado 9 |
+| PASSOU | sessions | Login fail-closed: sem acesso/futuro/inativo/expirado 10 |
+| PASSOU | sessions | Login fail-closed: sem acesso/futuro/inativo/expirado 11 |
+| PASSOU | sessions | Login fail-closed: sem acesso/futuro/inativo/expirado 12 |
+| PASSOU | sessions | OAuth state adulterado invalida sessao |
+| PASSOU | sessions | Sessao revalida identidade, status e vigencia persistidos |
+| PASSOU | sessions | Sessao revalida identidade, status e vigencia persistidos |
+| PASSOU | sessions | Sessao revalida identidade, status e vigencia persistidos |
+| PASSOU | sessions | Logout de origem valida |
+| PASSOU | qr | QR atual ausente retorna null |
+| PASSOU | qr | QR gerado: URL e unidade publicas |
+| PASSOU | qr | QR atual consistente entre perfis da mesma escola |
+| PASSOU | qr | QR original valido no resolvedor real |
+| PASSOU | qr | Regeneracao usa escola do acesso; body nao concede territorio |
+| PASSOU | qr | QR antigo perde validade apos regeneracao |
+| PASSOU | qr | Novo QR valido apos regeneracao |
+| PASSOU | qr | Indice do token antigo removido atomicamente do Redis |
+| PASSOU | qr | QR negado para perfil sem capacidade escolar 2 |
+| PASSOU | qr | QR negado para perfil sem capacidade escolar 3 |
+| PASSOU | qr | QR negado para perfil sem capacidade escolar 4 |
+| PASSOU | qr | QR negado para perfil sem capacidade escolar 7 |
+| PASSOU | qr | QR negado para perfil sem capacidade escolar 13 |
+| PASSOU | qr | QR ambiguo exige resolucao explicita |
+| PASSOU | qr | QR ambiguo exige resolucao explicita |
+| PASSOU | qr | QR nao combina capacidade escolar e DRE de outro acesso |
+| PASSOU | abuse | Cota sensivel de 40 compartilhada entre acesso e QR, inclusive negacoes |
+| PASSOU | abuse | Headers de limite e Retry-After preservados |
+| PASSOU | abuse | Cotas reais no Redis sem identidade em claro nas chaves |
+| PASSOU | abuse | Redis indisponivel falha fechado em producao |
+| PASSOU | abuse | Redis recuperado permite consultas sem fallback em memoria |
+| PASSOU | audit | Logs sem chaves OAuth/HMAC/sessao ou tokens de QR |
+| PASSOU | audit | Logs nao expoem CPF ou email ficticios em claro |
+| PASSOU | audit | Auditoria sem CPF/email/token ou URL de QR |
+| PASSOU | audit | Auditoria identifica operador e origem sem payload sensivel |
+| PASSOU | cleanup | mysql-dev e node-dev: mesmos IDs, estados, inicio e reinicios |
+| PASSOU | cleanup | .env preservados byte a byte |
+| PASSOU | cleanup | Somente MySQL/Redis temporarios removidos; Spring/cliente SQL/Gov.br encerrados |
+
+Totais: PASSOU=158; FALHOU=0; BLOQUEADO=0.

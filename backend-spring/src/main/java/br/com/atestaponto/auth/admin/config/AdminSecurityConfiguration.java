@@ -3,6 +3,7 @@ package br.com.atestaponto.auth.admin.config;
 import br.com.atestaponto.auth.admin.controller.PublicAdminAuthController.AdminPrincipal;
 import br.com.atestaponto.auth.admin.service.PublicAdminAuthorization;
 import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization;
+import br.com.atestaponto.auth.admin.service.PublicReportAuthorization;
 import br.com.atestaponto.auth.admin.service.PublicAdminRateLimit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -46,7 +47,8 @@ public class AdminSecurityConfiguration {
     @Order(2)
     public SecurityFilterChain publicAdminSecurity(HttpSecurity http,
             HttpSessionSecurityContextRepository contexts, PublicAdminAuthorization authorization,
-            PublicEmployeeAuthorization employees, PublicAdminRateLimit limits, ObjectMapper json,
+            PublicEmployeeAuthorization employees, PublicReportAuthorization reports,
+            PublicAdminRateLimit limits, ObjectMapper json,
             @org.springframework.beans.factory.annotation.Value("${admin.govbr.redirect-uri}") String redirectUri) throws Exception {
         var callback = java.net.URI.create(redirectUri);
         String origin = callback.getScheme() + "://" + callback.getRawAuthority();
@@ -65,7 +67,8 @@ public class AdminSecurityConfiguration {
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .exceptionHandling(e -> e.authenticationEntryPoint((request, response, failure) -> {
-                    if (publicApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
+                    if (publicApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED",
+                            reportApi(request) ? "Sessao administrativa Gov.br obrigatoria" : "Unauthorized");
                     else if (request.getServletPath().startsWith("/api/")) response.sendError(401);
                     else response.sendRedirect("/auth/govbr/login");
                 }).accessDeniedHandler((request, response, failure) -> {
@@ -84,8 +87,24 @@ public class AdminSecurityConfiguration {
                             try {
                                 if (session == null || !(session.getAttribute("ADMIN_EXPIRES_AT") instanceof Instant expiry)
                                         || !Instant.now().isBefore(expiry)) throw new IllegalStateException();
-                                request.setAttribute("adminContext", authorization.requireActive(admin.id()));
+                                request.setAttribute("adminContext", reportApi(request)
+                                        ? authorization.requireApiSession(admin.id()) : authorization.requireActive(admin.id()));
                             } catch (RuntimeException denied) {
+                                if (reportApi(request)) {
+                                    int status = denied instanceof org.springframework.web.server.ResponseStatusException error
+                                            ? error.getStatusCode().value() : 401;
+                                    String message = denied instanceof org.springframework.web.server.ResponseStatusException error
+                                            ? error.getReason() : "Falha ao validar sessao administrativa";
+                                    if (session == null || !(session.getAttribute("ADMIN_EXPIRES_AT") instanceof Instant expiry)
+                                            || !Instant.now().isBefore(expiry)) {
+                                        if (session != null) session.invalidate();
+                                        status = 401;
+                                        message = "Sessao administrativa Gov.br obrigatoria";
+                                    }
+                                    SecurityContextHolder.clearContext();
+                                    PublicAdminApiErrors.write(response, json, status, status == 403 ? "FORBIDDEN" : "UNAUTHORIZED", message);
+                                    return;
+                                }
                                 if (session != null) session.invalidate();
                                 SecurityContextHolder.clearContext();
                                 if (publicApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
@@ -98,13 +117,20 @@ public class AdminSecurityConfiguration {
                     }
                 }, PublicAccessApiFilter.class)
                 .addFilterAfter(new PublicEmployeeAuthorizationFilter(employees, json), AuthorizationFilter.class)
+                .addFilterAfter(new PublicReportApiFilter(reports, limits, json), PublicEmployeeAuthorizationFilter.class)
                 .build();
+    }
+
+    private static boolean reportApi(HttpServletRequest request) {
+        return request.getServletPath().startsWith("/api/admin/pontos/")
+                || request.getServletPath().matches("/api/admin/auth/me/?");
     }
 
     private static boolean publicApi(HttpServletRequest request) {
         String path = request.getServletPath();
         return java.util.List.of("/api/admin/funcionarios", "/api/admin/escolas", "/api/admin/diretorias",
-                        "/api/admin/acessos", "/api/admin/cargos", "/api/admin/qr-tokens")
+                        "/api/admin/acessos", "/api/admin/cargos", "/api/admin/qr-tokens",
+                        "/api/admin/pontos", "/api/admin/auth/me")
                 .stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
     }
 

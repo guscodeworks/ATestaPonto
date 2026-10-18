@@ -28,7 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class PublicAdminAuthController {
-    public record AdminPrincipal(long id, String sub, Instant loginAt) implements Serializable {}
+    public record AdminPrincipal(long id, String sub, Instant loginAt, String name, String email) implements Serializable {}
     private record PendingLogin(String state, String verifier, Instant expiresAt) implements Serializable {}
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String PENDING = "ADMIN_OAUTH_PENDING";
@@ -109,7 +109,8 @@ public class PublicAdminAuthController {
             authenticatedSession.setMaxInactiveInterval((int) ttlSeconds);
             Instant now = Instant.now();
             authenticatedSession.setAttribute("ADMIN_EXPIRES_AT", now.plusSeconds(ttlSeconds));
-            var principal = new AdminPrincipal(admin.id(), (String) identity.get("sub"), now);
+            var principal = new AdminPrincipal(admin.id(), (String) identity.get("sub"), now,
+                    admin.nome() == null ? "" : admin.nome().strip(), admin.email() == null ? "" : admin.email().strip());
             var context = SecurityContextHolder.createEmptyContext();
             context.setAuthentication(UsernamePasswordAuthenticationToken.authenticated(principal, null,
                     List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))));
