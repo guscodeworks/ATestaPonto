@@ -81,3 +81,41 @@ Grupos: datas,territorio. Requisicoes publicas verificadas: 131.
 - **PASSOU** `territorio`: DRE vazia: resultados vazios, nunca acesso global
 - **PASSOU** `territorio`: IDs territoriais invalidos/duplicados/injecao rejeitados com 400
 - **PASSOU** `limpeza`: somente recursos temporarios removidos; mysql-dev, node-dev e .env preservados
+
+## Rodada 2026-10-17T22:13:24-03:00: PASSOU
+
+Grupos: contratos,territorio,sessao,limites. Requisicoes publicas verificadas: 158.
+
+- **PASSOU** `infra`: Java 21, Spring real, MySQL e Redis temporarios; Gov.br Python local; JVM UTC
+- **PASSOU** `contratos`: hoje: contrato exato e contagens por pessoa/vinculo
+- **PASSOU** `contratos`: relatorio: contrato exato e contagens por pessoa/vinculo
+- **PASSOU** `contratos`: resumo: contrato exato e contagens por pessoa/vinculo
+- **PASSOU** `contratos`: semanal: sete dias, vigencia historica e totais pessoa-dia
+- **PASSOU** `contratos`: hierarquia: somente agregados; sem dados nominais extras
+- **PASSOU** `contratos`: auth/me: identidade e capacidades sem campos extras
+- **PASSOU** `contratos`: barra final aceita; paginacao e intervalo nao aplicaveis, ignorados como no Express
+- **PASSOU** `territorio`: perfil 1: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: perfil 3: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: perfil 4: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: perfil 5: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: perfil 6: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: perfil 7: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: perfil 9: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: perfil 13: capacidades, escopo servidor e filtros forjados sem vazamento
+- **PASSOU** `territorio`: SEDUC: globais apenas agregados, filtros validos e inexistente 403
+- **PASSOU** `territorio`: SEDUC + escola: nominal local, resumo global
+- **PASSOU** `territorio`: DRE vazia: resultados vazios, nunca acesso global
+- **PASSOU** `territorio`: IDs territoriais invalidos/duplicados/injecao rejeitados com 400
+- **PASSOU** `sessao`: todos os GETs exigem sessao; headers/identidade do navegador nao autorizam
+- **PASSOU** `sessao`: auth/me preserva snapshot de identidade e loginAt
+- **PASSOU** `sessao`: capacidades recalculadas apos mudanca de perfil
+- **PASSOU** `sessao`: acesso revogado bloqueia todos os GETs na proxima requisicao
+- **PASSOU** `sessao`: cadastro inativo bloqueia todos os GETs
+- **PASSOU** `sessao`: vigencia expirada apos login bloqueada
+- **PASSOU** `limites`: cota sensivel consumida por relatorios tambem bloqueia POST QR da API integrada
+- **PASSOU** `limites`: 40 sucessos, 41a retorna 429/Retry-After; chaves/TTL Redis compativeis; me fora da cota
+- **PASSOU** `limites`: cota por recurso preexistente em Redis respeitada
+- **PASSOU** `limites`: cota IP compartilhada preexistente respeitada
+- **PASSOU** `limites`: Redis indisponivel retorna 503 sem fallback; recuperacao retorna 200
+- **PASSOU** `sessao`: expiracao absoluta: replay do cookie expirado rejeitado nos seis GETs
+- **PASSOU** `limpeza`: somente recursos temporarios removidos; mysql-dev, node-dev e .env preservados

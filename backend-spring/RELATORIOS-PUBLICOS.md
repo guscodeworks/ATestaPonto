@@ -73,6 +73,35 @@ para resultados, histórico e reprodução com `scripts/check-public-reports.py`
 `mysql-dev`, `node-dev` e `.env` foram preservados, e os recursos temporários
 foram removidos. Sem commit, merge ou deploy; ambiente real não foi exercitado.
 
+## Integração após a PR #162
+
+`origin/develop` no commit `90ff8b51f98aae737049c2290704d0939fb4bb71`
+foi incorporada à branch de relatórios por merge normal, sem rebase.
+Os conflitos em `AdminSecurityConfiguration` e `PublicAdminRateLimit` foram
+reconciliados mantendo os dois conjuntos de APIs e filtros. A revalidação
+continua após `PublicAccessApiFilter`; relatórios mantêm sua autorização própria.
+A lista de APIs protegidas por sessão/CSRF contém acessos, cargos, QR e relatórios.
+
+O contador Redis permanece único: mesmos nomes, digest HMAC, janela, TTL e cotas
+para acessos/QR e relatórios. O fallback da chave interna fica restrito a
+ambiente local sem Redis; produção/Redis exige `SESSION_SECRET`, como na #163.
+Uma regressão HTTP adicional comprova que 40 consultas de relatório consomem
+na mesma instância a cota que protege `POST /api/admin/qr-tokens`.
+
+Regressão focada da integração: **PASSOU, 191 verificações; nenhuma falha ou
+bloqueio**. Build Java 21 com `./mvnw -o -DskipTests package` aprovado.
+
+- Relatórios: `python3 backend-spring/scripts/check-public-reports.py --only contratos,territorio,sessao,limites` — 33 verificações, 158 requisições públicas.
+- Acessos/QR: `python3 backend-spring/scripts/check-public-access-qr.py --only contracts,rbac,csrf,sessions,qr,abuse` — 158 verificações.
+
+Foram usados Spring real, Gov.br simulado e MySQL/Redis temporários isolados.
+Autenticação, capacidades, território, relatórios, CSRF, QR e cotas Redis
+passaram. `mysql-dev`, `node-dev` e `.env` permaneceram intactos; os recursos
+temporários foram removidos. Os relatórios de homologação preservam as rodadas.
+Express, `/internal/**` e os scripts existentes de acessos/QR não foram alterados.
+Não foram repetidas auditorias gerais ou as suítes de concorrência/rollback.
+Esta integração não faz merge da PR #163 em `develop` nem aciona deploy manual.
+
 ## Arquivos da mudança
 
 Sob `src/main/java/br/com/atestaponto/`:

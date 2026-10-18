@@ -396,6 +396,10 @@ def main():
                 assert run('docker','exec',redis,'redis-cli','HGET',sensitive,'hits')=='41'
                 assert run('docker','exec',redis,'redis-cli','HGET',resource,'hits')=='40'
                 api(b,PATHS[-1])
+                status, _, raw = b.request(app+'/api/admin/qr-tokens', 'POST', b'{}',
+                    {'Origin':app, 'Content-Type':'application/json'})
+                assert status==429 and json.loads(raw)['error']['code']=='RATE_LIMITED'
+                check(True,'cota sensivel consumida por relatorios tambem bloqueia POST QR da API integrada')
                 check(True,'40 sucessos, 41a retorna 429/Retry-After; chaves/TTL Redis compativeis; me fora da cota')
                 clear()
                 run('docker','exec',redis,'redis-cli','HSET',resource,'hits','40')

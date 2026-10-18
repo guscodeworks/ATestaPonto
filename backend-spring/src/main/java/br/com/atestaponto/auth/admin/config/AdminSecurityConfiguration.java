@@ -75,6 +75,7 @@ public class AdminSecurityConfiguration {
                     if (publicApi(request)) PublicAdminApiErrors.write(response, json, 403, "FORBIDDEN", "Forbidden");
                     else response.sendError(403);
                 }))
+                .addFilterAfter(new PublicAccessApiFilter(limits, json), SecurityContextHolderFilter.class)
                 .addFilterAfter(new OncePerRequestFilter() {
                     @Override
                     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -114,7 +115,7 @@ public class AdminSecurityConfiguration {
                         }
                         chain.doFilter(request, response);
                     }
-                }, SecurityContextHolderFilter.class)
+                }, PublicAccessApiFilter.class)
                 .addFilterAfter(new PublicEmployeeAuthorizationFilter(employees, json), AuthorizationFilter.class)
                 .addFilterAfter(new PublicReportApiFilter(reports, limits, json), PublicEmployeeAuthorizationFilter.class)
                 .build();
@@ -128,6 +129,7 @@ public class AdminSecurityConfiguration {
     private static boolean publicApi(HttpServletRequest request) {
         String path = request.getServletPath();
         return java.util.List.of("/api/admin/funcionarios", "/api/admin/escolas", "/api/admin/diretorias",
+                        "/api/admin/acessos", "/api/admin/cargos", "/api/admin/qr-tokens",
                         "/api/admin/pontos", "/api/admin/auth/me")
                 .stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
     }

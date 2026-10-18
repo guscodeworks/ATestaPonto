@@ -4,6 +4,7 @@ import br.com.atestaponto.adminaccess.dto.AdminAccessRequest;
 import br.com.atestaponto.adminaccess.dto.AdminAccessResponse.*;
 import br.com.atestaponto.adminaccess.repository.AdminAccessRepository;
 import br.com.atestaponto.adminaccess.repository.AdminAccessRepository.Authorizer;
+import br.com.atestaponto.auth.admin.service.AdminAccessPolicy;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,15 +63,7 @@ public class AdminAccessService {
         try { resource = resource(profile, department, school, true); }
         catch (AdminAccessException error) { throw forbidden("Escopo do acesso administrativo invalido"); }
         String source = authorizer.perfil();
-        // Espelha somente as capacidades de mutacao e a matriz Node; o RBAC publico permanece no gateway.
-        boolean delegation = switch (source) {
-            case "ADMIN_SEDUC" -> "ADMIN_DIRETORIA".equals(profile)
-                    || "SECRETARIA".equals(profile) || "COORDENADOR".equals(profile)
-                    || (!grant && SCHOOL_PROFILES.contains(profile));
-            case "ADMIN_DIRETORIA" -> SCHOOL_PROFILES.contains(profile);
-            case "DIRETOR", "VICE_DIRETOR" -> "SECRETARIA".equals(profile) || "COORDENADOR".equals(profile);
-            default -> false;
-        };
+        boolean delegation = AdminAccessPolicy.delegates(source, profile, grant);
         boolean scope = "ADMIN_SEDUC".equals(source)
                 || ("ADMIN_DIRETORIA".equals(source) && authorizer.diretoriaId() != null
                     && authorizer.diretoriaId().equals(resource.educationDepartmentId()))
