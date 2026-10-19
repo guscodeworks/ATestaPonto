@@ -88,14 +88,37 @@ public class EmployeeAccessSessions {
     }
 
     public void createRecovery(HttpServletRequest request, HttpServletResponse response, ObjectNode recovery) {
-        String previous = sid(request, "ponto_recovery");
+        create(request, response, "ponto_recovery", "passwordRecovery", recovery);
+    }
+
+    public void clearQr(HttpServletRequest request, HttpServletResponse response) {
+        String previous = sid(request, "ponto_qr_acesso");
+        if (previous != null) delete(key(previous));
+        clearCookie(response, "ponto_qr_acesso");
+    }
+
+    public void establishQr(HttpServletRequest request, HttpServletResponse response) {
+        clearQr(request, response);
+        String[] tokens = request.getParameterValues("qr");
+        if (tokens == null) return;
+        JsonNode token = tokens.length == 1 ? json.getNodeFactory().textNode(tokens[0]
+                .replaceAll("^[\\s\\p{Z}\\uFEFF]+|[\\s\\p{Z}\\uFEFF]+$", "")) : null;
+        if (qr.resolve(token) == null) throw new PublicPunchException(403, "FORBIDDEN", "QR Code invalido ou revogado");
+        var context = json.createObjectNode();
+        context.set("token", token);
+        create(request, response, "ponto_qr_acesso", "funcionario_qr", context);
+    }
+
+    private void create(HttpServletRequest request, HttpServletResponse response,
+            String cookie, String attribute, ObjectNode context) {
+        String previous = sid(request, cookie);
         if (previous != null) delete(key(previous));
         byte[] bytes = new byte[24]; random.nextBytes(bytes);
         String sid = EmployeeJwt.encode(bytes);
         var data = json.createObjectNode();
         data.putObject("cookie").put("expires", Instant.now().plusMillis(TTL).toString())
                 .put("originalMaxAge", TTL).put("httpOnly", true).put("sameSite", "lax").put("secure", secure).put("path", "/");
-        data.set("passwordRecovery", recovery);
+        data.set(attribute, context);
         String serialized = data.toString();
         if (local) {
             synchronized (sessions) {
@@ -105,7 +128,7 @@ public class EmployeeAccessSessions {
             }
         } else client().set(key(sid), serialized, SetParams.setParams().px(TTL));
         String signed = "s:" + sid + "." + signature(sid);
-        response.addHeader("Set-Cookie", ResponseCookie.from("ponto_recovery", java.net.URLEncoder.encode(signed, StandardCharsets.UTF_8))
+        response.addHeader("Set-Cookie", ResponseCookie.from(cookie, java.net.URLEncoder.encode(signed, StandardCharsets.UTF_8))
                 .path("/").httpOnly(true).sameSite("Lax").secure(secure).maxAge(TTL / 1000).build().toString());
     }
 

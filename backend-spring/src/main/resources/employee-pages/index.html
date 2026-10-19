@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Acesso do Funcionário</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+  <link rel="apple-touch-icon" href="/img/favicon-source-1024.png" />
+  <link rel="preload" as="image" href="/img/background-desktop.webp" media="(min-width: 768px)" />
+  <link rel="preload" as="image" href="/img/background-mobile.webp" media="(max-width: 767px)" />
+  <script src="/assets/js/auth/login.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/bundles/login.css?v=20260826-compact-2">
+</head>
+<body>
+  <main class="login-page">
+    <div class="login-art" aria-hidden="true">
+      <span class="art-dot art-dot--blue-one"></span>
+      <span class="art-dot art-dot--blue-two"></span>
+      <span class="art-dot art-dot--red-one"></span>
+      <span class="art-dot art-dot--red-two"></span>
+      <span class="art-dot art-dot--black-one"></span>
+      <span class="art-dot art-dot--black-two"></span>
+    </div>
+    <section class="login-panel" aria-labelledby="login-heading">
+      <div class="login-form-panel">
+        <header>
+          <img
+            class="login-brand-symbol"
+            src="/img/atestaponto-symbol.png"
+            width="82"
+            height="82"
+            alt=""
+          />
+          <p class="login-brand"><span>ATesta</span> <strong>Ponto</strong></p>
+          <h1 class="login-heading" id="login-heading">Acesso do funcionário</h1>
+          <p class="login-sub">Entre com seu CPF ou e-mail e sua senha.</p>
+        </header>
+
+        <form id="login-form" novalidate>
+          <div class="form-field">
+            <label for="identificador">CPF / e-mail</label>
+            <div class="input-wrap">
+              <input
+                type="text"
+                id="identificador"
+                class="field-input no-icon"
+                name="identificador"
+                placeholder="Digite seu CPF ou e-mail"
+                maxlength="150"
+                autocomplete="username"
+                inputmode="text"
+                aria-describedby="identificador-error"
+              />
+            </div>
+            <span class="field-error" id="identificador-error" aria-live="polite">
+              Informe um CPF / e-mail válido.
+            </span>
+          </div>
+
+          <div class="form-field">
+            <label for="senha">Senha</label>
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="senha"
+                class="field-input no-icon"
+                name="senha"
+                placeholder="Digite sua senha"
+                autocomplete="current-password"
+                aria-describedby="senha-error"
+              />
+              <button type="button" class="toggle-pw" id="toggle-pw" aria-label="Mostrar senha">
+                Mostrar
+              </button>
+            </div>
+            <span class="field-error" id="senha-error" aria-live="polite">
+              A senha deve ter pelo menos 8 caracteres.
+            </span>
+          </div>
+
+          <div class="form-meta">
+            <label class="form-remember" for="remember">
+              <input type="checkbox" id="remember" />
+              Lembrar CPF ou e-mail
+            </label>
+            <a href="/recuperar-senha" class="form-link">Esqueci minha senha</a>
+          </div>
+
+          <button type="submit" class="btn-login" id="btn-login">
+            <span class="btn-label">Entrar</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <section
+    class="toast-stack"
+    id="toast-stack"
+    aria-live="polite"
+    aria-atomic="true"
+    aria-label="Notificações"
+  ></section>
+</body>
+</html>

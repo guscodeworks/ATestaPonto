@@ -16,7 +16,7 @@ import org.springframework.transaction.TransactionException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = PublicPunchController.class)
+@RestControllerAdvice(assignableTypes = {PublicPunchController.class, EmployeePagesController.class})
 public class PublicPunchErrors {
     @ExceptionHandler(PublicPunchException.class)
     public ResponseEntity<?> business(PublicPunchException e) { return ResponseEntity.status(e.status()).body(body(e)); }
