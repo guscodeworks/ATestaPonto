@@ -21,6 +21,19 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 @Configuration
 public class PublicPunchSecurity {
+    @Bean
+    @Order(-1)
+    public SecurityFilterChain employeePagesSecurity(HttpSecurity http) throws Exception {
+        return http.securityMatcher("/", "/login", "/login/", "/home", "/home/", "/ponto", "/ponto/",
+                        "/bater-ponto", "/bater-ponto/", "/ponto/acessar", "/ponto/acessar/")
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .securityContext(c -> c.requireExplicitSave(true))
+                .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
+                .headers(h -> h.referrerPolicy(r -> r.policy(
+                        org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
+                .authorizeHttpRequests(a -> a.anyRequest().permitAll()).build();
+    }
+
     private static final Map<String, String> METHODS = Map.of(
             "/login", "POST", "/registrar", "POST", "/bater", "POST", "/hoje", "GET", "/historico", "GET",
             "/primeiro-acesso/trocar-senha", "POST", "/recuperar-senha/solicitar", "POST",
