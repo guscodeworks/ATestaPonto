@@ -60,7 +60,7 @@ public class AdminSecurityConfiguration {
                 .logout(c -> c.disable())
                 .authorizeHttpRequests(a -> a
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/health").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/health", "/ready").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/auth/govbr/login", "/auth/govbr/start", "/auth/govbr/callback", "/admin/login").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/auth/govbr/logout").permitAll()
