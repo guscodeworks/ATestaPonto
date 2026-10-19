@@ -90,23 +90,23 @@ public class AdminSecurityConfiguration {
                                 request.setAttribute("adminContext", reportApi(request)
                                         ? authorization.requireApiSession(admin.id()) : authorization.requireActive(admin.id()));
                             } catch (RuntimeException denied) {
+                                boolean expired = session == null
+                                        || !(session.getAttribute("ADMIN_EXPIRES_AT") instanceof Instant expiry)
+                                        || !Instant.now().isBefore(expiry);
+                                if (session != null) session.invalidate();
+                                SecurityContextHolder.clearContext();
                                 if (reportApi(request)) {
                                     int status = denied instanceof org.springframework.web.server.ResponseStatusException error
                                             ? error.getStatusCode().value() : 401;
                                     String message = denied instanceof org.springframework.web.server.ResponseStatusException error
                                             ? error.getReason() : "Falha ao validar sessao administrativa";
-                                    if (session == null || !(session.getAttribute("ADMIN_EXPIRES_AT") instanceof Instant expiry)
-                                            || !Instant.now().isBefore(expiry)) {
-                                        if (session != null) session.invalidate();
+                                    if (expired) {
                                         status = 401;
                                         message = "Sessao administrativa Gov.br obrigatoria";
                                     }
-                                    SecurityContextHolder.clearContext();
                                     PublicAdminApiErrors.write(response, json, status, status == 403 ? "FORBIDDEN" : "UNAUTHORIZED", message);
                                     return;
                                 }
-                                if (session != null) session.invalidate();
-                                SecurityContextHolder.clearContext();
                                 if (publicApi(request)) PublicAdminApiErrors.write(response, json, 401, "UNAUTHORIZED", "Unauthorized");
                                 else if (request.getServletPath().startsWith("/api/")) response.sendError(401);
                                 else response.sendRedirect("/auth/govbr/login");
