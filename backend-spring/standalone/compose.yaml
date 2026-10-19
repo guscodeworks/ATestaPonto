@@ -81,6 +81,39 @@ services:
       start_period: 60s
       retries: 12
 
+  init-schema:
+    profiles: ["schema"]
+    image: mysql:8.4@sha256:24989179f58856db763f418010c1169fecc944e3ec1ea7e921572d83eb070f70
+    entrypoint: ["/bin/sh", "/init-schema.sh"]
+    restart: "no"
+    environment:
+      DB_NAME: ${DB_NAME:?Configure DB_NAME no arquivo local}
+      DB_USER: ${DB_USER:?Configure DB_USER sem usar root}
+      MYSQL_PWD: ${DB_PASSWORD:?Configure DB_PASSWORD no arquivo local}
+    volumes:
+      - type: bind
+        source: ./init-schema.sh
+        target: /init-schema.sh
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../../atesta-gateway/database/schema/ponto.sql
+        target: /schema/ponto.sql
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - data
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
   redis:
     image: redis:7.4-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
     command: ["redis-server", "--appendonly", "yes"]

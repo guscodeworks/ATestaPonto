@@ -23,9 +23,11 @@ execute os demais comandos Compose normalmente, sem `--build`.
    docker compose --env-file .env -f compose.yaml build spring
    ```
 
-4. Quando autorizado a inicializar os bancos locais vazios:
+4. Quando autorizado a inicializar os bancos locais vazios, aplique o schema
+   manualmente antes de iniciar o Spring (veja os limites abaixo):
 
    ```sh
+   docker compose --env-file .env -f compose.yaml run --rm init-schema
    docker compose --env-file .env -f compose.yaml up -d --wait
    docker compose --env-file .env -f compose.yaml ps
    curl --fail http://localhost:18081/ready
@@ -43,6 +45,40 @@ ficam na rede `data` interna, sem portas no host. Somente Spring tambem particip
 da rede de saida, necessaria para OAuth, BrasilAPI e SMTP. As senhas devem ser
 configuradas antes da primeira inicializacao: mudar o `.env` nao muda senhas de um
 volume MySQL ja inicializado. Nao use `down -v` se quiser preservar os dados locais.
+
+## Schema manual (opt-in)
+
+```sh
+docker compose --env-file .env -f compose.yaml run --rm init-schema
+```
+
+O servico `init-schema`, no profile `schema`, usa somente o cliente da mesma imagem
+MySQL fixada na stack. O comando inicia apenas sua dependencia `mysql`, se
+necessario, e aguarda o healthcheck; nao inicia Spring, Redis, Node ou Express.
+Conecta ao MySQL desta stack pela rede interna `data`, com `DB_NAME`, `DB_USER` e
+`DB_PASSWORD` ja configurados. Nao usa root, cria outro servidor ou le `.env` de
+outros projetos. Nao utiliza `backend-spring/scripts/bootstrap-db.py`.
+
+O arquivo `atesta-gateway/database/schema/ponto.sql` e montado diretamente, somente
+para leitura, sem copia do SQL. O banco deve existir e estar sem tabelas ou views:
+qualquer tabela, mesmo vazia ou de uma inicializacao parcial, causa recusa antes
+da importacao. Falhas de conexao/consulta tambem interrompem o comando.
+
+Somente o baseline e aplicado: `ponto_idempotencia` ja esta incluido e a migration
+`20260908_ponto_idempotencia.sql` nao e reaplicada. Nenhuma migration e executada;
+migrations futuras precisam de revisao e procedimento proprio.
+
+Execute com Spring parado e sem outros clientes gravando no banco. A verificacao
+de banco vazio nao bloqueia escritas concorrentes. DDL MySQL nao tem rollback: se
+a importacao falhar depois de criar tabelas, uma nova tentativa sera recusada.
+O comando nao limpa, completa ou repara o banco; a recuperacao exige revisao manual
+autorizada. Nao remova volumes existentes para tentar novamente.
+
+`up` normal e o startup do Spring nunca aplicam o schema. Nao habilite o profile
+`schema` em comandos `up`; use somente o `run --rm init-schema` explicito acima.
+O schema nao fornece usuarios administrativos nem dados de exemplo. O comando
+exige o checkout do repositorio com o arquivo canonico acessivel ao Docker; em
+Windows, requer Docker Desktop com containers Linux e compartilhamento da pasta.
 
 ## Build e seguranca
 
@@ -76,9 +112,10 @@ volume MySQL ja inicializado. Nao use `down -v` se quiser preservar os dados loc
 
 ## Limites
 
-O MySQL inicializa apenas um banco vazio e um usuario local; nenhuma tabela, schema
-de dominio, migration, dump ou seed e aplicado. Os fluxos de dominio exigem o schema
-existente e dados ficticios previamente provisionados por uma tarefa autorizada.
+Por padrao, o MySQL inicializa apenas um banco vazio e um usuario local. Tabelas de
+dominio so sao criadas pelo comando manual acima; nao ha migrations, dumps ou
+seeds automaticos. Os fluxos de dominio exigem o schema e dados ficticios
+previamente provisionados por uma tarefa autorizada.
 Nao conecte esta stack ao banco real para contornar essa dependencia.
 
 O healthcheck usa `GET /ready`: HTTP 200 e `{"status":"UP"}` somente com MySQL
