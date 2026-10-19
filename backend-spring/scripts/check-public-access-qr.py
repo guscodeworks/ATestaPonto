@@ -5,6 +5,7 @@ Nao carrega .env nem acessa mysql-dev/node-dev. Requer JAR Java 21 e imagens
 locais mysql:8.4 e redis:7-alpine. --only repete somente os grupos afetados.
 """
 import argparse
+import base64
 import concurrent.futures
 import datetime
 import hashlib
@@ -57,11 +58,15 @@ class AccessProvider(Provider):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--only", help="Grupos separados por virgula: " + ",".join(sorted(GROUPS)))
+    parser.add_argument("--redis-auth", action="store_true", help="Redis com senha temporaria; registra resultados em REDIS.md")
     args = parser.parse_args()
     selected = set(args.only.split(",")) if args.only else GROUPS
     if selected - GROUPS:
         parser.error("Grupo desconhecido: " + ",".join(sorted(selected - GROUPS)))
     results, processes, clients, containers, secrets_used = [], [], [], [], []
+    report = ROOT / "backend-spring/REDIS.md" if args.redis_auth else REPORT
+    redis_password = secrets.token_hex(32) if args.redis_auth else ""
+    if redis_password: secrets_used.append(redis_password)
     current = "infra"
     baseline = run(*SNAPSHOT)
     protected = {p: hashlib.sha256(p.read_bytes()).digest() for p in ROOT.rglob(".env") if "node_modules" not in p.parts}
@@ -92,11 +97,17 @@ def main():
                 "-e", "MYSQL_ALLOW_EMPTY_PASSWORD=yes", "-e", "MYSQL_DATABASE=access_check",
                 "mysql:8.4", "--innodb-buffer-pool-size=64M")
             containers.append(mysql_name)
-            run("docker", "run", "--rm", "-d", "--name", redis_name,
+            redis_config = folder / "redis.conf"
+            redis_config.write_text('save ""\nappendonly no\nbind 0.0.0.0\nprotected-mode no\n'
+                + ("requirepass " + redis_password + "\n" if redis_password else ""))
+            redis_config.chmod(0o600)
+            run("docker", "create", "--name", redis_name,
                 "--label", "atestaponto.purpose=public-access-qr-homologation", "--memory", "128m",
-                "--tmpfs", "/data:rw,size=64m", "-p", "127.0.0.1::6379", "redis:7-alpine",
-                "redis-server", "--save", "", "--appendonly", "no")
+                "--user", "0:0", "--entrypoint", "redis-server",
+                "--tmpfs", "/data:rw,size=64m", "-p", "127.0.0.1::6379", "redis:7-alpine", "/tmp/redis.conf")
             containers.append(redis_name)
+            run("docker", "cp", str(redis_config), redis_name + ":/tmp/redis.conf")
+            run("docker", "start", redis_name)
             mysql_port = run("docker", "port", mysql_name, "3306/tcp").rsplit(":", 1)[1]
             redis_port = run("docker", "port", redis_name, "6379/tcp").rsplit(":", 1)[1]
 
@@ -107,7 +118,8 @@ def main():
                     raise RuntimeError(error.stderr.strip()) from None
 
             def redis(*command):
-                return run("docker", "exec", redis_name, "redis-cli", "--raw", *command)
+                return run("docker", "exec", "-e", "REDISCLI_AUTH", redis_name, "redis-cli", "--raw", *command,
+                    env=dict(os.environ, REDISCLI_AUTH=redis_password))
 
             def mysql_ready():
                 try: return sql("SELECT 1") == "1"
@@ -153,12 +165,13 @@ def main():
             Provider.secret = client_secret
             base = {k: os.environ[k] for k in ("PATH", "JAVA_HOME", "SystemRoot", "WINDIR") if k in os.environ}
             environment = dict(base, DB_HOST="127.0.0.1", DB_PORT=mysql_port, DB_NAME="access_check", DB_USER="root", DB_PASSWORD="",
-                INTERNAL_API_SHARED_KEY=key, SESSION_SECRET=secrets.token_hex(32), REDIS_ENABLED="true", REDIS_HOST="127.0.0.1",
-                REDIS_PORT=redis_port, REDIS_NAMESPACE=namespace, NODE_ENV="production", MAIL_ENABLED="false", ADMIN_SESSION_SECURE="false",
+                INTERNAL_API_SHARED_KEY=key, SESSION_SECRET=secrets.token_hex(32), JWT_SECRET=secrets.token_hex(32), REDIS_ENABLED="true", REDIS_HOST="127.0.0.1",
+                REDIS_PORT=redis_port, REDIS_PASSWORD=redis_password, REDIS_NAMESPACE=namespace, NODE_ENV="production", MAIL_ENABLED="false", ADMIN_SESSION_SECURE="false",
                 ADMIN_SESSION_TTL_SECONDS="600", GOVBR_AUTHORIZE_URL=provider+"/authorize", GOVBR_TOKEN_URL=provider+"/token",
                 GOVBR_USERINFO_URL=provider+"/userinfo", GOVBR_CLIENT_ID="isolated-access-check", GOVBR_CLIENT_SECRET=client_secret,
                 GOVBR_REDIRECT_URI=app+"/auth/govbr/callback", GOVBR_LOGOUT_URL="/")
             secrets_used.append(environment["SESSION_SECRET"])
+            secrets_used.append(environment["JWT_SECRET"])
 
             def start(extra=()):
                 with (folder / "spring.log").open("a") as log:
@@ -353,6 +366,10 @@ def main():
                 check(result[0]==201,"Referer de mesma origem preservado")
 
             def sessions():
+                api(1,"/api/admin/acessos/meu")
+                key = namespace + ":admin:spring-session:sessions:" + base64.b64decode(users[1].sid()).decode()
+                check(redis("TYPE",key)=="hash" and 0<int(redis("TTL",key))<=600,
+                    "Sessao HTTP autenticada persistida no namespace administrativo com TTL")
                 for account in (9,10,11,12):
                     browser,callback,_=begin(account)
                     check(browser.request(callback)[0]==403 and api(browser,expected=401)["error"]["code"]=="UNAUTHORIZED",f"Login fail-closed: sem acesso/futuro/inativo/expirado {account}")
@@ -369,8 +386,11 @@ def main():
                         check(True,"Sessao revalida identidade, status e vigencia persistidos")
                     finally: sql(restore)
                     api(browser,expected=401)
-                browser=login(1);check(browser.request(app+"/auth/govbr/logout","POST",headers={"Origin":app})[0]==302,"Logout de origem valida")
+                browser=login(1);old_sid=browser.sid()
+                check(browser.request(app+"/auth/govbr/logout","POST",headers={"Origin":app})[0]==302,"Logout de origem valida")
                 api(browser,expected=401)
+                check(Browser().request(app+"/api/admin/acessos/meu",headers={"Cookie":"ATESTA_ADMIN_SESSION="+old_sid})[0]==401,
+                    "Replay do cookie apos logout nao recupera acesso")
                 users[1]=login(1)
 
             def lock_row(table,row):
@@ -509,12 +529,29 @@ def main():
                 check(status==429 and int(headers["Retry-After"])>0 and "sensitive" in ",".join(headers.get_all("RateLimit",[])),"Headers de limite e Retry-After preservados")
                 keys=redis("--scan","--pattern",namespace+":ponto:rate_limit:sensitive:*").splitlines()
                 check(keys and all(re.fullmatch(r"[a-f0-9]{64}",k.rsplit(":",1)[1]) for k in keys),"Cotas reais no Redis sem identidade em claro nas chaves")
+                active_qr=api(1,"/api/admin/qr-tokens","POST")["qrCode"]
+                token=urllib.parse.parse_qs(urllib.parse.urlsplit(active_qr["url"]).query)["qr"][0]
+                secrets_used.append(token)
+                check(internal("/internal/escolas/qr/resolver",{"token":token})["unidade"]=={"unidade_escolar_id":1},
+                    "Resolvedor QR disponivel antes da queda")
                 run("docker","pause",redis_name)
                 try:
-                    error=api(2,expected=503)["error"]
+                    error=api(Browser(),expected=503)["error"]
                     check(error["code"]=="RATE_LIMIT_UNAVAILABLE","Redis indisponivel falha fechado em producao")
+                    for method,path,browser in (("GET","/api/admin/auth/me",users[1]),
+                            ("GET","/auth/govbr/login",Browser()),
+                            ("GET","/api/admin/qr-tokens",users[1]),("POST","/api/admin/qr-tokens",users[1])):
+                        status,headers,_=browser.request(app+path,method,headers={"Origin":app})
+                        check(500<=status<600 and not any(c.startswith("JSESSIONID=") for c in headers.get_all("Set-Cookie",[])),
+                            f"Redis indisponivel bloqueia {method} {path} sem sessao alternativa (HTTP {status})")
+                    path="/internal/escolas/qr/resolver";body=json.dumps({"token":token}).encode()
+                    status,_,raw=Browser().request(app+path,"POST",body,signed("POST",path,body))
+                    check(500<=status<600 and "unidade" not in json.loads(raw),
+                        "Resolvedor QR com HMAC valido nao retorna unidade durante queda do Redis")
                 finally: run("docker","unpause",redis_name)
                 api(2);check(True,"Redis recuperado permite consultas sem fallback em memoria")
+                check(api(1,"/api/admin/qr-tokens")["qrCode"]==active_qr,
+                    "Queda nao publica novo QR; sessao persistida e QR original retomados")
 
             def expiry():
                 spring.terminate();spring.wait(timeout=15)
@@ -569,14 +606,14 @@ def main():
             check(all(p.exists() and hashlib.sha256(p.read_bytes()).digest()==digest for p,digest in protected.items()),".env preservados byte a byte")
             remaining=run("docker","ps","-a","--format","{{.Names}}")
             check(all(name not in remaining.splitlines() for name in containers),"Somente MySQL/Redis temporarios removidos; Spring/cliente SQL/Gov.br encerrados")
-            lines=["", "## Rodada UTC "+datetime.datetime.now(datetime.timezone.utc).isoformat(), "", "Grupos: "+(args.only or "todos")+".", "", "| Resultado | Grupo | Cenario |", "|---|---|---|"]
+            lines=["", "## "+("HTTP Redis com senha — " if args.redis_auth else "")+"Rodada UTC "+datetime.datetime.now(datetime.timezone.utc).isoformat(), "", "Grupos: "+(args.only or "todos")+".", "", "| Resultado | Grupo | Cenario |", "|---|---|---|"]
             lines.extend(f"| {status} | {group} | {description.replace('|','/').replace(chr(10),' ')} |" for status,group,description in results)
             lines.extend(["", "Totais: "+"; ".join(f"{s}={sum(r==s for r,_,_ in results)}" for s in ("PASSOU","FALHOU","BLOQUEADO"))+".", ""])
-            if not REPORT.exists():
-                REPORT.write_text("# Homologacao Spring — acessos, cargos e QR\n\nHTTP direto no Spring real com Java 21, MySQL 8.4 e Redis 7 descartaveis em tmpfs,\nGov.br Python simulado e dados ficticios. Nao usa Express nem carrega .env.\n\nReproduzir: `./mvnw -o -DskipTests package && python3 scripts/check-public-access-qr.py`.\nRepetir grupos afetados: `python3 scripts/check-public-access-qr.py --only race-revoke,rollback`.\nImagens locais: `mysql:8.4`, `redis:7-alpine`; Docker e Java 21 necessarios.\nCotas Redis sao resetadas entre grupos para isolar cenarios; grupo abuse testa o limite real.\nSem commit, merge, push ou deploy.\n")
-            with REPORT.open("a") as output: output.write("\n".join(lines))
+            if not report.exists():
+                report.write_text("# Homologacao Spring — acessos, cargos e QR\n\nHTTP direto no Spring real com Java 21, MySQL 8.4 e Redis 7 descartaveis em tmpfs,\nGov.br Python simulado e dados ficticios. Nao usa Express nem carrega .env.\n\nReproduzir: `./mvnw -o -DskipTests package && python3 scripts/check-public-access-qr.py`.\nRepetir grupos afetados: `python3 scripts/check-public-access-qr.py --only race-revoke,rollback`.\nImagens locais: `mysql:8.4`, `redis:7-alpine`; Docker e Java 21 necessarios.\nCotas Redis sao resetadas entre grupos para isolar cenarios; grupo abuse testa o limite real.\nSem commit, merge, push ou deploy.\n")
+            with report.open("a") as output: output.write("\n".join(lines))
     if any(status!="PASSOU" for status,_,_ in results): raise SystemExit(1)
-    print(f"PASSOU {len(results)} verificacoes; {REPORT.relative_to(ROOT)}",flush=True)
+    print(f"PASSOU {len(results)} verificacoes; {report.relative_to(ROOT)}",flush=True)
 
 
 if __name__=="__main__":
