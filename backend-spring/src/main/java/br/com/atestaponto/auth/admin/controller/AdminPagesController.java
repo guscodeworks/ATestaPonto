@@ -2,6 +2,7 @@ package br.com.atestaponto.auth.admin.controller;
 
 import br.com.atestaponto.auth.admin.dto.AdminContextResponse;
 import br.com.atestaponto.auth.admin.service.AdminPageAuthorization;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.core.io.ClassPathResource;
@@ -21,7 +22,7 @@ public class AdminPagesController {
         this.authorization = authorization;
     }
 
-    @GetMapping({"/admin", "/admin/", "/admin/index", "/admin/index/"})
+    @GetMapping({"/admin", "/admin/", "/admin/index", "/admin/index/", "/admin/index.html", "/admin/index.html/"})
     public void index(@RequestAttribute(value = "adminContext", required = false) AdminContextResponse admin,
             HttpServletResponse response) throws IOException {
         authorization.require(admin, null);
@@ -58,7 +59,8 @@ public class AdminPagesController {
         return page(admin, "register-employee.html", "funcionario.criar");
     }
 
-    @GetMapping({"/admin/registrar-funcionario", "/admin/registrar-funcionario/"})
+    @GetMapping({"/admin/registrar-funcionario", "/admin/registrar-funcionario/",
+            "/admin/registrar-funcionario.html", "/admin/registrar-funcionario.html/"})
     public void legacyRegisterEmployee(@RequestAttribute(value = "adminContext", required = false) AdminContextResponse admin,
             HttpServletResponse response) throws IOException {
         authorization.require(admin, "funcionario.criar");
@@ -78,6 +80,33 @@ public class AdminPagesController {
     @GetMapping({"/admin/configuracoes", "/admin/configuracoes/"})
     public ResponseEntity<Resource> settings(@RequestAttribute(value = "adminContext", required = false) AdminContextResponse admin) {
         return page(admin, "settings.html", null);
+    }
+
+    @GetMapping({"/admin/login.html", "/admin/login.html/"})
+    public void legacyLogin(HttpServletResponse response) throws IOException {
+        response.sendRedirect("/admin/login");
+    }
+
+    @GetMapping({"/admin/dashboard.html", "/admin/dashboard.html/",
+            "/admin/funcionario.html", "/admin/funcionario.html/",
+            "/admin/funcionarios.html", "/admin/funcionarios.html/",
+            "/admin/funcionarios/novo.html", "/admin/funcionarios/novo.html/",
+            "/admin/pontos.html", "/admin/pontos.html/", "/admin/pontos-do-dia.html", "/admin/pontos-do-dia.html/",
+            "/admin/relatorios.html", "/admin/relatorios.html/", "/admin/configuracoes.html", "/admin/configuracoes.html/"})
+    public void legacyHtml(@RequestAttribute(value = "adminContext", required = false) AdminContextResponse admin,
+            HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String path = request.getServletPath();
+        String target = path.substring(0, path.lastIndexOf(".html"));
+        String capability = switch (target) {
+            case "/admin/dashboard", "/admin/configuracoes" -> null;
+            case "/admin/funcionario", "/admin/funcionarios" -> "funcionario.listar";
+            case "/admin/funcionarios/novo" -> "funcionario.criar";
+            case "/admin/pontos", "/admin/pontos-do-dia" -> "ponto.hoje.visualizar";
+            case "/admin/relatorios" -> "relatorio.hierarquico.visualizar";
+            default -> throw new IllegalArgumentException("Alias administrativo invalido");
+        };
+        authorization.require(admin, capability);
+        response.sendRedirect(target);
     }
 
     private ResponseEntity<Resource> page(AdminContextResponse admin, String file, String capability) {

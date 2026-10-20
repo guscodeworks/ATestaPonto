@@ -25,8 +25,14 @@ public class EmployeePagesController {
         return page();
     }
 
-    @GetMapping({"/home", "/home/"})
+    @GetMapping({"/home", "/home/", "/index.html", "/index.html/", "/home.html", "/home.html/"})
     public ResponseEntity<Void> home() { return ResponseEntity.status(302).location(URI.create("/")).build(); }
+
+    @GetMapping({"/login.html", "/login.html/", "/funcionario/login", "/funcionario/login/",
+            "/funcionario/login.html", "/funcionario/login.html/"})
+    public ResponseEntity<Void> legacyLogin() {
+        return ResponseEntity.status(302).location(URI.create("/login")).build();
+    }
 
     @GetMapping({"/ponto", "/ponto/", "/bater-ponto", "/bater-ponto/"})
     public ResponseEntity<Void> shortcut() {

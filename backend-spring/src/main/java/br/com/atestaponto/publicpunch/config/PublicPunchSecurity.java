@@ -25,7 +25,9 @@ public class PublicPunchSecurity {
     @Order(-1)
     public SecurityFilterChain employeePagesSecurity(HttpSecurity http) throws Exception {
         return http.securityMatcher("/", "/login", "/login/", "/home", "/home/", "/ponto", "/ponto/",
-                        "/bater-ponto", "/bater-ponto/", "/ponto/acessar", "/ponto/acessar/")
+                        "/bater-ponto", "/bater-ponto/", "/ponto/acessar", "/ponto/acessar/",
+                        "/index.html", "/index.html/", "/home.html", "/home.html/", "/login.html", "/login.html/",
+                        "/funcionario/login", "/funcionario/login/", "/funcionario/login.html", "/funcionario/login.html/")
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(c -> c.requireExplicitSave(true))
                 .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
