@@ -62,7 +62,8 @@ public class AdminSecurityConfiguration {
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/health", "/ready").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
-                                "/auth/govbr/login", "/auth/govbr/start", "/auth/govbr/callback", "/admin/login").permitAll()
+                                "/auth/govbr/login", "/auth/govbr/start", "/auth/govbr/callback", "/admin/login",
+                                "/admin/login.html", "/admin/login.html/").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/auth/govbr/logout").permitAll()
                         .requestMatchers("/admin/**", "/api/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll())
