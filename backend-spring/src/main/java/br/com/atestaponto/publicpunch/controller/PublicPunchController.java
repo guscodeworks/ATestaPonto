@@ -36,7 +36,7 @@ public class PublicPunchController {
             success = true; return ok(data);
         } finally { limits.loginFinished(subject, reservation, success, req); }
     }
-    @PostMapping({"/api/pontos/registrar", "/api/pontos/registrar/", "/api/pontos/bater", "/api/pontos/bater/"})
+    @PostMapping({"/api/pontos/registrar", "/api/pontos/registrar/", "/api/pontos/bater", "/api/pontos/bater/", "/ponto/bater", "/ponto/bater/"})
     public ResponseEntity<?> register(@RequestAttribute("publicPunchBody") JsonNode body, HttpServletRequest req, HttpServletResponse res) {
         long id = punches.authenticate(req);
         limits.point(id, res);

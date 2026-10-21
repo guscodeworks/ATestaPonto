@@ -15,9 +15,39 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.transaction.TransactionException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.core.MethodParameter;
+import org.springframework.core.env.Environment;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpResponse;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 @RestControllerAdvice(assignableTypes = {PublicPunchController.class, EmployeePagesController.class})
-public class PublicPunchErrors {
+public class PublicPunchErrors implements ResponseBodyAdvice<Object> {
+    private final boolean production;
+    public PublicPunchErrors(Environment env) {
+        production = env.getProperty("NODE_ENV", "development").strip().equalsIgnoreCase("production");
+    }
+    @Override
+    public boolean supports(MethodParameter method, Class<? extends HttpMessageConverter<?>> converter) {
+        return true;
+    }
+    @Override
+    public Object beforeBodyWrite(Object body, MethodParameter method, MediaType type,
+            Class<? extends HttpMessageConverter<?>> converter, ServerHttpRequest request, ServerHttpResponse response) {
+        String path = request.getURI().getPath();
+        if ((path.equals("/ponto/bater") || path.equals("/ponto/bater/"))
+                && body instanceof Map<?, ?> payload && payload.get("error") instanceof Map<?, ?> error) {
+            if (rateLimit(error.get("code")))
+                return Map.of("success", false, "error", Map.of("code", error.get("code"), "message", error.get("message")));
+            if (production && response instanceof ServletServerHttpResponse servlet && servlet.getServletResponse().getStatus() >= 500)
+                return Map.of("success", false, "error", Map.of("code", error.get("code"),
+                        "message", "Internal server error", "details", Map.of()));
+        }
+        return body;
+    }
     @ExceptionHandler(PublicPunchException.class)
     public ResponseEntity<?> business(PublicPunchException e) { return ResponseEntity.status(e.status()).body(body(e)); }
     @ExceptionHandler(PunchException.class)
@@ -48,7 +78,12 @@ public class PublicPunchErrors {
         return Map.of("success", false, "error", Map.of("code", e.code(), "message", e.getMessage(), "details", e.details()));
     }
     public static void write(HttpServletResponse response, ObjectMapper json, PublicPunchException e) throws IOException {
-        response.setStatus(e.status()); response.setContentType("application/json"); response.setCharacterEncoding("UTF-8");
-        json.writeValue(response.getOutputStream(), body(e));
+        write(response, json, e, false);
     }
+    public static void write(HttpServletResponse response, ObjectMapper json, PublicPunchException e, boolean legacyPunch) throws IOException {
+        response.setStatus(e.status()); response.setContentType("application/json"); response.setCharacterEncoding("UTF-8");
+        json.writeValue(response.getOutputStream(), legacyPunch && rateLimit(e.code())
+                ? Map.of("success", false, "error", Map.of("code", e.code(), "message", e.getMessage())) : body(e));
+    }
+    private static boolean rateLimit(Object code) { return "RATE_LIMITED".equals(code) || "RATE_LIMIT_UNAVAILABLE".equals(code); }
 }
