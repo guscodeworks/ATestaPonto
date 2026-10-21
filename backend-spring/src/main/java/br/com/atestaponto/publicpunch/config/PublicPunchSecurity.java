@@ -60,7 +60,7 @@ public class PublicPunchSecurity {
             boolean defaultPort = port == -1 || scheme.equals("https") && port == 443 || scheme.equals("http") && port == 80;
             origins.add(scheme + "://" + uri.getHost().toLowerCase(java.util.Locale.ROOT) + (defaultPort ? "" : ":" + port));
         }
-        return http.securityMatcher("/api/pontos", "/api/pontos/**")
+        return http.securityMatcher("/api/pontos", "/api/pontos/**", "/ponto/bater", "/ponto/bater/")
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(c -> c.requireExplicitSave(true))
                 .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
@@ -83,7 +83,8 @@ public class PublicPunchSecurity {
                             res.setHeader("Access-Control-Allow-Headers", "Content-Type,Authorization");
                             res.setStatus(204); return;
                         }
-                        String suffix = req.getServletPath().substring("/api/pontos".length()).replaceAll("/$", "");
+                        String path = req.getServletPath();
+                        String suffix = path.substring(path.startsWith("/api/pontos") ? "/api/pontos".length() : "/ponto".length()).replaceAll("/$", "");
                         String method = METHODS.get(suffix);
                         if (method == null) {
                             PublicPunchErrors.write(res, json, new PublicPunchException(404, "NOT_FOUND", "Route not found")); return;
@@ -104,7 +105,9 @@ public class PublicPunchSecurity {
                                 limits.ip(req, res);
                                 req.setAttribute("publicPunchBody", body(req, json));
                             }
-                        } catch (PublicPunchException e) { PublicPunchErrors.write(res, json, e); return; }
+                        } catch (PublicPunchException e) {
+                            PublicPunchErrors.write(res, json, e, path.startsWith("/ponto/")); return;
+                        }
                         chain.doFilter(req, res);
                     }
                 }, SecurityContextHolderFilter.class).build();
