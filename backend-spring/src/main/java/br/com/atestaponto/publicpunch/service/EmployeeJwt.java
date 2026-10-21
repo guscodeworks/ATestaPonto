@@ -66,10 +66,11 @@ public class EmployeeJwt {
             JsonNode claims = json.readTree(decoder.decode(parts[1]));
             long now = Instant.now().getEpochSecond();
             if (claims.has("nbf") && (!claims.get("nbf").isNumber() || claims.get("nbf").doubleValue() > now)) throw new IllegalArgumentException();
-            if (claims.has("exp") && !claims.get("exp").isNumber()) throw new IllegalArgumentException();
-            if (claims.has("exp") && claims.get("exp").doubleValue() <= now)
+            if (!claims.has("exp") || !claims.get("exp").isNumber()
+                    || !Double.isFinite(claims.get("exp").doubleValue())) throw new IllegalArgumentException();
+            if (claims.get("exp").doubleValue() <= now)
                 throw denied(first ? "Comprovante de primeiro acesso invalido" : "Sessao expirada. Faca login novamente.");
-            if (first && (!claims.has("exp") || !claims.path("purpose").asText().equals("primeira_troca_senha"))) throw new IllegalArgumentException();
+            if (first && !claims.path("purpose").asText().equals("primeira_troca_senha")) throw new IllegalArgumentException();
             id(claims, first);
             return claims;
         } catch (PublicPunchException e) { throw e; }
