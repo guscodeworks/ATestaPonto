@@ -16,7 +16,7 @@ function isSafeDatabaseName(name) {
 // Somente o baseline canônico pode inicializar um banco novo. Os antigos
 // ponto.sql e "ponto (2).sql" não representam mais a estrutura da aplicação.
 function resolveSchemaPath() {
-  const schemaPath = path.resolve(__dirname, '../../database/schema/ponto.sql');
+  const schemaPath = path.resolve(__dirname, '../../../database/schema/ponto.sql');
   return fs.existsSync(schemaPath) ? schemaPath : null;
 }
 
