@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Instant;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -23,6 +24,8 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
+import org.springframework.web.util.ServletRequestPathUtils;
 
 @Configuration
 public class AdminSecurityConfiguration {
@@ -49,6 +52,7 @@ public class AdminSecurityConfiguration {
             HttpSessionSecurityContextRepository contexts, PublicAdminAuthorization authorization,
             PublicEmployeeAuthorization employees, PublicReportAuthorization reports,
             PublicAdminRateLimit limits, ObjectMapper json,
+            @Qualifier("requestMappingHandlerMapping") RequestMappingHandlerMapping mappings,
             @org.springframework.beans.factory.annotation.Value("${admin.govbr.redirect-uri}") String redirectUri) throws Exception {
         var callback = java.net.URI.create(redirectUri);
         String origin = callback.getScheme() + "://" + callback.getRawAuthority();
@@ -76,6 +80,24 @@ public class AdminSecurityConfiguration {
                     if (publicApi(request)) PublicAdminApiErrors.write(response, json, 403, "FORBIDDEN", "Forbidden");
                     else response.sendError(403);
                 }))
+                .addFilterBefore(new OncePerRequestFilter() {
+                    @Override
+                    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                            FilterChain chain) throws ServletException, IOException {
+                        // APIs mantem seus contratos; caminhos MVC conhecidos continuam sujeitos a autenticacao e RBAC.
+                        if (!request.getServletPath().startsWith("/api/")) {
+                            var path = ServletRequestPathUtils.parseAndCache(request).pathWithinApplication();
+                            boolean knownPath = mappings.getHandlerMethods().keySet().stream()
+                                    .flatMap(mapping -> mapping.getPathPatternsCondition().getPatterns().stream())
+                                    .anyMatch(pattern -> pattern.matches(path));
+                            if (!knownPath) {
+                                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                                return;
+                            }
+                        }
+                        chain.doFilter(request, response);
+                    }
+                }, SecurityContextHolderFilter.class)
                 .addFilterAfter(new PublicAccessApiFilter(limits, json), SecurityContextHolderFilter.class)
                 .addFilterAfter(new OncePerRequestFilter() {
                     @Override
