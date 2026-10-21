@@ -16,9 +16,8 @@ function getCliArg(name) {
   return arg.slice(prefix.length).trim();
 }
 
-// Restringe o arquivo SQL a ficar dentro do diretório do projeto (impedindo
-// path traversal como "--file=../../etc/algo.sql") e exige extensão .sql,
-// já que este script permite executar qualquer arquivo informado via CLI.
+// Restringe SQL ao gateway, com exceção apenas da migration canônica movida.
+// Não permite executar outros arquivos fora do gateway e exige extensão .sql.
 function resolveSqlFile(fileArg) {
   if (!fileArg) {
     throw new Error('Informe o arquivo SQL com --file=caminho/do/arquivo.sql');
@@ -28,7 +27,9 @@ function resolveSqlFile(fileArg) {
   const absolutePath = path.resolve(root, fileArg);
   const relativePath = path.relative(root, absolutePath);
 
-  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+  const migrationPath = path.resolve(root, '../database/migrations/20260908_ponto_idempotencia.sql');
+
+  if ((relativePath.startsWith('..') || path.isAbsolute(relativePath)) && absolutePath !== migrationPath) {
     throw new Error('O arquivo SQL precisa estar dentro do projeto.');
   }
 
