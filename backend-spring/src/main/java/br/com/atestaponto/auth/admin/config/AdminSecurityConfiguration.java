@@ -17,10 +17,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.CrossOriginResourcePolicyHeaderWriter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -29,6 +32,25 @@ import org.springframework.web.util.ServletRequestPathUtils;
 
 @Configuration
 public class AdminSecurityConfiguration {
+    // Diretivas do Helmet do gateway, sem upgrade-insecure-requests (acesso HTTP na LAN) e sem origens https:
+    // que os HTMLs nao usam. frame-ancestors 'none' mantem o X-Frame-Options DENY do Spring. Os hashes liberam
+    // apenas os handlers inline atuais das paginas administrativas; se o HTML mudar, o navegador os bloqueia.
+    static final String CONTENT_SECURITY_POLICY = "default-src 'self'; base-uri 'self'; font-src 'self' data:; "
+            + "form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; "
+            + "script-src 'self'; script-src-attr 'unsafe-hashes' "
+            + "'sha256-UiXM9x9JOzYGt6wmZJ3IzYhJM9RMMztvKUxmajS6c4A=' "
+            + "'sha256-BooinK1lt/5pOSSlZ6SUDs5Ia0l0ij3BkoaUxWXhKAU=' "
+            + "'sha256-4e/qfVTmi0xgly8BtT5zi1kxsrbKJ8hFVLOWRPwmQrc='; style-src 'self' 'unsafe-inline'";
+
+    public static void browserHeaders(HeadersConfigurer<HttpSecurity> headers) {
+        headers.contentSecurityPolicy(c -> c.policyDirectives(CONTENT_SECURITY_POLICY))
+                .crossOriginOpenerPolicy(c -> c.policy(
+                        CrossOriginOpenerPolicyHeaderWriter.CrossOriginOpenerPolicy.SAME_ORIGIN))
+                // Mesmo valor do gateway: assets podem ser consumidos por outra origem na LAN.
+                .crossOriginResourcePolicy(c -> c.policy(
+                        CrossOriginResourcePolicyHeaderWriter.CrossOriginResourcePolicy.CROSS_ORIGIN));
+    }
+
     @Bean
     public HttpSessionSecurityContextRepository adminSecurityContexts() {
         var repository = new HttpSessionSecurityContextRepository();
@@ -56,7 +78,8 @@ public class AdminSecurityConfiguration {
             @org.springframework.beans.factory.annotation.Value("${admin.govbr.redirect-uri}") String redirectUri) throws Exception {
         var callback = java.net.URI.create(redirectUri);
         String origin = callback.getScheme() + "://" + callback.getRawAuthority();
-        return http.securityContext(c -> c.securityContextRepository(contexts))
+        return http.headers(AdminSecurityConfiguration::browserHeaders)
+                .securityContext(c -> c.securityContextRepository(contexts))
                 .requestCache(c -> c.disable())
                 .csrf(c -> c.ignoringRequestMatchers("/auth/govbr/logout")
                         // O frontend existente nao envia token CSRF; exige origem configurada para estas APIs.
