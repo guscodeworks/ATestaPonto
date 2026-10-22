@@ -160,6 +160,12 @@ public class PunchService {
         for (int i = 0; i < times.length; i++) if (times[i] == null) return i;
         return 4;
     }
+    private Integer totalMinutes(String[] times) {
+        if (next(times) != 4) return null;
+        int[] seconds = Arrays.stream(times).mapToInt(time -> LocalTime.parse(time).toSecondOfDay()).toArray();
+        if (seconds[0] > seconds[1] || seconds[1] > seconds[2] || seconds[2] > seconds[3]) return null;
+        return (seconds[1] - seconds[0] + seconds[3] - seconds[2]) / 60;
+    }
     private String scheduleTime(String value) {
         String time = value.strip().substring(0, Math.min(value.strip().length(), 8));
         if (!time.matches("[0-9]{2}:[0-9]{2}:[0-9]{2}")) throw new IllegalStateException("Jornada do funcionario incompleta");
@@ -185,7 +191,7 @@ public class PunchService {
         return new PunchResponse.Today(new PunchResponse.EmployeeSummary(employee.nome(), employee.cargo()),
                 new PunchResponse.Schedule(scheduleTime(employee.entrada()), scheduleTime(employee.saidaAlmoco()),
                         scheduleTime(employee.retornoAlmoco()), scheduleTime(employee.saida())),
-                new PunchResponse.Day(date.toString(), times[0], times[1], times[2], times[3]), next == 4 ? null : TYPES.get(next), next == 4);
+                new PunchResponse.Day(date.toString(), times[0], times[1], times[2], times[3]), next == 4 ? null : TYPES.get(next), totalMinutes(times) != null);
     }
 
     @Transactional(readOnly = true)
@@ -210,13 +216,7 @@ public class PunchService {
         for (var punches : groups.values()) {
             Row row = punches.getFirst();
             String[] times = times(punches);
-            Integer minutes = null;
-            if (Arrays.stream(times).allMatch(time -> time != null)) {
-                int[] seconds = Arrays.stream(times).mapToInt(time -> LocalTime.parse(time).toSecondOfDay()).toArray();
-                if (seconds[0] < seconds[1] && seconds[1] < seconds[2] && seconds[2] < seconds[3]) {
-                    minutes = (seconds[1] - seconds[0] + seconds[3] - seconds[2]) / 60;
-                }
-            }
+            Integer minutes = totalMinutes(times);
             records.add(new PunchResponse.HistoryDay(row.date(), times[0], times[1], times[2], times[3],
                     minutes, minutes == null ? "INCOMPLETO" : "COMPLETO", row.linkId(), row.schoolId(), row.schoolName()));
         }
