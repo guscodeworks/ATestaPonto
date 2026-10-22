@@ -1,5 +1,6 @@
 package br.com.atestaponto.publicpunch.config;
 
+import br.com.atestaponto.auth.admin.config.AdminSecurityConfiguration;
 import br.com.atestaponto.publicpunch.service.PublicPunchException;
 import br.com.atestaponto.publicpunch.service.PublicPunchRateLimit;
 import br.com.atestaponto.publicpunch.controller.PublicPunchErrors;
@@ -31,6 +32,7 @@ public class PublicPunchSecurity {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(c -> c.requireExplicitSave(true))
                 .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
+                .headers(AdminSecurityConfiguration::browserHeaders)
                 .headers(h -> h.referrerPolicy(r -> r.policy(
                         org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
                 .authorizeHttpRequests(a -> a.anyRequest().permitAll()).build();
@@ -64,6 +66,7 @@ public class PublicPunchSecurity {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(c -> c.requireExplicitSave(true))
                 .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
+                .headers(AdminSecurityConfiguration::browserHeaders)
                 .authorizeHttpRequests(a -> a.anyRequest().permitAll())
                 .addFilterAfter(new OncePerRequestFilter() {
                     @Override protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
