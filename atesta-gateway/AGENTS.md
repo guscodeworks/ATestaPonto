@@ -7,7 +7,6 @@
 ## Commands
 
 - Em `atesta-gateway/`, `npm run dev:check` verifica a conexão com `SELECT 1`, usando a configuração real.
-- `npm run mvc:check` verifica limites entre camadas MVC quando essas camadas forem alteradas.
 - `npm run build:client` regenera bundles apenas quando suas fontes forem alteradas.
 
 ## Constraints
