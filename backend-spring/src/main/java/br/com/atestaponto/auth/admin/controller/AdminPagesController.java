@@ -92,11 +92,13 @@ public class AdminPagesController {
             "/admin/funcionarios.html", "/admin/funcionarios.html/",
             "/admin/funcionarios/novo.html", "/admin/funcionarios/novo.html/",
             "/admin/pontos.html", "/admin/pontos.html/", "/admin/pontos-do-dia.html", "/admin/pontos-do-dia.html/",
-            "/admin/relatorios.html", "/admin/relatorios.html/", "/admin/configuracoes.html", "/admin/configuracoes.html/"})
+            "/admin/relatorios.html", "/admin/relatorios.html/", "/admin/configuracoes.html", "/admin/configuracoes.html/",
+            "/admin/configuracao", "/admin/configuracao/", "/admin/configuracao.html", "/admin/configuracao.html/"})
     public void legacyHtml(@RequestAttribute(value = "adminContext", required = false) AdminContextResponse admin,
             HttpServletRequest request, HttpServletResponse response) throws IOException {
         String path = request.getServletPath();
-        String target = path.substring(0, path.lastIndexOf(".html"));
+        String target = path.startsWith("/admin/configuracao") && !path.startsWith("/admin/configuracoes")
+                ? "/admin/configuracoes" : path.substring(0, path.lastIndexOf(".html"));
         String capability = switch (target) {
             case "/admin/dashboard", "/admin/configuracoes" -> null;
             case "/admin/funcionario", "/admin/funcionarios" -> "funcionario.listar";
