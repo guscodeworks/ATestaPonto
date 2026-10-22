@@ -93,6 +93,8 @@ const redisNamespace = validateRedisNamespace(
 const upstashRedisRestUrlRaw = getOptionalVar("UPSTASH_REDIS_REST_URL");
 const redisHost = getOptionalVar("REDIS_HOST", "127.0.0.1");
 const redisPort = parsePort(getOptionalVar("REDIS_PORT", "6379"));
+const redisUsername = getOptionalVar("REDIS_USERNAME");
+const redisPassword = String(process.env.REDIS_PASSWORD ?? "");
 
 if (isProduction && !redisEnabled) {
   throwEnvError('"REDIS_ENABLED" must be "true" in production');
@@ -158,6 +160,8 @@ const env = Object.freeze({
   redisNamespace,
   redisHost,
   redisPort,
+  redisUsername,
+  redisPassword,
   host: process.env.HOST || DEFAULT_HOST,
   // Aceita GOVBR_FAKE_PORT ou PORT como fallback, permitindo reaproveitar a
   // mesma variavel de ambiente PORT em plataformas de deploy que a definem
