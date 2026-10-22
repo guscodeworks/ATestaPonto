@@ -42,10 +42,8 @@ public class PublicAdminRateLimit {
             @Value("${REDIS_NAMESPACE:#{null}}") String namespace,
             @Value("${NODE_ENV:development}") String nodeEnv,
             @Value("${REDIS_ENABLED:false}") boolean redisEnabled,
-            @Value("${RATE_LIMIT_IP_MAX:2000}") int ipLimit,
-            @Value("${internal.auth.shared-key}") String internalKey) {
+            @Value("${RATE_LIMIT_IP_MAX:2000}") int ipLimit) {
         local = !redisEnabled && !nodeEnv.strip().equalsIgnoreCase("production");
-        if (secret.isBlank() && local) secret = internalKey;
         this.redis = redis; this.json = json; this.secret = secret.trim().getBytes(StandardCharsets.UTF_8);
         String safeNamespace = namespace == null ? (nodeEnv.strip().equalsIgnoreCase("production") ? "atestaponto:production" : "atestaponto:local") : namespace.strip();
         if (safeNamespace.length() > 128 || !safeNamespace.matches("[A-Za-z0-9][A-Za-z0-9_-]*(?::[A-Za-z0-9][A-Za-z0-9_-]*)*")) throw new IllegalArgumentException("REDIS_NAMESPACE invalido");
