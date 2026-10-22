@@ -7,6 +7,8 @@ const SAFE_PREFIX_SEGMENT = /^[a-z][a-z_-]*$/;
 
 const redisClient = env.redisEnabled
   ? createClient({
+      ...(env.redisUsername ? { username: env.redisUsername } : {}),
+      ...(env.redisPassword ? { password: env.redisPassword } : {}),
       socket: {
         host: env.redisHost || "127.0.0.1",
         port: Number(env.redisPort || 6379),
