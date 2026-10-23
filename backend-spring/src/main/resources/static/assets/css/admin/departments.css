@@ -1,0 +1,12 @@
+.departments-page .ui-panel + .ui-panel { margin-top: 20px; }
+.department-fields { border: 0; padding: 16px; margin: 0; }
+.department-actions { display: flex; flex-wrap: wrap; gap: 10px; grid-column: 1 / -1; }
+.departments-table { padding: 16px; overflow-x: auto; }
+.departments-table table { min-width: 640px; }
+.departments-table td:last-child { white-space: nowrap; }
+.departments-table td button + button { margin-left: 8px; }
+.departments-page .schools-filter-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.departments-page [hidden] { display: none !important; }
+@media (max-width: 640px) {
+  .departments-page .schools-filter-form { grid-template-columns: 1fr; }
+}

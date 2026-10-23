@@ -87,6 +87,9 @@ public class AdminSecurityConfiguration {
                 .logout(c -> c.disable())
                 .authorizeHttpRequests(a -> a
                         .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
+                        // Assets publicos sao somente leitura; APIs e demais rotas continuam protegidas.
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/assets/**", "/icons/**", "/img/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.HEAD, "/assets/**", "/icons/**", "/img/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/health", "/ready").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/auth/govbr/login", "/auth/govbr/start", "/auth/govbr/callback", "/admin/login",
@@ -108,7 +111,7 @@ public class AdminSecurityConfiguration {
                     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                             FilterChain chain) throws ServletException, IOException {
                         // APIs mantem seus contratos; caminhos MVC conhecidos continuam sujeitos a autenticacao e RBAC.
-                        if (!request.getServletPath().startsWith("/api/")) {
+                        if (!request.getServletPath().startsWith("/api/") && !isPublicStaticAssetRequest(request)) {
                             var path = ServletRequestPathUtils.parseAndCache(request).pathWithinApplication();
                             boolean knownPath = mappings.getHandlerMethods().keySet().stream()
                                     .flatMap(mapping -> mapping.getPathPatternsCondition().getPatterns().stream())
@@ -165,6 +168,13 @@ public class AdminSecurityConfiguration {
                 .addFilterAfter(new PublicEmployeeAuthorizationFilter(employees, json), AuthorizationFilter.class)
                 .addFilterAfter(new PublicReportApiFilter(reports, limits, json), PublicEmployeeAuthorizationFilter.class)
                 .build();
+    }
+
+    private static boolean isPublicStaticAssetRequest(HttpServletRequest request) {
+        String method = request.getMethod();
+        if (!"GET".equals(method) && !"HEAD".equals(method)) return false;
+        String path = request.getServletPath();
+        return path.startsWith("/assets/") || path.startsWith("/icons/") || path.startsWith("/img/");
     }
 
     private static boolean reportApi(HttpServletRequest request) {

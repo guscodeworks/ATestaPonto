@@ -1,0 +1,92 @@
+:root {
+  /* Paleta ATestaPonto — extraída da logo */
+  --color-primary:       #1450F0;
+  --color-primary-hover: #0040CC;
+  --color-accent:        #F01414;
+  --color-bg:            #F8F9FC;
+  --color-surface:       #FFFFFF;
+  --color-text:          #141414;
+  --color-text-muted:    #6B7280;
+  --color-success:       #0c7c4e;
+  --color-success-bg:    #ecfbf4;
+  --color-warning:       #d97706;
+  --color-warning-bg:    #fffbeb;
+  --color-danger:        #b91c1c;
+  --color-danger-bg:     #fff5f5;
+  --color-info:          #1251a3;
+  --color-info-bg:       #eef5ff;
+
+  /* Tipografia */
+  --font-main: 'Inter', sans-serif;
+
+  /* Forma */
+  --radius-card:   10px;
+  --radius-btn:    6px;
+
+  /* Sombras */
+  --shadow-card:   0 2px 8px rgba(20, 80, 240, 0.08);
+  --shadow-hover:  0 6px 16px rgba(20, 80, 240, 0.14);
+
+  /* Transição padrão */
+  --transition:    0.18s ease;
+}
+
+/* Superfícies compartilhadas apenas pela área do funcionário. */
+body.employee-area {
+  --employee-shell-border: #e4e9f3;
+  --employee-glass-border: rgba(255, 255, 255, 0.8);
+  --employee-mobile-card-radius: 16px;
+  --employee-card-shadow: 0 2px 10px rgba(20, 20, 20, 0.05);
+  --employee-card-shadow-raised:
+    var(--employee-card-shadow),
+    0 8px 24px rgba(32, 57, 104, 0.06);
+  --employee-accent-dot: radial-gradient(circle at 30% 26%, #ffb3b3 0, #ff5656 34%, #f01414 65%, #790000 100%);
+  --employee-accent-dot-shadow: 0 4px 7px rgba(20, 20, 20, 0.18);
+}
+
+/* Dashboard desktop do funcionário (.ponto-dashboard-dt): REUSO do design
+   system do dashboard ADMIN (mesmo design system da área do funcionário, per
+   admin/base.css). Não importamos admin.css (arrastaria o layout fixed .app-
+   sidebar/topbar e brigaria com o .employee-shell); em vez disso, reproduzimos
+   aqui a CAMADA DE ALIASES de tokens que os componentes admin consomem, na
+   MESMA paleta --color-* do projeto — escopo LOCAL p/ não vazar no sistema
+   --text-* legado de css/style/*.
+   Fontes: admin/base.css :root (alias layer) + admin/visual-identity.css
+   (--admin-border/--admin-shadow). Os 7 tokens visuais do bloco (--fill-accent
+   etc., usados inline no HTML) são re-resolvidos p/ essas alias admin. */
+.ponto-dashboard-dt {
+  /* alias admin (admin/base.css) — resolvidos na paleta --color-* */
+  --bg-base:        var(--color-bg);
+  --bg-surface:     var(--color-surface);
+  --text-900:       var(--color-text);
+  --text-700:       color-mix(in srgb, var(--color-text) 82%, var(--color-bg));
+  --text-500:       color-mix(in srgb, var(--color-text) 62%, var(--color-bg));
+  --text-300:       color-mix(in srgb, var(--color-text) 42%, var(--color-bg));
+  --border-light:   color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+  --border-medium:  color-mix(in srgb, var(--color-text) 18%, var(--color-bg));
+  --r-lg:           16px;
+  --r-full:         9999px;
+  --radius-card:    10px;            /* admin override do card (admin.css general) */
+  --radius-btn:     8px;
+  --shadow-sm:      0 1px 3px rgba(20,20,20,0.08), 0 1px 2px rgba(20,20,20,0.04);
+  --shadow-md:      0 4px 12px rgba(20,20,20,0.1), 0 2px 4px rgba(20,20,20,0.05);
+  --font-mono:      'Consolas', 'Courier New', monospace;
+  --ease-fast:      120ms cubic-bezier(.4,0,.2,1);
+  --ease-default:   220ms cubic-bezier(.4,0,.2,1);
+  /* visual-identity.css (admin) */
+  --admin-border:   #E4E9F3;
+  --admin-muted:    #7181A1;
+  --admin-shadow:   0 8px 24px rgba(32, 57, 104, 0.06);
+
+  /* tokens visuais do bloco (inline no HTML) re-resolvidos p/ a alias admin:
+     --surface-2 vira surface admin, --border vira --admin-border, sombras via
+     --admin-shadow; --fill-accent conserva o gradiente do botão Entrar do login
+     (azul→preto→vermelho) herdado do passo anterior — não é estilo novo. */
+  --fill-accent:     linear-gradient(135deg, var(--color-primary) 0%, var(--color-text) 46%, var(--color-text) 54%, var(--color-accent) 100%);
+  --on-accent:       #ffffff;
+  --text-accent:     var(--color-primary);
+  --surface-2:       var(--bg-surface);
+  --border:          var(--admin-border);
+  --text-secondary:  var(--text-700);
+  --text-muted:      var(--text-500);
+}
