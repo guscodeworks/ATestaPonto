@@ -77,6 +77,10 @@ let RELATORIO_DATA_ERROR = null;
 let FUNCIONARIOS_LOADING = false;
 let FUNCIONARIOS_TOTAL_SISTEMA = null;
 let FUNCIONARIOS_TOTAL_FILTRADO = 0;
+let FUNCIONARIOS_PAGINA_ATUAL = 1;
+let FUNCIONARIOS_LIMITE_PAGINA = 100;
+let FUNCIONARIOS_TOTAL_PAGINAS = 1;
+let FUNCIONARIOS_FILTROS_ATUAIS = null;
 let FUNCIONARIOS_REQUEST_ID = 0;
 let FUNCIONARIOS_ABORT_CONTROLLER = null;
 let ADMIN_DATA_LOADING = false;
@@ -212,7 +216,13 @@ async function adminApiFetch(path, options = {}) {
 
 async function carregarFuncionariosAdmin(filters = {}, options = {}) {
   const requestId = ++FUNCIONARIOS_REQUEST_ID;
-  const params = new URLSearchParams({ page: '1', limit: '100' });
+  const requestedPage = Number.isSafeInteger(options.page) && options.page > 0
+    ? options.page
+    : 1;
+  const params = new URLSearchParams({
+    page: String(requestedPage),
+    limit: String(FUNCIONARIOS_LIMITE_PAGINA),
+  });
   const search = String(filters.q || '').trim();
   const cpfSearch = /^[\d.\-\s]+$/.test(search)
     ? search.replace(/\D/g, '')
@@ -236,17 +246,55 @@ async function carregarFuncionariosAdmin(filters = {}, options = {}) {
   };
 
   try {
-    const firstPage = await loadPage(1);
-    const parsedTotal = Number(firstPage?.pagination?.total || 0);
-    const total = Number.isFinite(parsedTotal) ? Math.max(parsedTotal, 0) : 0;
-    const pageLimit = Math.max(
-      Number(firstPage?.pagination?.limit || 100) || 100,
-      1
-    );
+    const firstPage = await loadPage(requestedPage);
+    const pagination = firstPage?.pagination;
+    const parsedTotal = Number(pagination?.total);
+    const total = Number.isSafeInteger(parsedTotal) && parsedTotal >= 0
+      ? parsedTotal
+      : 0;
+    const parsedLimit = Number(pagination?.limit);
+    const pageLimit = Number.isSafeInteger(parsedLimit) && parsedLimit > 0
+      ? parsedLimit
+      : FUNCIONARIOS_LIMITE_PAGINA;
     const totalPages = Math.max(Math.ceil(total / pageLimit), 1);
-    const remainingPages = totalPages > 1
+
+    if (options.page !== undefined) {
+      const pageFromApi = Number(pagination?.page);
+      if (!Array.isArray(firstPage?.items)
+        || !Number.isSafeInteger(pageFromApi)
+        || pageFromApi !== requestedPage
+        || !Number.isSafeInteger(parsedTotal)
+        || parsedTotal < 0
+        || !Number.isSafeInteger(parsedLimit)
+        || parsedLimit < 1) {
+        throw new Error('A resposta da lista de funcionários está incompleta.');
+      }
+      if (requestId !== FUNCIONARIOS_REQUEST_ID) return false;
+
+      FUNCIONARIOS = firstPage.items.map(normalizarFuncionarioApi);
+      FUNCIONARIOS_PAGINA_ATUAL = pageFromApi;
+      FUNCIONARIOS_LIMITE_PAGINA = parsedLimit;
+      FUNCIONARIOS_TOTAL_PAGINAS = totalPages;
+      FUNCIONARIOS_TOTAL_FILTRADO = total;
+      FUNCIONARIOS_FILTROS_ATUAIS = JSON.stringify({
+        q: search,
+        status,
+        cargo,
+      });
+      FUNCIONARIOS_DATA_ERROR = null;
+
+      if (!search && !status && !cargo) {
+        FUNCIONARIOS_TOTAL_SISTEMA = total;
+      }
+
+      return true;
+    }
+
+    const firstPageTotal = Number.isFinite(parsedTotal) ? Math.max(parsedTotal, 0) : 0;
+    const legacyTotalPages = Math.max(Math.ceil(firstPageTotal / pageLimit), 1);
+    const remainingPages = legacyTotalPages > 1
       ? await Promise.all(
-          Array.from({ length: totalPages - 1 }, (_item, index) =>
+          Array.from({ length: legacyTotalPages - 1 }, (_item, index) =>
             loadPage(index + 2)
           )
         )
@@ -258,11 +306,15 @@ async function carregarFuncionariosAdmin(filters = {}, options = {}) {
       Array.isArray(page?.items) ? page.items : []
     );
     FUNCIONARIOS = items.map(normalizarFuncionarioApi);
-    FUNCIONARIOS_TOTAL_FILTRADO = total;
+    FUNCIONARIOS_PAGINA_ATUAL = 1;
+    FUNCIONARIOS_LIMITE_PAGINA = pageLimit;
+    FUNCIONARIOS_TOTAL_PAGINAS = legacyTotalPages;
+    FUNCIONARIOS_TOTAL_FILTRADO = firstPageTotal;
+    FUNCIONARIOS_FILTROS_ATUAIS = JSON.stringify({ q: search, status, cargo });
     FUNCIONARIOS_DATA_ERROR = null;
 
     if (!search && !status && !cargo) {
-      FUNCIONARIOS_TOTAL_SISTEMA = total;
+      FUNCIONARIOS_TOTAL_SISTEMA = firstPageTotal;
     }
 
     return true;
@@ -367,7 +419,12 @@ async function carregarDadosAdmin(options = {}) {
   const loaders = [];
 
   const requestOptions = { signal: controller.signal, requestId };
-  if (includeEmployees) loaders.push(carregarFuncionariosAdmin({}, requestOptions));
+  if (includeEmployees) {
+    const employeeOptions = document.getElementById('tbody-funcionarios')
+      ? { ...requestOptions, page: 1 }
+      : requestOptions;
+    loaders.push(carregarFuncionariosAdmin({}, employeeOptions));
+  }
   if (includeToday) loaders.push(carregarPontosHojeAdmin(requestOptions));
   if (includeSummary) loaders.push(carregarResumoAdmin(requestOptions));
   if (includeReport) loaders.push(carregarRelatorioAdmin(options.dataReferencia, requestOptions));
