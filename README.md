@@ -351,7 +351,6 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 | `npm run dev:spring` | Inicia o backend Spring usando variáveis do ambiente Node |
 | `npm run db:init` | Inicializa o banco de dados vazio com o baseline (ponto.sql) |
 | `npm run db:run` | Executa arquivo SQL específico |
-| `npm test` | Executa testes automatizados |
 
 ### Comandos do atesta-id
 

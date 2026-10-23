@@ -13,7 +13,6 @@ const { registerAuditLog } = require("./auditLogService");
 const employeeActivationService = require("./employeeActivationService");
 const employeeCreateService = require("./employeeCreateService");
 const employeeReadService = require("./employeeReadService");
-const loginModel = require("../models/loginModel");
 const employeeEditService = require("./employeeEditService");
 const { sendEmployeeWelcomeEmail } = require("./emailService");
 

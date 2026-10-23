@@ -21,4 +21,4 @@
 
 ## Done when
 
-- Selecione verificações proporcionais à mudança e ao risco; antes de executar testes, confira acesso ao banco e efeitos colaterais conforme a raiz. `npm test` não é uma etapa obrigatória; não regenere bundles sem alteração nas fontes.
+- Selecione verificações proporcionais à mudança e ao risco; antes de executar testes, confira acesso ao banco e efeitos colaterais conforme a raiz. Não regenere bundles sem alteração nas fontes.
