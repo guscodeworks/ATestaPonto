@@ -1,5 +1,6 @@
 package br.com.atestaponto.publicpunch.service;
 
+import br.com.atestaponto.validation.Cpf;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,22 +24,12 @@ public final class PublicPunchValidation {
         String value = trim(primitiveText(candidate(body))).toLowerCase(Locale.ROOT);
         return value.contains("@") ? value : digits(value);
     }
-    static boolean cpf(String value) {
-        if (!value.matches("[0-9]{11}") || value.chars().distinct().count() == 1) return false;
-        for (int length = 9; length <= 10; length++) {
-            int sum = 0;
-            for (int i = 0; i < length; i++) sum += (value.charAt(i) - '0') * (length + 1 - i);
-            int digit = (sum * 10) % 11;
-            if ((digit == 10 ? 0 : digit) != value.charAt(length) - '0') return false;
-        }
-        return true;
-    }
     public static String subject(JsonNode body) {
         if (!candidate(body).isTextual() || candidate(body).textValue().length() > 150) return "invalid";
         String value = identifier(body);
         return value.length() <= 150 && validIdentifier(value) ? (value.contains("@") ? "email:" : "cpf:") + value : "invalid";
     }
-    static boolean validIdentifier(String value) { return value.contains("@") ? value.matches("[^\\s\\p{Z}\\uFEFF@]+@[^\\s\\p{Z}\\uFEFF@]+\\.[^\\s\\p{Z}\\uFEFF@]+") : cpf(value); }
+    static boolean validIdentifier(String value) { return value.contains("@") ? value.matches("[^\\s\\p{Z}\\uFEFF@]+@[^\\s\\p{Z}\\uFEFF@]+\\.[^\\s\\p{Z}\\uFEFF@]+") : Cpf.valid(value); }
     static void login(JsonNode body) {
         var errors = new ArrayList<Map<String, String>>();
         String value = identifier(body);
@@ -60,7 +51,7 @@ public final class PublicPunchValidation {
     static String recoveryCpf(JsonNode body) {
         String value = digits(primitiveText(body.path("cpf")));
         var errors = new ArrayList<Map<String, String>>();
-        if (!cpf(value)) error(errors, "cpf", value.isEmpty() ? "CPF e obrigatorio" : value.length() != 11 ? "CPF deve ter 11 digitos" : "CPF invalido");
+        if (!Cpf.valid(value)) error(errors, "cpf", value.isEmpty() ? "CPF e obrigatorio" : value.length() != 11 ? "CPF deve ter 11 digitos" : "CPF invalido");
         check(errors); return value;
     }
     static String code(JsonNode body) {

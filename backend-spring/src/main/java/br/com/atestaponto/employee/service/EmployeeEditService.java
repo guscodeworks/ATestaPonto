@@ -62,7 +62,7 @@ public class EmployeeEditService {
             if (telefone.isEmpty()) telefone = null;
         }
         if ((fields.containsKey("email") && !validator.validate(new EmailValue(email)).isEmpty())
-                || (fields.containsKey("nome") && (nome.trim().length() < 3 || nome.contains("<") || nome.contains(">")))
+                || (fields.containsKey("nome") && (nome.trim().length() < 3 || nome.length() > 150 || nome.contains("<") || nome.contains(">")))
                 || (fields.containsKey("telefone") && telefone != null && !telefone.matches("[0-9]{10,11}"))) {
             throw error(HttpStatus.BAD_REQUEST, "Dados do funcionario invalidos");
         }

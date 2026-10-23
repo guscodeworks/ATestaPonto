@@ -5,6 +5,7 @@ import br.com.atestaponto.adminaccess.dto.AdminAccessResponse.*;
 import br.com.atestaponto.adminaccess.repository.AdminAccessRepository;
 import br.com.atestaponto.adminaccess.repository.AdminAccessRepository.Authorizer;
 import br.com.atestaponto.auth.admin.service.AdminAccessPolicy;
+import br.com.atestaponto.validation.Cpf;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,21 +72,11 @@ public class AdminAccessService {
                     && authorizer.unidadeId().equals(resource.schoolUnitId()));
         if (!delegation || !scope) throw forbidden("Acesso autorizador sem capacidade ou escopo suficiente");
     }
-    private boolean validCpf(String cpf) {
-        if (cpf == null || !cpf.matches("[0-9]{11}") || cpf.matches("([0-9])\\1{10}")) return false;
-        for (int length = 9; length <= 10; length++) {
-            int sum = 0;
-            for (int i = 0; i < length; i++) sum += (cpf.charAt(i) - '0') * (length + 1 - i);
-            int digit = sum * 10 % 11;
-            if ((digit == 10 ? 0 : digit) != cpf.charAt(length) - '0') return false;
-        }
-        return true;
-    }
 
     @Transactional
     public Granted grant(AdminAccessRequest.Grant request) {
         consistent(request.perfil(), request.diretoriaId(), request.unidadeId());
-        if (!validCpf(request.cpf())) throw bad("CPF invalido");
+        if (!Cpf.valid(request.cpf())) throw bad("CPF invalido");
         if (request.dataInicio() != null && request.dataFim() != null && request.dataFim().isBefore(request.dataInicio())) {
             throw bad("data_fim deve ser posterior ou igual a data_inicio");
         }
