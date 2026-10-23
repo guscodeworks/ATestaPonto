@@ -64,7 +64,7 @@ public class EmployeePagesController {
     @GetMapping({"/funcionario/relatorio", "/funcionario/relatorio/"})
     public ResponseEntity<Resource> report() { return page("report.html"); }
 
-    @GetMapping({"/recuperar-senha", "/recuperar-senha/"})
+    @GetMapping({"/recuperar-senha", "/recuperar-senha/", "/views/password/password.html", "/views/password/password.html/"})
     public ResponseEntity<Resource> passwordRecovery() { return page("password.html"); }
 
     @GetMapping({"/first-access", "/first-access/"})
