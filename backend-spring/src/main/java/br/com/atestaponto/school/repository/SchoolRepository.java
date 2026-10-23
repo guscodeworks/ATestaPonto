@@ -36,14 +36,6 @@ public class SchoolRepository {
             WHERE id = ?
             """;
 
-    private static final String LIST_BY_EDUCATION_DEPARTMENT = """
-            SELECT id, diretoria_ensino_id, nome, latitude, longitude,
-                   raio_permitido_metros, ativa, codigo_inep, endereco, cidade
-            FROM unidades_escolares
-            WHERE diretoria_ensino_id = ?
-            ORDER BY nome ASC
-            """;
-
     private final JdbcTemplate jdbcTemplate;
 
     private static final String INSERT = """
@@ -55,14 +47,6 @@ public class SchoolRepository {
 
     public SchoolRepository(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-    }
-
-    public Optional<SchoolResponse> findById(int id) {
-        return querySchools(FIND_BY_ID, id).stream().findFirst();
-    }
-
-    public List<SchoolResponse> listByEducationDepartment(long educationDepartmentId) {
-        return querySchools(LIST_BY_EDUCATION_DEPARTMENT, educationDepartmentId);
     }
 
     public SchoolListResponse listForAdmin(SchoolListRequest request) {
@@ -240,7 +224,7 @@ public class SchoolRepository {
         if (inserted != 1 || id == null) {
             throw new DataRetrievalFailureException("Nao foi possivel obter a escola criada");
         }
-        return querySchools(FIND_BY_ID, id.longValue(), false).stream().findFirst()
+        return querySchools(FIND_BY_ID, id.longValue()).stream().findFirst()
                 .orElseThrow(() -> new DataRetrievalFailureException("Escola criada nao encontrada"));
     }
 
@@ -252,17 +236,8 @@ public class SchoolRepository {
     }
 
     private List<SchoolResponse> querySchools(String sql, long id) {
-        return querySchools(sql, id, true);
-    }
-
-    private List<SchoolResponse> querySchools(String sql, long id, boolean readOnly) {
         return jdbcTemplate.query(connection -> {
-            if (readOnly && !connection.isReadOnly()) {
-                throw new SQLException("A consulta exige uma conexao somente leitura");
-            }
-            if (!readOnly) {
-                requireCreationTransaction(connection);
-            }
+            requireCreationTransaction(connection);
             PreparedStatement statement = connection.prepareStatement(sql);
             statement.setLong(1, id);
             statement.setQueryTimeout(3);

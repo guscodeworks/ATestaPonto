@@ -2,7 +2,7 @@ package br.com.atestaponto.auth.admin.controller;
 
 import br.com.atestaponto.auth.admin.controller.PublicAdminAuthController.AdminPrincipal;
 import br.com.atestaponto.auth.admin.dto.AdminContextResponse;
-import br.com.atestaponto.auth.admin.service.AdminCapabilities;
+import br.com.atestaponto.auth.admin.service.AdminAccessPolicy;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Map;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +19,6 @@ public class PublicAdminSessionController {
         return Map.of("success", true, "data", Map.of(
                 "admin", Map.of("authProvider", "govbr", "id", principal.id(), "sub", principal.sub(),
                         "name", principal.name(), "nome", principal.name(), "email", principal.email(), "loginAt", loginAt),
-                "capacidades", AdminCapabilities.list(context.acessos())));
+                "capacidades", AdminAccessPolicy.list(context.acessos())));
     }
 }
