@@ -270,7 +270,6 @@ async function carregarFuncionariosAdmin(filters = {}, options = {}) {
         throw new Error('A resposta da lista de funcionários está incompleta.');
       }
       if (requestId !== FUNCIONARIOS_REQUEST_ID) return false;
-      if (requestId !== FUNCIONARIOS_REQUEST_ID) return false;
 
       FUNCIONARIOS = firstPage.items.map(normalizarFuncionarioApi);
       FUNCIONARIOS_PAGINA_ATUAL = pageFromApi;
