@@ -31,6 +31,7 @@ public class PublicPunchSecurity {
                         "/funcionario/login", "/funcionario/login/", "/funcionario/login.html", "/funcionario/login.html/",
                         "/funcionario", "/funcionario/", "/funcionario/perfil", "/funcionario/perfil/",
                         "/funcionario/relatorio", "/funcionario/relatorio/", "/recuperar-senha", "/recuperar-senha/",
+                        "/views/password/password.html", "/views/password/password.html/",
                         "/first-access", "/first-access/", "/first-access.html", "/first-access.html/",
                         "/funcionario.html", "/funcionario.html/", "/funcionario/ponto.html", "/funcionario/ponto.html/",
                         "/funcionario/perfil.html", "/funcionario/perfil.html/",
@@ -57,6 +58,7 @@ public class PublicPunchSecurity {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(c -> c.requireExplicitSave(true))
                 .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
+                .headers(AdminSecurityConfiguration::browserHeaders)
                 .authorizeHttpRequests(a -> a.anyRequest().permitAll()).build();
     }
 
