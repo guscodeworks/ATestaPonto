@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminAccessService {
-    private static final Set<String> SCHOOL_PROFILES = Set.of("DIRETOR", "VICE_DIRETOR", "SECRETARIA", "COORDENADOR");
     private final AdminAccessRepository repository;
     public AdminAccessService(AdminAccessRepository repository) { this.repository = repository; }
     private AdminAccessException bad(String message) { return new AdminAccessException(400, "BAD_REQUEST", message); }
@@ -36,7 +35,7 @@ public class AdminAccessService {
         } else if ("ADMIN_DIRETORIA".equals(profile)) {
             if (department == null) throw bad("diretoria_ensino_id e obrigatoria para ADMIN_DIRETORIA");
             if (school != null) throw bad("ADMIN_DIRETORIA nao admite unidade_escolar_id");
-        } else if (SCHOOL_PROFILES.contains(profile)) {
+        } else if (AdminAccessPolicy.SCHOOL_PROFILES.contains(profile)) {
             if (school == null) throw bad("unidade_escolar_id e obrigatoria para perfis escolares");
             if (department != null) throw bad("Perfis escolares nao admitem diretoria_ensino_id");
         } else throw bad("perfil invalido");
@@ -67,7 +66,7 @@ public class AdminAccessService {
         boolean scope = "ADMIN_SEDUC".equals(source)
                 || ("ADMIN_DIRETORIA".equals(source) && authorizer.diretoriaId() != null
                     && authorizer.diretoriaId().equals(resource.educationDepartmentId()))
-                || (SCHOOL_PROFILES.contains(source) && authorizer.unidadeId() != null
+                || (AdminAccessPolicy.SCHOOL_PROFILES.contains(source) && authorizer.unidadeId() != null
                     && authorizer.unidadeId().equals(resource.schoolUnitId()));
         if (!delegation || !scope) throw forbidden("Acesso autorizador sem capacidade ou escopo suficiente");
     }

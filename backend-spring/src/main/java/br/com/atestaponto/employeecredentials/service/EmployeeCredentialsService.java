@@ -29,21 +29,20 @@ public class EmployeeCredentialsService {
         }
         return new EmployeeCredentialsResponse.Authentication(repository.findLoginEmployee(
                 hasCpf ? cpf.textValue() : null,
-                hasEmail ? email.textValue().toLowerCase(Locale.ROOT) : null, repository.hasModernLoginTable()));
+                hasEmail ? email.textValue().toLowerCase(Locale.ROOT) : null));
     }
 
     @Transactional(readOnly = true)
     public EmployeeCredentialsResponse.Authentication tokenValidation(EmployeeCredentialsRequest.EmployeeId request) {
         long id = employeeId(request);
-        return new EmployeeCredentialsResponse.Authentication(
-                repository.findTokenEmployee(id, repository.hasModernLoginTable()));
+        return new EmployeeCredentialsResponse.Authentication(repository.findTokenEmployee(id));
     }
 
     @Transactional(readOnly = true)
     public EmployeeCredentialsResponse.LoginLink activeLink(EmployeeCredentialsRequest.EmployeeId request) {
         long id = employeeId(request);
-        boolean modern = repository.hasModernLoginTable();
-        return new EmployeeCredentialsResponse.LoginLink(modern, modern ? repository.findActiveLink(id) : null);
+        // modern permanece no contrato /internal consumido pelo gateway; o schema legado nao e mais suportado.
+        return new EmployeeCredentialsResponse.LoginLink(true, repository.findActiveLink(id));
     }
 
     private long employeeId(EmployeeCredentialsRequest.EmployeeId request) {
@@ -56,7 +55,6 @@ public class EmployeeCredentialsService {
     @Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
     public EmployeeCredentialsResponse.Change lastLogin(EmployeeCredentialsRequest.EmployeeId request) {
         long id = employeeId(request);
-        if (!repository.hasModernLoginTable()) return new EmployeeCredentialsResponse.Change(false);
         if (repository.updateLastLogin(id) != 1) {
             throw new EmployeeCredentialsException(401, "UNAUTHORIZED", "CPF/email ou senha invalidos");
         }
@@ -69,8 +67,7 @@ public class EmployeeCredentialsService {
         if (cpf == null || !cpf.isTextual() || !cpf.textValue().matches("[0-9]{11}")) {
             throw badRequest();
         }
-        return new EmployeeCredentialsResponse.Recovery(
-                repository.findRecoveryEmployee(cpf.textValue(), repository.hasModernLoginTable()));
+        return new EmployeeCredentialsResponse.Recovery(repository.findRecoveryEmployee(cpf.textValue()));
     }
 
     @Transactional
@@ -92,13 +89,10 @@ public class EmployeeCredentialsService {
                 || !hash.textValue().matches("\\$2[ab]\\$(0[4-9]|[12][0-9]|3[01])\\$[./A-Za-z0-9]{53}")) {
             throw badRequest();
         }
-        boolean modern = repository.hasModernLoginTable();
-        var credential = repository.lockCredential(id.longValue(), modern);
+        var credential = repository.lockCredential(id.longValue());
         if (credential == null || !credential.active()) throw unauthorized(firstAccess);
         if (!Boolean.valueOf(firstAccess).equals(credential.firstAccess())) throw invalidState(firstAccess);
-        int affected = repository.updatePassword(id.longValue(), hash.textValue(), firstAccess, modern);
-        boolean updated = modern ? affected == 1 : affected >= 1 && affected <= 2;
-        if (!updated) throw invalidState(firstAccess);
+        if (repository.updatePassword(id.longValue(), hash.textValue(), firstAccess) != 1) throw invalidState(firstAccess);
         return new EmployeeCredentialsResponse.Change(true);
     }
 

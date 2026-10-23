@@ -19,7 +19,7 @@ public class AdminPageAuthorization {
                 || admin.acessos() == null || admin.acessos().isEmpty()) throw denied();
         if (capability == null) return;
         if ("diretoria.gerenciar".equals(capability)) {
-            if (admin.acessos().stream().noneMatch(a -> AdminCapabilities.permits(a, capability))) throw denied();
+            if (admin.acessos().stream().noneMatch(a -> AdminAccessPolicy.permits(a.perfil(), capability))) throw denied();
             return;
         }
         var scope = scopes.authorize(admin, capability);

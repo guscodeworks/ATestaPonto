@@ -52,19 +52,15 @@ public class PublicPunchService {
         catch (IllegalArgumentException invalidCredential) { matches = false; }
         if (employee == null || !matches || !employee.ativo()) invalidLogin(req, 0);
         var link = credential(() -> credentials.activeLink(employeeId(employee.id())));
-        if (!link.modern() && link.vinculo() != null || link.vinculo() != null
-                && (!safeId(link.vinculo().id()) || !safeId(link.vinculo().unidade_escolar_id()))) throw credentialsUnavailable();
-        if (link.modern() && link.vinculo() == null) invalidLogin(req, employee.id());
-        if (qrUnit != null) {
-            if (!link.modern()) throw new PublicPunchException(403, "FORBIDDEN", "Contexto de QR Code indisponivel");
-            if (link.vinculo().unidade_escolar_id() != qrUnit) {
-                audit("funcionario_login_qr_unidade_incompativel", employee.id(), req, Map.of());
-                throw new PublicPunchException(403, "FORBIDDEN", "QR Code nao corresponde a unidade escolar do funcionario");
-            }
+        if (link.vinculo() == null) invalidLogin(req, employee.id());
+        if (!safeId(link.vinculo().id()) || !safeId(link.vinculo().unidade_escolar_id())) throw credentialsUnavailable();
+        if (qrUnit != null && link.vinculo().unidade_escolar_id() != qrUnit) {
+            audit("funcionario_login_qr_unidade_incompativel", employee.id(), req, Map.of());
+            throw new PublicPunchException(403, "FORBIDDEN", "QR Code nao corresponde a unidade escolar do funcionario");
         }
         boolean first = Boolean.TRUE.equals(employee.primeiro_acesso());
         String token = jwt.issue(employee.id(), employee.senha_hash(), first);
-        if (!first && !credential(() -> credentials.lastLogin(employeeId(employee.id()))).updated() && link.modern()) throw credentialsUnavailable();
+        if (!first && !credential(() -> credentials.lastLogin(employeeId(employee.id()))).updated()) throw credentialsUnavailable();
         audit(first ? "funcionario_primeiro_acesso_validado" : "funcionario_login_sucesso", employee.id(), req, Map.of("login", "[REDACTED]"));
         var result = new LinkedHashMap<String, Object>();
         result.put("primeiro_acesso", first);

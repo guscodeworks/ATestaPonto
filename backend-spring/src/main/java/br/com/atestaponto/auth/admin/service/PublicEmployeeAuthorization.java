@@ -69,16 +69,8 @@ public class PublicEmployeeAuthorization {
     }
 
     private boolean permits(String profile, String capability) {
-        if (profile == null || capability == null) return false;
-        return switch (capability) {
-            case "funcionario.listar", "funcionario.visualizar" ->
-                List.of("ADMIN_DIRETORIA", "DIRETOR", "VICE_DIRETOR", "SECRETARIA", "COORDENADOR").contains(profile);
-            case "funcionario.criar" -> List.of("DIRETOR", "VICE_DIRETOR", "SECRETARIA").contains(profile);
-            case "funcionario.editar" -> List.of("ADMIN_DIRETORIA", "DIRETOR", "VICE_DIRETOR", "SECRETARIA").contains(profile);
-            case "funcionario.desativar", "funcionario.reativar" ->
-                List.of("ADMIN_DIRETORIA", "DIRETOR", "VICE_DIRETOR").contains(profile);
-            default -> false;
-        };
+        // Este fluxo so autoriza capacidades de funcionario; as demais seguem negadas aqui.
+        return capability != null && capability.startsWith("funcionario.") && AdminAccessPolicy.permits(profile, capability);
     }
 
     private static ResponseStatusException denied() {
