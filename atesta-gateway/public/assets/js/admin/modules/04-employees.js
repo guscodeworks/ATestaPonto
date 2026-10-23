@@ -75,6 +75,7 @@ function aplicarCapacidadesNaPaginaFuncionarios() {
   page.querySelector('.employees-action-bar')?.remove();
   page.querySelector('.employees-table-panel')?.remove();
   page.querySelector('#cards-funcionarios')?.remove();
+  page.querySelector('#funcionarios-pagination')?.remove();
   atualizarFeedbackFuncionarios();
 }
 
@@ -262,11 +263,44 @@ function atualizarFeedbackFuncionarios() {
   }
   if (existemFiltrosFuncionarios()) {
     feedback.className = 'employees-feedback';
-    feedback.textContent = `${FUNCIONARIOS_TOTAL_FILTRADO} resultado(s) para os filtros atuais.`;
+    const inicio = ((FUNCIONARIOS_PAGINA_ATUAL - 1) * FUNCIONARIOS_LIMITE_PAGINA) + 1;
+    const fim = Math.min(
+      FUNCIONARIOS_PAGINA_ATUAL * FUNCIONARIOS_LIMITE_PAGINA,
+      FUNCIONARIOS_TOTAL_FILTRADO
+    );
+    feedback.textContent = FUNCIONARIOS_TOTAL_FILTRADO
+      ? `Mostrando ${inicio}–${fim} de ${FUNCIONARIOS_TOTAL_FILTRADO} resultado(s) para os filtros atuais.`
+      : 'Nenhum resultado para os filtros atuais.';
+    return;
+  }
+  if (FUNCIONARIOS_TOTAL_FILTRADO > 0) {
+    const inicio = ((FUNCIONARIOS_PAGINA_ATUAL - 1) * FUNCIONARIOS_LIMITE_PAGINA) + 1;
+    const fim = Math.min(
+      FUNCIONARIOS_PAGINA_ATUAL * FUNCIONARIOS_LIMITE_PAGINA,
+      FUNCIONARIOS_TOTAL_FILTRADO
+    );
+    feedback.className = 'employees-feedback';
+    feedback.textContent = `Mostrando ${inicio}–${fim} de ${FUNCIONARIOS_TOTAL_FILTRADO} funcionário(s).`;
     return;
   }
   feedback.className = 'employees-feedback';
   feedback.textContent = '';
+}
+
+function atualizarPaginacaoFuncionarios({ hidden = false, loading = false } = {}) {
+  const pagination = document.getElementById('funcionarios-pagination');
+  const pageLabel = document.getElementById('funcionarios-page-label');
+  const previous = document.getElementById('funcionarios-prev');
+  const next = document.getElementById('funcionarios-next');
+  if (!pagination || !pageLabel || !previous || !next) return;
+
+  pagination.hidden = hidden || FUNCIONARIOS_TOTAL_PAGINAS <= 1;
+  pagination.setAttribute('aria-busy', String(loading));
+  pageLabel.textContent = loading
+    ? 'Carregando funcionários...'
+    : `Página ${FUNCIONARIOS_PAGINA_ATUAL} de ${FUNCIONARIOS_TOTAL_PAGINAS}`;
+  previous.disabled = loading || FUNCIONARIOS_PAGINA_ATUAL <= 1;
+  next.disabled = loading || FUNCIONARIOS_PAGINA_ATUAL >= FUNCIONARIOS_TOTAL_PAGINAS;
 }
 
 function renderizarFuncionarios() {
@@ -289,6 +323,7 @@ function renderizarFuncionarios() {
   atualizarFeedbackFuncionarios();
 
   if (FUNCIONARIOS_LOADING) {
+    atualizarPaginacaoFuncionarios({ loading: true });
     if (tbody) tbody.innerHTML = criarLoadingTabelaFuncionarios();
     if (cardList) {
       cardList.innerHTML = criarEstadoListaFuncionarios({
@@ -301,6 +336,7 @@ function renderizarFuncionarios() {
   }
 
   if (FUNCIONARIOS_DATA_ERROR) {
+    atualizarPaginacaoFuncionarios({ hidden: true });
     const state = obterEstadoErroFuncionarios(FUNCIONARIOS_DATA_ERROR);
     const markup = criarEstadoListaFuncionarios({
       icon: 'triangle-alert',
@@ -314,6 +350,7 @@ function renderizarFuncionarios() {
   }
 
   if (!FUNCIONARIOS.length) {
+    atualizarPaginacaoFuncionarios({ hidden: true });
     const filtered = existemFiltrosFuncionarios();
     const markup = criarEstadoListaFuncionarios({
       icon: 'users',
@@ -329,10 +366,20 @@ function renderizarFuncionarios() {
 
   if (tbody) tbody.innerHTML = FUNCIONARIOS.map(criarLinhaFuncionario).join('');
   if (cardList) cardList.innerHTML = FUNCIONARIOS.map(criarCardFuncionario).join('');
+  atualizarPaginacaoFuncionarios();
 }
 
 async function recarregarListaFuncionarios() {
   if (!temCapacidade('funcionario.listar')) return;
+  const filters = obterFiltrosFuncionarios();
+  const filterKey = JSON.stringify({
+    q: String(filters.q || '').trim(),
+    status: String(filters.status || '').trim(),
+    cargo: String(filters.cargo || '').trim().toUpperCase(),
+  });
+  if (filterKey !== FUNCIONARIOS_FILTROS_ATUAIS) {
+    FUNCIONARIOS_PAGINA_ATUAL = 1;
+  }
   FUNCIONARIOS_ABORT_CONTROLLER?.abort();
   const controller = new AbortController();
   FUNCIONARIOS_ABORT_CONTROLLER = controller;
@@ -347,8 +394,10 @@ async function recarregarListaFuncionarios() {
       tamanho: 'md',
       mensagem: 'Carregando funcionários',
     }));
+  renderizarFuncionarios();
 
-  const request = carregarFuncionariosAdmin(obterFiltrosFuncionarios(), {
+  const request = carregarFuncionariosAdmin(filters, {
+    page: FUNCIONARIOS_PAGINA_ATUAL,
     signal: controller.signal,
   });
   const requestId = FUNCIONARIOS_REQUEST_ID;
@@ -567,11 +616,24 @@ function atualizarStatusFuncionarioNaLista(id, ativo, data = {}) {
   if (doesNotMatchFilter) {
     FUNCIONARIOS.splice(index, 1);
     FUNCIONARIOS_TOTAL_FILTRADO = Math.max(FUNCIONARIOS_TOTAL_FILTRADO - 1, 0);
+    FUNCIONARIOS_TOTAL_PAGINAS = Math.max(
+      Math.ceil(FUNCIONARIOS_TOTAL_FILTRADO / FUNCIONARIOS_LIMITE_PAGINA),
+      1
+    );
+    FUNCIONARIOS_PAGINA_ATUAL = Math.min(
+      FUNCIONARIOS_PAGINA_ATUAL,
+      FUNCIONARIOS_TOTAL_PAGINAS
+    );
   } else {
     FUNCIONARIOS[index] = atualizado;
   }
   sincronizarFuncionariosNosPontos();
   renderizarFuncionarios();
+  if (doesNotMatchFilter) {
+    estadoStatusFuncionario.elementoOrigem = document.getElementById('busca-funcionario');
+    recarregarListaFuncionarios();
+    return;
+  }
 
   const newButtons = Array.from(
     document.querySelectorAll(`[data-employee-status="${Number(id)}"]`)
@@ -682,6 +744,18 @@ function iniciarAcoesFuncionarios() {
   document.documentElement.dataset.employeeActionsInitialized = 'true';
 
   document.addEventListener('click', (event) => {
+    const previousPage = event.target.closest('#funcionarios-prev');
+    const nextPage = event.target.closest('#funcionarios-next');
+    if (previousPage || nextPage) {
+      if (FUNCIONARIOS_LOADING) return;
+      const direction = previousPage ? -1 : 1;
+      const targetPage = FUNCIONARIOS_PAGINA_ATUAL + direction;
+      if (targetPage < 1 || targetPage > FUNCIONARIOS_TOTAL_PAGINAS) return;
+      FUNCIONARIOS_PAGINA_ATUAL = targetPage;
+      recarregarListaFuncionarios();
+      return;
+    }
+
     const reloadButton = event.target.closest('[data-employee-reload]');
     if (reloadButton) {
       recarregarListaFuncionarios();
