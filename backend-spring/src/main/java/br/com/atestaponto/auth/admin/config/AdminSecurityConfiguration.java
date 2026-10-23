@@ -15,6 +15,7 @@ import java.time.Instant;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
@@ -25,6 +26,7 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.security.web.header.writers.CrossOriginOpenerPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.CrossOriginResourcePolicyHeaderWriter;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.header.HeaderWriterFilter;
 import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
@@ -103,7 +105,7 @@ public class AdminSecurityConfiguration {
                     if (publicApi(request)) PublicAdminApiErrors.write(response, json, 403, "FORBIDDEN", "Forbidden");
                     else response.sendError(403);
                 }))
-                .addFilterBefore(new OncePerRequestFilter() {
+                .addFilterAfter(new OncePerRequestFilter() {
                     @Override
                     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                             FilterChain chain) throws ServletException, IOException {
@@ -114,13 +116,24 @@ public class AdminSecurityConfiguration {
                                     .flatMap(mapping -> mapping.getPathPatternsCondition().getPatterns().stream())
                                     .anyMatch(pattern -> pattern.matches(path));
                             if (!knownPath) {
-                                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                                if (htmlNavigation(request)) {
+                                    // Mesma tela e cabecalhos no-cache do notFoundMiddleware do gateway.
+                                    response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+                                    response.setHeader("Cache-Control", "no-store, max-age=0");
+                                    response.setHeader("Pragma", "no-cache");
+                                    response.setHeader("Expires", "0");
+                                    response.setContentType("text/html;charset=UTF-8");
+                                    try (var page = new ClassPathResource("error-pages/error.html").getInputStream()) {
+                                        page.transferTo(response.getOutputStream());
+                                    }
+                                } else response.sendError(HttpServletResponse.SC_NOT_FOUND);
                                 return;
                             }
                         }
                         chain.doFilter(request, response);
                     }
-                }, SecurityContextHolderFilter.class)
+                    // Depois do HeaderWriterFilter para a pagina 404 receber CSP e demais cabecalhos de seguranca.
+                }, HeaderWriterFilter.class)
                 .addFilterAfter(new PublicAccessApiFilter(limits, json), SecurityContextHolderFilter.class)
                 .addFilterAfter(new OncePerRequestFilter() {
                     @Override
@@ -178,6 +191,14 @@ public class AdminSecurityConfiguration {
                         "/api/admin/acessos", "/api/admin/cargos", "/api/admin/qr-tokens",
                         "/api/admin/pontos", "/api/admin/auth/me")
                 .stream().anyMatch(prefix -> path.equals(prefix) || path.startsWith(prefix + "/"));
+    }
+
+    private static boolean htmlNavigation(HttpServletRequest request) {
+        String path = request.getServletPath();
+        String accept = request.getHeader("Accept");
+        return ("GET".equals(request.getMethod()) || "HEAD".equals(request.getMethod()))
+                && !path.startsWith("/api/") && !path.startsWith("/ponto/")
+                && accept != null && accept.contains("text/html");
     }
 
     private static boolean sameOrigin(HttpServletRequest request, String origin) {
