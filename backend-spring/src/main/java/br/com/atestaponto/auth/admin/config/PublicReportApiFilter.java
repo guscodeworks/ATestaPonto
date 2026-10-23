@@ -57,11 +57,8 @@ final class PublicReportApiFilter extends OncePerRequestFilter {
                 return;
             }
             try {
-                // Express usa trust proxy=1: o ultimo salto de X-Forwarded-For e o IP da cota.
-                String forwarded = request.getHeader("X-Forwarded-For");
-                String[] hops = forwarded == null ? new String[0] : forwarded.split(",", -1);
-                String ip = hops.length == 0 ? request.getRemoteAddr() : hops[hops.length - 1].strip();
-                if (!reserve("ip-abuse", ipSubject(ip), limits.ipLimit(), response)) return;
+                // RemoteIpValve (forward-headers-strategy=native) ja resolve X-Forwarded-For apenas de proxies internos.
+                if (!reserve("ip-abuse", ipSubject(request.getRemoteAddr()), limits.ipLimit(), response)) return;
                 String subject = "admin:" + admin.admin().id();
                 if (!reserve("sensitive", subject, 40, response)) return;
                 if (!reserve("sensitive-resource", List.of(subject, ROOT, suffix, ""), 40, response)) return;

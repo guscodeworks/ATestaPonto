@@ -69,11 +69,8 @@ public class PublicPunchRateLimit {
         return new PublicPunchException(429, "RATE_LIMITED", "Muitas requisicoes. Tente novamente em instantes");
     }
     private PublicPunchException unavailable() { return new PublicPunchException(503, "RATE_LIMIT_UNAVAILABLE", "Protecao temporariamente indisponivel. Tente novamente em instantes."); }
-    public static String ip(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        String[] hops = forwarded == null ? new String[0] : forwarded.split(",", -1);
-        return hops.length == 0 ? request.getRemoteAddr() : hops[hops.length - 1].strip();
-    }
+    // RemoteIpValve (forward-headers-strategy=native) ja resolve X-Forwarded-For apenas de proxies internos.
+    public static String ip(HttpServletRequest request) { return request.getRemoteAddr(); }
     private static String ipSubject(String ip) {
         if (ip == null || !ip.matches("[0-9a-fA-F:.%]+")) return "unknown-ip";
         if (!ip.contains(":")) return ip;
