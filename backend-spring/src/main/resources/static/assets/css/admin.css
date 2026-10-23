@@ -1,0 +1,20 @@
+/* Admin CSS Manifest */
+@import url("./admin/base.css");
+@import url("./loading.css?v=20260729-loading-review");
+@import url("./admin/dashboard.css");
+@import url("./admin/tables-and-filters.css");
+@import url("./admin/employees.css");
+@import url("./admin/register.css");
+@import url("./admin/points-and-reports.css");
+@import url("./admin/settings.css");
+@import url("./admin/components.css");
+@import url("./admin/visual-identity.css");
+@import url("./admin/responsive.css");
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/inter-latin-400-700.woff2") format("woff2");
+}
