@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Primeiro acesso | ATesta Ponto</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png" />
+  <link rel="apple-touch-icon" href="/img/favicon-source-1024.png" />
+  <link rel="preload" as="image" href="/img/background-desktop.webp" media="(min-width: 768px)" />
+  <link rel="preload" as="image" href="/img/background-mobile.webp" media="(max-width: 767px)" />
+  <script src="/assets/js/auth/first-access.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/bundles/login.css?v=20260826-compact-2">
+  <style>
+    /* login.css define display em form e .btn-login, o que anularia o atributo hidden usado por first-access.js. */
+    [hidden] { display: none !important; }
+    .msg-container { margin: 0 0 18px; padding: 12px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; }
+    .msg-container.error { color: var(--color-danger); background: var(--color-danger-bg); }
+    .msg-container.success { color: var(--color-success); background: var(--color-success-bg); }
+    #login-link { text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main class="login-page">
+    <div class="login-art" aria-hidden="true">
+      <span class="art-dot art-dot--blue-one"></span>
+      <span class="art-dot art-dot--blue-two"></span>
+      <span class="art-dot art-dot--red-one"></span>
+      <span class="art-dot art-dot--red-two"></span>
+      <span class="art-dot art-dot--black-one"></span>
+      <span class="art-dot art-dot--black-two"></span>
+    </div>
+    <section class="login-panel" aria-labelledby="first-access-heading">
+      <div class="login-form-panel">
+        <header>
+          <img
+            class="login-brand-symbol"
+            src="/img/atestaponto-symbol.png"
+            width="82"
+            height="82"
+            alt=""
+          />
+          <p class="login-brand"><span>ATesta</span> <strong>Ponto</strong></p>
+          <h1 class="login-heading" id="first-access-heading">Primeiro acesso</h1>
+          <p class="login-sub">Crie uma nova senha para continuar.</p>
+        </header>
+
+        <div class="msg-container" id="msg-container" role="status" aria-live="polite" hidden></div>
+
+        <form id="first-access-form" novalidate>
+          <div class="form-field">
+            <label for="nova-senha">Nova senha</label>
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="nova-senha"
+                class="field-input no-icon"
+                name="nova-senha"
+                placeholder="Digite a nova senha"
+                minlength="8"
+                maxlength="72"
+                autocomplete="new-password"
+                aria-describedby="nova-senha-error"
+              />
+              <button type="button" class="toggle-pw" id="toggle-nova-senha" aria-label="Mostrar senha">
+                Mostrar
+              </button>
+            </div>
+            <span class="field-error" id="nova-senha-error" aria-live="polite">
+              A senha deve ter entre 8 e 72 caracteres.
+            </span>
+          </div>
+
+          <div class="form-field">
+            <label for="confirma-senha">Confirmar nova senha</label>
+            <div class="input-wrap">
+              <input
+                type="password"
+                id="confirma-senha"
+                class="field-input no-icon"
+                name="confirma-senha"
+                placeholder="Repita a nova senha"
+                maxlength="72"
+                autocomplete="new-password"
+                aria-describedby="confirma-senha-error"
+              />
+              <button type="button" class="toggle-pw" id="toggle-confirma-senha" aria-label="Mostrar senha">
+                Mostrar
+              </button>
+            </div>
+            <span class="field-error" id="confirma-senha-error" aria-live="polite">
+              As senhas não coincidem.
+            </span>
+          </div>
+
+          <button type="submit" class="btn-login" id="btn-salvar">
+            <span class="btn-label">Salvar nova senha</span>
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </form>
+
+        <a href="/login" class="btn-login" id="login-link" hidden>Ir para o login</a>
+      </div>
+    </section>
+  </main>
+
+  <section
+    class="toast-stack"
+    id="toast-stack"
+    aria-live="polite"
+    aria-atomic="true"
+    aria-label="Notificações"
+  ></section>
+</body>
+</html>
