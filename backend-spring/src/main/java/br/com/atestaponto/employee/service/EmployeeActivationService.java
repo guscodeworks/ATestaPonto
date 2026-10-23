@@ -8,7 +8,6 @@ import java.util.Locale;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,7 +22,8 @@ public class EmployeeActivationService {
         this.validator = validator;
     }
 
-    @Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
+    // Participa da transacao do chamador para manter os locks da autorizacao administrativa ate o commit.
+    @Transactional
     public EmployeeActivationResponse changeActivation(long id, boolean active, EmployeeActivationRequest request) {
         if (id < 1 || id > 9007199254740991L || request == null || !validator.validate(request).isEmpty()) {
             throw error(HttpStatus.BAD_REQUEST, "Dados de ativacao do funcionario invalidos");
