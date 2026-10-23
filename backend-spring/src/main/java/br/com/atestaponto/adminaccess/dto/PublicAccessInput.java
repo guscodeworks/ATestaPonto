@@ -2,6 +2,7 @@ package br.com.atestaponto.adminaccess.dto;
 
 import br.com.atestaponto.employee.dto.PublicEmployeeInput;
 import br.com.atestaponto.auth.admin.service.AdminAccessPolicy;
+import br.com.atestaponto.validation.Cpf;
 import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Validator;
 import java.time.LocalDate;
@@ -70,7 +71,7 @@ public final class PublicAccessInput {
         String cpf = text(body, "cpf").replaceAll("[^0-9]", "");
         if (cpf.isEmpty()) add(errors, "cpf", "body", "CPF e obrigatorio");
         else if (cpf.length() != 11) add(errors, "cpf", "body", "CPF deve ter 11 digitos");
-        else if (!validCpf(cpf)) add(errors, "cpf", "body", "CPF invalido");
+        else if (!Cpf.valid(cpf)) add(errors, "cpf", "body", "CPF invalido");
         String name = body.has("nome") ? text(body, "nome").strip() : null;
         if (name != null) {
             int length = name.codePointCount(0, name.length());
@@ -139,17 +140,6 @@ public final class PublicAccessInput {
             add(errors, field, "body", field + " invalida");
             return null;
         }
-    }
-
-    private static boolean validCpf(String cpf) {
-        if (cpf.matches("([0-9])\\1{10}")) return false;
-        for (int length = 9; length <= 10; length++) {
-            int sum = 0;
-            for (int i = 0; i < length; i++) sum += (cpf.charAt(i) - '0') * (length + 1 - i);
-            int digit = sum * 10 % 11;
-            if ((digit == 10 ? 0 : digit) != cpf.charAt(length) - '0') return false;
-        }
-        return true;
     }
 
     private static String text(JsonNode body, String field) {

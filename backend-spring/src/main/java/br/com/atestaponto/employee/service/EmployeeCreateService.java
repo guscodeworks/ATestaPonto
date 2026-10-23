@@ -3,6 +3,7 @@ package br.com.atestaponto.employee.service;
 import br.com.atestaponto.employee.dto.EmployeeCreateRequest;
 import br.com.atestaponto.employee.dto.EmployeeCreateResponse;
 import br.com.atestaponto.employee.repository.EmployeeCreateRepository;
+import br.com.atestaponto.validation.Cpf;
 import java.util.Locale;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -83,14 +84,14 @@ public class EmployeeCreateService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dados do funcionario invalidos");
         }
         String cpf = request.cpf();
-        if (cpf == null || !cpf.matches("[0-9]{11}") || !isValidCpf(cpf)) {
+        if (!Cpf.valid(cpf)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CPF invalido");
         }
         if (request.email() == null || !request.email().equals(request.email().strip().toLowerCase(Locale.ROOT))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email invalido");
         }
         if (request.nome() == null || request.nome().strip().length() < 3
-                || request.nome().strip().length() > 55
+                || request.nome().length() > 150 // Texto ja escapado: protege a largura da coluna.
                 || request.nome().codePoints().anyMatch(Character::isISOControl)
                 || request.nome().contains("<") || request.nome().contains(">")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome invalido");
@@ -123,22 +124,6 @@ public class EmployeeCreateService {
         if (request.senhaHash() == null || request.senhaHash().isBlank() || request.senhaHash().length() > 255) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Credencial temporaria invalida");
         }
-    }
-
-    private boolean isValidCpf(String cpf) {
-        if (cpf.chars().distinct().count() == 1) return false;
-        int first = cpfDigit(cpf.substring(0, 9), 10);
-        int second = cpfDigit(cpf.substring(0, 9) + first, 11);
-        return cpf.equals(cpf.substring(0, 9) + first + second);
-    }
-
-    private int cpfDigit(String digits, int factor) {
-        int sum = 0;
-        for (int index = 0; index < digits.length(); index++) {
-            sum += Character.digit(digits.charAt(index), 10) * (factor - index);
-        }
-        int rest = (sum * 10) % 11;
-        return rest == 10 ? 0 : rest;
     }
 
     private boolean validTime(String value) {

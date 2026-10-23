@@ -10,7 +10,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public record EmployeeCreateRequest(
-        @NotBlank @Size(min = 3, max = 55) String nome,
+        // Nome chega escapado (ate 55 caracteres antes do escape); o limite aqui e a largura de funcionarios.nome.
+        @NotBlank @Size(min = 3, max = 150) String nome,
         @NotBlank @Pattern(regexp = "[0-9]{11}") String cpf,
         @NotBlank @Email @Size(max = 150) String email,
         @Size(max = 20) String telefone,

@@ -77,7 +77,7 @@ public final class PublicEmployeeInput {
     public static String escape(String text) {
         return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 .replace("\"", "&quot;").replace("'", "&#x27;").replace("/", "&#x2F;")
-                .replace("`", "&#96;").replace("=", "&#x3D;");
+                .replace("\\", "&#x5C;").replace("`", "&#96;"); // Mesmo mapeamento do validator.escape do Express.
     }
 
     private static String email(String value) {
