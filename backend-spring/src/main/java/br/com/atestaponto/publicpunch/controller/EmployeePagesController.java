@@ -34,6 +34,16 @@ public class EmployeePagesController {
         return ResponseEntity.status(302).location(URI.create("/login")).build();
     }
 
+    @GetMapping({"/first-access.html", "/first-access.html/", "/funcionario.html", "/funcionario.html/",
+            "/funcionario/ponto.html", "/funcionario/ponto.html/", "/funcionario/perfil.html", "/funcionario/perfil.html/",
+            "/funcionario/relatorio.html", "/funcionario/relatorio.html/"})
+    public ResponseEntity<Void> legacyHtml(HttpServletRequest request) {
+        String path = request.getServletPath();
+        String target = path.startsWith("/funcionario/ponto.html") ? "/funcionario"
+                : path.substring(0, path.lastIndexOf(".html"));
+        return ResponseEntity.status(302).location(URI.create(target)).build();
+    }
+
     @GetMapping({"/ponto", "/ponto/", "/bater-ponto", "/bater-ponto/"})
     public ResponseEntity<Void> shortcut() {
         return ResponseEntity.status(302).location(URI.create("/ponto/acessar")).build();
@@ -45,9 +55,28 @@ public class EmployeePagesController {
         return page();
     }
 
-    private ResponseEntity<Resource> page() {
+    @GetMapping({"/funcionario", "/funcionario/"})
+    public ResponseEntity<Resource> punch() { return page("punch.html"); }
+
+    @GetMapping({"/funcionario/perfil", "/funcionario/perfil/"})
+    public ResponseEntity<Resource> profile() { return page("profile.html"); }
+
+    @GetMapping({"/funcionario/relatorio", "/funcionario/relatorio/"})
+    public ResponseEntity<Resource> report() { return page("report.html"); }
+
+    @GetMapping({"/recuperar-senha", "/recuperar-senha/"})
+    public ResponseEntity<Resource> passwordRecovery() { return page("password.html"); }
+
+    @GetMapping({"/first-access", "/first-access/"})
+    public ResponseEntity<Resource> firstAccess() { return page("first-access.html"); }
+
+    private ResponseEntity<Resource> page() { return page("index.html"); }
+
+    private ResponseEntity<Resource> page(String name) {
+        Resource body = new ClassPathResource("employee-pages/" + name);
+        if (!body.exists()) return ResponseEntity.notFound().build();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .contentType(new MediaType("text", "html", StandardCharsets.UTF_8))
-                .body(new ClassPathResource("employee-pages/index.html"));
+                .body(body);
     }
 }

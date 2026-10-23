@@ -28,13 +28,35 @@ public class PublicPunchSecurity {
         return http.securityMatcher("/", "/login", "/login/", "/home", "/home/", "/ponto", "/ponto/",
                         "/bater-ponto", "/bater-ponto/", "/ponto/acessar", "/ponto/acessar/",
                         "/index.html", "/index.html/", "/home.html", "/home.html/", "/login.html", "/login.html/",
-                        "/funcionario/login", "/funcionario/login/", "/funcionario/login.html", "/funcionario/login.html/")
+                        "/funcionario/login", "/funcionario/login/", "/funcionario/login.html", "/funcionario/login.html/",
+                        "/funcionario", "/funcionario/", "/funcionario/perfil", "/funcionario/perfil/",
+                        "/funcionario/relatorio", "/funcionario/relatorio/", "/recuperar-senha", "/recuperar-senha/",
+                        "/first-access", "/first-access/", "/first-access.html", "/first-access.html/",
+                        "/funcionario.html", "/funcionario.html/", "/funcionario/ponto.html", "/funcionario/ponto.html/",
+                        "/funcionario/perfil.html", "/funcionario/perfil.html/",
+                        "/funcionario/relatorio.html", "/funcionario/relatorio.html/")
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .securityContext(c -> c.requireExplicitSave(true))
                 .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
                 .headers(AdminSecurityConfiguration::browserHeaders)
                 .headers(h -> h.referrerPolicy(r -> r.policy(
                         org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER)))
+                .authorizeHttpRequests(a -> a.anyRequest().permitAll()).build();
+    }
+
+    @Bean
+    @Order(-2)
+    public SecurityFilterChain publicAssetsSecurity(HttpSecurity http) throws Exception {
+        // Somente leitura; demais metodos seguem para a cadeia administrativa, que responde 404 a caminhos nao mapeados.
+        var get = org.springframework.http.HttpMethod.GET;
+        var head = org.springframework.http.HttpMethod.HEAD;
+        var paths = org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher.withDefaults();
+        return http.securityMatchers(m -> m.requestMatchers(paths.matcher(get, "/assets/**"), paths.matcher(head, "/assets/**"),
+                        paths.matcher(get, "/icons/**"), paths.matcher(head, "/icons/**"),
+                        paths.matcher(get, "/img/**"), paths.matcher(head, "/img/**")))
+                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .securityContext(c -> c.requireExplicitSave(true))
+                .requestCache(c -> c.disable()).csrf(c -> c.disable()).logout(c -> c.disable())
                 .authorizeHttpRequests(a -> a.anyRequest().permitAll()).build();
     }
 
