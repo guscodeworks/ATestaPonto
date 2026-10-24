@@ -186,8 +186,8 @@ public class PublicPunchService {
         audit(event, id, ip, metadata, message);
     }
     static String auditIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        String ip = forwarded == null ? request.getRemoteAddr() : forwarded.split(",", -1)[0].strip();
+        // RemoteIpValve (forward-headers-strategy=native) ja resolve X-Forwarded-For apenas de proxies internos.
+        String ip = request.getRemoteAddr();
         return ip == null || ip.length() > 64 || !ip.matches("[0-9a-fA-F:.%]+") ? "[InvalidIP]" : ip;
     }
     static void audit(String event, long id, String ip, Map<String, Object> metadata, String message) {
