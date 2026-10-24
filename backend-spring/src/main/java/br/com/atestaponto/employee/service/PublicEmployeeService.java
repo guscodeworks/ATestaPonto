@@ -113,7 +113,9 @@ public class PublicEmployeeService {
         RANDOM.nextBytes(bytes);
         String password = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         request = PublicEmployeeInput.create(body, passwords.encode(password));
-        var result = creates.createAuthorized(request, context.targetDepartmentId());
+        long schoolId = request.unidadeEscolarId();
+        var result = creates.createAuthorized(request,
+                () -> refresh(previous, "funcionario.criar", null, schoolId, true).targetDepartmentId());
         audit("funcionario_cadastrado", context.adminId(), result.id());
         // O service de dominio encerra a transacao antes do envio de e-mail.
         return Map.of("funcionario", project(result, true),
