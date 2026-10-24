@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
+    "test": "node --test",
     "start:ponto": "node server.js",
     "start:govbr": "npm --prefix ../atesta-id start",
     "dev": "concurrently -n PONTO,GOVBR \"npm run start:ponto\" \"npm run start:govbr\"",

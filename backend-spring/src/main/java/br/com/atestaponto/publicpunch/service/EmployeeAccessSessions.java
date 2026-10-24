@@ -1,6 +1,5 @@
 package br.com.atestaponto.publicpunch.service;
 
-import br.com.atestaponto.schoolqr.service.SchoolQrService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -38,15 +37,14 @@ public class EmployeeAccessSessions {
     }
     private final ObjectProvider<JedisPooled> redis;
     private final ObjectMapper json;
-    private final SchoolQrService qr;
     private final byte[] secret;
     private final String prefix;
     private final boolean secure, local;
     private final SecureRandom random = new SecureRandom();
     private final Map<String, Local> sessions = new ConcurrentHashMap<>();
 
-    public EmployeeAccessSessions(ObjectProvider<JedisPooled> redis, ObjectMapper json, SchoolQrService qr, Environment env) {
-        this.redis = redis; this.json = json; this.qr = qr;
+    public EmployeeAccessSessions(ObjectProvider<JedisPooled> redis, ObjectMapper json, Environment env) {
+        this.redis = redis; this.json = json;
         String value = env.getRequiredProperty("SESSION_SECRET").strip();
         if (value.length() < 32) throw new IllegalArgumentException("SESSION_SECRET invalido");
         secret = value.getBytes(StandardCharsets.UTF_8);
@@ -56,26 +54,6 @@ public class EmployeeAccessSessions {
         if (namespace.length() > 128 || !namespace.matches("[A-Za-z0-9][A-Za-z0-9_-]*(?::[A-Za-z0-9][A-Za-z0-9_-]*)*"))
             throw new IllegalArgumentException("REDIS_NAMESPACE invalido");
         prefix = namespace + ":ponto:session:";
-    }
-
-    public Long qrUnit(HttpServletRequest request, HttpServletResponse response) {
-        String sid = sid(request, "ponto_qr_acesso");
-        if (sid == null) return null;
-        Snapshot stored = read(sid);
-        if (stored == null || expired(stored.data())) {
-            clearCookie(response, "ponto_qr_acesso");
-            return null;
-        }
-        JsonNode token = stored.data().path("funcionario_qr").get("token");
-        if (token == null) return null;
-        var resolved = qr.resolve(token);
-        if (resolved == null) {
-            stored.data().remove("funcionario_qr");
-            replace(stored);
-            clearCookie(response, "ponto_qr_acesso");
-            throw new PublicPunchException(403, "FORBIDDEN", "QR Code invalido ou revogado");
-        }
-        return resolved.unidade_escolar_id();
     }
 
     public Snapshot recovery(HttpServletRequest request) {
@@ -89,24 +67,6 @@ public class EmployeeAccessSessions {
 
     public void createRecovery(HttpServletRequest request, HttpServletResponse response, ObjectNode recovery) {
         create(request, response, "ponto_recovery", "passwordRecovery", recovery);
-    }
-
-    public void clearQr(HttpServletRequest request, HttpServletResponse response) {
-        String previous = sid(request, "ponto_qr_acesso");
-        if (previous != null) delete(key(previous));
-        clearCookie(response, "ponto_qr_acesso");
-    }
-
-    public void establishQr(HttpServletRequest request, HttpServletResponse response) {
-        clearQr(request, response);
-        String[] tokens = request.getParameterValues("qr");
-        if (tokens == null) return;
-        JsonNode token = tokens.length == 1 ? json.getNodeFactory().textNode(tokens[0]
-                .replaceAll("^[\\s\\p{Z}\\uFEFF]+|[\\s\\p{Z}\\uFEFF]+$", "")) : null;
-        if (qr.resolve(token) == null) throw new PublicPunchException(403, "FORBIDDEN", "QR Code invalido ou revogado");
-        var context = json.createObjectNode();
-        context.set("token", token);
-        create(request, response, "ponto_qr_acesso", "funcionario_qr", context);
     }
 
     private void create(HttpServletRequest request, HttpServletResponse response,
@@ -182,8 +142,5 @@ public class EmployeeAccessSessions {
         JedisPooled client = redis.getIfAvailable();
         if (client == null) throw new IllegalStateException("Redis de sessao indisponivel");
         return client;
-    }
-    private void clearCookie(HttpServletResponse response, String name) {
-        response.addHeader("Set-Cookie", ResponseCookie.from(name, "").path("/").httpOnly(true).sameSite("Lax").secure(secure).maxAge(0).build().toString());
     }
 }

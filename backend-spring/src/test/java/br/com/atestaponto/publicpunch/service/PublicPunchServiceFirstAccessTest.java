@@ -29,7 +29,7 @@ class PublicPunchServiceFirstAccessTest {
     private final EmployeeJwt jwt = new EmployeeJwt(json, new MockEnvironment().withProperty("JWT_SECRET", "test-secret-with-at-least-32-characters"));
     private final EmployeeCredentialsRepository repository = mock(EmployeeCredentialsRepository.class);
     private final PublicPunchService service = new PublicPunchService(new EmployeeCredentialsService(repository), mock(PunchService.class),
-            jwt, mock(EmployeeAccessSessions.class), json, new MockEnvironment().withProperty("BCRYPT_SALT_ROUNDS", "10"));
+            jwt, json, new MockEnvironment().withProperty("BCRYPT_SALT_ROUNDS", "10"));
     private final PublicPunchErrors errors = new PublicPunchErrors(new MockEnvironment());
 
     private Object change() throws Exception {

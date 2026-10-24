@@ -1,8 +1,6 @@
 package br.com.atestaponto.publicpunch.controller;
 
-import br.com.atestaponto.publicpunch.service.EmployeeAccessSessions;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.ClassPathResource;
@@ -15,15 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class EmployeePagesController {
-    private final EmployeeAccessSessions sessions;
-
-    public EmployeePagesController(EmployeeAccessSessions sessions) { this.sessions = sessions; }
-
     @GetMapping({"/", "/login", "/login/"})
-    public ResponseEntity<Resource> login(HttpServletRequest request, HttpServletResponse response) {
-        sessions.clearQr(request, response);
-        return page();
-    }
+    public ResponseEntity<Resource> login() { return page(); }
 
     @GetMapping({"/home", "/home/", "/index.html", "/index.html/", "/home.html", "/home.html/"})
     public ResponseEntity<Void> home() { return ResponseEntity.status(302).location(URI.create("/")).build(); }
@@ -49,11 +40,9 @@ public class EmployeePagesController {
         return ResponseEntity.status(302).location(URI.create("/ponto/acessar")).build();
     }
 
+    // QR e apenas atalho para esta URL: ?qr e ignorado e nunca autentica, autoriza ou bloqueia.
     @GetMapping({"/ponto/acessar", "/ponto/acessar/"})
-    public ResponseEntity<Resource> access(HttpServletRequest request, HttpServletResponse response) {
-        sessions.establishQr(request, response);
-        return page();
-    }
+    public ResponseEntity<Resource> access() { return page(); }
 
     @GetMapping({"/funcionario", "/funcionario/"})
     public ResponseEntity<Resource> punch() { return page("punch.html"); }
