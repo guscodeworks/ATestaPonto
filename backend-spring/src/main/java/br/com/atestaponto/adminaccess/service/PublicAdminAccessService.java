@@ -39,7 +39,11 @@ public class PublicAdminAccessService {
     }
 
     private List<Access> capable(long adminId, String capability) {
-        var result = admins.requireActive(adminId).acessos().stream().filter(a -> permits(a.perfil(), capability)).toList();
+        return capable(admins.requireActive(adminId).acessos(), capability);
+    }
+
+    private static List<Access> capable(List<Access> active, String capability) {
+        var result = active.stream().filter(a -> permits(a.perfil(), capability)).toList();
         if (result.isEmpty()) throw forbidden("Capacidade administrativa insuficiente");
         return result;
     }
@@ -61,7 +65,8 @@ public class PublicAdminAccessService {
 
     @Transactional(readOnly = true)
     public Map<String, ?> list(long adminId, MultiValueMap<String, String> query) {
-        var operators = capable(adminId, "acesso.listar");
+        var active = admins.requireActive(adminId).acessos();
+        var operators = capable(active, "acesso.listar");
         var scope = scope(operators);
         var pagination = PublicAccessInput.pagination(query);
         long offset;
@@ -69,7 +74,6 @@ public class PublicAdminAccessService {
         catch (ArithmeticException overflow) { offset = Long.MAX_VALUE; }
         var result = accesses.list(new AdminAccessRequest.ListQuery(scope.global(), scope.departments(),
                 scope.global() ? List.of() : scope.visibleSchools(), pagination.limit(), offset));
-        var active = admins.requireActive(adminId).acessos();
         return Map.of("items", result.items().stream().map(row -> {
             var item = project(row);
             item.put("acoes_permitidas", actions(row, active, adminId));
@@ -188,9 +192,7 @@ public class PublicAdminAccessService {
             resource = new Resource(target.unidade_diretoria_ensino_id(), target.unidade_escolar_id());
         } else return List.of();
         return List.of("suspender", "reativar", "revogar").stream().filter(action ->
-                (action.equals("reativar") ? target.status().equals("SUSPENSO")
-                        : action.equals("suspender") ? target.status().equals("ATIVO")
-                        : List.of("ATIVO", "SUSPENSO").contains(target.status()))
+                AdminAccessService.transitionAllowed(action, target.status())
                 && authorizer(operators, "acesso." + action, target.perfil(), resource, false) != null).toList();
     }
 
