@@ -562,6 +562,8 @@
         showMessage(msg, true);
         sessionStorage.removeItem('funcionario_primeiro_acesso_token');
         sessionStorage.removeItem('funcionario_primeiro_acesso_expira_em');
+        form.hidden = true;
+        loginLink.hidden = false;
       } else {
         const msg = error.payload?.message || 'Erro ao alterar senha. Tente novamente.';
         toast(msg, 'error');
