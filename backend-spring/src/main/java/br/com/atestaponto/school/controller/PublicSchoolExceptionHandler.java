@@ -4,6 +4,8 @@ import br.com.atestaponto.educationdepartment.controller.PublicEducationDepartme
 import br.com.atestaponto.school.dto.PublicSchoolInput;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ProblemDetail;
@@ -15,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice(assignableTypes = {PublicSchoolController.class, PublicEducationDepartmentController.class})
 public class PublicSchoolExceptionHandler {
+    private static final Logger LOG = LoggerFactory.getLogger(PublicSchoolExceptionHandler.class);
     @ExceptionHandler(PublicSchoolInput.Invalid.class)
     public ResponseEntity<?> validation(PublicSchoolInput.Invalid error) {
         return failure(422, "VALIDATION_ERROR", error.getReason(), error.details());
@@ -24,13 +27,14 @@ public class PublicSchoolExceptionHandler {
     public ResponseEntity<?> status(ResponseStatusException error, HttpServletRequest request) {
         int status = error.getStatusCode().value();
         if (schoolWrite(request) && status != 403) {
+            if (status >= 500) logUnexpected(error, status, "SCHOOL_CREATE_ERROR");
             return schoolProblem(status, error.getReason(), request);
         }
         if (request.getServletPath().matches("/api/admin/escolas/cep/[^/]+/?")) {
             if (status == 404) return failure(404, "CEP_NAO_ENCONTRADO", "CEP nao encontrado na base de consulta");
             if (status == 400) return failure(422, "VALIDATION_ERROR", "CEP invalido",
                     java.util.List.of(Map.of("field", "cep", "location", "body", "message", "CEP deve ter 8 digitos validos")));
-            if (status >= 500) return failure(502, "CEP_INDISPONIVEL", "Internal server error");
+            if (status >= 500) return unexpected(error, 502, "CEP_INDISPONIVEL");
         }
         String code = switch (status) {
             case 400 -> "BAD_REQUEST";
@@ -39,7 +43,8 @@ public class PublicSchoolExceptionHandler {
             case 409 -> "EDUCATION_DEPARTMENT_CONFLICT";
             default -> "INTERNAL_ERROR";
         };
-        return failure(status, code, status >= 500 ? "Internal server error" : error.getReason());
+        if (status >= 500) return unexpected(error, status, code);
+        return failure(status, code, error.getReason());
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -57,13 +62,24 @@ public class PublicSchoolExceptionHandler {
     @ExceptionHandler({DataAccessException.class, Exception.class})
     public ResponseEntity<?> unavailable(Exception error, HttpServletRequest request) {
         if (schoolWrite(request) && error instanceof DataAccessException && !request.getServletPath().matches(".*/preview/?")) {
+            logUnexpected(error, 500, "SCHOOL_CREATE_ERROR");
             return schoolProblem(500, "Nao foi possivel criar a unidade escolar", request);
         }
         String code = request.getServletPath().startsWith("/api/admin/diretorias")
                 ? "EDUCATION_DEPARTMENT_ERROR"
                 : request.getServletPath().matches("/api/admin/escolas/diretorias/?")
                 ? "EDUCATION_DEPARTMENT_SERVICE_UNAVAILABLE" : "SCHOOL_SERVICE_UNAVAILABLE";
-        return failure(502, code, "Internal server error");
+        return unexpected(error, 502, code);
+    }
+
+    private ResponseEntity<?> unexpected(Exception error, int status, String code) {
+        logUnexpected(error, status, code);
+        return failure(status, code, "Internal server error");
+    }
+
+    private static void logUnexpected(Exception error, int status, String code) {
+        // Somente o tipo: mensagem, causa e stack podem conter CPF, e-mail ou tokens.
+        LOG.error("falha_inesperada codigo={} status={} excecao={}", code, status, error.getClass().getName());
     }
 
     private ResponseEntity<?> schoolProblem(int status, String detail, HttpServletRequest request) {

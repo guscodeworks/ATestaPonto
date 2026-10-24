@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 @RestControllerAdvice(assignableTypes = {PublicPunchController.class, EmployeePagesController.class})
 public class PublicPunchErrors implements ResponseBodyAdvice<Object> {
+    private static final Logger LOG = LoggerFactory.getLogger(PublicPunchErrors.class);
     private final boolean production;
     public PublicPunchErrors(Environment env) {
         production = env.getProperty("NODE_ENV", "development").strip().equalsIgnoreCase("production");
@@ -73,7 +76,11 @@ public class PublicPunchErrors implements ResponseBodyAdvice<Object> {
         return unexpected(e);
     }
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<?> unexpected(Exception e) { return business(new PublicPunchException(500, "INTERNAL_ERROR", "Internal server error")); }
+    public ResponseEntity<?> unexpected(Exception e) {
+        // Somente o tipo: mensagem, causa e stack podem conter CPF, e-mail ou tokens.
+        LOG.error("falha_inesperada codigo={} status={} excecao={}", "INTERNAL_ERROR", 500, e.getClass().getName());
+        return business(new PublicPunchException(500, "INTERNAL_ERROR", "Internal server error"));
+    }
     static Map<String, Object> body(PublicPunchException e) {
         return Map.of("success", false, "error", Map.of("code", e.code(), "message", e.getMessage(), "details", e.details()));
     }

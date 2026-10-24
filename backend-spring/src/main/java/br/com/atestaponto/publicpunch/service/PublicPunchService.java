@@ -117,7 +117,6 @@ public class PublicPunchService {
                 "sequencia", result.response().path("ponto").path("sequencia").asInt(),
                 "tipo", result.response().path("ponto").path("tipo").asText(),
                 "distancia_metros", result.response().path("ponto").path("distancia_metros").asDouble(),
-                "latitude", body.path("latitude").doubleValue(), "longitude", body.path("longitude").doubleValue(),
                 "user_agent", safeUserAgent(request.getHeader("User-Agent"))));
         return result.response();
     }
