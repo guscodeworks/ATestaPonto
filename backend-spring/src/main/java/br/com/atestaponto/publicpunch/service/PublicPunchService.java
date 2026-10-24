@@ -29,15 +29,16 @@ public class PublicPunchService {
     private final ObjectMapper json;
     private final int rounds;
     private final String invalidHash;
-    private final long failureDelay;
+    /** Credencial invalida; o controller a entrega apos LoginFailureDelay. */
+    public static final class InvalidLogin extends PublicPunchException {
+        public InvalidLogin() { super(401, "UNAUTHORIZED", "CPF/email ou senha invalidos"); }
+    }
     public PublicPunchService(EmployeeCredentialsService credentials, PunchService punches, EmployeeJwt jwt,
             EmployeeAccessSessions sessions, ObjectMapper json, Environment env) {
         this.credentials = credentials; this.punches = punches; this.jwt = jwt; this.sessions = sessions; this.json = json;
         rounds = env.getProperty("BCRYPT_SALT_ROUNDS", Integer.class, 12);
         if (rounds < 10 || rounds > 15) throw new IllegalArgumentException("BCRYPT_SALT_ROUNDS invalido");
         invalidHash = hash("invalid-login-credential");
-        failureDelay = env.getProperty("LOGIN_FAILURE_DELAY_MS", Long.class, 2000L);
-        if (failureDelay < 0 || failureDelay > 10000) throw new IllegalArgumentException("LOGIN_FAILURE_DELAY_MS invalido");
     }
     public Object login(JsonNode body, HttpServletRequest req, HttpServletResponse res) {
         PublicPunchValidation.login(body);
@@ -75,9 +76,7 @@ public class PublicPunchService {
     }
     private void invalidLogin(HttpServletRequest req, long id) {
         audit("funcionario_login_invalido", id, req, Map.of("login", "[REDACTED]"));
-        try { Thread.sleep(failureDelay); }
-        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        throw EmployeeJwt.denied("CPF/email ou senha invalidos");
+        throw new InvalidLogin();
     }
     public long authenticate(HttpServletRequest request) {
         String authorization = request.getHeader("Authorization");
