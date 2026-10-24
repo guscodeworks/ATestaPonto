@@ -8,6 +8,8 @@ import br.com.atestaponto.schoolqr.service.PublicSchoolQrService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.sql.SQLException;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice(assignableTypes = {PublicAdminAccessController.class, PublicCargoController.class, PublicSchoolQrController.class})
 public class PublicAccessExceptionHandler {
+    private static final Logger LOG = LoggerFactory.getLogger(PublicAccessExceptionHandler.class);
     @ExceptionHandler(PublicAccessInput.Invalid.class)
     public ResponseEntity<?> validation(PublicAccessInput.Invalid error) {
         return failure(422, "VALIDATION_ERROR", error.getMessage(), error.details());
@@ -53,14 +56,20 @@ public class PublicAccessExceptionHandler {
                 default: break;
             }
         }
-        return failure(500, "INTERNAL_ERROR", "Internal server error", Map.of());
+        return unexpected(error, 500, "INTERNAL_ERROR");
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> unavailable(Exception error, HttpServletRequest request) {
-        if (request.getServletPath().startsWith("/api/admin/qr-tokens")) return failure(502, "SCHOOL_QR_SERVICE_UNAVAILABLE", "Internal server error", Map.of());
-        if (request.getServletPath().startsWith("/api/admin/cargos")) return failure(502, "CARGO_READ_SERVICE_UNAVAILABLE", "Internal server error", Map.of());
-        return failure(500, "INTERNAL_ERROR", "Internal server error", Map.of());
+        if (request.getServletPath().startsWith("/api/admin/qr-tokens")) return unexpected(error, 502, "SCHOOL_QR_SERVICE_UNAVAILABLE");
+        if (request.getServletPath().startsWith("/api/admin/cargos")) return unexpected(error, 502, "CARGO_READ_SERVICE_UNAVAILABLE");
+        return unexpected(error, 500, "INTERNAL_ERROR");
+    }
+
+    private static ResponseEntity<?> unexpected(Exception error, int status, String code) {
+        // Somente o tipo: mensagem, causa e stack podem conter CPF, e-mail ou tokens.
+        LOG.error("falha_inesperada codigo={} status={} excecao={}", code, status, error.getClass().getName());
+        return failure(status, code, "Internal server error", Map.of());
     }
 
     private static ResponseEntity<?> failure(int status, String code, String message, Object details) {
