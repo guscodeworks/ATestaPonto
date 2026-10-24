@@ -6,7 +6,6 @@ import br.com.atestaponto.adminaccess.repository.AdminAccessRepository;
 import br.com.atestaponto.adminaccess.repository.AdminAccessRepository.Authorizer;
 import br.com.atestaponto.auth.admin.service.AdminAccessPolicy;
 import br.com.atestaponto.validation.Cpf;
-import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +17,15 @@ public class AdminAccessService {
     private AdminAccessException forbidden(String message) { return new AdminAccessException(403, "FORBIDDEN", message); }
     private AdminAccessException missing(String message) { return new AdminAccessException(404, "NOT_FOUND", message); }
     private AdminAccessException conflict(String message) { return new AdminAccessException(409, "CONFLICT", message); }
+
+    static boolean transitionAllowed(String action, String status) {
+        return switch (action) {
+            case "suspender" -> "ATIVO".equals(status);
+            case "reativar" -> "SUSPENSO".equals(status);
+            case "revogar" -> "ATIVO".equals(status) || "SUSPENSO".equals(status);
+            default -> false;
+        };
+    }
 
     @Transactional(readOnly = true)
     public Page list(AdminAccessRequest.ListQuery request) { return repository.list(request); }
@@ -105,10 +113,7 @@ public class AdminAccessService {
         if (!target.status().equals(request.statusAtual())) {
             throw conflict("Status do acesso foi alterado por outra operacao; atualize e tente novamente");
         }
-        boolean permitted = "suspender".equals(request.acao()) ? "ATIVO".equals(target.status())
-                : "reativar".equals(request.acao()) ? "SUSPENSO".equals(target.status())
-                : Set.of("ATIVO", "SUSPENSO").contains(target.status());
-        if (!permitted) {
+        if (!transitionAllowed(request.acao(), target.status())) {
             if ("REVOGADO".equals(target.status()) && !"REVOGADO".equals(next)) {
                 throw conflict("Acesso REVOGADO e definitivo: nao pode ser reativado");
             }

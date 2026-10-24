@@ -98,7 +98,6 @@ public class PublicSchoolService {
     }
 
     private SchoolPreviewRequest request(long adminId, JsonNode body, String message) {
-        authorization.creationDepartments(adminId);
         JsonNode department = body == null ? null : body.get("diretoria_ensino_id");
         Long departmentId = null;
         if (department != null && (department.isIntegralNumber() || department.isTextual())) {
