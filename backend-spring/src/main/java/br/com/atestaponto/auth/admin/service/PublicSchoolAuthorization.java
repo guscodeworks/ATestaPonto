@@ -1,5 +1,6 @@
 package br.com.atestaponto.auth.admin.service;
 
+import br.com.atestaponto.adminaccess.dto.AdminAccessResponse.Resource;
 import br.com.atestaponto.auth.admin.dto.AdminContextResponse;
 import br.com.atestaponto.school.dto.SchoolListResponse;
 import br.com.atestaponto.school.service.SchoolService;
@@ -49,11 +50,8 @@ public class PublicSchoolAuthorization {
         var admin = admins.requireActive(adminId);
         try {
             var school = schools.findForAdmin(id);
-            if (admin.acessos().stream().anyMatch(a -> switch (a.perfil()) {
-                case "ADMIN_SEDUC" -> true;
-                case "ADMIN_DIRETORIA" -> Long.valueOf(school.diretoria_ensino_id()).equals(a.diretoria_ensino_id());
-                default -> Long.valueOf(school.id()).equals(a.unidade_escolar_id());
-            })) return school;
+            var resource = new Resource(school.diretoria_ensino_id(), school.id());
+            if (admin.acessos().stream().anyMatch(a -> AdminAccessPolicy.covers(a, resource))) return school;
         } catch (ResponseStatusException missing) {
             if (missing.getStatusCode().value() != 404) throw missing;
         } catch (DataAccessException failure) {

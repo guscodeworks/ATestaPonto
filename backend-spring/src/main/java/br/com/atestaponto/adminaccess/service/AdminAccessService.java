@@ -64,11 +64,7 @@ public class AdminAccessService {
         catch (AdminAccessException error) { throw forbidden("Escopo do acesso administrativo invalido"); }
         String source = authorizer.perfil();
         boolean delegation = AdminAccessPolicy.delegates(source, profile, grant);
-        boolean scope = "ADMIN_SEDUC".equals(source)
-                || ("ADMIN_DIRETORIA".equals(source) && authorizer.diretoriaId() != null
-                    && authorizer.diretoriaId().equals(resource.educationDepartmentId()))
-                || (AdminAccessPolicy.SCHOOL_PROFILES.contains(source) && authorizer.unidadeId() != null
-                    && authorizer.unidadeId().equals(resource.schoolUnitId()));
+        boolean scope = AdminAccessPolicy.covers(source, authorizer.diretoriaId(), authorizer.unidadeId(), resource);
         if (!delegation || !scope) throw forbidden("Acesso autorizador sem capacidade ou escopo suficiente");
     }
 
