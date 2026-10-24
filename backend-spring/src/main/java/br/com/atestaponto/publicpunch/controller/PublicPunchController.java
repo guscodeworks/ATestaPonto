@@ -1,5 +1,6 @@
 package br.com.atestaponto.publicpunch.controller;
 
+import br.com.atestaponto.publicpunch.service.LoginFailureDelay;
 import br.com.atestaponto.publicpunch.service.PublicPasswordRecovery;
 import br.com.atestaponto.publicpunch.service.PublicPunchRateLimit;
 import br.com.atestaponto.publicpunch.service.PublicPunchService;
@@ -22,19 +23,24 @@ public class PublicPunchController {
     private final PublicPasswordRecovery recovery;
     private final PublicPunchRateLimit limits;
     private final org.springframework.core.task.AsyncTaskExecutor executor;
+    private final LoginFailureDelay failureDelay;
     public PublicPunchController(PublicPunchService punches, PublicPasswordRecovery recovery, PublicPunchRateLimit limits,
-            org.springframework.core.task.AsyncTaskExecutor executor) {
-        this.punches = punches; this.recovery = recovery; this.limits = limits; this.executor = executor;
+            org.springframework.core.task.AsyncTaskExecutor executor, LoginFailureDelay failureDelay) {
+        this.punches = punches; this.recovery = recovery; this.limits = limits; this.executor = executor; this.failureDelay = failureDelay;
     }
     @PostMapping({"/api/pontos/login", "/api/pontos/login/"})
-    public Object login(@RequestAttribute("publicPunchBody") JsonNode body, HttpServletRequest req, HttpServletResponse res) {
+    public DeferredResult<Object> login(@RequestAttribute("publicPunchBody") JsonNode body, HttpServletRequest req, HttpServletResponse res) {
         String subject = PublicPunchValidation.subject(body);
         var reservation = limits.login(subject, req, res);
+        var result = new DeferredResult<Object>();
         boolean success = false;
         try {
-            Object data = punches.login(body, req, res);
-            success = true; return ok(data);
+            result.setResult(ok(punches.login(body, req)));
+            success = true;
+        } catch (PublicPunchService.InvalidLogin invalid) {
+            failureDelay.fail(result, invalid);
         } finally { limits.loginFinished(subject, reservation, success, req); }
+        return result;
     }
     @PostMapping({"/api/pontos/registrar", "/api/pontos/registrar/", "/api/pontos/bater", "/api/pontos/bater/", "/ponto/bater", "/ponto/bater/"})
     public ResponseEntity<?> register(@RequestAttribute("publicPunchBody") JsonNode body, HttpServletRequest req, HttpServletResponse res) {

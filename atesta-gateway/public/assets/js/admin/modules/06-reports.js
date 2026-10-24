@@ -73,7 +73,7 @@ async function carregarRelatorioSemanalAdmin(dataReferencia, options = {}) {
     });
     if (options.requestId && options.requestId !== ADMIN_DATA_REQUEST_ID) return false;
     const report = getApiData(payload);
-    if (!report || !Array.isArray(report.dias) || report.dias.length !== 7) {
+    if (!validarRelatorioSemanal(report)) {
       throw new Error('Resposta inválida ao carregar a presença semanal. Tente novamente.');
     }
     RELATORIO_SEMANAL = report;
@@ -85,6 +85,76 @@ async function carregarRelatorioSemanalAdmin(dataReferencia, options = {}) {
     RELATORIO_SEMANAL_DATA_ERROR = error;
     throw error;
   }
+}
+
+function dataIsoSemanalValida(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (Number(value.slice(0, 4)) < 1000) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function adicionarDiasDataIsoSemanal(value, days) {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function resumoSemanalValido(summary, fields) {
+  return Boolean(summary && typeof summary === 'object' && !Array.isArray(summary)
+    && fields.every((field) =>
+      Number.isSafeInteger(summary[field]) && summary[field] >= 0
+    ));
+}
+
+function validarRelatorioSemanal(report) {
+  if (!report || typeof report !== 'object' || Array.isArray(report)
+    || !dataIsoSemanalValida(report.data_referencia)
+    || !dataIsoSemanalValida(report.data_inicio)
+    || !dataIsoSemanalValida(report.data_fim)
+    || !dataIsoSemanalValida(report.data_atual)
+    || report.data_fim !== adicionarDiasDataIsoSemanal(report.data_inicio, 6)
+    || report.data_referencia < report.data_inicio
+    || report.data_referencia > report.data_fim
+    || !resumoSemanalValido(report.resumo, [
+      'total_previstos',
+      'total_presencas',
+      'total_ausencias',
+    ])
+    || !Number.isSafeInteger(report.resumo.total_presencas + report.resumo.total_ausencias)
+    || report.resumo.total_presencas + report.resumo.total_ausencias !== report.resumo.total_previstos
+    || !Array.isArray(report.dias)
+    || report.dias.length !== 7) {
+    return false;
+  }
+
+  return report.dias.every((day, index) =>
+    day && typeof day === 'object' && !Array.isArray(day)
+    && day.data === adicionarDiasDataIsoSemanal(report.data_inicio, index)
+    && typeof day.futuro === 'boolean'
+    && resumoSemanalValido(day.resumo, [
+      'total_funcionarios',
+      'presentes',
+      'ausentes',
+    ])
+    && Number.isSafeInteger(day.resumo.presentes + day.resumo.ausentes)
+    && day.resumo.presentes + day.resumo.ausentes === day.resumo.total_funcionarios
+    && day.futuro === (day.data > report.data_atual)
+  );
+}
+
+function normalizarPercentualSemanal(value) {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  if (typeof value === 'string' && !/^-?(?:\d+\.?\d*|\.\d+)$/.test(value.trim())) {
+    return null;
+  }
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.min(Math.max(parsed, 0), 100);
+}
+
+function formatarPercentualSemanal(value) {
+  return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value);
 }
 
 function renderizarGraficoSemanalRelatorio() {
@@ -105,19 +175,33 @@ function renderizarGraficoSemanalRelatorio() {
   }
 
   const report = RELATORIO_SEMANAL;
+  if (!validarRelatorioSemanal(report)) {
+    container.innerHTML = criarEstadoErroDadosAdmin(
+      'Dados semanais indisponíveis',
+      'A resposta da presença semanal está incompleta ou inválida. Tente carregar o relatório novamente.'
+    );
+    return;
+  }
   const labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
   const rows = report.dias.map((day, index) => {
     const summary = day.resumo;
     const dateLabel = `${day.data.slice(8, 10)}/${day.data.slice(5, 7)}`;
+    const percentage = normalizarPercentualSemanal(summary.taxa_presenca_percent);
+    const percentageLabel = day.futuro || !summary.total_funcionarios || percentage === null
+      ? 'Percentual indisponível'
+      : `Presença ${formatarPercentualSemanal(percentage)}%`;
     const detail = day.futuro ? 'Dia futuro' : summary.total_funcionarios === 0
       ? 'Nenhum vínculo vigente no escopo'
       : `${summary.presentes} presentes de ${summary.total_funcionarios}; ${summary.ausentes} sem ponto`;
-    const label = `${labels[index]}, ${dateLabel}: ${detail}`;
+    const label = `${labels[index]}, ${dateLabel}: ${detail}; ${percentageLabel}`;
+    const valueLabel = day.futuro || !summary.total_funcionarios || percentage === null
+      ? '—'
+      : `${formatarPercentualSemanal(percentage)}%`;
     return `<div class="weekly-chart-day">
       <div class="chart-bar-item" role="img" aria-label="${escapeHtml(label)}">
         <span class="chart-bar-label">${labels[index]} ${dateLabel}</span>
-        <div class="chart-bar-track" aria-hidden="true"><div class="chart-bar-fill blue" style="width:${summary.taxa_presenca_percent}%"></div></div>
-        <span class="chart-bar-val" aria-hidden="true">${day.futuro || !summary.total_funcionarios ? '—' : `${summary.taxa_presenca_percent}%`}</span>
+        <div class="chart-bar-track" aria-hidden="true"><div class="chart-bar-fill blue" style="width:${percentage ?? 0}%"></div></div>
+        <span class="chart-bar-val" aria-hidden="true">${valueLabel}</span>
       </div>
       <div class="reports-panel-meta weekly-chart-detail" aria-hidden="true">${escapeHtml(detail)}</div>
     </div>`;

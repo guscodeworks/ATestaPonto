@@ -1,6 +1,8 @@
 package br.com.atestaponto.auth.admin.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
+import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -15,9 +17,7 @@ import redis.clients.jedis.JedisPooled;
 
 @Service
 public class PublicAdminRateLimit {
-    public record Reservation(long hits, long ttl, String generation) {
-        public Reservation(long hits, long ttl) { this(hits, ttl, ""); }
-    }
+    public record Reservation(long hits, long ttl, String generation) {}
     private record LocalCounter(long hits, long expires) {}
     private static final long WINDOW_MS = 900_000;
     // Mesmo hash/TTL do Express: cotas continuam compartilhadas durante a migracao.
@@ -42,10 +42,8 @@ public class PublicAdminRateLimit {
             @Value("${REDIS_NAMESPACE:#{null}}") String namespace,
             @Value("${NODE_ENV:development}") String nodeEnv,
             @Value("${REDIS_ENABLED:false}") boolean redisEnabled,
-            @Value("${RATE_LIMIT_IP_MAX:2000}") int ipLimit,
-            @Value("${internal.auth.shared-key}") String internalKey) {
+            @Value("${RATE_LIMIT_IP_MAX:2000}") int ipLimit) {
         local = !redisEnabled && !nodeEnv.strip().equalsIgnoreCase("production");
-        if (secret.isBlank() && local) secret = internalKey;
         this.redis = redis; this.json = json; this.secret = secret.trim().getBytes(StandardCharsets.UTF_8);
         String safeNamespace = namespace == null ? (nodeEnv.strip().equalsIgnoreCase("production") ? "atestaponto:production" : "atestaponto:local") : namespace.strip();
         if (safeNamespace.length() > 128 || !safeNamespace.matches("[A-Za-z0-9][A-Za-z0-9_-]*(?::[A-Za-z0-9][A-Za-z0-9_-]*)*")) throw new IllegalArgumentException("REDIS_NAMESPACE invalido");
@@ -57,6 +55,28 @@ public class PublicAdminRateLimit {
     public int ipLimit() { return ipLimit; }
 
     public Reservation increment(String name, Object subject) { return increment(name, subject, WINDOW_MS); }
+
+    public Reservation reserve(String name, Object subject, int max, HttpServletResponse response) {
+        return reserve(name, subject, max, WINDOW_MS, response);
+    }
+
+    // Incrementa e publica RateLimit/RateLimit-Policy; acima do limite tambem define Retry-After.
+    public Reservation reserve(String name, Object subject, int max, long windowMs, HttpServletResponse response) {
+        var value = increment(name, subject, windowMs);
+        headers(name, value, max, windowMs, response);
+        if (value.hits() > max) retryAfter(value, response);
+        return value;
+    }
+
+    public static void headers(String name, Reservation value, int max, long windowMs, HttpServletResponse response) {
+        long seconds = Math.max(1, (Math.max(0, value.ttl()) + 999) / 1000);
+        response.addHeader("RateLimit", "\"" + name + "\"; r=" + Math.max(0, max - value.hits()) + "; t=" + seconds);
+        response.addHeader("RateLimit-Policy", "\"" + name + "\"; q=" + max + "; w=" + ((windowMs + 999) / 1000));
+    }
+
+    public static void retryAfter(Reservation value, HttpServletResponse response) {
+        response.setHeader("Retry-After", Long.toString(Math.max(1, (value.ttl() + 999) / 1000)));
+    }
 
     public Reservation increment(String name, Object subject, long windowMs) {
         String key = prefix + name + ":" + digest(subject);
@@ -71,19 +91,22 @@ public class PublicAdminRateLimit {
         return new Reservation(hits, ttl, generation);
     }
 
-    private synchronized Reservation incrementLocal(String key, long windowMs) {
-        long now = System.currentTimeMillis();
-        counters.values().removeIf(value -> value.expires() <= now);
-        LocalCounter previous = counters.get(key);
-        if (previous == null && counters.size() >= 10000) throw new IllegalStateException("Limite do armazenamento local atingido");
-        var value = previous == null ? new LocalCounter(1, now + windowMs) : new LocalCounter(previous.hits() + 1, previous.expires());
-        counters.put(key, value);
-        return new Reservation(value.hits(), value.expires() - now, Long.toString(value.expires()));
+    // counters e o unico estado compartilhado; chamadas Jedis ficam fora de qualquer lock Java.
+    private Reservation incrementLocal(String key, long windowMs) {
+        synchronized (counters) {
+            long now = System.currentTimeMillis();
+            counters.values().removeIf(value -> value.expires() <= now);
+            LocalCounter previous = counters.get(key);
+            if (previous == null && counters.size() >= 10000) throw new IllegalStateException("Limite do armazenamento local atingido");
+            var value = previous == null ? new LocalCounter(1, now + windowMs) : new LocalCounter(previous.hits() + 1, previous.expires());
+            counters.put(key, value);
+            return new Reservation(value.hits(), value.expires() - now, Long.toString(value.expires()));
+        }
     }
 
-    public synchronized Reservation current(String name, Object subject) {
+    public Reservation current(String name, Object subject) {
         String key = prefix + name + ":" + digest(subject);
-        if (local) {
+        if (local) synchronized (counters) {
             var value = counters.get(key);
             long now = System.currentTimeMillis();
             return value == null || value.expires() <= now ? new Reservation(0, 0, "")
@@ -103,9 +126,9 @@ public class PublicAdminRateLimit {
         return new Reservation(hits, ttl, "");
     }
 
-    public synchronized void refund(String name, Object subject, Reservation reservation) {
+    public void refund(String name, Object subject, Reservation reservation) {
         String key = prefix + name + ":" + digest(subject);
-        if (local) {
+        if (local) synchronized (counters) {
             var value = counters.get(key);
             if (value != null && Long.toString(value.expires()).equals(reservation.generation()) && value.hits() > 0)
                 counters.put(key, new LocalCounter(value.hits() - 1, value.expires()));
@@ -120,6 +143,33 @@ public class PublicAdminRateLimit {
                 end
                 return 0
                 """, List.of(key), List.of(reservation.generation()));
+    }
+
+    // IPv4 exato; IPv6 agrupado por /56. O IP ja vem resolvido pelo RemoteIpValve.
+    public static String ipSubject(String ip) {
+        if (ip == null || !ip.matches("[0-9a-fA-F:.%]+")) return "unknown-ip";
+        if (!ip.contains(":")) return ip;
+        try {
+            byte[] bytes = InetAddress.getByName(ip).getAddress();
+            if (bytes.length == 4) return InetAddress.getByAddress(bytes).getHostAddress();
+            java.util.Arrays.fill(bytes, 7, 16, (byte) 0);
+            int[] groups = new int[8];
+            for (int i = 0; i < 8; i++) groups[i] = (bytes[i * 2] & 255) * 256 + (bytes[i * 2 + 1] & 255);
+            int best = -1, length = 1;
+            for (int i = 0; i < 8;) {
+                if (groups[i] != 0) { i++; continue; }
+                int start = i;
+                while (i < 8 && groups[i] == 0) i++;
+                if (i - start > length) { best = start; length = i - start; }
+            }
+            var result = new StringBuilder();
+            for (int i = 0; i < 8; i++) {
+                if (i == best) { result.append("::"); i += length - 1; continue; }
+                if (!result.isEmpty() && result.charAt(result.length() - 1) != ':') result.append(':');
+                result.append(Integer.toHexString(groups[i]));
+            }
+            return result + "/56";
+        } catch (java.net.UnknownHostException invalid) { return "unknown-ip"; }
     }
 
     private String digest(Object subject) {

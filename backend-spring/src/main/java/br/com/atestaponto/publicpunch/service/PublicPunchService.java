@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.LinkedHashMap;
@@ -25,23 +24,22 @@ public class PublicPunchService {
     private final EmployeeCredentialsService credentials;
     private final PunchService punches;
     private final EmployeeJwt jwt;
-    private final EmployeeAccessSessions sessions;
     private final ObjectMapper json;
     private final int rounds;
     private final String invalidHash;
-    private final long failureDelay;
+    /** Credencial invalida; o controller a entrega apos LoginFailureDelay. */
+    public static final class InvalidLogin extends PublicPunchException {
+        public InvalidLogin() { super(401, "UNAUTHORIZED", "CPF/email ou senha invalidos"); }
+    }
     public PublicPunchService(EmployeeCredentialsService credentials, PunchService punches, EmployeeJwt jwt,
-            EmployeeAccessSessions sessions, ObjectMapper json, Environment env) {
-        this.credentials = credentials; this.punches = punches; this.jwt = jwt; this.sessions = sessions; this.json = json;
+            ObjectMapper json, Environment env) {
+        this.credentials = credentials; this.punches = punches; this.jwt = jwt; this.json = json;
         rounds = env.getProperty("BCRYPT_SALT_ROUNDS", Integer.class, 12);
         if (rounds < 10 || rounds > 15) throw new IllegalArgumentException("BCRYPT_SALT_ROUNDS invalido");
         invalidHash = hash("invalid-login-credential");
-        failureDelay = env.getProperty("LOGIN_FAILURE_DELAY_MS", Long.class, 2000L);
-        if (failureDelay < 0 || failureDelay > 10000) throw new IllegalArgumentException("LOGIN_FAILURE_DELAY_MS invalido");
     }
-    public Object login(JsonNode body, HttpServletRequest req, HttpServletResponse res) {
+    public Object login(JsonNode body, HttpServletRequest req) {
         PublicPunchValidation.login(body);
-        Long qrUnit = sessions.qrUnit(req, res);
         String login = PublicPunchValidation.identifier(body);
         var employee = checkedEmployee(credential(() -> credentials.login(new EmployeeCredentialsRequest.Login(login.contains("@") ? null : TextNode.valueOf(login),
                 login.contains("@") ? TextNode.valueOf(login) : null))).employee());
@@ -52,19 +50,11 @@ public class PublicPunchService {
         catch (IllegalArgumentException invalidCredential) { matches = false; }
         if (employee == null || !matches || !employee.ativo()) invalidLogin(req, 0);
         var link = credential(() -> credentials.activeLink(employeeId(employee.id())));
-        if (!link.modern() && link.vinculo() != null || link.vinculo() != null
-                && (!safeId(link.vinculo().id()) || !safeId(link.vinculo().unidade_escolar_id()))) throw credentialsUnavailable();
-        if (link.modern() && link.vinculo() == null) invalidLogin(req, employee.id());
-        if (qrUnit != null) {
-            if (!link.modern()) throw new PublicPunchException(403, "FORBIDDEN", "Contexto de QR Code indisponivel");
-            if (link.vinculo().unidade_escolar_id() != qrUnit) {
-                audit("funcionario_login_qr_unidade_incompativel", employee.id(), req, Map.of());
-                throw new PublicPunchException(403, "FORBIDDEN", "QR Code nao corresponde a unidade escolar do funcionario");
-            }
-        }
+        if (link.vinculo() == null) invalidLogin(req, employee.id());
+        if (!safeId(link.vinculo().id()) || !safeId(link.vinculo().unidade_escolar_id())) throw credentialsUnavailable();
         boolean first = Boolean.TRUE.equals(employee.primeiro_acesso());
         String token = jwt.issue(employee.id(), employee.senha_hash(), first);
-        if (!first && !credential(() -> credentials.lastLogin(employeeId(employee.id()))).updated() && link.modern()) throw credentialsUnavailable();
+        if (!first && !credential(() -> credentials.lastLogin(employeeId(employee.id()))).updated()) throw credentialsUnavailable();
         audit(first ? "funcionario_primeiro_acesso_validado" : "funcionario_login_sucesso", employee.id(), req, Map.of("login", "[REDACTED]"));
         var result = new LinkedHashMap<String, Object>();
         result.put("primeiro_acesso", first);
@@ -79,9 +69,7 @@ public class PublicPunchService {
     }
     private void invalidLogin(HttpServletRequest req, long id) {
         audit("funcionario_login_invalido", id, req, Map.of("login", "[REDACTED]"));
-        try { Thread.sleep(failureDelay); }
-        catch (InterruptedException e) { Thread.currentThread().interrupt(); }
-        throw EmployeeJwt.denied("CPF/email ou senha invalidos");
+        throw new InvalidLogin();
     }
     public long authenticate(HttpServletRequest request) {
         String authorization = request.getHeader("Authorization");
@@ -121,7 +109,6 @@ public class PublicPunchService {
                 "sequencia", result.response().path("ponto").path("sequencia").asInt(),
                 "tipo", result.response().path("ponto").path("tipo").asText(),
                 "distancia_metros", result.response().path("ponto").path("distancia_metros").asDouble(),
-                "latitude", body.path("latitude").doubleValue(), "longitude", body.path("longitude").doubleValue(),
                 "user_agent", safeUserAgent(request.getHeader("User-Agent"))));
         return result.response();
     }
@@ -177,7 +164,6 @@ public class PublicPunchService {
     static void audit(String event, long id, HttpServletRequest request, Map<String, Object> metadata) {
         String message = switch (event) {
             case "funcionario_login_invalido" -> "Tentativa de login de funcionario invalida";
-            case "funcionario_login_qr_unidade_incompativel" -> "Tentativa de login com QR Code de outra unidade escolar";
             case "funcionario_primeiro_acesso_validado" -> "Senha temporaria validada; troca de senha obrigatoria";
             case "funcionario_login_sucesso" -> "Login de funcionario realizado com CPF/email e senha";
             case "senha_primeiro_acesso_atualizada" -> "Senha temporaria substituida no primeiro acesso";
@@ -190,13 +176,13 @@ public class PublicPunchService {
         audit(event, id, ip, metadata, message);
     }
     static String auditIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        String ip = forwarded == null ? request.getRemoteAddr() : forwarded.split(",", -1)[0].strip();
+        // RemoteIpValve (forward-headers-strategy=native) ja resolve X-Forwarded-For apenas de proxies internos.
+        String ip = request.getRemoteAddr();
         return ip == null || ip.length() > 64 || !ip.matches("[0-9a-fA-F:.%]+") ? "[InvalidIP]" : ip;
     }
     static void audit(String event, long id, String ip, Map<String, Object> metadata, String message) {
         var logger = LoggerFactory.getLogger(PublicPunchService.class);
-        if (event.equals("funcionario_login_invalido") || event.equals("funcionario_login_qr_unidade_incompativel"))
+        if (event.equals("funcionario_login_invalido"))
             logger.warn("audit_evento evento={} nivel=WARN funcionarioId={} mensagem={} ipOrigem={} metadados={}", event, id, message, ip, metadata);
         else logger.info("audit_evento evento={} nivel=INFO funcionarioId={} mensagem={} ipOrigem={} metadados={}", event, id, message, ip, metadata);
     }

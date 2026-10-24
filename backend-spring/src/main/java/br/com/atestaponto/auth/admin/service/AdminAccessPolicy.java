@@ -11,35 +11,128 @@ import java.util.Set;
 /** Contrato de capacidades e delegacao de adminCapabilities.js/adminScope.js. */
 public final class AdminAccessPolicy {
     public static final Set<String> SCHOOL_PROFILES = Set.of("DIRETOR", "VICE_DIRETOR", "SECRETARIA", "COORDENADOR");
+    // Fonte unica no Spring; ordem publica equivalente a utils/adminCapabilities.js do gateway.
     public static final Map<String, List<String>> CAPABILITIES;
     static {
-        var administrative = List.of("escola.listar", "escola.visualizar", "funcionario.listar", "funcionario.visualizar",
-                "funcionario.editar", "funcionario.desativar", "funcionario.reativar", "ponto.hoje.visualizar",
-                "ponto.resumo.visualizar", "relatorio.visualizar", "relatorio.hierarquico.visualizar", "acesso.listar",
-                "acesso.proprio.visualizar", "acesso.visualizar", "acesso.conceder", "acesso.suspender",
-                "acesso.reativar", "acesso.revogar", "cargo.listar");
-        var secretary = List.of("escola.listar", "escola.visualizar", "funcionario.listar", "funcionario.visualizar",
-                "funcionario.criar", "funcionario.editar", "ponto.hoje.visualizar", "ponto.resumo.visualizar",
-                "relatorio.visualizar", "relatorio.hierarquico.visualizar", "acesso.proprio.visualizar", "cargo.listar");
         var profiles = new LinkedHashMap<String, List<String>>();
-        profiles.put("ADMIN_SEDUC", java.util.stream.Stream.concat(java.util.stream.Stream.of("diretoria.gerenciar"),
-                administrative.stream().filter(c -> !c.startsWith("funcionario.") && !c.equals("ponto.hoje.visualizar")
-                        && !c.equals("relatorio.visualizar"))).toList());
-        profiles.put("ADMIN_DIRETORIA", append(administrative, "escola.criar"));
-        profiles.put("DIRETOR", append(administrative, "funcionario.criar", "qr.visualizar", "qr.gerar"));
-        profiles.put("VICE_DIRETOR", profiles.get("DIRETOR"));
-        profiles.put("SECRETARIA", append(secretary, "qr.visualizar", "qr.gerar"));
-        profiles.put("COORDENADOR", secretary.stream().filter(c -> !c.equals("funcionario.criar") && !c.equals("funcionario.editar")).toList());
+        profiles.put("ADMIN_SEDUC", List.of(
+                "diretoria.gerenciar",
+                "escola.listar",
+                "escola.visualizar",
+                "ponto.resumo.visualizar",
+                "relatorio.hierarquico.visualizar",
+                "acesso.listar",
+                "acesso.proprio.visualizar",
+                "acesso.visualizar",
+                "acesso.conceder",
+                "acesso.suspender",
+                "acesso.reativar",
+                "acesso.revogar",
+                "cargo.listar"));
+        profiles.put("ADMIN_DIRETORIA", List.of(
+                "escola.listar",
+                "escola.visualizar",
+                "funcionario.listar",
+                "funcionario.visualizar",
+                "funcionario.editar",
+                "funcionario.desativar",
+                "funcionario.reativar",
+                "ponto.hoje.visualizar",
+                "ponto.resumo.visualizar",
+                "relatorio.visualizar",
+                "relatorio.hierarquico.visualizar",
+                "acesso.listar",
+                "acesso.proprio.visualizar",
+                "acesso.visualizar",
+                "acesso.conceder",
+                "acesso.suspender",
+                "acesso.reativar",
+                "acesso.revogar",
+                "cargo.listar",
+                "escola.criar"));
+        profiles.put("DIRETOR", List.of(
+                "escola.listar",
+                "escola.visualizar",
+                "funcionario.listar",
+                "funcionario.visualizar",
+                "funcionario.editar",
+                "funcionario.desativar",
+                "funcionario.reativar",
+                "ponto.hoje.visualizar",
+                "ponto.resumo.visualizar",
+                "relatorio.visualizar",
+                "relatorio.hierarquico.visualizar",
+                "acesso.listar",
+                "acesso.proprio.visualizar",
+                "acesso.visualizar",
+                "acesso.conceder",
+                "acesso.suspender",
+                "acesso.reativar",
+                "acesso.revogar",
+                "cargo.listar",
+                "funcionario.criar",
+                "qr.visualizar",
+                "qr.gerar"));
+        profiles.put("VICE_DIRETOR", List.of(
+                "escola.listar",
+                "escola.visualizar",
+                "funcionario.listar",
+                "funcionario.visualizar",
+                "funcionario.editar",
+                "funcionario.desativar",
+                "funcionario.reativar",
+                "ponto.hoje.visualizar",
+                "ponto.resumo.visualizar",
+                "relatorio.visualizar",
+                "relatorio.hierarquico.visualizar",
+                "acesso.listar",
+                "acesso.proprio.visualizar",
+                "acesso.visualizar",
+                "acesso.conceder",
+                "acesso.suspender",
+                "acesso.reativar",
+                "acesso.revogar",
+                "cargo.listar",
+                "funcionario.criar",
+                "qr.visualizar",
+                "qr.gerar"));
+        profiles.put("SECRETARIA", List.of(
+                "escola.listar",
+                "escola.visualizar",
+                "funcionario.listar",
+                "funcionario.visualizar",
+                "funcionario.criar",
+                "funcionario.editar",
+                "ponto.hoje.visualizar",
+                "ponto.resumo.visualizar",
+                "relatorio.visualizar",
+                "relatorio.hierarquico.visualizar",
+                "acesso.proprio.visualizar",
+                "cargo.listar",
+                "qr.visualizar",
+                "qr.gerar"));
+        profiles.put("COORDENADOR", List.of(
+                "escola.listar",
+                "escola.visualizar",
+                "funcionario.listar",
+                "funcionario.visualizar",
+                "ponto.hoje.visualizar",
+                "ponto.resumo.visualizar",
+                "relatorio.visualizar",
+                "relatorio.hierarquico.visualizar",
+                "acesso.proprio.visualizar",
+                "cargo.listar"));
         CAPABILITIES = java.util.Collections.unmodifiableMap(profiles);
     }
+    private static final List<String> ORDER = CAPABILITIES.values().stream().flatMap(List::stream).distinct().toList();
     private AdminAccessPolicy() {}
 
-    private static List<String> append(List<String> list, String... extra) {
-        return java.util.stream.Stream.concat(list.stream(), java.util.Arrays.stream(extra)).toList();
+    public static boolean permits(String profile, String capability) {
+        return capability != null && CAPABILITIES.getOrDefault(profile, List.of()).contains(capability);
     }
 
-    public static boolean permits(String profile, String capability) {
-        return CAPABILITIES.getOrDefault(profile, List.of()).contains(capability);
+    public static List<String> list(List<Access> accesses) {
+        return ORDER.stream().filter(capability -> accesses.stream().anyMatch(a -> permits(a.perfil(), capability))).toList();
     }
 
     public static boolean delegates(String source, String target, boolean grant) {
@@ -53,11 +146,15 @@ public final class AdminAccessPolicy {
     }
 
     public static boolean covers(Access access, Resource resource) {
-        return "ADMIN_SEDUC".equals(access.perfil())
-                || ("ADMIN_DIRETORIA".equals(access.perfil()) && access.diretoria_ensino_id() != null
-                    && access.diretoria_ensino_id().equals(resource.educationDepartmentId()))
-                || (SCHOOL_PROFILES.contains(access.perfil()) && access.unidade_escolar_id() != null
-                    && access.unidade_escolar_id().equals(resource.schoolUnitId()));
+        return covers(access.perfil(), access.diretoria_ensino_id(), access.unidade_escolar_id(), resource);
+    }
+
+    public static boolean covers(String profile, Long departmentId, Long schoolUnitId, Resource resource) {
+        return "ADMIN_SEDUC".equals(profile)
+                || ("ADMIN_DIRETORIA".equals(profile) && departmentId != null
+                    && departmentId.equals(resource.educationDepartmentId()))
+                || (profile != null && SCHOOL_PROFILES.contains(profile) && schoolUnitId != null
+                    && schoolUnitId.equals(resource.schoolUnitId()));
     }
 
     public static Access authorizer(List<Access> accesses, String capability, String profile, Resource resource, boolean grant) {

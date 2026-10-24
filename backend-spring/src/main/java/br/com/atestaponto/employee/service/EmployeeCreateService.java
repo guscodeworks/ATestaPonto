@@ -3,7 +3,9 @@ package br.com.atestaponto.employee.service;
 import br.com.atestaponto.employee.dto.EmployeeCreateRequest;
 import br.com.atestaponto.employee.dto.EmployeeCreateResponse;
 import br.com.atestaponto.employee.repository.EmployeeCreateRepository;
+import br.com.atestaponto.validation.Cpf;
 import java.util.Locale;
+import java.util.function.Supplier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,17 +30,18 @@ public class EmployeeCreateService {
         return create(request, null);
     }
 
-    public EmployeeCreateResponse createAuthorized(EmployeeCreateRequest request, Long departmentId) {
-        if (departmentId == null || departmentId <= 0) {
+    /** {@code reauthorize} roda dentro da transacao, antes dos demais locks, e devolve a DRE autorizada da unidade. */
+    public EmployeeCreateResponse createAuthorized(EmployeeCreateRequest request, Supplier<Long> reauthorize) {
+        if (reauthorize == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Escopo da unidade invalido");
         }
-        return create(request, departmentId);
+        return create(request, reauthorize);
     }
 
-    private EmployeeCreateResponse create(EmployeeCreateRequest request, Long departmentId) {
+    private EmployeeCreateResponse create(EmployeeCreateRequest request, Supplier<Long> reauthorize) {
         validate(request);
         try {
-            return creationTransaction.execute(status -> createAtomically(request, departmentId));
+            return creationTransaction.execute(status -> createAtomically(request, reauthorize));
         } catch (DuplicateKeyException error) {
             // Os índices UNIQUE são a última barreira contra cadastros concorrentes.
             if (repository.existsByCpf(request.cpf())) {
@@ -51,7 +54,12 @@ public class EmployeeCreateService {
         }
     }
 
-    private EmployeeCreateResponse createAtomically(EmployeeCreateRequest request, Long departmentId) {
+    private EmployeeCreateResponse createAtomically(EmployeeCreateRequest request, Supplier<Long> reauthorize) {
+        // Revalida acessos e escopo sob lock do administrador antes de travar funcionario e unidade.
+        Long departmentId = reauthorize == null ? null : reauthorize.get();
+        if (reauthorize != null && (departmentId == null || departmentId <= 0)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Escopo da unidade invalido");
+        }
         if (repository.existsByCpfForUpdate(request.cpf())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "CPF ja cadastrado");
         }
@@ -83,14 +91,14 @@ public class EmployeeCreateService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Dados do funcionario invalidos");
         }
         String cpf = request.cpf();
-        if (cpf == null || !cpf.matches("[0-9]{11}") || !isValidCpf(cpf)) {
+        if (!Cpf.valid(cpf)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CPF invalido");
         }
         if (request.email() == null || !request.email().equals(request.email().strip().toLowerCase(Locale.ROOT))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email invalido");
         }
         if (request.nome() == null || request.nome().strip().length() < 3
-                || request.nome().strip().length() > 55
+                || request.nome().length() > 150 // Texto ja escapado: protege a largura da coluna.
                 || request.nome().codePoints().anyMatch(Character::isISOControl)
                 || request.nome().contains("<") || request.nome().contains(">")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nome invalido");
@@ -123,22 +131,6 @@ public class EmployeeCreateService {
         if (request.senhaHash() == null || request.senhaHash().isBlank() || request.senhaHash().length() > 255) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Credencial temporaria invalida");
         }
-    }
-
-    private boolean isValidCpf(String cpf) {
-        if (cpf.chars().distinct().count() == 1) return false;
-        int first = cpfDigit(cpf.substring(0, 9), 10);
-        int second = cpfDigit(cpf.substring(0, 9) + first, 11);
-        return cpf.equals(cpf.substring(0, 9) + first + second);
-    }
-
-    private int cpfDigit(String digits, int factor) {
-        int sum = 0;
-        for (int index = 0; index < digits.length(); index++) {
-            sum += Character.digit(digits.charAt(index), 10) * (factor - index);
-        }
-        int rest = (sum * 10) % 11;
-        return rest == 10 ? 0 : rest;
     }
 
     private boolean validTime(String value) {

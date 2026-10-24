@@ -19,7 +19,7 @@ public class PublicReportAuthorization {
 
     @Transactional(readOnly = true)
     public Scope authorize(AdminContextResponse admin, String capability) {
-        var accesses = admin.acessos().stream().filter(a -> AdminCapabilities.permits(a, capability)).toList();
+        var accesses = admin.acessos().stream().filter(a -> AdminAccessPolicy.permits(a.perfil(), capability)).toList();
         if (accesses.isEmpty()) throw denied("Capacidade administrativa insuficiente");
         if (accesses.stream().anyMatch(a -> "ADMIN_SEDUC".equals(a.perfil()))) {
             return new Scope(true, List.of(), List.of());

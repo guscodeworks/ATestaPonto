@@ -5,19 +5,27 @@ import br.com.atestaponto.adminaccess.dto.AdminAccessResponse.*;
 import br.com.atestaponto.adminaccess.repository.AdminAccessRepository;
 import br.com.atestaponto.adminaccess.repository.AdminAccessRepository.Authorizer;
 import br.com.atestaponto.auth.admin.service.AdminAccessPolicy;
-import java.util.Set;
+import br.com.atestaponto.validation.Cpf;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminAccessService {
-    private static final Set<String> SCHOOL_PROFILES = Set.of("DIRETOR", "VICE_DIRETOR", "SECRETARIA", "COORDENADOR");
     private final AdminAccessRepository repository;
     public AdminAccessService(AdminAccessRepository repository) { this.repository = repository; }
     private AdminAccessException bad(String message) { return new AdminAccessException(400, "BAD_REQUEST", message); }
     private AdminAccessException forbidden(String message) { return new AdminAccessException(403, "FORBIDDEN", message); }
     private AdminAccessException missing(String message) { return new AdminAccessException(404, "NOT_FOUND", message); }
     private AdminAccessException conflict(String message) { return new AdminAccessException(409, "CONFLICT", message); }
+
+    static boolean transitionAllowed(String action, String status) {
+        return switch (action) {
+            case "suspender" -> "ATIVO".equals(status);
+            case "reativar" -> "SUSPENSO".equals(status);
+            case "revogar" -> "ATIVO".equals(status) || "SUSPENSO".equals(status);
+            default -> false;
+        };
+    }
 
     @Transactional(readOnly = true)
     public Page list(AdminAccessRequest.ListQuery request) { return repository.list(request); }
@@ -36,7 +44,7 @@ public class AdminAccessService {
         } else if ("ADMIN_DIRETORIA".equals(profile)) {
             if (department == null) throw bad("diretoria_ensino_id e obrigatoria para ADMIN_DIRETORIA");
             if (school != null) throw bad("ADMIN_DIRETORIA nao admite unidade_escolar_id");
-        } else if (SCHOOL_PROFILES.contains(profile)) {
+        } else if (AdminAccessPolicy.SCHOOL_PROFILES.contains(profile)) {
             if (school == null) throw bad("unidade_escolar_id e obrigatoria para perfis escolares");
             if (department != null) throw bad("Perfis escolares nao admitem diretoria_ensino_id");
         } else throw bad("perfil invalido");
@@ -64,28 +72,14 @@ public class AdminAccessService {
         catch (AdminAccessException error) { throw forbidden("Escopo do acesso administrativo invalido"); }
         String source = authorizer.perfil();
         boolean delegation = AdminAccessPolicy.delegates(source, profile, grant);
-        boolean scope = "ADMIN_SEDUC".equals(source)
-                || ("ADMIN_DIRETORIA".equals(source) && authorizer.diretoriaId() != null
-                    && authorizer.diretoriaId().equals(resource.educationDepartmentId()))
-                || (SCHOOL_PROFILES.contains(source) && authorizer.unidadeId() != null
-                    && authorizer.unidadeId().equals(resource.schoolUnitId()));
+        boolean scope = AdminAccessPolicy.covers(source, authorizer.diretoriaId(), authorizer.unidadeId(), resource);
         if (!delegation || !scope) throw forbidden("Acesso autorizador sem capacidade ou escopo suficiente");
-    }
-    private boolean validCpf(String cpf) {
-        if (cpf == null || !cpf.matches("[0-9]{11}") || cpf.matches("([0-9])\\1{10}")) return false;
-        for (int length = 9; length <= 10; length++) {
-            int sum = 0;
-            for (int i = 0; i < length; i++) sum += (cpf.charAt(i) - '0') * (length + 1 - i);
-            int digit = sum * 10 % 11;
-            if ((digit == 10 ? 0 : digit) != cpf.charAt(length) - '0') return false;
-        }
-        return true;
     }
 
     @Transactional
     public Granted grant(AdminAccessRequest.Grant request) {
         consistent(request.perfil(), request.diretoriaId(), request.unidadeId());
-        if (!validCpf(request.cpf())) throw bad("CPF invalido");
+        if (!Cpf.valid(request.cpf())) throw bad("CPF invalido");
         if (request.dataInicio() != null && request.dataFim() != null && request.dataFim().isBefore(request.dataInicio())) {
             throw bad("data_fim deve ser posterior ou igual a data_inicio");
         }
@@ -119,10 +113,7 @@ public class AdminAccessService {
         if (!target.status().equals(request.statusAtual())) {
             throw conflict("Status do acesso foi alterado por outra operacao; atualize e tente novamente");
         }
-        boolean permitted = "suspender".equals(request.acao()) ? "ATIVO".equals(target.status())
-                : "reativar".equals(request.acao()) ? "SUSPENSO".equals(target.status())
-                : Set.of("ATIVO", "SUSPENSO").contains(target.status());
-        if (!permitted) {
+        if (!transitionAllowed(request.acao(), target.status())) {
             if ("REVOGADO".equals(target.status()) && !"REVOGADO".equals(next)) {
                 throw conflict("Acesso REVOGADO e definitivo: nao pode ser reativado");
             }

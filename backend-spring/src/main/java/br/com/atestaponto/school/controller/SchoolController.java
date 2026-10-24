@@ -2,7 +2,6 @@ package br.com.atestaponto.school.controller;
 
 import br.com.atestaponto.school.dto.SchoolListRequest;
 import br.com.atestaponto.school.dto.SchoolListResponse;
-import br.com.atestaponto.school.dto.SchoolResponse;
 import br.com.atestaponto.school.dto.SchoolScopeResponse;
 import br.com.atestaponto.school.dto.SchoolRegistrationRequest;
 import br.com.atestaponto.school.service.SchoolService;
@@ -51,16 +50,5 @@ public class SchoolController {
     public List<SchoolRegistrationRequest.Item> listForRegistration(
             @Valid @RequestBody SchoolRegistrationRequest request) {
         return service.listForRegistration(request);
-    }
-
-    @GetMapping
-    public List<SchoolResponse> listByEducationDepartment(
-            @RequestParam("diretoria_ensino_id") Long educationDepartmentId) {
-        return service.listByEducationDepartment(educationDepartmentId);
-    }
-
-    @GetMapping("/{id}")
-    public SchoolResponse findById(@PathVariable("id") Integer id) {
-        return service.findById(id);
     }
 }

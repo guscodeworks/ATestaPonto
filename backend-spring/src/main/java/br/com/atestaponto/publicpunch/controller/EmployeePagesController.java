@@ -1,8 +1,6 @@
 package br.com.atestaponto.publicpunch.controller;
 
-import br.com.atestaponto.publicpunch.service.EmployeeAccessSessions;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import org.springframework.core.io.ClassPathResource;
@@ -15,15 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class EmployeePagesController {
-    private final EmployeeAccessSessions sessions;
-
-    public EmployeePagesController(EmployeeAccessSessions sessions) { this.sessions = sessions; }
-
     @GetMapping({"/", "/login", "/login/"})
-    public ResponseEntity<Resource> login(HttpServletRequest request, HttpServletResponse response) {
-        sessions.clearQr(request, response);
-        return page();
-    }
+    public ResponseEntity<Resource> login() { return page(); }
 
     @GetMapping({"/home", "/home/", "/index.html", "/index.html/", "/home.html", "/home.html/"})
     public ResponseEntity<Void> home() { return ResponseEntity.status(302).location(URI.create("/")).build(); }
@@ -34,20 +25,47 @@ public class EmployeePagesController {
         return ResponseEntity.status(302).location(URI.create("/login")).build();
     }
 
+    @GetMapping({"/first-access.html", "/first-access.html/", "/funcionario.html", "/funcionario.html/",
+            "/funcionario/ponto.html", "/funcionario/ponto.html/", "/funcionario/perfil.html", "/funcionario/perfil.html/",
+            "/funcionario/relatorio.html", "/funcionario/relatorio.html/"})
+    public ResponseEntity<Void> legacyHtml(HttpServletRequest request) {
+        String path = request.getServletPath();
+        String target = path.startsWith("/funcionario/ponto.html") ? "/funcionario"
+                : path.substring(0, path.lastIndexOf(".html"));
+        return ResponseEntity.status(302).location(URI.create(target)).build();
+    }
+
     @GetMapping({"/ponto", "/ponto/", "/bater-ponto", "/bater-ponto/"})
     public ResponseEntity<Void> shortcut() {
         return ResponseEntity.status(302).location(URI.create("/ponto/acessar")).build();
     }
 
+    // QR e apenas atalho para esta URL: ?qr e ignorado e nunca autentica, autoriza ou bloqueia.
     @GetMapping({"/ponto/acessar", "/ponto/acessar/"})
-    public ResponseEntity<Resource> access(HttpServletRequest request, HttpServletResponse response) {
-        sessions.establishQr(request, response);
-        return page();
-    }
+    public ResponseEntity<Resource> access() { return page(); }
 
-    private ResponseEntity<Resource> page() {
+    @GetMapping({"/funcionario", "/funcionario/"})
+    public ResponseEntity<Resource> punch() { return page("punch.html"); }
+
+    @GetMapping({"/funcionario/perfil", "/funcionario/perfil/"})
+    public ResponseEntity<Resource> profile() { return page("profile.html"); }
+
+    @GetMapping({"/funcionario/relatorio", "/funcionario/relatorio/"})
+    public ResponseEntity<Resource> report() { return page("report.html"); }
+
+    @GetMapping({"/recuperar-senha", "/recuperar-senha/", "/views/password/password.html", "/views/password/password.html/"})
+    public ResponseEntity<Resource> passwordRecovery() { return page("password.html"); }
+
+    @GetMapping({"/first-access", "/first-access/"})
+    public ResponseEntity<Resource> firstAccess() { return page("first-access.html"); }
+
+    private ResponseEntity<Resource> page() { return page("index.html"); }
+
+    private ResponseEntity<Resource> page(String name) {
+        Resource body = new ClassPathResource("employee-pages/" + name);
+        if (!body.exists()) return ResponseEntity.notFound().build();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .contentType(new MediaType("text", "html", StandardCharsets.UTF_8))
-                .body(new ClassPathResource("employee-pages/index.html"));
+                .body(body);
     }
 }

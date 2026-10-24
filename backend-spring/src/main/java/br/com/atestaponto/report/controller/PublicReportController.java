@@ -20,8 +20,8 @@ public class PublicReportController {
             @RequestAttribute("reportScope") Scope scope, @RequestParam MultiValueMap<String, String> query,
             HttpServletRequest request) {
         String report = request.getServletPath().substring("/api/admin/pontos/".length()).replaceAll("/$", "");
-        String forwarded = request.getHeader("X-Forwarded-For");
-        String ip = forwarded == null ? request.getRemoteAddr() : forwarded.split(",", -1)[0].strip();
+        // RemoteIpValve (forward-headers-strategy=native) ja resolve X-Forwarded-For apenas de proxies internos.
+        String ip = request.getRemoteAddr();
         return Map.of("success", true, "data", service.read(report, query, scope, admin.admin().id(), ip));
     }
 }

@@ -156,14 +156,6 @@ public class SchoolService {
     }
 
     @Transactional(readOnly = true)
-    public List<SchoolResponse> listByEducationDepartment(Long educationDepartmentId) {
-        if (educationDepartmentId == null || educationDepartmentId <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de diretoria invalido");
-        }
-        return repository.listByEducationDepartment(educationDepartmentId);
-    }
-
-    @Transactional(readOnly = true)
     public List<SchoolScopeResponse> listForScope(Long educationDepartmentId) {
         if (educationDepartmentId == null || educationDepartmentId <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de diretoria invalido");
@@ -197,15 +189,5 @@ public class SchoolService {
         if (id == null || id <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de escola invalido");
         }
-    }
-
-    @Transactional(readOnly = true)
-    public SchoolResponse findById(Integer id) {
-        if (id == null || id <= 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de escola invalido");
-        }
-        return repository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Unidade escolar nao encontrada"));
     }
 }

@@ -14,7 +14,7 @@ public class SchoolQrController {
     private final SchoolQrService service;
     public SchoolQrController(SchoolQrService service) { this.service = service; }
 
-    @PostMapping({"/gerar", "/regenerar"})
+    @PostMapping("/gerar")
     public SchoolQrResponse.Current generate(@RequestBody SchoolQrRequest request) {
         return new SchoolQrResponse.Current(service.generate(request.unidade_escolar_id(), request.base_url()));
     }

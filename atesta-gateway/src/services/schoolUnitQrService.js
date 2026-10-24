@@ -74,21 +74,10 @@ async function findCurrentSchoolUnitQr(unidadeEscolarId, { baseUrl = "" } = {}) 
     result => publicQr(result, id, base, true));
 }
 
-async function resolveSchoolUnitByQrToken(token) {
-  if (!isValidTokenFormat(token)) return null;
-  return requestQr("resolver", { token }, result => {
-    if (result.unidade === null) return null;
-    const id = result.unidade?.unidade_escolar_id;
-    if (!Number.isInteger(id) || id < 1) throw unavailable();
-    return { unidade_escolar_id: id };
-  });
-}
-
 module.exports = {
   POINT_ACCESS_PATH,
   buildQrAccessUrl,
   generateSchoolUnitQr,
   regenerateSchoolUnitQr,
   findCurrentSchoolUnitQr,
-  resolveSchoolUnitByQrToken,
 };

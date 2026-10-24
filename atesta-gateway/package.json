@@ -8,18 +8,15 @@
   },
   "scripts": {
     "start": "node server.js",
+    "test": "node --test",
     "start:ponto": "node server.js",
     "start:govbr": "npm --prefix ../atesta-id start",
     "dev": "concurrently -n PONTO,GOVBR \"npm run start:ponto\" \"npm run start:govbr\"",
     "dev:spring": "node src/scripts/startSpringBackend.js",
     "dev:check": "node src/scripts/checkDatabaseConnection.js",
     "build:client": "node src/scripts/buildClientBundles.js",
-    "check:public-assets": "node src/scripts/checkPublicAssetSizes.js",
     "db:init": "node src/scripts/initDatabase.js",
-    "db:run": "node src/scripts/runSqlFile.js",
-    "mvc:check": "node src/scripts/checkMvcBoundaries.js",
-    "test": "node --test --test-concurrency=1 test/*.test.js",
-    "test:first-access": "node test-first-access.js"
+    "db:run": "node src/scripts/runSqlFile.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

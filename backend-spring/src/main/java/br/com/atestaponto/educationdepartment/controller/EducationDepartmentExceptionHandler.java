@@ -9,16 +9,9 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice(assignableTypes = EducationDepartmentController.class)
 public class EducationDepartmentExceptionHandler {
-    @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<ProblemDetail> handle(ResponseStatusException exception) {
-        return ResponseEntity.status(exception.getStatusCode()).body(
-                ProblemDetail.forStatusAndDetail(exception.getStatusCode(), exception.getReason()));
-    }
-
     @ExceptionHandler(DuplicateKeyException.class)
     public ResponseEntity<ProblemDetail> duplicate(DuplicateKeyException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ProblemDetail.forStatusAndDetail(

@@ -60,7 +60,7 @@ public class PublicEmployeeService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> list(Context previous, MultiValueMap<String, String> query) {
-        Context context = refresh(previous, "funcionario.listar", null, null);
+        Context context = refresh(previous, "funcionario.listar", null, null, false);
         long page = integer(single(query, "page", "1"), 9007199254740991L, "page");
         int limit = (int) integer(single(query, "limit", "20"), 100, "limit");
         String active = single(query, "ativo", null);
@@ -88,14 +88,14 @@ public class PublicEmployeeService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> find(Context previous, long id) {
-        var context = refresh(previous, "funcionario.visualizar", id, null);
+        var context = refresh(previous, "funcionario.visualizar", id, null, false);
         var employee = reads.findAdminEmployeeById(new EmployeeDetailRequest(id, context.link().id()));
         return Map.of("funcionario", project(employee, false));
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> registrationUnits(Context previous) {
-        var context = refresh(previous, "funcionario.criar", null, null);
+        var context = refresh(previous, "funcionario.criar", null, null, false);
         return Map.of("items", schools.listForRegistration(new SchoolRegistrationRequest(false, context.schoolIds())));
     }
 
@@ -108,18 +108,21 @@ public class PublicEmployeeService {
             if (invalid.getStatusCode().value() == 400) throw PublicEmployeeInput.invalid(invalid.getReason());
             throw invalid;
         }
-        var context = refresh(previous, "funcionario.criar", null, request.unidadeEscolarId());
+        var context = refresh(previous, "funcionario.criar", null, request.unidadeEscolarId(), false);
         byte[] bytes = new byte[18];
         RANDOM.nextBytes(bytes);
         String password = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         request = PublicEmployeeInput.create(body, passwords.encode(password));
-        var result = creates.createAuthorized(request, context.targetDepartmentId());
+        long schoolId = request.unidadeEscolarId();
+        var result = creates.createAuthorized(request,
+                () -> refresh(previous, "funcionario.criar", null, schoolId, true).targetDepartmentId());
         audit("funcionario_cadastrado", context.adminId(), result.id());
         // O service de dominio encerra a transacao antes do envio de e-mail.
         return Map.of("funcionario", project(result, true),
                 "email_acesso", mail.send(result.nome(), result.email(), password));
     }
 
+    @Transactional
     public Map<String, Object> edit(Context previous, long id, JsonNode body) {
         var fields = PublicEmployeeInput.edit(body);
         for (var field : fields.entrySet()) {
@@ -133,7 +136,7 @@ public class PublicEmployeeService {
                 throw PublicEmployeeInput.invalid(field.getKey(), "body", field.getKey() + " invalido");
             }
         }
-        var context = refresh(previous, "funcionario.editar", id, null);
+        var context = refresh(previous, "funcionario.editar", id, null, true);
         var link = context.link();
         var result = edits.update(id, new EmployeeEditRequest(link.id(), link.unidade_escolar_id(),
                 link.diretoria_ensino_id(), fields));
@@ -143,12 +146,13 @@ public class PublicEmployeeService {
         return Map.of("funcionario", employee);
     }
 
+    @Transactional
     public EmployeeActivationResponse activation(Context previous, long id, boolean active, JsonNode body) {
         String confirmation = PublicEmployeeInput.confirmation(body);
         if (!(active ? "REATIVAR" : "DESATIVAR").equals(confirmation)) {
             throw PublicEmployeeInput.invalid("confirmacao deve ser " + (active ? "REATIVAR" : "DESATIVAR"));
         }
-        var context = refresh(previous, "funcionario." + (active ? "reativar" : "desativar"), id, null);
+        var context = refresh(previous, "funcionario." + (active ? "reativar" : "desativar"), id, null, true);
         var link = context.link();
         var result = activations.changeActivation(id, active, new EmployeeActivationRequest(confirmation,
                 link.id(), link.unidade_escolar_id(), link.diretoria_ensino_id()));
@@ -156,11 +160,13 @@ public class PublicEmployeeService {
         return result;
     }
 
-    private Context refresh(Context previous, String capability, Long id, Long schoolId) {
+    private Context refresh(Context previous, String capability, Long id, Long schoolId, boolean forUpdate) {
         if (previous == null || !previous.capability().equals(capability)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Contexto administrativo invalido");
         }
-        return authorization.authorize(admins.requireActive(previous.adminId()), capability, id, schoolId);
+        // Escritas travam identidade e acessos ate o commit; o service de dominio revalida vinculo e unidade sob lock.
+        var admin = forUpdate ? admins.requireActiveForUpdate(previous.adminId()) : admins.requireActive(previous.adminId());
+        return authorization.authorize(admin, capability, id, schoolId);
     }
 
     private void validate(Object input) {
