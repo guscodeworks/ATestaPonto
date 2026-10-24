@@ -91,19 +91,22 @@ public class PublicAdminRateLimit {
         return new Reservation(hits, ttl, generation);
     }
 
-    private synchronized Reservation incrementLocal(String key, long windowMs) {
-        long now = System.currentTimeMillis();
-        counters.values().removeIf(value -> value.expires() <= now);
-        LocalCounter previous = counters.get(key);
-        if (previous == null && counters.size() >= 10000) throw new IllegalStateException("Limite do armazenamento local atingido");
-        var value = previous == null ? new LocalCounter(1, now + windowMs) : new LocalCounter(previous.hits() + 1, previous.expires());
-        counters.put(key, value);
-        return new Reservation(value.hits(), value.expires() - now, Long.toString(value.expires()));
+    // counters e o unico estado compartilhado; chamadas Jedis ficam fora de qualquer lock Java.
+    private Reservation incrementLocal(String key, long windowMs) {
+        synchronized (counters) {
+            long now = System.currentTimeMillis();
+            counters.values().removeIf(value -> value.expires() <= now);
+            LocalCounter previous = counters.get(key);
+            if (previous == null && counters.size() >= 10000) throw new IllegalStateException("Limite do armazenamento local atingido");
+            var value = previous == null ? new LocalCounter(1, now + windowMs) : new LocalCounter(previous.hits() + 1, previous.expires());
+            counters.put(key, value);
+            return new Reservation(value.hits(), value.expires() - now, Long.toString(value.expires()));
+        }
     }
 
-    public synchronized Reservation current(String name, Object subject) {
+    public Reservation current(String name, Object subject) {
         String key = prefix + name + ":" + digest(subject);
-        if (local) {
+        if (local) synchronized (counters) {
             var value = counters.get(key);
             long now = System.currentTimeMillis();
             return value == null || value.expires() <= now ? new Reservation(0, 0, "")
@@ -123,9 +126,9 @@ public class PublicAdminRateLimit {
         return new Reservation(hits, ttl, "");
     }
 
-    public synchronized void refund(String name, Object subject, Reservation reservation) {
+    public void refund(String name, Object subject, Reservation reservation) {
         String key = prefix + name + ":" + digest(subject);
-        if (local) {
+        if (local) synchronized (counters) {
             var value = counters.get(key);
             if (value != null && Long.toString(value.expires()).equals(reservation.generation()) && value.hits() > 0)
                 counters.put(key, new LocalCounter(value.hits() - 1, value.expires()));
