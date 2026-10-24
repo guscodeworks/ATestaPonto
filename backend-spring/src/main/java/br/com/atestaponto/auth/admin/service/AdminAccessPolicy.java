@@ -146,11 +146,15 @@ public final class AdminAccessPolicy {
     }
 
     public static boolean covers(Access access, Resource resource) {
-        return "ADMIN_SEDUC".equals(access.perfil())
-                || ("ADMIN_DIRETORIA".equals(access.perfil()) && access.diretoria_ensino_id() != null
-                    && access.diretoria_ensino_id().equals(resource.educationDepartmentId()))
-                || (SCHOOL_PROFILES.contains(access.perfil()) && access.unidade_escolar_id() != null
-                    && access.unidade_escolar_id().equals(resource.schoolUnitId()));
+        return covers(access.perfil(), access.diretoria_ensino_id(), access.unidade_escolar_id(), resource);
+    }
+
+    public static boolean covers(String profile, Long departmentId, Long schoolUnitId, Resource resource) {
+        return "ADMIN_SEDUC".equals(profile)
+                || ("ADMIN_DIRETORIA".equals(profile) && departmentId != null
+                    && departmentId.equals(resource.educationDepartmentId()))
+                || (profile != null && SCHOOL_PROFILES.contains(profile) && schoolUnitId != null
+                    && schoolUnitId.equals(resource.schoolUnitId()));
     }
 
     public static Access authorizer(List<Access> accesses, String capability, String profile, Resource resource, boolean grant) {
