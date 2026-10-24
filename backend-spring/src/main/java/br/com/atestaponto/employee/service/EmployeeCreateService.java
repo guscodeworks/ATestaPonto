@@ -5,6 +5,7 @@ import br.com.atestaponto.employee.dto.EmployeeCreateResponse;
 import br.com.atestaponto.employee.repository.EmployeeCreateRepository;
 import br.com.atestaponto.validation.Cpf;
 import java.util.Locale;
+import java.util.function.Supplier;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,17 +30,18 @@ public class EmployeeCreateService {
         return create(request, null);
     }
 
-    public EmployeeCreateResponse createAuthorized(EmployeeCreateRequest request, Long departmentId) {
-        if (departmentId == null || departmentId <= 0) {
+    /** {@code reauthorize} roda dentro da transacao, antes dos demais locks, e devolve a DRE autorizada da unidade. */
+    public EmployeeCreateResponse createAuthorized(EmployeeCreateRequest request, Supplier<Long> reauthorize) {
+        if (reauthorize == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Escopo da unidade invalido");
         }
-        return create(request, departmentId);
+        return create(request, reauthorize);
     }
 
-    private EmployeeCreateResponse create(EmployeeCreateRequest request, Long departmentId) {
+    private EmployeeCreateResponse create(EmployeeCreateRequest request, Supplier<Long> reauthorize) {
         validate(request);
         try {
-            return creationTransaction.execute(status -> createAtomically(request, departmentId));
+            return creationTransaction.execute(status -> createAtomically(request, reauthorize));
         } catch (DuplicateKeyException error) {
             // Os índices UNIQUE são a última barreira contra cadastros concorrentes.
             if (repository.existsByCpf(request.cpf())) {
@@ -52,7 +54,12 @@ public class EmployeeCreateService {
         }
     }
 
-    private EmployeeCreateResponse createAtomically(EmployeeCreateRequest request, Long departmentId) {
+    private EmployeeCreateResponse createAtomically(EmployeeCreateRequest request, Supplier<Long> reauthorize) {
+        // Revalida acessos e escopo sob lock do administrador antes de travar funcionario e unidade.
+        Long departmentId = reauthorize == null ? null : reauthorize.get();
+        if (reauthorize != null && (departmentId == null || departmentId <= 0)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Escopo da unidade invalido");
+        }
         if (repository.existsByCpfForUpdate(request.cpf())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "CPF ja cadastrado");
         }
