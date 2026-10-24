@@ -10,7 +10,6 @@ const { PUNCH_TYPES } = require("../utils/punch");
 const {
   AppError,
   BadRequestError,
-  ForbiddenError,
   UnauthorizedError,
 } = require("../utils/errors");
 const { registerAuditLog } = require("./auditLogService");
@@ -151,20 +150,8 @@ function isFirstAccess(value) {
 }
 
 // Autenticação própria do funcionário (separada do login admin Gov.br).
-async function loginFuncionario(
-  body,
-  { ipOrigem, unidadeEscolarIdQr } = {}
-) {
+async function loginFuncionario(body, { ipOrigem } = {}) {
   const login = resolveLogin(body);
-  const qrSchoolUnitId =
-    unidadeEscolarIdQr === undefined ? null : Number(unidadeEscolarIdQr);
-
-  if (
-    qrSchoolUnitId !== null &&
-    (!Number.isInteger(qrSchoolUnitId) || qrSchoolUnitId <= 0)
-  ) {
-    throw new ForbiddenError("Contexto de QR Code invalido");
-  }
 
   const funcionario = await findLoginEmployee(login);
   const senhaCorreta = await bcrypt.compare(
@@ -192,37 +179,16 @@ async function loginFuncionario(
   // O banco legado não possui vínculos funcionais. Nele, a flag ativo do
   // funcionário já é a regra disponível para autorizar o acesso.
   const { modern, vinculo: vinculoAtivo } = await findLoginLink(funcionario.id);
-  if (modern) {
-    if (!vinculoAtivo) {
-      await registerAuditLog({
-        evento: "funcionario_login_invalido",
-        nivel: "WARN",
-        mensagem: "Tentativa de login de funcionario sem vinculo ativo",
-        ipOrigem,
-        metadados: { login: login.auditLogin },
-      });
-      await waitForFailedLoginDelay();
-      throw new UnauthorizedError("CPF/email ou senha invalidos");
-    }
-
-    if (
-      qrSchoolUnitId !== null &&
-      Number(vinculoAtivo.unidade_escolar_id) !== qrSchoolUnitId
-    ) {
-      await registerAuditLog({
-        evento: "funcionario_login_qr_unidade_incompativel",
-        nivel: "WARN",
-        funcionarioId: funcionario.id,
-        mensagem: "Tentativa de login com QR Code de outra unidade escolar",
-        ipOrigem,
-      });
-      throw new ForbiddenError(
-        "QR Code nao corresponde a unidade escolar do funcionario"
-      );
-    }
-  } else if (qrSchoolUnitId !== null) {
-    // Sem vínculo funcional não há como provar a unidade do funcionário.
-    throw new ForbiddenError("Contexto de QR Code indisponivel");
+  if (modern && !vinculoAtivo) {
+    await registerAuditLog({
+      evento: "funcionario_login_invalido",
+      nivel: "WARN",
+      mensagem: "Tentativa de login de funcionario sem vinculo ativo",
+      ipOrigem,
+      metadados: { login: login.auditLogin },
+    });
+    await waitForFailedLoginDelay();
+    throw new UnauthorizedError("CPF/email ou senha invalidos");
   }
 
   if (isFirstAccess(funcionario.primeiro_acesso)) {

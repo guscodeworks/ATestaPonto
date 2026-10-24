@@ -35,7 +35,7 @@ public class PublicPunchController {
         var result = new DeferredResult<Object>();
         boolean success = false;
         try {
-            result.setResult(ok(punches.login(body, req, res)));
+            result.setResult(ok(punches.login(body, req)));
             success = true;
         } catch (PublicPunchService.InvalidLogin invalid) {
             failureDelay.fail(result, invalid);

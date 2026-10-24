@@ -47,7 +47,7 @@ class PublicPunchControllerLoginTest {
 
     @Test
     void invalidLoginIsDelayedAsynchronouslyWithSameResponse() throws Exception {
-        when(punches.login(any(), any(), any())).thenThrow(new PublicPunchService.InvalidLogin());
+        when(punches.login(any(), any())).thenThrow(new PublicPunchService.InvalidLogin());
         long started = System.nanoTime();
         var result = mvc.perform(post("/api/pontos/login").requestAttr("publicPunchBody", json.readTree("{\"identificador\":\"x\"}")))
                 .andExpect(request().asyncStarted()).andReturn();
@@ -60,7 +60,7 @@ class PublicPunchControllerLoginTest {
 
     @Test
     void successRespondsWithSameBody() throws Exception {
-        when(punches.login(any(), any(), any())).thenReturn(Map.of("token", "t"));
+        when(punches.login(any(), any())).thenReturn(Map.of("token", "t"));
         mvc.perform(asyncDispatch(login())).andExpect(status().isOk())
                 .andExpect(content().json("{\"success\":true,\"data\":{\"token\":\"t\"}}", true));
         verify(limits).loginFinished(eq("invalid"), any(), eq(true), any());
@@ -69,7 +69,7 @@ class PublicPunchControllerLoginTest {
     @Test
     void otherErrorsStaySynchronous() throws Exception {
         var unavailable = new PublicPunchException(503, "SERVICE_UNAVAILABLE", "x");
-        when(punches.login(any(), any(), any())).thenThrow(unavailable);
+        when(punches.login(any(), any())).thenThrow(unavailable);
         mvc.perform(post("/api/pontos/login").requestAttr("publicPunchBody", json.readTree("{\"identificador\":\"x\"}")))
                 .andExpect(request().asyncNotStarted()).andExpect(status().isServiceUnavailable())
                 .andExpect(content().json(expected(unavailable), true));

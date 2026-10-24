@@ -10,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.LongNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.LinkedHashMap;
@@ -25,7 +24,6 @@ public class PublicPunchService {
     private final EmployeeCredentialsService credentials;
     private final PunchService punches;
     private final EmployeeJwt jwt;
-    private final EmployeeAccessSessions sessions;
     private final ObjectMapper json;
     private final int rounds;
     private final String invalidHash;
@@ -34,15 +32,14 @@ public class PublicPunchService {
         public InvalidLogin() { super(401, "UNAUTHORIZED", "CPF/email ou senha invalidos"); }
     }
     public PublicPunchService(EmployeeCredentialsService credentials, PunchService punches, EmployeeJwt jwt,
-            EmployeeAccessSessions sessions, ObjectMapper json, Environment env) {
-        this.credentials = credentials; this.punches = punches; this.jwt = jwt; this.sessions = sessions; this.json = json;
+            ObjectMapper json, Environment env) {
+        this.credentials = credentials; this.punches = punches; this.jwt = jwt; this.json = json;
         rounds = env.getProperty("BCRYPT_SALT_ROUNDS", Integer.class, 12);
         if (rounds < 10 || rounds > 15) throw new IllegalArgumentException("BCRYPT_SALT_ROUNDS invalido");
         invalidHash = hash("invalid-login-credential");
     }
-    public Object login(JsonNode body, HttpServletRequest req, HttpServletResponse res) {
+    public Object login(JsonNode body, HttpServletRequest req) {
         PublicPunchValidation.login(body);
-        Long qrUnit = sessions.qrUnit(req, res);
         String login = PublicPunchValidation.identifier(body);
         var employee = checkedEmployee(credential(() -> credentials.login(new EmployeeCredentialsRequest.Login(login.contains("@") ? null : TextNode.valueOf(login),
                 login.contains("@") ? TextNode.valueOf(login) : null))).employee());
@@ -55,10 +52,6 @@ public class PublicPunchService {
         var link = credential(() -> credentials.activeLink(employeeId(employee.id())));
         if (link.vinculo() == null) invalidLogin(req, employee.id());
         if (!safeId(link.vinculo().id()) || !safeId(link.vinculo().unidade_escolar_id())) throw credentialsUnavailable();
-        if (qrUnit != null && link.vinculo().unidade_escolar_id() != qrUnit) {
-            audit("funcionario_login_qr_unidade_incompativel", employee.id(), req, Map.of());
-            throw new PublicPunchException(403, "FORBIDDEN", "QR Code nao corresponde a unidade escolar do funcionario");
-        }
         boolean first = Boolean.TRUE.equals(employee.primeiro_acesso());
         String token = jwt.issue(employee.id(), employee.senha_hash(), first);
         if (!first && !credential(() -> credentials.lastLogin(employeeId(employee.id()))).updated()) throw credentialsUnavailable();
@@ -171,7 +164,6 @@ public class PublicPunchService {
     static void audit(String event, long id, HttpServletRequest request, Map<String, Object> metadata) {
         String message = switch (event) {
             case "funcionario_login_invalido" -> "Tentativa de login de funcionario invalida";
-            case "funcionario_login_qr_unidade_incompativel" -> "Tentativa de login com QR Code de outra unidade escolar";
             case "funcionario_primeiro_acesso_validado" -> "Senha temporaria validada; troca de senha obrigatoria";
             case "funcionario_login_sucesso" -> "Login de funcionario realizado com CPF/email e senha";
             case "senha_primeiro_acesso_atualizada" -> "Senha temporaria substituida no primeiro acesso";
@@ -190,7 +182,7 @@ public class PublicPunchService {
     }
     static void audit(String event, long id, String ip, Map<String, Object> metadata, String message) {
         var logger = LoggerFactory.getLogger(PublicPunchService.class);
-        if (event.equals("funcionario_login_invalido") || event.equals("funcionario_login_qr_unidade_incompativel"))
+        if (event.equals("funcionario_login_invalido"))
             logger.warn("audit_evento evento={} nivel=WARN funcionarioId={} mensagem={} ipOrigem={} metadados={}", event, id, message, ip, metadata);
         else logger.info("audit_evento evento={} nivel=INFO funcionarioId={} mensagem={} ipOrigem={} metadados={}", event, id, message, ip, metadata);
     }
