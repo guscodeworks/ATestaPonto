@@ -1,0 +1,4 @@
+/* Manifesto de estilos do relatório do funcionário. */
+@import url("../tokens.css");
+@import url("../employee/base.css");
+@import url("../employee/report.css");

@@ -1,0 +1,4 @@
+/* Manifesto de estilos do perfil do funcionário. */
+@import url("../tokens.css");
+@import url("../employee/base.css");
+@import url("../employee/profile.css");
