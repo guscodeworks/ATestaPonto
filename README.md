@@ -102,19 +102,36 @@ CREATE DATABASE ponto_escolar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ### Passo 5 — Inicializar as tabelas do banco de dados
 
+Instale a CLI `atesta-db` uma única vez, a partir da raiz do repositório (requer Python 3.11+):
+
 ```bash
-cd ../atesta-gateway
-npm run db:init
+# Se o pipx ainda não estiver instalado:
+python3 -m pip install --user pipx
+python3 -m pipx ensurepath   # feche e reabra o terminal depois
+
+pipx install -e ./tools/atesta-db
+```
+
+> [!IMPORTANT]
+> A instalação via `pipx` deve ser feita a partir da **raiz do repositório**, mas depois disso `atesta-db` funciona de qualquer pasta. Use `pipx install -e ./tools/atesta-db` (com `-e`) para que a CLI encontre sempre o SQL do repositório atualizado.
+
+Em seguida, inicialize o banco de qualquer diretório:
+
+```bash
+atesta-db init
 ```
 
 Este comando cria automaticamente todas as tabelas necessárias no banco de dados usando o arquivo SQL do projeto (`database/schema/ponto.sql`).
 
 > [!IMPORTANT]
-> O comando `db:init` exige um banco de dados vazio. Se o banco já contém tabelas, o script será interrompido. Para atualizar a estrutura de um banco existente, use as migrations apropriadas.
+> O comando `atesta-db init` exige um banco de dados vazio. Se o banco já contém tabelas, o comando será interrompido. Para atualizar a estrutura de um banco existente, use as migrations apropriadas. Em ambiente com `NODE_ENV=production`, é obrigatório passar `--confirm-production`.
 
 ## Configuração
 
 O projeto usa arquivos `.env` para armazenar todas as configurações importantes. Esses arquivos nunca devem ser compartilhados publicamente, pois contêm informações sensíveis.
+
+> [!NOTE]
+> A CLI `atesta-db` lê as mesmas variáveis (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`) com esta precedência: variáveis do ambiente > `backend-spring/.env` > `atesta-gateway/.env` (fallback transitório). `DB_PORT` tem padrão `3306` e o alias legado `DB_PASS` também é aceito para a senha.
 
 ### Configurar o arquivo `.env` do atesta-gateway
 
@@ -349,7 +366,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 | `npm start` | Inicia o servidor principal (porta 3000) |
 | `npm run dev` | Inicia servidor principal + simulador Gov.br simultaneamente |
 | `npm run dev:spring` | Inicia o backend Spring usando variáveis do ambiente Node |
-| `npm run db:init` | Inicializa o banco de dados vazio com o baseline (ponto.sql) |
+| `atesta-db init` | Inicializa o banco de dados vazio com o baseline (ponto.sql) — CLI Python em `tools/atesta-db` |
 | `npm run db:run` | Executa arquivo SQL específico |
 
 ### Comandos do atesta-id
@@ -369,13 +386,13 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 2. Confirme `DB_HOST`, `DB_USER`, `DB_PASSWORD` e `DB_NAME` no `.env`
 3. Teste a conexão: `mysql -h localhost -u root -p`
 
-### Erro: "db:init interrompido: banco já contém tabelas"
+### Erro: "atesta-db init interrompido: banco já contém tabelas"
 
-**Causa:** O comando `db:init` exige banco vazio.
+**Causa:** O comando `atesta-db init` exige banco vazio.
 
 **Solução:**
 - Para atualizar estrutura existente, use migrations: `npm run db:run -- <caminho_da_migration>`
-- Para recriar do zero (perde dados): delete o banco, recrie e execute `db:init`
+- Para recriar do zero (perde dados): delete o banco, recrie e execute `atesta-db init`
 
 ### Erro: "JWT_SECRET ou SESSION_SECRET ausente"
 
@@ -426,7 +443,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 
 Para que o sistema funcione corretamente, você precisa de:
 
-1. **Banco de dados inicializado** com `npm run db:init`
+1. **Banco de dados inicializado** com `atesta-db init`
 2. **Pelo menos um usuário administrativo** cadastrado em `usuarios_administrativos`
 3. **Pelo menos um acesso administrativo ativo** em `acessos_administrativos` vinculado ao usuário
 4. **CPF do administrador configurado** em `GOVBR_FAKE_ADMIN_SUB` do simulador
