@@ -5,6 +5,7 @@ import br.com.atestaponto.employmentlink.repository.EmploymentLinkReadRepository
 import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -33,6 +34,25 @@ public class EmploymentLinkReadService {
     public Optional<EmploymentLinkScopeResponse> findLatestByEmployeeId(Long employeeId) {
         validateId(employeeId);
         return repository.findLatestByEmployeeId(employeeId);
+    }
+
+    // Participa da transacao de escrita do chamador; o repositorio recusa transacao read-only.
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<EmploymentLinkScopeResponse> findActiveByEmployeeIdInWriteTransaction(Long employeeId) {
+        validateId(employeeId);
+        return repository.findActiveByEmployeeIdInWriteTransaction(employeeId);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<EmploymentLinkScopeResponse> findVisibleForAdminByEmployeeIdInWriteTransaction(Long employeeId) {
+        validateId(employeeId);
+        return repository.findVisibleForAdminByEmployeeIdInWriteTransaction(employeeId);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<EmploymentLinkScopeResponse> findLatestByEmployeeIdInWriteTransaction(Long employeeId) {
+        validateId(employeeId);
+        return repository.findLatestByEmployeeIdInWriteTransaction(employeeId);
     }
 
     private void validateId(Long id) {

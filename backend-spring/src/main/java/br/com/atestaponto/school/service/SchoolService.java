@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -167,6 +168,22 @@ public class SchoolService {
     public SchoolScopeResponse findForScope(Long id) {
         requireSchoolId(id);
         return repository.findForScope(id).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Unidade escolar nao encontrada"));
+    }
+
+    // Participa da transacao de escrita do chamador; o repositorio recusa transacao read-only.
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<SchoolScopeResponse> listForScopeInWriteTransaction(Long educationDepartmentId) {
+        if (educationDepartmentId == null || educationDepartmentId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID de diretoria invalido");
+        }
+        return repository.listForScopeInWriteTransaction(educationDepartmentId);
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public SchoolScopeResponse findForScopeInWriteTransaction(Long id) {
+        requireSchoolId(id);
+        return repository.findForScopeInWriteTransaction(id).orElseThrow(() -> new ResponseStatusException(
                 HttpStatus.NOT_FOUND, "Unidade escolar nao encontrada"));
     }
 

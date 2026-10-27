@@ -3,7 +3,9 @@ package br.com.atestaponto.employee.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -15,7 +17,10 @@ import br.com.atestaponto.auth.admin.dto.AdminContextResponse;
 import br.com.atestaponto.auth.admin.service.PublicAdminAuthorization;
 import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization;
 import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization.Context;
+import br.com.atestaponto.employee.dto.EmployeeActivationRequest;
+import br.com.atestaponto.employee.dto.EmployeeActivationResponse;
 import br.com.atestaponto.employee.repository.EmployeeCreateRepository;
+import br.com.atestaponto.employmentlink.dto.EmploymentLinkScopeResponse;
 import br.com.atestaponto.school.service.SchoolService;
 import br.com.atestaponto.service.EmployeeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -67,7 +72,51 @@ class PublicEmployeeServiceTest {
         assertThrows(ResponseStatusException.class,
                 () -> service.activation(previous("funcionario.reativar"), 5, true, json.valueToTree(Map.of("confirmacao", "DESATIVAR"))));
         verifyNoInteractions(admins, activations);
+        verifyNoInteractions(authorization);
+    }
+
+    @Test
+    void activationRevalidatesInWriteTransaction() {
+        var locked = mock(AdminContextResponse.class);
+        when(admins.requireActiveForUpdate(7)).thenReturn(locked);
+        when(authorization.authorizeInWriteTransaction(locked, "funcionario.reativar", 5L, null))
+                .thenReturn(new Context(7, "funcionario.reativar", List.of(20L), null, null,
+                        new EmploymentLinkScopeResponse(50, 20, 10L)));
+        when(activations.changeActivation(anyLong(), anyBoolean(), any()))
+                .thenReturn(new EmployeeActivationResponse(5, true, null));
+        service.activation(previous("funcionario.reativar"), 5, true, json.valueToTree(Map.of("confirmacao", "REATIVAR")));
         verify(authorization, never()).authorize(any(), any(), any(), any());
+        verify(activations).changeActivation(anyLong(), anyBoolean(),
+                eq(new EmployeeActivationRequest("REATIVAR", 50L, 20L, 10L)));
+    }
+
+    @Test
+    void editOutOfScopeIsForbiddenBeforeWrite() {
+        var edits = mock(EmployeeEditService.class);
+        var editing = new PublicEmployeeService(mock(EmployeeService.class), mock(SchoolService.class),
+                mock(EmployeeCreateService.class), edits, activations, admins, authorization,
+                mock(EmployeeWelcomeEmail.class), mock(Validator.class), json, 4);
+        var locked = mock(AdminContextResponse.class);
+        when(admins.requireActiveForUpdate(7)).thenReturn(locked);
+        when(authorization.authorizeInWriteTransaction(locked, "funcionario.editar", 5L, null))
+                .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Operacao fora do escopo administrativo"));
+        var error = assertThrows(ResponseStatusException.class,
+                () -> editing.edit(previous("funcionario.editar"), 5, json.valueToTree(Map.of("nome", "Maria Silva"))));
+        assertEquals(403, error.getStatusCode().value());
+        verify(authorization, never()).authorize(any(), any(), any(), any());
+        verifyNoInteractions(edits);
+    }
+
+    @Test
+    void readKeepsReadOnlyAuthorization() {
+        var unlocked = mock(AdminContextResponse.class);
+        when(admins.requireActive(7)).thenReturn(unlocked);
+        when(authorization.authorize(unlocked, "funcionario.visualizar", 5L, null))
+                .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Operacao fora do escopo administrativo"));
+        var error = assertThrows(ResponseStatusException.class, () -> service.find(previous("funcionario.visualizar"), 5));
+        assertEquals(403, error.getStatusCode().value());
+        verify(admins, never()).requireActiveForUpdate(anyLong());
+        verify(authorization, never()).authorizeInWriteTransaction(any(), any(), any(), any());
     }
 
     @Test
@@ -89,10 +138,11 @@ class PublicEmployeeServiceTest {
         var fixture = new CreateFixture();
         var locked = mock(AdminContextResponse.class);
         when(admins.requireActiveForUpdate(7)).thenReturn(locked);
-        when(authorization.authorize(locked, "funcionario.criar", null, 20L))
+        when(authorization.authorizeInWriteTransaction(locked, "funcionario.criar", null, 20L))
                 .thenThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado"));
         var error = assertThrows(ResponseStatusException.class, fixture::create);
         assertEquals(403, error.getStatusCode().value());
+        verify(authorization, never()).authorize(eq(locked), any(), any(), any());
         verify(fixture.transactions).rollback(any());
         verifyNoInteractions(fixture.repository, fixture.mail);
     }
