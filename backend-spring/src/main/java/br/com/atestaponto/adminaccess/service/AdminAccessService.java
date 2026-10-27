@@ -86,6 +86,7 @@ public class AdminAccessService {
         Authorizer authorizer = authorizer(request.acessoAutorizadorId(), request.adminId());
         revalidate(authorizer, request.perfil(), request.diretoriaId(), request.unidadeId(), true);
         Long user = repository.findActiveUser(request.cpf());
+        if (request.adminId().equals(user)) throw forbidden("Nao e permitido conceder acesso ao proprio usuario");
         boolean created = user == null;
         if (created) {
             if (request.nome() == null || request.nome().isBlank()) throw bad("nome e obrigatorio para novo usuario administrativo");
