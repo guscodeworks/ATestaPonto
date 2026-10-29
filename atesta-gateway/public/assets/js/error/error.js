@@ -1,9 +1,7 @@
 (function () {
   "use strict";
 
-  // Rota de destino do botão "Voltar ao início".
-  // Ajuste este caminho caso a página inicial/login do sistema mude de local.
-  var HOME_URL = "../index.html";
+  var HOME_URL = "/login";
 
   var btnVoltar = document.getElementById("btn-voltar");
 

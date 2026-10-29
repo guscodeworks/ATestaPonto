@@ -14,7 +14,7 @@
   --red: #7A1518;
   --black: #111111;
   --white: #ffffff;
-  --gray-500: #8b8f98;
+  --gray-500: #5f6368;
   --gray-300: #d9dce1;
   --ease: cubic-bezier(.4,0,.2,1);
 }
@@ -211,7 +211,7 @@ html::-webkit-scrollbar {
 
 .subtitle {
   text-align: center;
-  font-size: clamp(13px, 3.4vw, 14px);
+  font-size: 14px;
   line-height: 1.5;
   color: var(--gray-500);
   margin: 0 auto 18px;
@@ -245,6 +245,11 @@ html::-webkit-scrollbar {
   box-shadow: 0 10px 24px -8px rgba(0,0,0,.35);
 }
 
+.btn-primary:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 3px;
+}
+
 .btn-primary:active { transform: scale(0.99); }
 
 /* ---------- Responsivo ---------- */
@@ -255,7 +260,7 @@ html::-webkit-scrollbar {
   .brand { margin-bottom: 12px; }
   .digit { font-size: clamp(60px, 18vw, 84px); }
   .title { font-size: 19px; }
-  .subtitle { font-size: 13px; margin-bottom: 16px; }
+  .subtitle { font-size: 14px; margin-bottom: 16px; }
   .btn-primary { height: 50px; font-size: 14.5px; }
 }
 
@@ -264,7 +269,7 @@ html::-webkit-scrollbar {
   .brand { font-size: 26px; }
   .digit { font-size: clamp(52px, 17vw, 72px); }
   .title { font-size: 18px; }
-  .subtitle { font-size: 12.5px; }
+  .subtitle { font-size: 14px; }
   .btn-primary { height: 48px; }
 }
 
