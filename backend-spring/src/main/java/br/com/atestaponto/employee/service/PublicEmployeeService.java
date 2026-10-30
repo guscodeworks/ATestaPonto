@@ -165,8 +165,9 @@ public class PublicEmployeeService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Contexto administrativo invalido");
         }
         // Escritas travam identidade e acessos ate o commit; o service de dominio revalida vinculo e unidade sob lock.
-        var admin = forUpdate ? admins.requireActiveForUpdate(previous.adminId()) : admins.requireActive(previous.adminId());
-        return authorization.authorize(admin, capability, id, schoolId);
+        if (!forUpdate) return authorization.authorize(admins.requireActive(previous.adminId()), capability, id, schoolId);
+        var admin = admins.requireActiveForUpdate(previous.adminId());
+        return authorization.authorizeInWriteTransaction(admin, capability, id, schoolId);
     }
 
     private void validate(Object input) {

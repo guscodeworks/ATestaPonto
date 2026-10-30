@@ -129,6 +129,17 @@ public class SchoolRepository {
                 List.of(educationDepartmentId), this::mapScopeSchool);
     }
 
+    // Leitura consistente sem bloqueio, para revalidar escopo dentro de transacoes de escrita.
+    public Optional<SchoolScopeResponse> findForScopeInWriteTransaction(long id) {
+        return queryInWriteTransaction(SCOPE_SELECT + " WHERE id = ? LIMIT 1", List.of(id),
+                this::mapScopeSchool).stream().findFirst();
+    }
+
+    public List<SchoolScopeResponse> listForScopeInWriteTransaction(long educationDepartmentId) {
+        return queryInWriteTransaction(SCOPE_SELECT + " WHERE diretoria_ensino_id = ? ORDER BY nome ASC",
+                List.of(educationDepartmentId), this::mapScopeSchool);
+    }
+
     private SchoolScopeResponse mapScopeSchool(ResultSet row, int index) throws SQLException {
         return new SchoolScopeResponse(row.getLong("id"), row.getLong("diretoria_ensino_id"),
                 row.getString("nome"), row.getBigDecimal("latitude"), row.getBigDecimal("longitude"),
@@ -157,13 +168,25 @@ public class SchoolRepository {
             if (!connection.isReadOnly()) {
                 throw new SQLException("A consulta exige uma conexao somente leitura");
             }
-            PreparedStatement statement = connection.prepareStatement(sql);
-            for (int index = 0; index < parameters.size(); index++) {
-                statement.setObject(index + 1, parameters.get(index));
-            }
-            statement.setQueryTimeout(3);
-            return statement;
+            return prepareQuery(connection, sql, parameters);
         }, mapper);
+    }
+
+    private <T> List<T> queryInWriteTransaction(String sql, List<Object> parameters, RowMapper<T> mapper) {
+        return jdbcTemplate.query(connection -> {
+            requireWriteTransaction(connection);
+            return prepareQuery(connection, sql, parameters);
+        }, mapper);
+    }
+
+    private PreparedStatement prepareQuery(Connection connection, String sql, List<Object> parameters)
+            throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(sql);
+        for (int index = 0; index < parameters.size(); index++) {
+            statement.setObject(index + 1, parameters.get(index));
+        }
+        statement.setQueryTimeout(3);
+        return statement;
     }
 
     private static final DateTimeFormatter ADMIN_TIMESTAMP = new DateTimeFormatterBuilder()
@@ -229,10 +252,20 @@ public class SchoolRepository {
     }
 
     private void requireCreationTransaction(Connection connection) throws SQLException {
-        if (connection.isReadOnly() || !TransactionSynchronizationManager.isActualTransactionActive()
-                || TransactionSynchronizationManager.isCurrentTransactionReadOnly()) {
+        if (!isWriteTransaction(connection)) {
             throw new SQLException("A criacao exige uma transacao de escrita");
         }
+    }
+
+    private void requireWriteTransaction(Connection connection) throws SQLException {
+        if (!isWriteTransaction(connection)) {
+            throw new SQLException("A consulta exige uma transacao de escrita");
+        }
+    }
+
+    private boolean isWriteTransaction(Connection connection) throws SQLException {
+        return !connection.isReadOnly() && TransactionSynchronizationManager.isActualTransactionActive()
+                && !TransactionSynchronizationManager.isCurrentTransactionReadOnly();
     }
 
     private List<SchoolResponse> querySchools(String sql, long id) {

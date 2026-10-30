@@ -5,6 +5,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.async.DeferredResult;
@@ -20,6 +21,7 @@ public class LoginFailureDelay implements DisposableBean {
         thread.setDaemon(true);
         return thread;
     });
+    @Autowired
     public LoginFailureDelay(Environment env) { this(env, 1000); }
     LoginFailureDelay(Environment env, int maxPending) {
         delay = env.getProperty("LOGIN_FAILURE_DELAY_MS", Long.class, 2000L);
