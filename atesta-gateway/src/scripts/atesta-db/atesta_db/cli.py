@@ -1,7 +1,7 @@
 """Ponto de entrada da CLI atesta-db.
 
 Uso: atesta-db init [--confirm-production]
-Instalação única na raiz do repositório: pipx install -e ./tools/atesta-db
+Instalação única na raiz do repositório: pipx install -e ./atesta-gateway/src/scripts/atesta-db
 """
 
 from __future__ import annotations

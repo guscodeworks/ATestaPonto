@@ -109,11 +109,11 @@ Instale a CLI `atesta-db` uma única vez, a partir da raiz do repositório (requ
 python3 -m pip install --user pipx
 python3 -m pipx ensurepath   # feche e reabra o terminal depois
 
-pipx install -e ./tools/atesta-db
+pipx install -e ./atesta-gateway/src/scripts/atesta-db
 ```
 
 > [!IMPORTANT]
-> A instalação via `pipx` deve ser feita a partir da **raiz do repositório**, mas depois disso `atesta-db` funciona de qualquer pasta. Use `pipx install -e ./tools/atesta-db` (com `-e`) para que a CLI encontre sempre o SQL do repositório atualizado.
+> A instalação via `pipx` deve ser feita a partir da **raiz do repositório**, mas depois disso `atesta-db` funciona de qualquer pasta. Use `pipx install -e ./atesta-gateway/src/scripts/atesta-db` (com `-e`) para que a CLI encontre sempre o SQL do repositório atualizado.
 
 Em seguida, inicialize o banco de qualquer diretório:
 
@@ -366,7 +366,7 @@ Todos os relatórios respeitam o escopo territorial do administrador autenticado
 | `npm start` | Inicia o servidor principal (porta 3000) |
 | `npm run dev` | Inicia servidor principal + simulador Gov.br simultaneamente |
 | `npm run dev:spring` | Inicia o backend Spring usando variáveis do ambiente Node |
-| `atesta-db init` | Inicializa o banco de dados vazio com o baseline (ponto.sql) — CLI Python em `tools/atesta-db` |
+| `atesta-db init` | Inicializa o banco de dados vazio com o baseline (ponto.sql) — CLI Python em `atesta-gateway/src/scripts/atesta-db` |
 | `npm run db:run` | Executa arquivo SQL específico |
 
 ### Comandos do atesta-id
