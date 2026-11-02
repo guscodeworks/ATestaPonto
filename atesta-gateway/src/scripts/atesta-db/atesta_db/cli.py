@@ -58,13 +58,16 @@ def init_database(config: DbConfig, schema_sql: str) -> None:
     statements = split_statements(schema_sql)
     connection = None
     try:
+        # Não usamos autocommit=True para manter controle explícito; DDL no MySQL
+        # comete implicitamente, mas isso evita executar statements subsequentes
+        # após uma falha e permite rollback de operações não-DDL se houver.
         connection = pymysql.connect(
             host=config.host,
             port=config.port,
             user=config.user,
             password=config.password,
             charset="utf8mb4",
-            autocommit=True,
+            autocommit=False,
         )
         with connection.cursor() as cursor:
             # Cria o banco caso não exista; nome validado como seguro.
@@ -87,6 +90,14 @@ def init_database(config: DbConfig, schema_sql: str) -> None:
                 )
             for statement in statements:
                 cursor.execute(statement)
+            connection.commit()
+    except pymysql.MySQLError:
+        if connection is not None:
+            try:
+                connection.rollback()
+            except Exception:
+                pass
+        raise
     finally:
         if connection is not None:
             connection.close()
