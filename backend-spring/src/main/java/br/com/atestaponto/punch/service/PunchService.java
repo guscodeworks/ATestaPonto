@@ -168,7 +168,7 @@ public class PunchService {
         String[] times = new String[4];
         for (Row row : rows) {
             int index = TYPES.indexOf(row.type());
-            if (index >= 0 && row.time() != null && !row.time().equals("00:00:00")) times[index] = row.time();
+            if (index >= 0 && row.time() != null) times[index] = row.time();
         }
         return times;
     }
