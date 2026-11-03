@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend-spring
+        working-directory: atesta-gateway
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -20,6 +20,5 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-          cache-dependency-path: backend-spring/pom.xml
-      - run: ./mvnw -B compile
-      - run: ./mvnw -B test
+          cache-dependency-path: atesta-gateway/pom.xml
+      - run: ./mvnw -B clean verify

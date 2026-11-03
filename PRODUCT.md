@@ -28,7 +28,7 @@ A batida combina três provas: login do funcionário, leitura do QR Code da unid
 
 ## Capabilities and Constraints
 
-- Interface em português do Brasil (`lang="pt-BR"`), servida como HTML, CSS e JavaScript de navegador. O backend migra de Node/Express para Spring Boot sem reescrever o frontend.
+- Interface em português do Brasil (`lang="pt-BR"`), servida como HTML, CSS e JavaScript de navegador. O backend Spring Boot preserva o frontend de navegador.
 - Tipos de batida derivados da sequência do dia: Entrada, Saída para almoço, Retorno do almoço e Saída.
 - Cadastro de escola com CEP e coordenadas pela BrasilAPI. O cadastro de funcionário gera uma senha temporária, mostrada uma única vez ao administrador.
 - Autorização fail-closed: escopo ausente, inválido ou vazio não dá acesso. Tokens não vão na URL, e dados pessoais não ficam expostos.
@@ -41,7 +41,7 @@ A batida combina três provas: login do funcionário, leitura do QR Code da unid
 
 ## Evidence on Hand
 
-- Telas existentes em `atesta-gateway/views/` (funcionário, administração, senha e erro) e assets em `atesta-gateway/public/` (CSS com `tokens.css`, ícones SVG e imagens).
+- Telas existentes em `atesta-gateway/web/` (funcionário, administração, senha e erro) e assets em `atesta-gateway/web/public/` (CSS com `tokens.css`, ícones SVG e imagens).
 - Não há usuários reais, depoimentos, métricas de uso nem escolas em produção. Nada disso deve ser inventado.
 
 ## Product Principles

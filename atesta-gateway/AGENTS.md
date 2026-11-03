@@ -1,24 +1,33 @@
-## Repo layout
+## Stack
 
-- Backend legado transitório em Node.js 24/Express, npm e CommonJS (`require`/`module.exports`); o backend de destino é Java 21/Spring Boot, conforme a raiz.
-- Em `src/`: routes definem endpoints; controllers tratam HTTP; services concentram regras; models acessam dados; middlewares protegem sessão, RBAC e escopo.
-- `server.js` e `src/scripts/` executam no Node para servidor e ferramentas; `public/assets/js/` contém JavaScript do navegador, incluindo fontes em `modules/` e bundles. Preserve esse frontend e seus contratos durante a migração do backend.
+- Java 21, Spring Boot 3.5.x, Maven, JDBC e MySQL.
+- Redis para sessões administrativas via Spring Session, QR e controles de acesso/rate limiting existentes; preserve configuração por ambiente e não amplie fallbacks locais para produção.
+- OAuth Gov.br Authorization Code com `state` e PKCE S256 para autenticação administrativa; JWT Bearer de funcionário é um fluxo separado.
 
 ## Commands
 
-- Em `atesta-gateway/`, `npm run dev:check` verifica a conexão com `SELECT 1`, usando a configuração real.
-- `npm run build:client` regenera bundles apenas quando suas fontes forem alteradas.
+- Dentro de `atesta-gateway/`, `./mvnw compile` compila o projeto; use quando pertinente à mudança.
+- Selecione validações locais proporcionais à alteração e confira seus efeitos antes de executá-las; login, startup ou testes que escrevam no banco exigem autorização explícita conforme a raiz. Não gere scripts ou relatórios versionados para testes locais, nem crie arquivos auxiliares não solicitados.
+
+## Architecture
+
+- Controller trata HTTP → Service concentra regras e transações → Repository executa SQL via JDBC, parametrizado conforme a raiz; preserve os limites transacionais existentes.
+- APIs públicas, como `/api/admin/**`, `/api/pontos/**` e `/auth/govbr/**`, atendem os clientes com as proteções próprias de cada fluxo; públicas não significa acesso anônimo irrestrito, nem exige HMAC do navegador.
+- `/internal/**` mantém compatibilidade Node → Spring durante a migração, com HMAC, timestamp, request ID e proteção anti-replay definidos na raiz; não crie rotas alternativas que contornem essa proteção.
+- Preserve contratos HTTP públicos e internos: rotas, métodos, status, corpos, erros, cookies e redirecionamentos consumidos pelo navegador e pelo gateway.
+- Preserve atomicidade, rollback, locks e revalidações de autorização dentro das transações existentes; não mova SQL para controllers.
+
+## Security
+
+- Gov.br autentica; o sistema autoriza. Preserve callback, consumo único do `state`, PKCE, renovação da sessão no login e revalidação do cadastro administrativo e acessos ativos na sessão Redis.
+- A autorização administrativa exige capacidades e RBAC territorial por diretoria/escola conforme as políticas existentes. Falhe fechado: escopo ausente, inválido ou vazio não autoriza; acesso global exige autorização explícita. Não confie em IDs, perfis ou escopos enviados pelo navegador.
+- No fluxo de funcionário, preserve assinatura e validade do JWT, perfil, versão da credencial, cadastro ativo e separação do comprovante de primeiro acesso; JWT de funcionário não concede autorização administrativa. Não envie tokens pela URL nem exponha segredos ou dados pessoais.
 
 ## Constraints
 
-- Não implemente novas funcionalidades no Express quando já houver equivalente no Spring; direcione novas regras de backend ao Spring e limite mudanças no legado à manutenção e compatibilidade necessárias.
-- Enquanto houver consumidores ativos, preserve contratos HTTP, páginas, assets, cookies, redirecionamentos, validações e proteções de segurança do gateway, incluindo rate limiting, RBAC territorial e autorização com falha fechada.
-- Preserve `req.session.admin`, OAuth `state`/PKCE, callback e revalidação do cadastro administrativo e acessos ativos; dashboard exige sessão administrativa autorizada.
-- Mantenha ponto separado do fluxo administrativo: preserve identificação, elegibilidade, acesso local/QR, sequência de marcações e proteção contra duplicidade.
-- Reutilize o cliente Spring existente para chamadas HMAC; valide respostas internas e projete os campos públicos antes de responder ao navegador.
-- Não remova controllers, serviços, rotas ou ferramentas sem comprovar a substituição e a ausência de dependências ativas, incluindo consumidores, imports, scripts npm e fluxos de build/deploy. A existência de equivalente no Spring, isoladamente, não comprova que o legado possa ser removido.
-- Evite testes redundantes e reutilize verificações existentes; não crie novos scripts auxiliares, relatórios ou documentação adicional sem solicitação explícita.
+- Use o schema existente e SQL parametrizado; não introduza Hibernate/JPA, geração automática de schema, migrations ou infraestrutura sem necessidade autorizada explicitamente. Para escritas no banco, siga a exigência de autorização explícita da raiz.
 
 ## Done when
 
-- Selecione verificações proporcionais à mudança e ao risco; antes de executar testes, confira acesso ao banco e efeitos colaterais conforme a raiz. Não regenere bundles sem alteração nas fontes.
+- Contratos públicos e internos, autorização territorial e garantias transacionais preservados; diff revisado e validações realizadas ou limitações informadas conforme a raiz.
+- Funcionalidades implementadas ainda exigem homologação antes da produção; compilação ou testes locais não comprovam prontidão nem autorizam publicação.
