@@ -1,6 +1,7 @@
 package br.com.atestaponto.employee.repository;
 
 import br.com.atestaponto.employee.dto.EmployeeActivationResponse;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -64,20 +65,20 @@ public class EmployeeActivationRepository {
                 """, active, active, id);
     }
 
-    public int closeLink(long id) {
-        return jdbc.update("UPDATE vinculos_funcionais SET status = 'ENCERRADO', data_fim = CURRENT_DATE WHERE id = ?",
-                id);
+    public int closeLink(long id, LocalDate date) {
+        return jdbc.update("UPDATE vinculos_funcionais SET status = 'ENCERRADO', data_fim = ? WHERE id = ?",
+                date, id);
     }
 
-    public int createLink(long employeeId, Link link) {
+    public int createLink(long employeeId, Link link, LocalDate date) {
         // Matrícula pertence ao vínculo histórico e não acompanha a reativação.
         return jdbc.update("""
                 INSERT INTO vinculos_funcionais
                     (funcionario_id, unidade_escolar_id, cargo_id, horario_entrada, horario_saida_almoco,
                      horario_volta_almoco, horario_saida, data_inicio, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), 'ATIVO')
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ATIVO')
                 """, employeeId, link.unitId(), link.cargoId(), link.entrada(), link.saidaAlmoco(),
-                link.retornoAlmoco(), link.saida());
+                link.retornoAlmoco(), link.saida(), date);
     }
 
     public EmployeeActivationResponse findStatus(long id) {

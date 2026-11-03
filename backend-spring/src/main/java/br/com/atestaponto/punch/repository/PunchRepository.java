@@ -53,9 +53,11 @@ public class PunchRepository {
                 true, (r, n) -> new Previous(r.getString("requisicao_hash"), r.getString("resposta")), employeeId, key));
     }
 
-    public Long activeLink(long employeeId, boolean lock) {
+    public Long activeLink(long employeeId, LocalDate date, boolean lock) {
         return first(query("SELECT id FROM vinculos_funcionais WHERE funcionario_id = ? AND status = 'ATIVO'"
-                + " ORDER BY id DESC LIMIT 1" + (lock ? " FOR UPDATE" : ""), lock, (r, n) -> r.getLong("id"), employeeId));
+                + " AND data_inicio <= ? AND (data_fim IS NULL OR data_fim >= ?)"
+                + " ORDER BY id DESC LIMIT 1" + (lock ? " FOR UPDATE" : ""), lock, (r, n) -> r.getLong("id"),
+                employeeId, date.toString(), date.toString()));
     }
 
     public Location location(long linkId) {
@@ -67,7 +69,7 @@ public class PunchRepository {
                         r.getObject("raio_permitido_metros", Integer.class)), linkId));
     }
 
-    public Dashboard dashboard(long employeeId) {
+    public Dashboard dashboard(long employeeId, LocalDate date) {
         return first(query("""
                 SELECT f.nome, f.ativo, lv.cargo, lv.entrada, lv.saida_almoco, lv.retorno_almoco, lv.saida
                 FROM funcionarios f LEFT JOIN LATERAL (
@@ -76,10 +78,13 @@ public class PunchRepository {
                            TIME_FORMAT(v.horario_volta_almoco, '%H:%i:%s') AS retorno_almoco,
                            TIME_FORMAT(v.horario_saida, '%H:%i:%s') AS saida
                     FROM vinculos_funcionais v INNER JOIN cargos c ON c.id = v.cargo_id
-                    WHERE v.funcionario_id = f.id AND v.status = 'ATIVO' ORDER BY v.id DESC LIMIT 1
+                    WHERE v.funcionario_id = f.id AND v.status = 'ATIVO'
+                      AND v.data_inicio <= ? AND (v.data_fim IS NULL OR v.data_fim >= ?)
+                    ORDER BY v.id DESC LIMIT 1
                 ) lv ON TRUE WHERE f.id = ? LIMIT 1
                 """, false, (r, n) -> new Dashboard(r.getString("nome"), r.getBoolean("ativo"), r.getString("cargo"),
-                        r.getString("entrada"), r.getString("saida_almoco"), r.getString("retorno_almoco"), r.getString("saida")), employeeId));
+                        r.getString("entrada"), r.getString("saida_almoco"), r.getString("retorno_almoco"), r.getString("saida")),
+                date.toString(), date.toString(), employeeId));
     }
 
     public List<Row> day(long linkId, LocalDate date, boolean lock) {

@@ -3,6 +3,7 @@ package br.com.atestaponto.employeecredentials.repository;
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse.Employee;
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse.AuthenticationEmployee;
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse.ActiveLink;
+import java.time.LocalDate;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -44,25 +45,28 @@ public class EmployeeCredentialsRepository {
         return rows.isEmpty() ? null : rows.getFirst();
     }
 
-    public ActiveLink findActiveLink(long employeeId) {
+    public ActiveLink findActiveLink(long employeeId, LocalDate date) {
         var rows = jdbc.query("""
                 SELECT v.id, v.unidade_escolar_id FROM vinculos_funcionais v
                 INNER JOIN funcionarios f ON f.id = v.funcionario_id
                 WHERE v.funcionario_id = ? AND f.ativo = 1 AND v.status = 'ATIVO'
+                  AND v.data_inicio <= ? AND (v.data_fim IS NULL OR v.data_fim >= ?)
                 ORDER BY v.id DESC LIMIT 1
-                """, (row, number) -> new ActiveLink(row.getLong("id"), row.getLong("unidade_escolar_id")), employeeId);
+                """, (row, number) -> new ActiveLink(row.getLong("id"), row.getLong("unidade_escolar_id")),
+                employeeId, date.toString(), date.toString());
         return rows.isEmpty() ? null : rows.getFirst();
     }
 
-    public int updateLastLogin(long employeeId) {
+    public int updateLastLogin(long employeeId, LocalDate date) {
         return jdbc.update("""
                 UPDATE login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id
                 SET lf.ultimo_login_em = CURRENT_TIMESTAMP
                 WHERE lf.funcionario_id = ? AND f.ativo = 1 AND lf.primeiro_acesso = FALSE
                   AND (lf.senha_temporaria_expira_em IS NULL OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP)
                   AND EXISTS (SELECT 1 FROM vinculos_funcionais v
-                              WHERE v.funcionario_id = f.id AND v.status = 'ATIVO')
-                """, employeeId);
+                              WHERE v.funcionario_id = f.id AND v.status = 'ATIVO'
+                                AND v.data_inicio <= ? AND (v.data_fim IS NULL OR v.data_fim >= ?))
+                """, employeeId, date.toString(), date.toString());
     }
 
     public Employee findRecoveryEmployee(String cpf) {

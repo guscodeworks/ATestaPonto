@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -24,6 +25,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.TreeMap;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,9 +37,17 @@ public class PunchService {
     private static final long MAX_SAFE_INTEGER = 9007199254740991L;
     private final PunchRepository repository;
     private final ObjectMapper json;
+    private final Clock clock;
+
+    @Autowired
     public PunchService(PunchRepository repository, ObjectMapper json) {
+        this(repository, json, Clock.system(BRASILIA));
+    }
+
+    PunchService(PunchRepository repository, ObjectMapper json, Clock clock) {
         this.repository = repository;
         this.json = json;
+        this.clock = clock.withZone(BRASILIA);
     }
 
     private long employeeId(PunchRequest request) {
@@ -90,16 +100,22 @@ public class PunchService {
                 || reading.get(3).longValue() <= 0 || reading.get(3).longValue() > MAX_SAFE_INTEGER) {
             throw badRequest("Leitura GPS exige precisao maior que zero e de ate 100 metros, com timestamp em milissegundos.");
         }
-        Long linkId = repository.activeLink(employeeId, true);
+        LocalDate date = LocalDate.now(clock);
+        Long linkId = repository.activeLink(employeeId, date, true);
+        if (!date.equals(LocalDate.now(clock))) {
+            throw conflict("O dia mudou durante o registro de ponto. Tente novamente.");
+        }
         if (linkId == null) throw notFound("Funcionario sem vinculo ativo");
         var location = repository.location(linkId);
         if (location == null) throw notFound("Unidade escolar do vinculo nao encontrada");
         double distance = distance(location, reading.get(0).doubleValue(), reading.get(1).doubleValue(), reading.get(2).doubleValue());
-        var now = Instant.now().atZone(BRASILIA);
-        LocalDate date = now.toLocalDate();
         List<Row> rows = repository.day(linkId, date, true);
+        var now = clock.instant().atZone(BRASILIA);
+        if (!date.equals(now.toLocalDate())) {
+            throw conflict("O dia mudou durante o registro de ponto. Tente novamente.");
+        }
         // So novas acoes validam a idade do GPS, depois de adquirir todos os locks.
-        long age = Instant.now().toEpochMilli() - reading.get(3).longValue();
+        long age = now.toInstant().toEpochMilli() - reading.get(3).longValue();
         if (age > 60000 || age < -5000) {
             throw badRequest("Leitura GPS vencida ou com horario futuro. Atualize a localizacao e confira o relogio do aparelho.");
         }
@@ -175,17 +191,19 @@ public class PunchService {
     @Transactional(readOnly = true)
     public PunchResponse.Today today(PunchRequest request) {
         long employeeId = employeeId(request);
-        var employee = repository.dashboard(employeeId);
+        LocalDate today = LocalDate.now(clock);
+        var employee = repository.dashboard(employeeId, today);
         if (employee == null) throw notFound("Funcionario nao encontrado");
         if (!employee.ativo()) throw forbidden("Funcionario inativo");
         if (employee.entrada() == null || employee.saidaAlmoco() == null || employee.retornoAlmoco() == null
                 || employee.saida() == null || employee.cargo() == null || employee.cargo().isEmpty()) {
             throw notFound("Funcionario sem vinculo ativo");
         }
-        Long linkId = repository.activeLink(employeeId, false);
+        Long linkId = repository.activeLink(employeeId, today, false);
         if (linkId == null) throw notFound("Funcionario sem vinculo ativo");
         if (repository.location(linkId) == null) throw notFound("Unidade escolar do vinculo nao encontrada");
-        LocalDate date = referenceDate(request);
+        // A referencia interna seleciona o dia consultado, nunca concede vigencia atual.
+        LocalDate date = request.referencia() == null ? today : request.referencia().atZone(BRASILIA).toLocalDate();
         String[] times = times(repository.day(linkId, date, false));
         int next = next(times);
         return new PunchResponse.Today(new PunchResponse.EmployeeSummary(employee.nome(), employee.cargo()),

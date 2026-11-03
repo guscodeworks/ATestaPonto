@@ -4,8 +4,12 @@ import br.com.atestaponto.employee.dto.EmployeeActivationRequest;
 import br.com.atestaponto.employee.dto.EmployeeActivationResponse;
 import br.com.atestaponto.employee.repository.EmployeeActivationRepository;
 import jakarta.validation.Validator;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Set;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,13 +17,21 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class EmployeeActivationService {
+    private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
     private static final Set<String> CARGOS = Set.of("FUNCIONARIO", "INSPETOR", "PROFESSOR");
     private final EmployeeActivationRepository repository;
     private final Validator validator;
+    private final Clock clock;
 
+    @Autowired
     public EmployeeActivationService(EmployeeActivationRepository repository, Validator validator) {
+        this(repository, validator, Clock.system(BRASILIA));
+    }
+
+    EmployeeActivationService(EmployeeActivationRepository repository, Validator validator, Clock clock) {
         this.repository = repository;
         this.validator = validator;
+        this.clock = clock.withZone(BRASILIA);
     }
 
     // Participa da transacao do chamador para manter os locks da autorizacao administrativa ate o commit.
@@ -64,8 +76,9 @@ public class EmployeeActivationService {
             validateSchedule(link);
         }
 
+        LocalDate date = LocalDate.now(clock);
         requireChanged(repository.changeStatus(id, active));
-        requireChanged(active ? repository.createLink(id, link) : repository.closeLink(link.id()));
+        requireChanged(active ? repository.createLink(id, link, date) : repository.closeLink(link.id(), date));
         var result = repository.findStatus(id);
         if (result == null) throw new IllegalStateException("Falha ao consultar ativacao atualizada do funcionario");
         return result;
