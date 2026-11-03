@@ -4,8 +4,12 @@ import br.com.atestaponto.employee.dto.EmployeeCreateRequest;
 import br.com.atestaponto.employee.dto.EmployeeCreateResponse;
 import br.com.atestaponto.employee.repository.EmployeeCreateRepository;
 import br.com.atestaponto.validation.Cpf;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Locale;
 import java.util.function.Supplier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,11 +20,19 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class EmployeeCreateService {
+    private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
     private final EmployeeCreateRepository repository;
     private final TransactionTemplate creationTransaction;
+    private final Clock clock;
 
+    @Autowired
     public EmployeeCreateService(EmployeeCreateRepository repository, PlatformTransactionManager transactionManager) {
+        this(repository, transactionManager, Clock.system(BRASILIA));
+    }
+
+    EmployeeCreateService(EmployeeCreateRepository repository, PlatformTransactionManager transactionManager, Clock clock) {
         this.repository = repository;
+        this.clock = clock.withZone(BRASILIA);
         this.creationTransaction = new TransactionTemplate(transactionManager);
         this.creationTransaction.setReadOnly(false);
         this.creationTransaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -74,14 +86,15 @@ public class EmployeeCreateService {
         }
 
         long cargoId = repository.findOrCreateCargo(request.cargo());
+        LocalDate date = LocalDate.now(clock);
         long employeeId = repository.insertEmployee(request.cpf(), request.email(), request.nome(),
                 request.telefone(), request.ativo());
         repository.insertLogin(employeeId, request.senhaHash());
         long linkId = repository.insertEmploymentLink(employeeId, request.unidadeEscolarId(), cargoId,
                 normalizeTime(request.entrada()), normalizeTime(request.saidaAlmoco()),
-                normalizeTime(request.retornoAlmoco()), normalizeTime(request.saida()));
+                normalizeTime(request.retornoAlmoco()), normalizeTime(request.saida()), date);
         if (!request.ativo()) {
-            repository.closeEmploymentLink(linkId);
+            repository.closeEmploymentLink(linkId, date);
         }
         return repository.findCreatedEmployee(employeeId);
     }

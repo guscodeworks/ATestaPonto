@@ -4,6 +4,8 @@ import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsRequest;
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse;
 import br.com.atestaponto.employeecredentials.repository.EmployeeCredentialsRepository;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -11,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EmployeeCredentialsService {
+    private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
     private static final long MAX_SAFE_INTEGER = 9007199254740991L;
     private final EmployeeCredentialsRepository repository;
 
@@ -42,7 +45,7 @@ public class EmployeeCredentialsService {
     public EmployeeCredentialsResponse.LoginLink activeLink(EmployeeCredentialsRequest.EmployeeId request) {
         long id = employeeId(request);
         // modern permanece no contrato /internal consumido pelo gateway; o schema legado nao e mais suportado.
-        return new EmployeeCredentialsResponse.LoginLink(true, repository.findActiveLink(id));
+        return new EmployeeCredentialsResponse.LoginLink(true, repository.findActiveLink(id, LocalDate.now(BRASILIA)));
     }
 
     private long employeeId(EmployeeCredentialsRequest.EmployeeId request) {
@@ -55,7 +58,7 @@ public class EmployeeCredentialsService {
     @Transactional(readOnly = false, propagation = Propagation.REQUIRES_NEW)
     public EmployeeCredentialsResponse.Change lastLogin(EmployeeCredentialsRequest.EmployeeId request) {
         long id = employeeId(request);
-        if (repository.updateLastLogin(id) != 1) {
+        if (repository.updateLastLogin(id, LocalDate.now(BRASILIA)) != 1) {
             throw new EmployeeCredentialsException(401, "UNAUTHORIZED", "CPF/email ou senha invalidos");
         }
         return new EmployeeCredentialsResponse.Change(true);

@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -90,14 +91,14 @@ public class EmployeeCreateRepository {
     }
 
     public long insertEmploymentLink(long employeeId, long unitId, long cargoId,
-            String entrada, String saidaAlmoco, String retornoAlmoco, String saida) {
+            String entrada, String saidaAlmoco, String retornoAlmoco, String saida, LocalDate date) {
         GeneratedKeyHolder keys = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             PreparedStatement statement = connection.prepareStatement("""
                     INSERT INTO vinculos_funcionais
                         (funcionario_id, unidade_escolar_id, cargo_id, horario_entrada,
                          horario_saida_almoco, horario_volta_almoco, horario_saida, data_inicio, status)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE(), 'ATIVO')
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ATIVO')
                     """, Statement.RETURN_GENERATED_KEYS);
             statement.setLong(1, employeeId);
             statement.setLong(2, unitId);
@@ -106,6 +107,7 @@ public class EmployeeCreateRepository {
             statement.setString(5, saidaAlmoco);
             statement.setString(6, retornoAlmoco);
             statement.setString(7, saida);
+            statement.setObject(8, date);
             return statement;
         }, keys);
         Number key = keys.getKey();
@@ -115,9 +117,9 @@ public class EmployeeCreateRepository {
         return key.longValue();
     }
 
-    public void closeEmploymentLink(long linkId) {
-        jdbc.update("UPDATE vinculos_funcionais SET status = 'ENCERRADO', data_fim = CURRENT_DATE WHERE id = ?",
-                linkId);
+    public void closeEmploymentLink(long linkId, LocalDate date) {
+        jdbc.update("UPDATE vinculos_funcionais SET status = 'ENCERRADO', data_fim = ? WHERE id = ?",
+                date, linkId);
     }
 
     public EmployeeCreateResponse findCreatedEmployee(long employeeId) {
