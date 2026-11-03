@@ -1,7 +1,0 @@
-**
-!pom.xml
-!src/
-!src/**
-**/.env*
-**/*.key
-**/*.pem

@@ -1,0 +1,9 @@
+**
+!pom.xml
+!src/
+!src/**
+!web/
+!web/**
+**/.env*
+**/*.key
+**/*.pem
