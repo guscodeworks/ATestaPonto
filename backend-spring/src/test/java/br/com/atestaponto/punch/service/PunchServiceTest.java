@@ -9,6 +9,7 @@ import br.com.atestaponto.punch.repository.PunchRepository;
 import br.com.atestaponto.punch.repository.PunchRepository.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.LongNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -55,6 +56,10 @@ class PunchServiceTest {
         assertEquals(status, assertThrows(PunchException.class, () -> service.register(request)).status());
         verify(repository, never()).insert(anyLong(), any(), anyString(), anyString());
         verify(repository, never()).saveIdempotency(anyLong(), anyString(), anyString(), anyString());
+    }
+
+    private Row row(String type, String time) {
+        return new Row(7, DATE.toString(), type, time, 20, "Unidade teste");
     }
 
     @ParameterizedTest
@@ -297,5 +302,45 @@ class PunchServiceTest {
     void gpsAccuracyMustFitInsideSchoolRadius() {
         when(repository.location(7)).thenReturn(new Location(BigDecimal.ZERO, BigDecimal.ZERO, 9));
         assertRejected(403, request(BEFORE_MIDNIGHT));
+    }
+
+    @Test
+    void midnightEntryIsNotRegisteredAgain() {
+        when(repository.day(7, DATE, true)).thenReturn(List.of(row("ENTRADA", "00:00:00")));
+        var result = service.register(request(BEFORE_MIDNIGHT));
+        assertEquals("SAIDA_ALMOCO", result.response().path("ponto").path("tipo").asText());
+        verify(repository).insert(7, DATE, "SAIDA_ALMOCO", "2026-11-02 23:59:59");
+    }
+
+    @Test
+    void fourPunchesIncludingMidnightCompleteDay() {
+        when(repository.day(7, DATE, true)).thenReturn(List.of(row("ENTRADA", "00:00:00"),
+                row("SAIDA_ALMOCO", "04:00:00"), row("RETORNO_ALMOCO", "05:00:00"), row("SAIDA", "09:00:00")));
+        assertRejected(409, request(BEFORE_MIDNIGHT));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void todayAndHistoryPreserveMidnightEntry(boolean complete) {
+        var service = new PunchService(repository, json, Clock.fixed(BEFORE_MIDNIGHT, ZoneOffset.UTC));
+        when(repository.dashboard(5, DATE)).thenReturn(new Dashboard("Teste", true, "PROFESSOR",
+                "00:00:00", "04:00:00", "05:00:00", "09:00:00"));
+        when(repository.activeLink(5, DATE, false)).thenReturn(7L);
+        var rows = complete ? List.of(row("ENTRADA", "00:00:00"), row("SAIDA_ALMOCO", "04:00:00"),
+                row("RETORNO_ALMOCO", "05:00:00"), row("SAIDA", "09:00:00"))
+                : List.of(row("ENTRADA", "00:00:00"));
+        when(repository.day(7, DATE, false)).thenReturn(rows);
+        when(repository.history(5, DATE.withDayOfMonth(1), DATE.withDayOfMonth(30))).thenReturn(rows);
+        var request = new PunchRequest(LongNode.valueOf(5), null, null,
+                TextNode.valueOf("2026-11"), BEFORE_MIDNIGHT);
+        var today = service.today(request);
+        verify(repository).dashboard(5, DATE);
+        verify(repository).activeLink(5, DATE, false);
+        assertEquals("00:00:00", today.ponto().entrada());
+        assertEquals(complete ? null : "SAIDA_ALMOCO", today.proxima_batida());
+        assertEquals(complete, today.jornada_concluida());
+        var history = service.history(request).registros().getFirst();
+        assertEquals("00:00:00", history.entrada());
+        assertEquals(complete ? Integer.valueOf(480) : null, history.total_minutos());
     }
 }

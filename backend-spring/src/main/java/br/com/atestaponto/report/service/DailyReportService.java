@@ -72,8 +72,8 @@ public class DailyReportService {
     private Object time(LocalDate date, List<Row> rows, String type) {
         String time = null;
         for (Row row : rows) {
-            if (type.equals(row.type()) && row.time() != null) time = row.time();
+            if (row.punchId() != null && type.equals(row.type()) && row.time() != null) time = row.time();
         }
-        return time == null || "00:00:00".equals(time) ? Map.of() : date + " " + time;
+        return time == null ? Map.of() : date + " " + time;
     }
 }
