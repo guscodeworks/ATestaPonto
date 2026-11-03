@@ -1,0 +1,20 @@
+name: Docker build
+
+on:
+  pull_request:
+    branches: [develop]
+  push:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build Docker image
+        run: docker build --file atesta-gateway/Dockerfile --tag atestaponto:${{ github.sha }} atesta-gateway
