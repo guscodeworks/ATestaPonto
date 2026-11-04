@@ -1,5 +1,13 @@
 /* Perfil mobile do funcionario. */
 
+html {
+  min-width: 0;
+}
+
+body.employee-profile {
+  min-width: 0;
+}
+
 .profile-page-description {
   display: none;
 }
@@ -7,7 +15,15 @@
 .profile-main {
   gap: 14px;
   padding-top: 18px;
-  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
+}
+
+.employee-profile .employee-name,
+.employee-profile .employee-role {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .profile-overview {
@@ -162,9 +178,7 @@
 
 .profile-summary-copy h2,
 .profile-summary-copy p {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .profile-summary-copy h2 {
@@ -377,8 +391,12 @@
   }
 
   .profile-data-row {
-    grid-template-columns: minmax(70px, 0.7fr) minmax(0, 1.5fr);
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .profile-data-row dd {
+    text-align: left;
   }
 
   .profile-schedule-item {
@@ -389,6 +407,10 @@
 
 /* Desktop: reaproveita o shell do Início sem alterar a composição mobile. */
 @media (min-width: 768px) {
+  .employee-profile .employee-bottom-nav-inner {
+    overflow-y: auto;
+  }
+
   .employee-profile .profile-overview {
     display: flex;
     flex-direction: column;
