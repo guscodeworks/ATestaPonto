@@ -130,11 +130,6 @@ function aplicarCapacidadesNosPaineisAdmin() {
     document.querySelectorAll(seletor).forEach((elemento) => elemento.remove());
   });
 
-  // Ainda não há capacidade nem endpoint para alterar horários ou sistema.
-  document.querySelectorAll(
-    '.settings-nav-item[data-panel="panel-horarios"], #panel-horarios, '
-    + '.settings-nav-item[data-panel="panel-sistema"], #panel-sistema'
-  ).forEach((elemento) => elemento.remove());
 }
 
 /* ============================================================
