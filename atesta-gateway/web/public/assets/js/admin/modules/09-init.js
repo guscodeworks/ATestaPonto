@@ -127,7 +127,8 @@
     const paginaListaFuncionarios = Boolean(
       document.getElementById('tbody-funcionarios')
     );
-    const precisaFuncionarios = temCapacidade('funcionario.listar') && Boolean(document.querySelector(
+    const paginaRelatorios = existe('.reports-page');
+    const precisaFuncionarios = !paginaRelatorios && temCapacidade('funcionario.listar') && Boolean(document.querySelector(
       '#tbody-funcionarios,#cards-funcionarios,#tbody-presentes,#tbody-ausentes,#tbody-relatorio,#tbody-ultimos,#stat-total,#form-registro,#grafico-presenca'
     ));
     const precisaPontosHoje =
@@ -135,14 +136,14 @@
       Boolean(document.querySelector(
       '#tbody-presentes,#tbody-ausentes,#tbody-ultimos,#stat-presentes,#count-presentes,#tbody-funcionarios,#grafico-presenca'
       ));
-    const precisaResumo = temCapacidade('ponto.resumo.visualizar') && Boolean(document.querySelector(
+    const precisaResumo = !paginaRelatorios && temCapacidade('ponto.resumo.visualizar') && Boolean(document.querySelector(
       '#stat-total,#hero-presentes,#relatorio-presentes,#grafico-presenca'
     ));
-    const precisaRelatorio = temCapacidade('relatorio.visualizar')
+    const precisaRelatorio = !paginaRelatorios && temCapacidade('relatorio.visualizar')
       && Boolean(document.getElementById('tbody-relatorio'));
-    const precisaHierarquia = temCapacidade('relatorio.hierarquico.visualizar')
+    const precisaHierarquia = !paginaRelatorios && temCapacidade('relatorio.hierarquico.visualizar')
       && Boolean(document.getElementById('tbody-relatorio-hierarquico'));
-    const precisaSemanal = temCapacidade('relatorio.hierarquico.visualizar')
+    const precisaSemanal = !paginaRelatorios && temCapacidade('relatorio.hierarquico.visualizar')
       && Boolean(document.getElementById('chart-presenca-semanal'));
     const dataOptions = {
       includeEmployees: precisaFuncionarios,
@@ -159,6 +160,8 @@
       renderizarDadosAdminAtuais();
     }
 
+    if (paginaRelatorios) await iniciarRelatoriosPeriodo();
+
     if (existe('#busca-funcionario,#filtro-status,#filtro-cargo')) {
       iniciarFiltrosFuncionarios();
       iniciarAcoesFuncionarios();
@@ -168,10 +171,10 @@
 
     const btnPDF = document.getElementById('btn-gerar-pdf');
     const btnImprimir = document.getElementById('btn-imprimir');
-    if (btnPDF && temCapacidade('relatorio.visualizar')) {
+    if (btnPDF && temCapacidade('relatorio.hierarquico.visualizar')) {
       btnPDF.addEventListener('click', gerarPDF);
     }
-    if (btnImprimir && temCapacidade('relatorio.visualizar')) {
+    if (btnImprimir && temCapacidade('relatorio.hierarquico.visualizar')) {
       btnImprimir.addEventListener('click', imprimirRelatorio);
     }
 
