@@ -2,6 +2,7 @@ package br.com.atestaponto.employee.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -19,6 +20,9 @@ import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization;
 import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization.Context;
 import br.com.atestaponto.employee.dto.EmployeeActivationRequest;
 import br.com.atestaponto.employee.dto.EmployeeActivationResponse;
+import br.com.atestaponto.employee.dto.EmployeeCreateResponse;
+import br.com.atestaponto.employee.dto.EmployeeDetailRequest;
+import br.com.atestaponto.employee.dto.EmployeeDetailResponse;
 import br.com.atestaponto.employee.repository.EmployeeCreateRepository;
 import br.com.atestaponto.employmentlink.dto.EmploymentLinkScopeResponse;
 import br.com.atestaponto.school.service.SchoolService;
@@ -28,6 +32,8 @@ import jakarta.validation.Validator;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,13 +47,35 @@ class PublicEmployeeServiceTest {
     private final EmployeeActivationService activations = mock(EmployeeActivationService.class);
     private final PublicAdminAuthorization admins = mock(PublicAdminAuthorization.class);
     private final PublicEmployeeAuthorization authorization = mock(PublicEmployeeAuthorization.class);
+    private final EmployeeService reads = mock(EmployeeService.class);
+    private final EmployeeTemporaryPasswordService temporaryPasswords = mock(EmployeeTemporaryPasswordService.class);
     private final ObjectMapper json = new ObjectMapper();
-    private final PublicEmployeeService service = new PublicEmployeeService(mock(EmployeeService.class),
+    private final PublicEmployeeService service = new PublicEmployeeService(reads,
             mock(SchoolService.class), mock(EmployeeCreateService.class), mock(EmployeeEditService.class), activations,
-            admins, authorization, mock(EmployeeWelcomeEmail.class), mock(Validator.class), json, 4);
+            admins, authorization, temporaryPasswords, mock(Validator.class), json, 4);
 
     private static Context previous(String capability) {
         return new Context(7, capability, List.of(20L), null, null, null);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void detailIncludesPersistedActiveStateAsBoolean(boolean active) {
+        var admin = mock(AdminContextResponse.class);
+        when(admins.requireActive(7)).thenReturn(admin);
+        when(authorization.authorize(admin, "funcionario.visualizar", 5L, null))
+                .thenReturn(new Context(7, "funcionario.visualizar", List.of(20L), null, null,
+                        new EmploymentLinkScopeResponse(50, 20, 10L)));
+        when(reads.findAdminEmployeeById(new EmployeeDetailRequest(5L, 50L)))
+                .thenReturn(new EmployeeDetailResponse(5, "Funcionario teste", "00000000000", "teste@example.invalid",
+                        null, active, "PROFESSOR", "07:00", "11:00", "12:00", "16:00"));
+        when(temporaryPasswords.metadata(5)).thenReturn(Map.of("primeiro_acesso", true));
+
+        var payload = json.valueToTree(service.find(previous("funcionario.visualizar"), 5)).path("funcionario");
+
+        assertTrue(payload.path("ativo").isBoolean());
+        assertEquals(active, payload.path("ativo").booleanValue());
+        assertTrue(payload.path("credencial_temporaria").path("primeiro_acesso").booleanValue());
     }
 
     @Test
@@ -95,7 +123,7 @@ class PublicEmployeeServiceTest {
         var edits = mock(EmployeeEditService.class);
         var editing = new PublicEmployeeService(mock(EmployeeService.class), mock(SchoolService.class),
                 mock(EmployeeCreateService.class), edits, activations, admins, authorization,
-                mock(EmployeeWelcomeEmail.class), mock(Validator.class), json, 4);
+                mock(EmployeeTemporaryPasswordService.class), mock(Validator.class), json, 4);
         var locked = mock(AdminContextResponse.class);
         when(admins.requireActiveForUpdate(7)).thenReturn(locked);
         when(authorization.authorizeInWriteTransaction(locked, "funcionario.editar", 5L, null))
@@ -147,11 +175,38 @@ class PublicEmployeeServiceTest {
         verifyNoInteractions(fixture.repository, fixture.mail);
     }
 
+    @Test
+    void creationCommitsBeforeDeliveryWithTheExpiryCapturedInTheTransaction() {
+        var fixture = new CreateFixture();
+        var locked = mock(AdminContextResponse.class);
+        when(admins.requireActiveForUpdate(7)).thenReturn(locked);
+        when(authorization.authorizeInWriteTransaction(locked, "funcionario.criar", null, 20L))
+                .thenReturn(new Context(7, "funcionario.criar", List.of(20L), 20L, 3L, null));
+        when(fixture.repository.lockAuthorizedSchoolUnit(20, 3)).thenReturn(true);
+        when(fixture.repository.insertEmployee(any(), any(), any(), any(), eq(true))).thenReturn(5L);
+        when(fixture.repository.findCreatedEmployee(5)).thenReturn(new EmployeeCreateResponse(
+                5L, "52998224725", "Maria Silva", "maria@example.com", null, true,
+                "2026-11-03T12:00:00Z", true, 1L, "PROFESSOR", "2026-11-10T12:00:00Z"));
+        when(fixture.mail.delivery(any(), any(), any(), any())).thenReturn(Map.of("email_acesso", Map.of("estado", "desativado")));
+
+        fixture.create();
+
+        var order = inOrder(fixture.transactions, fixture.mail);
+        order.verify(fixture.transactions).commit(any());
+        order.verify(fixture.mail).delivery(eq("Maria Silva"), eq("maria@example.com"), any(), eq("2026-11-10T12:00:00Z"));
+        var hash = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(fixture.repository).insertLogin(eq(5L), hash.capture());
+        var password = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(fixture.mail).delivery(any(), any(), password.capture(), any());
+        org.junit.jupiter.api.Assertions.assertTrue(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4)
+                .matches(password.getValue(), hash.getValue()));
+    }
+
     /** Usa o EmployeeCreateService real com repository e transaction manager mockados. */
     private final class CreateFixture {
         final EmployeeCreateRepository repository = mock(EmployeeCreateRepository.class);
         final PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
-        final EmployeeWelcomeEmail mail = mock(EmployeeWelcomeEmail.class);
+        final EmployeeTemporaryPasswordService mail = mock(EmployeeTemporaryPasswordService.class);
         final PublicEmployeeService service;
 
         CreateFixture() {

@@ -988,3 +988,20 @@ body.employee-status-open {
   border-color: color-mix(in srgb, var(--color-accent) 90%, var(--color-text));
   background: color-mix(in srgb, var(--color-accent) 90%, var(--color-text));
 }
+
+.temporary-password-dialog {
+  width: min(36rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: 24px;
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  color: var(--text-700);
+  background: var(--surface, #fff);
+  font-family: inherit;
+}
+.temporary-password-dialog::backdrop { background: rgba(20, 20, 20, .5); }
+.temporary-password-dialog p { margin-block: 16px; }
+.temporary-password-value { font-size: 1.4rem; font-weight: 700; overflow-wrap: anywhere; user-select: all; }
+#employee-temporary-password { border-top: 1px solid var(--border-light); padding-block: 20px; }
+#employee-temporary-password p { margin-block: 12px; }

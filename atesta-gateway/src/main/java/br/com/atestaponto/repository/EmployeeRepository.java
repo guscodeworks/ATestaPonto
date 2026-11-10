@@ -75,7 +75,7 @@ public class EmployeeRepository {
 
     public Optional<EmployeeDetailResponse> findAdminEmployeeById(EmployeeDetailRequest request) {
         return query("""
-                SELECT f.id, f.nome, f.cpf, f.email, f.telefone,
+                SELECT f.id, f.nome, f.cpf, f.email, f.telefone, f.ativo,
                        c.cargo,
                        TIME_FORMAT(lvf.horario_entrada, '%H:%i:%s') AS entrada,
                        TIME_FORMAT(lvf.horario_saida_almoco, '%H:%i:%s') AS saida_almoco,
@@ -136,7 +136,7 @@ public class EmployeeRepository {
     private EmployeeDetailResponse mapDetail(ResultSet row, int index) throws SQLException {
         return new EmployeeDetailResponse(
                 row.getLong("id"), row.getString("nome"), row.getString("cpf"), row.getString("email"),
-                row.getString("telefone"), row.getString("cargo"), row.getString("entrada"),
+                row.getString("telefone"), row.getBoolean("ativo"), row.getString("cargo"), row.getString("entrada"),
                 row.getString("saida_almoco"), row.getString("retorno_almoco"), row.getString("saida"));
     }
 

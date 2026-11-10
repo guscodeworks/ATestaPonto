@@ -6,6 +6,7 @@ public record EmployeeDetailResponse(
         String cpf,
         String email,
         String telefone,
+        boolean ativo,
         String cargo,
         String entrada,
         String saida_almoco,

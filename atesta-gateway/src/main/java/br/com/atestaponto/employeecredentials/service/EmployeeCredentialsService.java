@@ -3,7 +3,10 @@ package br.com.atestaponto.employeecredentials.service;
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsRequest;
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse;
 import br.com.atestaponto.employeecredentials.repository.EmployeeCredentialsRepository;
+import br.com.atestaponto.publicpunch.service.EmployeeJwt;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Locale;
@@ -16,8 +19,12 @@ public class EmployeeCredentialsService {
     private static final ZoneId BRASILIA = ZoneId.of("America/Sao_Paulo");
     private static final long MAX_SAFE_INTEGER = 9007199254740991L;
     private final EmployeeCredentialsRepository repository;
+    private final EmployeeJwt jwt;
 
-    public EmployeeCredentialsService(EmployeeCredentialsRepository repository) { this.repository = repository; }
+    public EmployeeCredentialsService(EmployeeCredentialsRepository repository, EmployeeJwt jwt) {
+        this.repository = repository;
+        this.jwt = jwt;
+    }
 
     @Transactional(readOnly = true)
     public EmployeeCredentialsResponse.Authentication login(EmployeeCredentialsRequest.Login request) {
@@ -95,6 +102,13 @@ public class EmployeeCredentialsService {
         var credential = repository.lockCredential(id.longValue());
         if (credential == null || !credential.active()) throw unauthorized(firstAccess);
         if (!Boolean.valueOf(firstAccess).equals(credential.firstAccess())) throw invalidState(firstAccess);
+        if (firstAccess && (!credential.temporaryValid() || credential.expiresAt() == null
+                || credential.passwordHash() == null || request.versao_credencial() == null
+                || !request.versao_credencial().matches("[a-f0-9]{64}")
+                || !MessageDigest.isEqual(request.versao_credencial().getBytes(StandardCharsets.US_ASCII),
+                        jwt.version(id.longValue(), credential.passwordHash()).getBytes(StandardCharsets.US_ASCII)))) {
+            throw unauthorized(true);
+        }
         if (repository.updatePassword(id.longValue(), hash.textValue(), firstAccess) != 1) throw invalidState(firstAccess);
         return new EmployeeCredentialsResponse.Change(true);
     }

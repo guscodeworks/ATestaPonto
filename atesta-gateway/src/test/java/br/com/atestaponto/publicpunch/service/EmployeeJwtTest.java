@@ -76,6 +76,16 @@ class EmployeeJwtTest {
     }
 
     @Test
+    void firstAccessProofIncludesVersionAndLegacyProofWithoutVersionIsRejected() {
+        var claims = jwt.verify("Bearer " + jwt.issue(42, "hash", true), true);
+        assertEquals(jwt.version(42, "hash"), claims.path("credentialVersion").asText());
+        byte[] firstKey = EmployeeJwt.sha256((SECRET + ":first-access-password-change:v1").getBytes(StandardCharsets.UTF_8));
+        String legacy = sign("{\"alg\":\"HS256\"}", "{\"sub\":\"42\",\"purpose\":\"primeira_troca_senha\",\"exp\":"
+                + (Instant.now().getEpochSecond() + 600) + "}", firstKey);
+        assertDenied(() -> jwt.verify("Bearer " + legacy, true));
+    }
+
+    @Test
     void rejectsInvalidSubject() {
         long exp = Instant.now().getEpochSecond() + 600;
         byte[] key = SECRET.getBytes(StandardCharsets.UTF_8);
