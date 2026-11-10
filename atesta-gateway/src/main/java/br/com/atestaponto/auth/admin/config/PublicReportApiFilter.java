@@ -19,7 +19,9 @@ final class PublicReportApiFilter extends OncePerRequestFilter {
     private static final Map<String, String> CAPABILITIES = Map.of(
             "/hoje", "ponto.hoje.visualizar", "/relatorio", "relatorio.visualizar",
             "/relatorio/semanal", "relatorio.hierarquico.visualizar",
-            "/relatorio/hierarquia", "relatorio.hierarquico.visualizar", "/resumo", "ponto.resumo.visualizar");
+            "/relatorio/hierarquia", "relatorio.hierarquico.visualizar", "/resumo", "ponto.resumo.visualizar",
+            "/relatorio/periodo", "relatorio.visualizar",
+            "/relatorio/hierarquia/periodo", "relatorio.hierarquico.visualizar");
     private final PublicReportAuthorization authorization;
     private final PublicAdminRateLimit limits;
     private final ObjectMapper json;

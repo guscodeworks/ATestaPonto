@@ -15,7 +15,8 @@ public class PublicReportController {
     public PublicReportController(PublicReportService service) { this.service = service; }
 
     @GetMapping({"/hoje", "/hoje/", "/relatorio", "/relatorio/", "/relatorio/semanal", "/relatorio/semanal/",
-            "/relatorio/hierarquia", "/relatorio/hierarquia/", "/resumo", "/resumo/"})
+            "/relatorio/hierarquia", "/relatorio/hierarquia/", "/resumo", "/resumo/",
+            "/relatorio/periodo", "/relatorio/periodo/", "/relatorio/hierarquia/periodo", "/relatorio/hierarquia/periodo/"})
     public Map<String, ?> read(@RequestAttribute("adminContext") AdminContextResponse admin,
             @RequestAttribute("reportScope") Scope scope, @RequestParam MultiValueMap<String, String> query,
             HttpServletRequest request) {

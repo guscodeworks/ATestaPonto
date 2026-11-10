@@ -45,13 +45,15 @@ public class DailyReportService {
         List<EmployeeDay> absent = days.stream().filter(day -> day.total_batidas() == 0).toList();
         // Indicadores sao por pessoa; linhas continuam por vinculo.
         long total = days.stream().map(day -> day.funcionario().id()).distinct().count();
+        long activeCount = days.stream().filter(day -> day.funcionario().ativo())
+                .map(day -> day.funcionario().id()).distinct().count();
         long presentCount = present.stream().map(day -> day.funcionario().id()).distinct().count();
-        Summary summary = new Summary(total, total, presentCount, total - presentCount,
+        Summary summary = new Summary(total, activeCount, presentCount, total - presentCount,
                 total == 0 ? 0 : Math.round(100.0 * presentCount / total));
-        return new DailyReportResponse(date.toString(), total, total, present, absent, days, summary);
+        return new DailyReportResponse(date.toString(), total, activeCount, present, absent, days, summary);
     }
 
-    private EmployeeDay summarize(LocalDate date, List<Row> rows) {
+    EmployeeDay summarize(LocalDate date, List<Row> rows) {
         Row first = rows.getFirst();
         List<Punch> punches = rows.stream()
                 .filter(row -> row.punchId() != null && SEQUENCES.containsKey(row.type()))

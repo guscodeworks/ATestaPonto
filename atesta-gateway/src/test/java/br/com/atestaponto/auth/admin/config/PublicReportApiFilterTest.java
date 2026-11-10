@@ -18,6 +18,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -27,7 +29,8 @@ class PublicReportApiFilterTest {
 
     private final ObjectMapper json = new ObjectMapper();
     private final PublicAdminRateLimit limits = mock(PublicAdminRateLimit.class);
-    private final PublicReportApiFilter filter = new PublicReportApiFilter(mock(PublicReportAuthorization.class), limits, json);
+    private final PublicReportAuthorization authorization = mock(PublicReportAuthorization.class);
+    private final PublicReportApiFilter filter = new PublicReportApiFilter(authorization, limits, json);
 
     @BeforeEach
     void realReserve() {
@@ -97,5 +100,23 @@ class PublicReportApiFilterTest {
         assertNull(chain.getRequest());
         assertEquals(503, response.getStatus());
         assertEquals("RATE_LIMIT_UNAVAILABLE", json.readTree(response.getContentAsByteArray()).at("/error/code").asText());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"/relatorio/periodo,relatorio.visualizar", "/relatorio/hierarquia/periodo,relatorio.hierarquico.visualizar"})
+    void periodRoutesKeepDistinctNominalAndAggregateCapabilities(String suffix, String capability) throws Exception {
+        var request = request(true);
+        request.setServletPath("/api/admin/pontos" + suffix);
+        when(authorization.authorize(any(), org.mockito.ArgumentMatchers.eq(capability)))
+                .thenThrow(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.FORBIDDEN, "Capacidade administrativa insuficiente"));
+        var response = new MockHttpServletResponse();
+        var chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        verify(authorization).authorize(any(), org.mockito.ArgumentMatchers.eq(capability));
+        assertEquals(403, response.getStatus());
+        assertNull(chain.getRequest());
     }
 }

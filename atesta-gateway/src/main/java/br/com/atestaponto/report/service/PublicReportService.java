@@ -17,13 +17,24 @@ public class PublicReportService {
     private final DailyReportService daily;
     private final WeeklyReportService weekly;
     private final HierarchicalReportService hierarchy;
+    private final PeriodReportService period;
 
-    public PublicReportService(DailyReportService daily, WeeklyReportService weekly, HierarchicalReportService hierarchy) {
-        this.daily = daily; this.weekly = weekly; this.hierarchy = hierarchy;
+    public PublicReportService(DailyReportService daily, WeeklyReportService weekly, HierarchicalReportService hierarchy,
+            PeriodReportService period) {
+        this.daily = daily; this.weekly = weekly; this.hierarchy = hierarchy; this.period = period;
     }
 
     public Object read(String report, MultiValueMap<String, String> query, Scope scope, long adminId, String ip) {
         String date = report.equals("resumo") ? today() : date(query, report.equals("relatorio/semanal"));
+        if (report.equals("relatorio/periodo") || report.equals("relatorio/hierarquia/periodo")) {
+            String requestedPeriod = single(query, "periodo", "Periodo invalido");
+            if (requestedPeriod == null) requestedPeriod = "dia";
+            var result = period.report(date, requestedPeriod, scope, filter(query, "diretoria_ensino_id"),
+                    filter(query, "unidade_escolar_id"), filter(query, "funcionario_id"),
+                    single(query, "status", "Status de relatorio invalido"), report.equals("relatorio/hierarquia/periodo"));
+            audit(adminId, ip, "Administrador consultou relatorio de periodo", Map.of("data_referencia", date, "periodo", requestedPeriod));
+            return result;
+        }
         if (report.equals("relatorio/semanal")) {
             return weekly.report(new WeeklyReportRequest(date, scope.global(), scope.schools()));
         }
