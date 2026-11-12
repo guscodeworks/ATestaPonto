@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 import ssl
+from pathlib import Path
 
 import pymysql
 
@@ -16,6 +17,11 @@ from .config import ConfigError, DbConfig, find_repo_root, load_config
 from .schema import SCHEMA_RELATIVE_PATH, SchemaError, load_schema_sql, resolve_schema_path, split_statements
 
 PROGRAM = "atesta-db"
+
+# Lista explícita de migrations permitidas (ID -> caminho relativo à raiz do repo)
+ALLOWED_MIGRATIONS = {
+    "20260908_ponto_idempotencia": "database/migrations/20260908_ponto_idempotencia.sql",
+}
 
 
 def fail(message: str) -> None:
@@ -26,10 +32,8 @@ def fail(message: str) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog=PROGRAM,
-        # O objetivo é permitir `atesta-db init` sem invocar Node nem
-        # indicar arquivo Python manualmente.
-        description="Inicializa o banco de dados vazio do ATestaPonto com o baseline canônico "
-        "(database/schema/ponto.sql).",
+        description="Gerencia o banco de dados do ATestaPonto: inicialização com baseline canônico "
+        "(database/schema/ponto.sql) e aplicação de migrations autorizadas.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -44,9 +48,26 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Confirma a inicialização quando NODE_ENV=production.",
     )
-    run = subparsers.add_parser("run", help="Executa SQL manualmente, sem inicializar schema.")
-    run.add_argument("--file", required=True, help="SQL relativo ao módulo ou migration canônica permitida.")
-    run.add_argument("--confirm-production", action="store_true")
+
+    apply = subparsers.add_parser(
+        "apply",
+        help="Aplica uma migration autorizada explicitamente.",
+        description="Aplica uma migration específica pelo ID. "
+        "Somente migrations na lista autorizada são permitidas; "
+        "não aceita caminhos arbitrários.",
+    )
+    apply.add_argument(
+        "--migration",
+        required=True,
+        choices=sorted(ALLOWED_MIGRATIONS.keys()),
+        help="ID da migration a ser aplicada (ex.: 20260908_ponto_idempotencia).",
+    )
+    apply.add_argument(
+        "--confirm-production",
+        action="store_true",
+        help="Confirma a execução quando NODE_ENV=production.",
+    )
+
     subparsers.add_parser("check", help="Verifica a conexão usando somente SELECT 1.")
     return parser
 
@@ -73,21 +94,7 @@ def init_database(config: DbConfig, schema_sql: str) -> None:
     statements = split_statements(schema_sql)
     connection = None
     try:
-<<<<<<< HEAD:atesta-gateway/src/scripts/atesta-db/atesta_db/cli.py
-        # Não usamos autocommit=True para manter controle explícito; DDL no MySQL
-        # comete implicitamente, mas isso evita executar statements subsequentes
-        # após uma falha e permite rollback de operações não-DDL se houver.
-        connection = pymysql.connect(
-            host=config.host,
-            port=config.port,
-            user=config.user,
-            password=config.password,
-            charset="utf8mb4",
-            autocommit=False,
-        )
-=======
         connection = connect(config, select_database=False)
->>>>>>> 8d97c592ae979885733da8177f5926cbb26d2119:atesta-gateway/scripts/atesta-db/atesta_db/cli.py
         with connection.cursor() as cursor:
             # Cria o banco caso não exista; nome validado como seguro.
             cursor.execute(
@@ -147,35 +154,74 @@ def run_init(confirm_production: bool) -> None:
     print(f"{PROGRAM}: banco inicializado com sucesso.")
 
 
+def run_apply(migration_id: str, confirm_production: bool) -> None:
+    try:
+        repo_root = find_repo_root()
+        config = load_config(repo_root)
+        check_production_gate(config, confirm_production)
+
+        # Resolve o arquivo de migration pelo ID autorizado
+        if migration_id not in ALLOWED_MIGRATIONS:
+            fail(f"Migration não autorizada: {migration_id}")
+
+        migration_rel_path = ALLOWED_MIGRATIONS[migration_id]
+        migration_path = (repo_root / migration_rel_path).resolve()
+
+        # Validações de segurança: caminho deve estar dentro do repo, ser arquivo .sql, não vazio
+        try:
+            migration_path.relative_to(repo_root.resolve())
+        except ValueError:
+            fail("Caminho da migration fora da raiz do repositório.")
+
+        if migration_path.suffix.lower() != ".sql":
+            fail("Migration deve ter extensão .sql")
+
+        if not migration_path.is_file():
+            fail(f"Arquivo de migration não encontrado: {migration_rel_path}")
+
+        schema_sql = load_schema_sql(migration_path)
+        statements = split_statements(schema_sql)
+        if not statements:
+            fail("Arquivo de migration sem comandos executáveis.")
+
+    except ConfigError as error:
+        fail(str(error))
+    except SchemaError as error:
+        fail(str(error))
+
+    print(f"Alvo: {config.user}@{config.host}:{config.port} banco `{config.database}`")
+    print(f"Migration: {migration_rel_path}")
+    try:
+        with connect(config) as connection:
+            with connection.cursor() as cursor:
+                for statement in statements:
+                    cursor.execute(statement)
+    except pymysql.MySQLError as error:
+        fail(f"Falha ao aplicar migration; confira a configuração e a disponibilidade do MySQL: {error}")
+
+    print(f"{PROGRAM}: migration {migration_id} aplicada com sucesso.")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.command == "init":
         run_init(args.confirm_production)
         return
+    if args.command == "apply":
+        run_apply(args.migration, args.confirm_production)
+        return
+    # check command
     try:
         repo_root = find_repo_root()
         config = load_config(repo_root)
-        statements = ["SELECT 1"]
-        if args.command == "run":
-            check_production_gate(config, args.confirm_production)
-            module = repo_root / "atesta-gateway"
-            sql_file = (module / args.file).resolve()
-            migration = (repo_root / "database/migrations/20260908_ponto_idempotencia.sql").resolve()
-            if sql_file.suffix.lower() != ".sql" or (not sql_file.is_relative_to(module.resolve()) and sql_file != migration):
-                raise SchemaError("SQL deve estar no módulo ou ser a migration canônica permitida.")
-            statements = split_statements(load_schema_sql(sql_file))
-            if not statements:
-                raise SchemaError("Arquivo SQL sem comandos executáveis.")
         with connect(config) as connection:
             with connection.cursor() as cursor:
-                if args.command == "check":
-                    cursor.execute("SET SESSION TRANSACTION READ ONLY")
-                for statement in statements:
-                    cursor.execute(statement)
-        print(f"{PROGRAM}: {args.command} concluído.")
+                cursor.execute("SET SESSION TRANSACTION READ ONLY")
+                cursor.execute("SELECT 1")
+        print(f"{PROGRAM}: check concluído.")
     except (ConfigError, SchemaError, OSError, ValueError, pymysql.MySQLError):
-        fail("Operação cancelada ou falhou; confira arquivo, configuração, TLS e disponibilidade do MySQL.")
+        fail("Operação cancelada ou falhou; confira configuração, TLS e disponibilidade do MySQL.")
 
 
 if __name__ == "__main__":
