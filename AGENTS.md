@@ -1,13 +1,12 @@
 ## Repo layout
-- `backend-spring/`: backend de destino em Java 21 + Spring Boot, com JDBC e SQL explícito.
-- `atesta-gateway/`: backend legado transitório em Node.js/Express; ainda serve assets e páginas pendentes de migração.
+- `atesta-gateway/`: aplicação Java 21/Spring Boot, JDBC e SQL explícito; Maven inclui frontend e assets de `web/` no JAR.
 - `atesta-id/`: simulador ATestaID isolado apenas para desenvolvimento e testes locais, fora de produção; preserve-o sem misturar código, regras ou dados com o sistema real.
 
 ## Architecture
-- Migre Node/Express → Java 21/Spring Boot gradualmente pelo Strangler Pattern, preservando contratos e camadas existentes; implemente novas regras de backend no Spring, sem ampliar o legado fora do necessário à compatibilidade.
+- A aplicação principal executa exclusivamente no Spring. Preserve contratos, camadas e frontend; não reintroduza um runtime Node para backend ou build.
 - Spring já implementa APIs públicas, OAuth Authorization Code com PKCE, sessões administrativas Redis, RBAC, escopo territorial, rate limiting, funcionários, QR, ponto e relatórios. Preserve autenticação e autorização no backend também nas rotas públicas.
-- `/internal/**` com HMAC permanece para compatibilidade Node → Spring durante a migração; preserve timestamp, request ID e proteção anti-replay. Não exija essa passagem para APIs públicas já implementadas no Spring.
-- A migração de assets e das páginas públicas restantes ainda está pendente; algumas páginas e redirecionamentos já existem no Spring. Preserve o JavaScript do navegador e seus contratos com as APIs; migrar o backend não implica reescrever o frontend em Java.
+- `/internal/**` com HMAC permanece para compatibilidade de integrações assinadas; preserve timestamp, request ID e proteção anti-replay. Não exija essa passagem para APIs públicas já implementadas no Spring.
+- Páginas e assets são mantidos em `atesta-gateway/web/` e empacotados pelo Maven. Preserve o JavaScript do navegador e seus contratos com as APIs.
 
 ## Constraints
 - Autorização fail-closed: escopo ausente, inválido ou vazio não autoriza; acesso global exige autorização explícita. Gov.br autentica; o sistema autoriza; IDs ou tokens do navegador não bastam para conceder acesso.

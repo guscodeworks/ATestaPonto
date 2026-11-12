@@ -1,277 +1,92 @@
-# Manual de Instalação e Uso — ATestaPonto
+# ATestaPonto
 
-Sistema web para controle de presença de funcionários em ambiente escolar, combinando autenticação Gov.br, geolocalização e QR Code.
+Sistema de ponto escolar com Java 21, Spring Boot, MySQL, Redis e frontend HTML/CSS/JavaScript.
 
-**Tecnologias:** Node.js · Spring Boot · MySQL · JavaScript · HTML · CSS
+- `atesta-gateway/`: aplicação principal Spring, Maven Wrapper, Docker e fontes do frontend em `web/`.
+- `atesta-id/`: simulador OAuth independente, exclusivo de desenvolvimento/testes; mantém seu próprio Node/npm.
+- `database/`: baseline e migrations SQL existentes; nada é aplicado no startup.
 
-> [!NOTE]
-> Este é o manual prático de instalação, configuração e uso. Para arquitetura e documentação técnica detalhada, consulte [`000.md`](./000.md) e [backend-spring/README.md](./backend-spring/README.md).
+## Configuração e execução
 
-## Visão Geral
-
-O sistema registra batidas de ponto de funcionários através de autenticação combinada com geolocalização e leitura de QR Code, garantindo presença física na unidade escolar.
-
-**Arquitetura:**
-- **atesta-gateway**: gateway Node.js (servidor principal, autenticação, sessão, RBAC)
-- **backend-spring**: backend Java 21 + Spring Boot (em migração gradual via Strangler Pattern)
-- **atesta-id**: simulador OAuth/OIDC para desenvolvimento local
-
-**Perfis de acesso:**
-- **Funcionário**: registra ponto via login + QR Code + geolocalização
-- **Administradores**: gerenciam escolas, funcionários, acessos e visualizam relatórios conforme seu escopo territorial (SEDUC, DRE ou unidade escolar)
-
-## Desenvolvedores
-
-- Dymas Kawam Batista (backend)
-- Gustavo Nascimento da Silva Braga (líder/backend)
-- Isaque de Deus Quadros (frontend)
-- Guilherme Daniel Souza (backend)
-- João Victor da Silvas Alves (frontend)
-
-## Requisitos
-
-Para instalar e executar o sistema, você precisa de:
-
-| Programa | Versão mínima | Descrição |
-|---|---|---|
-| **Node.js** | 18 | Ambiente de execução do servidor principal e simulador Gov.br |
-| **npm** | — | Gerenciador de pacotes (instalado automaticamente com Node.js) |
-| **MySQL** | 8.0 | Banco de dados |
-| **Java** (opcional) | 21 | Necessário apenas se for executar o backend Spring localmente |
-| **Maven** (opcional) | 3.8+ | Necessário apenas se for executar o backend Spring localmente |
-| **Git** (opcional) | — | Facilita clonar o repositório |
-
-> [!TIP]
-> Verifique as versões instaladas:
-> ```bash
-> node --version  # Deve mostrar v18.0.0 ou superior
-> npm --version
-> mysql --version  # Deve mostrar 8.0 ou superior
-> java --version   # Se for usar o Spring, deve mostrar Java 21
-> ```
-
-## Instalação
-
-Siga os passos abaixo, na ordem indicada, para instalar e configurar o projeto do zero.
-
-### Passo 1 — Baixar o projeto
-
-Se você recebeu o projeto como arquivo ZIP, extraia-o para uma pasta de sua escolha.
-
-![extraindo_do_zip](docs/img/passo%201/Capturar.PNG)
-
-Se tiver o Git instalado, pode clonar o repositório:
-
-![clonando](docs/img/passo%201/github.clone.PNG)
-![clonando](docs/img/passo%201/copiando.clone.PNG)
-```bash
-git clone <URL_DO_REPOSITORIO>
-cd ATestaPonto
-```
-![clonando_repositorio](docs/img/passo%201/clonando.png)
-
-
-### Passo 2 — Instalar as dependências do servidor principal
+Requisitos da aplicação principal: JDK 21, MySQL e Redis. O Maven Wrapper usa o Maven configurado em `.mvn/`. Node/npm não são necessários para compilar, empacotar ou executar a aplicação principal.
 
 ```bash
 cd atesta-gateway
-npm install
+cp .env.example .env
+./mvnw clean verify
+./mvnw spring-boot:run
 ```
-![instalando_dependencias_ponto](docs/img/passo%202/instalando_dependencias.PNG)
 
-Este comando lê o arquivo `package.json` e baixa automaticamente todas as bibliotecas listadas (Express, bcrypt, JWT, QR Code, etc.).
+No Windows, use `mvnw.cmd` no lugar de `./mvnw`. Preencha `.env` localmente; nunca versione ou compartilhe seus valores. A precedência é propriedades Java/ambiente sobre `.env`. O `.env` é lido somente no diretório de execução. `SERVER_PORT` e demais variáveis de infraestrutura devem ser exportadas no ambiente; a porta padrão é 8081.
 
-### Passo 3 — Instalar as dependências do simulador Gov.br
+Configure as variáveis de `atesta-gateway/.env.example`:
+
+- MySQL: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`. Para CA própria, `DB_SSL_ENABLED=true` e `DB_SSL_CA_BASE64`; TLS verifica certificado e hostname, sem fallback inseguro.
+- Redis: `REDIS_HOST`, `REDIS_PORT`, `REDIS_USERNAME`, `REDIS_PASSWORD`, `REDIS_TLS`, `REDIS_NAMESPACE`. Sessões administrativas sempre exigem Redis. `REDIS_ENABLED` também controla QR, recuperação e rate limiting distribuídos; em produção, mantenha-o habilitado.
+- OAuth: `GOVBR_AUTHORIZE_URL`, `GOVBR_TOKEN_URL`, `GOVBR_USERINFO_URL`, `GOVBR_CLIENT_ID`, `GOVBR_CLIENT_SECRET`, `GOVBR_REDIRECT_URI`, `GOVBR_LOGOUT_URL`. O callback precisa corresponder à URL/porta publicada.
+- Cookies: `ADMIN_SESSION_SECURE` exige HTTPS quando `true`; desabilite apenas para HTTP local. Preserve `ADMIN_SESSION_TTL_SECONDS`.
+- Segredos distintos e fornecidos pelo ambiente: `JWT_SECRET`, `SESSION_SECRET`, `INTERNAL_API_SHARED_KEY`. A chave interna permanece obrigatória para os contratos `/internal/**`, protegidos por HMAC e anti-replay; navegadores usam as APIs públicas diretamente.
+- `NODE_ENV` continua como nome de configuração compatível para definir `production`; não indica dependência do runtime Node.
+- E-mail e limites: use os campos `MAIL_*`, `SMTP_*` e de rate limiting do exemplo. Nunca registre credenciais, destinatários ou códigos.
+
+Para executar o JAR, a partir de `atesta-gateway/`:
 
 ```bash
-cd ../atesta-id
-npm install
-```
-![instalando_dependencias_do_gov](docs/img/passo%203/instalando_depedencias_gov.PNG)
-
-### Passo 4 — Configurar o banco de dados MySQL
-
-Abra o MySQL e crie o banco de dados do sistema — pelo terminal do MySQL ou por uma ferramenta como MySQL Workbench ou phpMyAdmin:
-
-```sql
-CREATE DATABASE ponto_escolar CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+java -jar target/atesta-gateway-0.0.1-SNAPSHOT.jar
 ```
 
-> [!TIP]
-> O nome `ponto_escolar` é o padrão definido no arquivo `.env.example` atual do `atesta-gateway`. Você pode mudar o nome, mas lembre-se de atualizar `DB_NAME` também.
+O Maven inclui páginas, CSS, ícones, fontes, imagens e módulos JavaScript de `web/` no JAR. Também gera os sete bundles de compatibilidade em `target/classes`; edite as fontes de `web/`, sem executar npm. Páginas administrativas ficam fora do diretório público e continuam protegidas por sessão e RBAC.
 
-### Passo 5 — Inicializar as tabelas do banco de dados
+## Transição do Express
 
-Instale a CLI `atesta-db` uma única vez, a partir da raiz do repositório (requer Python 3.11+):
+A aplicação principal passou a ser exclusivamente Spring. As APIs públicas, páginas e aliases POST `/ponto/*` são atendidos diretamente, sem proxy Node. `/health` mantém o envelope `success/data/error` anterior e o estado de MySQL/Redis; `/ready` exige MySQL e Redis mesmo quando `REDIS_ENABLED=false`.
+
+Cookies `connect.sid` do Express não autenticam no Spring. Uma sessão antiga exige novo login OAuth/PKCE; `/auth/govbr/login` também expira o cookie antigo. O novo login renova a sessão e revalida cadastro, capacidades e território. Recuperações de senha iniciadas no Express precisam ser solicitadas novamente: o Spring usa cookie e namespace próprios. Não há importação de sessões nem limpeza dos registros antigos em Redis; eles expiram pelo TTL existente.
+
+Após a mudança de diretório, mantenha a configuração Spring no novo `atesta-gateway/.env`. Não copie automaticamente o `.env` Express: mapeie os nomes conforme o exemplo, sem reutilizar configurações do simulador como produção. Instalações editáveis da CLI no caminho antigo precisam ser reinstaladas.
+
+## Build e publicação por Docker
 
 ```bash
-# Se o pipx ainda não estiver instalado:
-python3 -m pip install --user pipx
-python3 -m pipx ensurepath   # feche e reabra o terminal depois
-
-pipx install -e ./atesta-gateway/src/scripts/atesta-db
+docker build -t atestaponto ./atesta-gateway
+docker run --env-file /caminho/seguro/atestaponto.env -p 8081:8081 atestaponto
 ```
 
-> [!IMPORTANT]
-> A instalação via `pipx` deve ser feita a partir da **raiz do repositório**, mas depois disso `atesta-db` funciona de qualquer pasta. Use `pipx install -e ./atesta-gateway/src/scripts/atesta-db` (com `-e`) para que a CLI encontre sempre o SQL do repositório atualizado.
+A imagem usa Java 21, usuário sem privilégios e health check `/ready`. `.env`, chaves e certificados privados ficam fora do contexto. O deploy deve fornecer MySQL, Redis, OAuth, SMTP e configuração de proxy por ambiente. Ajuste o proxy para o `SERVER_PORT` publicado e preserve a URL de callback. Este repositório não publica ambientes automaticamente.
 
-Em seguida, inicialize o banco de qualquer diretório:
+A antiga Function Express/Vercel não é um destino compatível com este JAR: a aplicação principal deve executar no host/container Java configurado. Nenhuma infraestrutura ou implantação remota foi alterada. O simulador `atesta-id` mantém sua configuração própria, inclusive Vercel.
+
+## Ferramentas de banco
+
+A CLI Python existente foi mantida e ampliada, sem dependência de Node:
+
+```bash
+pipx install --force -e ./atesta-gateway/scripts/atesta-db
+atesta-db check
+```
+
+Requer Python 3.11+ e as dependências declaradas no `pyproject.toml`. Execute dentro do repositório. A configuração vem do ambiente, depois de `atesta-gateway/.env`; `DB_PASS` é um alias legado de `DB_PASSWORD`. TLS usa a mesma CA configurada para o backend. `check` abre uma sessão read-only e executa somente `SELECT 1`.
+
+Com autorização explícita para modificar o banco, os comandos manuais são:
 
 ```bash
 atesta-db init
+atesta-db run --file=../database/migrations/20260908_ponto_idempotencia.sql
 ```
 
-Este comando cria automaticamente todas as tabelas necessárias no banco de dados usando o arquivo SQL do projeto (`database/schema/ponto.sql`).
+`init` aplica somente o baseline canônico e recusa banco com tabelas/views. `run` substitui `db:run`: aceita `.sql` dentro do módulo ou a migration canônica indicada, nunca inicializa o schema automaticamente. Em produção, os dois exigem `--confirm-production`. SQL arbitrário pode ter efeitos irreversíveis e DDL MySQL não garante rollback; confira o destino antes de autorizar. Estes comandos não fazem parte do build/startup.
 
-> [!IMPORTANT]
-> O comando `atesta-db init` exige um banco de dados vazio. Se o banco já contém tabelas, o comando será interrompido. Para atualizar a estrutura de um banco existente, use as migrations apropriadas. Em ambiente com `NODE_ENV=production`, é obrigatório passar `--confirm-production`.
+## Simulador independente
 
-## Configuração
-
-O projeto usa arquivos `.env` para armazenar todas as configurações importantes. Esses arquivos nunca devem ser compartilhados publicamente, pois contêm informações sensíveis.
-
-> [!NOTE]
-> A CLI `atesta-db` lê as mesmas variáveis (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`) com esta precedência: variáveis do ambiente > `backend-spring/.env` > `atesta-gateway/.env` (fallback transitório). `DB_PORT` tem padrão `3306` e o alias legado `DB_PASS` também é aceito para a senha.
-
-### Configurar o arquivo `.env` do atesta-gateway
-
-1. Copie o arquivo `.env.example` para `.env`:
+Para desenvolvimento/testes, configure `atesta-id/.env` conforme seu próprio exemplo e execute em outro terminal:
 
 ```bash
-cd atesta-gateway
-cp .env.example .env
-```
-
-2. Abra o arquivo `.env` em um editor de texto e preencha as variáveis obrigatórias:
-
-**Variáveis obrigatórias:**
-
-| Variável | Descrição | Exemplo |
-|---|---|---|
-| `NODE_ENV` | Ambiente de execução. Use `development` para testes locais. | `development` |
-| `DB_HOST` | Endereço do servidor MySQL. | `localhost` ou `127.0.0.1` |
-| `DB_USER` | Usuário do banco de dados. | `root` |
-| `DB_PASSWORD` | Senha do banco de dados. Deixe vazio se não houver senha. | |
-| `DB_NAME` | Nome do banco de dados criado no passo 4. | `ponto_escolar` |
-| `JWT_SECRET` | Chave secreta para tokens JWT. Gere com o comando abaixo. | |
-| `SESSION_SECRET` | Chave secreta para sessões. Gere com o comando abaixo. | |
-| `CORS_ORIGIN` | Origens permitidas. Para desenvolvimento local, use o exemplo abaixo. | `http://127.0.0.1:3000,http://localhost:3000` |
-| `INTERNAL_API_SHARED_KEY` | Chave compartilhada para comunicação Node→Spring (mínimo 32 bytes). | |
-
-> [!TIP]
-> **Como gerar chaves seguras para JWT_SECRET e SESSION_SECRET:**
-> ```bash
-> node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
-> ```
-> Execute o comando duas vezes para gerar valores diferentes para cada variável.
-
-**Variáveis opcionais relevantes:**
-
-| Variável | Descrição | Padrão |
-|---|---|---|
-| `PORT` | Porta do servidor principal. | `3000` |
-| `FUNCIONARIO_JWT_EXPIRES_IN` | Tempo de validade do token de funcionário. | `20m` |
-| `GOVBR_AUTHORIZE_URL` | URL de autorização do Gov.br (simulador em dev). | `http://127.0.0.1:4000/fake-govbr/authorize` |
-| `GOVBR_TOKEN_URL` | URL de token do Gov.br (simulador em dev). | `http://127.0.0.1:4000/fake-govbr/token` |
-| `GOVBR_USERINFO_URL` | URL de userinfo do Gov.br (simulador em dev). | `http://127.0.0.1:4000/fake-govbr/userinfo` |
-| `GOVBR_CLIENT_ID` | ID do cliente OAuth. | `ponto-escolar` |
-| `GOVBR_CLIENT_SECRET` | Segredo do cliente OAuth (deve coincidir com atesta-id). | |
-| `GOVBR_REDIRECT_URI` | URI de callback OAuth. | `http://127.0.0.1:3000/auth/govbr/callback` |
-| `SPRING_BACKEND_URL` | URL do backend Spring (se for executá-lo). | `http://127.0.0.1:8081` |
-
-### Configurar o arquivo `.env` do atesta-id
-
-1. Copie o arquivo `.env.example` para `.env`:
-
-```bash
-cd ../atesta-id
-cp .env.example .env
-```
-
-2. Abra o arquivo `.env` e configure:
-
-**Variáveis obrigatórias:**
-
-| Variável | Descrição | Exemplo |
-|---|---|---|
-| `NODE_ENV` | Ambiente de execução. | `development` |
-| `GOVBR_FAKE_CLIENT_ID` | ID do cliente (deve coincidir com ponto-escolar). | `ponto-escolar` |
-| `GOVBR_FAKE_CLIENT_SECRET` | Segredo do cliente (deve coincidir com atesta-gateway). | Use o mesmo valor gerado para o atesta-gateway |
-| `GOVBR_FAKE_ADMIN_LOGIN` | Login de teste para administrador. | `adminlocal` |
-| `GOVBR_FAKE_ADMIN_PASSWORD` | Senha de teste para administrador. | `senhaSegura123` |
-| `GOVBR_FAKE_ADMIN_SUB` | CPF do administrador (deve existir no banco). | `12345678900` |
-
-**Variáveis opcionais:**
-
-| Variável | Descrição | Padrão |
-|---|---|---|
-| `GOVBR_FAKE_PORT` | Porta do simulador Gov.br. | `4000` |
-| `PONTO_ESCOLAR_REDIRECT_URI` | URI de callback do atesta-gateway. | `http://127.0.0.1:3000/auth/govbr/callback` |
-
-> [!IMPORTANT]
-> O `GOVBR_FAKE_ADMIN_SUB` (CPF) deve corresponder a um usuário administrativo ativo cadastrado no banco de dados para que o login funcione.
-
-### Configurar o backend Spring (opcional)
-
-O backend Spring é opcional para uso básico do sistema. Se você deseja executá-lo:
-
-1. Copie o arquivo `.env.example` para `.env` dentro de `backend-spring`:
-
-```bash
-cd ../backend-spring
-cp .env.example .env
-```
-
-2. Configure as variáveis:
-
-| Variável | Descrição |
-|---|---|
-| `DB_HOST` | Endereço do MySQL (igual ao atesta-gateway). |
-| `DB_PORT` | Porta do MySQL. |
-| `DB_USER` | Usuário do banco (igual ao atesta-gateway). |
-| `DB_PASSWORD` | Senha do banco (igual ao atesta-gateway). |
-| `DB_NAME` | Nome do banco (igual ao atesta-gateway). |
-| `INTERNAL_API_SHARED_KEY` | Mesma chave configurada no atesta-gateway. |
-
-> [!NOTE]
-> Para executar o Spring via `npm run dev:spring` do atesta-gateway, não é necessário criar o `.env` do Spring. O comando usa as variáveis do ambiente Node. Consulte [backend-spring/README.md](./backend-spring/README.md) para detalhes.
-
-## Como Executar
-
-### Opção 1 — Iniciar tudo de uma vez (recomendado)
-
-```bash
-cd atesta-gateway
-npm run dev
-```
-
-Este comando inicia automaticamente os dois servidores ao mesmo tempo: o servidor principal (porta 3000) e o simulador Gov.br (porta 4000).
-
-### Opção 2 — Iniciar cada servidor separadamente
-
-Abra dois terminais diferentes:
-
-```bash
-# Terminal 1 — Servidor principal
-cd atesta-gateway
-npm start
-```
-
-```bash
-# Terminal 2 — Simulador Gov.br
 cd atesta-id
+npm install
 npm start
 ```
 
-### Acessando o sistema no navegador
-
-| Endereço | O que abre |
-|---|---|
-| `http://localhost:3000` | Página inicial do sistema. |
-| `http://localhost:3000/admin/dashboard` | Dashboard administrativo, com login obrigatório. |
-
-> [!IMPORTANT]
-> Sempre verifique se o MySQL está rodando antes de iniciar o sistema. Sem o banco de dados ativo, o servidor não inicia.
+Configure nesse ambiente as URLs do gateway e faça corresponder cliente/segredo ao OAuth do Spring. Os nomes de configuração do simulador permanecem próprios (`GOVBR_FAKE_*`); não são automaticamente aliases das variáveis Spring. Não use dados pessoais reais nem execute o simulador em produção.
 
 ## Como Usar o Sistema
 
@@ -357,100 +172,7 @@ O sistema oferece três tipos de relatórios:
 
 Todos os relatórios respeitam o escopo territorial do administrador autenticado.
 
-## Comandos Disponíveis
 
-### Comandos do atesta-gateway
+## Validação e homologação
 
-| Comando | Descrição |
-|---|---|
-| `npm start` | Inicia o servidor principal (porta 3000) |
-| `npm run dev` | Inicia servidor principal + simulador Gov.br simultaneamente |
-| `npm run dev:spring` | Inicia o backend Spring usando variáveis do ambiente Node |
-| `atesta-db init` | Inicializa o banco de dados vazio com o baseline (ponto.sql) — CLI Python em `atesta-gateway/src/scripts/atesta-db` |
-| `npm run db:run` | Executa arquivo SQL específico |
-
-### Comandos do atesta-id
-
-| Comando | Descrição |
-|---|---|
-| `npm start` | Inicia o simulador Gov.br (porta 4000) |
-
-## Erros Comuns e Soluções
-
-### Erro: "Cannot connect to MySQL"
-
-**Causa:** MySQL não está rodando ou credenciais incorretas no `.env`.
-
-**Solução:**
-1. Verifique se o MySQL está ativo
-2. Confirme `DB_HOST`, `DB_USER`, `DB_PASSWORD` e `DB_NAME` no `.env`
-3. Teste a conexão: `mysql -h localhost -u root -p`
-
-### Erro: "atesta-db init interrompido: banco já contém tabelas"
-
-**Causa:** O comando `atesta-db init` exige banco vazio.
-
-**Solução:**
-- Para atualizar estrutura existente, use migrations: `npm run db:run -- <caminho_da_migration>`
-- Para recriar do zero (perde dados): delete o banco, recrie e execute `atesta-db init`
-
-### Erro: "JWT_SECRET ou SESSION_SECRET ausente"
-
-**Causa:** Variáveis obrigatórias não configuradas no `.env`.
-
-**Solução:**
-1. Gere chaves seguras:
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
-   ```
-2. Adicione no `.env` do atesta-gateway
-
-### Erro: "Login administrativo falhou"
-
-**Causa:** CPF retornado pelo Gov.br não tem acesso administrativo ativo no banco.
-
-**Solução:**
-1. Verifique se `GOVBR_FAKE_ADMIN_SUB` (CPF) existe na tabela `usuarios_administrativos`
-2. Verifique se existe acesso ativo em `acessos_administrativos` para esse usuário
-3. Confirme que `GOVBR_FAKE_CLIENT_SECRET` é idêntico em atesta-gateway e atesta-id
-
-### Erro: "Funcionário não consegue registrar ponto"
-
-**Possíveis causas:**
-1. Geolocalização fora do raio permitido pela escola
-2. QR Code inválido ou expirado
-3. Funcionário inativo ou vínculo inativo
-
-**Solução:**
-1. Verifique coordenadas e raio da escola no banco (`unidades_escolares`)
-2. Gere novo QR Code pelo painel administrativo
-3. Verifique status do funcionário e vínculo no banco
-
-### Erro: "INTERNAL_API_SHARED_KEY inválida"
-
-**Causa:** Chave Node→Spring ausente, diferente ou menor que 32 bytes.
-
-**Solução:**
-1. Gere chave de 48 bytes:
-   ```bash
-   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
-   ```
-2. Configure o **mesmo valor** em:
-   - `atesta-gateway/.env` → `INTERNAL_API_SHARED_KEY`
-   - `backend-spring/.env` → `INTERNAL_API_SHARED_KEY` (se iniciar Spring manualmente)
-
-## Estrutura Mínima para Execução
-
-Para que o sistema funcione corretamente, você precisa de:
-
-1. **Banco de dados inicializado** com `atesta-db init`
-2. **Pelo menos um usuário administrativo** cadastrado em `usuarios_administrativos`
-3. **Pelo menos um acesso administrativo ativo** em `acessos_administrativos` vinculado ao usuário
-4. **CPF do administrador configurado** em `GOVBR_FAKE_ADMIN_SUB` do simulador
-5. **Secrets configurados** (`JWT_SECRET`, `SESSION_SECRET`, `INTERNAL_API_SHARED_KEY`)
-6. **MySQL rodando** e acessível conforme `DB_HOST` e `DB_PORT`
-
-Para uso completo do sistema (com cadastro de escolas e relatórios via Spring):
-
-7. **Backend Spring** iniciado via `npm run dev:spring` ou manualmente
-8. **Diretoria de ensino cadastrada** em `diretorias_ensino` (obrigatória para criar escolas)
+`./mvnw clean verify` compila, executa a suíte Java e empacota o JAR. O Mockito usa agente explícito na versão gerenciada pelo Spring Boot. Compilação e testes com mocks não homologam MySQL, Redis, OAuth, SMTP, navegador ou infraestrutura. Reutilize as evidências HML de negócio já aprovadas; a troca de runtime e publicação ainda exige homologação operacional antes de produção.
