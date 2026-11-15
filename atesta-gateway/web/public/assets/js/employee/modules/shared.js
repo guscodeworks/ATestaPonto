@@ -12,7 +12,8 @@
     'func_nome',
     'func_cpf',
     'funcionario_primeiro_acesso_token',
-    'funcionario_primeiro_acesso_expira_em'
+    'funcionario_primeiro_acesso_expira_em',
+    'funcionario_ponto_pendente'
   ]);
   const tokenDaPagina = sessionStorage.getItem('funcionario_token');
   const displayOriginal = document.documentElement.style.display;
