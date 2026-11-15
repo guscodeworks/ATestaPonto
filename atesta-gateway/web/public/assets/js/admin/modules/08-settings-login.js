@@ -4,27 +4,31 @@
 // Exportação real: o PDF e a impressão usam os dados recebidos da API, não
 // uma captura da tela administrativa.
 function obterDadosExportacaoRelatorio() {
-  if (RELATORIO_DATA_ERROR) {
-    throw new Error('O relatório não foi carregado. Atualize os dados antes de exportar.');
+  if (RELATORIO_PERIODO_CARREGANDO || RELATORIO_PERIODO_ERRO || !RELATORIO_PERIODO) {
+    throw new Error('Aguarde uma consulta concluída antes de exportar.');
   }
-
-  const resumo = RESUMO_RELATORIO || {};
+  const report = RELATORIO_PERIODO;
+  const nominal = temCapacidade('relatorio.visualizar');
+  const filtros = [report.filtros?.funcionario_id ? `Funcionário ID ${report.filtros.funcionario_id}` : null,
+    report.filtros?.status ? `Status: ${report.filtros.status}` : null].filter(Boolean).join('; ') || 'Sem filtros nominais';
+  const linhas = nominal ? report.items.map(item => [
+    item.data_referencia.split('-').reverse().join('/'), item.ponto.funcionario.nome,
+    `${item.ponto.unidade_escolar_nome} / vínculo ${item.ponto.vinculo_funcional_id}`,
+    ...horariosRelatorio(item), statusRelatorioTexto(item),
+  ]) : report.diretorias.flatMap(department => [
+    [department.diretoria_ensino_nome, department.resumo.total_funcionarios, department.resumo.presentes,
+      department.resumo.ausentes, `${department.resumo.taxa_presenca_percent}%`],
+    ...department.escolas.map(school => [school.unidade_escolar_nome, school.resumo.total_funcionarios,
+      school.resumo.presentes, school.resumo.ausentes, `${school.resumo.taxa_presenca_percent}%`]),
+  ]);
   return {
-    data: DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS || '',
-    periodo: formatarDataReferencia(DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS),
-    geradoPor: ADMIN?.nome || 'Administrador',
-    geradoEm: new Date().toLocaleString('pt-BR'),
-    presentes: Number(resumo.presentes || 0),
-    ausentes: Number(resumo.ausentes || 0),
-    itens: (Array.isArray(RELATORIO_PONTOS) ? RELATORIO_PONTOS : []).map((item) => ({
-      nome: item.funcionario?.nome || 'Funcionário não identificado',
-      cargo: item.funcionario?.cargo || 'Cargo não informado',
-      entrada: item.entrada || '-',
-      pausa: item.pausa || '-',
-      retorno: item.retorno || '-',
-      saida: item.saida || '-',
-      status: item.status === 'completo' ? 'Completo' : item.status === 'ausente' ? 'Ausente' : 'Em andamento',
-    })),
+    data: report.data_referencia,
+    periodo: periodoRelatorioTexto(report), filtros,
+    geradoPor: ADMIN?.nome || 'Administrador', geradoEm: new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+    presentes: report.resumo.total_presencas, ausentes: report.resumo.total_ausencias,
+    colunas: nominal ? ['Data', 'Funcionário', 'Escola / vínculo', 'Entrada', 'Pausa', 'Retorno', 'Saída', 'Status']
+      : ['DRE / escola', 'Pessoas/dia', 'Presentes', 'Ausentes', 'Presença'],
+    linhas,
   };
 }
 
@@ -39,47 +43,49 @@ function textoPdf(value) {
   return `<${hex}>`;
 }
 
-function encurtarTextoPdf(value, limite) {
-  const texto = String(value ?? '');
-  return texto.length > limite ? `${texto.slice(0, limite - 3)}...` : texto;
-}
-
 function criarPdfRelatorio(relatorio) {
-  const itens = relatorio.itens.length ? relatorio.itens : [{
-    nome: 'Nenhum registro encontrado', cargo: '-', entrada: '-', pausa: '-', retorno: '-', saida: '-', status: '-',
-  }];
-  const porPagina = 24;
+  const itens = relatorio.linhas.length ? relatorio.linhas : [relatorio.colunas.map((_coluna, index) => index ? '—' : 'Nenhum registro encontrado')];
   const paginas = [];
-  const colunas = [
-    ['FUNCIONÁRIO', 40, 31], ['CARGO', 238, 18], ['ENTRADA', 370, 8], ['PAUSA', 446, 8],
-    ['RETORNO', 512, 8], ['SAÍDA', 586, 8], ['STATUS', 658, 17],
-  ];
+  const posicoes = relatorio.colunas.length === 8 ? [36, 104, 258, 462, 518, 574, 630, 686, 806]
+    : [36, 390, 494, 598, 702, 806];
+  const colunas = relatorio.colunas.map((titulo, index) => [titulo.toUpperCase(), posicoes[index],
+    Math.floor((posicoes[index + 1] - posicoes[index] - 8) / 4.3)]);
 
-  for (let inicio = 0; inicio < itens.length; inicio += porPagina) {
+  const blocos = [[]];
+  let alturaPagina = 0;
+  itens.forEach(item => {
+    const celulas = item.map((valor, index) => String(valor ?? '').match(new RegExp(`.{1,${colunas[index][2]}}`, 'gu')) || ['']);
+    const altura = Math.max(...celulas.map(celula => celula.length)) * 11 + 6;
+    if (alturaPagina + altura > 390 && blocos.at(-1).length) { blocos.push([]); alturaPagina = 0; }
+    blocos.at(-1).push({ celulas, altura });
+    alturaPagina += altura;
+  });
+  for (const paginaItens of blocos) {
     const comandos = [];
     const escrever = (fonte, tamanho, x, y, valor) => comandos.push(`BT /F${fonte} ${tamanho} Tf ${x} ${y} Td ${textoPdf(valor)} Tj ET`);
     const linha = (x1, y1, x2, y2, espessura = 0.5) => comandos.push(`${espessura} w ${x1} ${y1} m ${x2} ${y2} l S`);
-    const paginaItens = itens.slice(inicio, inicio + porPagina);
 
     comandos.push('0.05 0.18 0.38 rg', '36 536 770 28 re f', '1 1 1 rg');
     escrever(2, 15, 50, 547, 'ATestaPonto | Relatório de frequência');
     escrever(1, 9, 700, 547, `Página ${paginas.length + 1}`);
     comandos.push('0 0 0 rg');
     escrever(2, 11, 36, 510, `Período: ${relatorio.periodo}`);
-    escrever(1, 9, 36, 494, `Gerado por: ${relatorio.geradoPor} em ${relatorio.geradoEm}`);
+    escrever(1, 9, 36, 497, `Gerado por: ${relatorio.geradoPor} em ${relatorio.geradoEm} (Brasília)`);
+    escrever(1, 8, 36, 486, relatorio.filtros);
     escrever(2, 10, 410, 510, `Presentes: ${relatorio.presentes}`);
     escrever(2, 10, 520, 510, `Ausentes: ${relatorio.ausentes}`);
     comandos.push('0.93 0.95 0.97 rg', '36 462 770 20 re f', '0 0 0 rg');
     colunas.forEach(([titulo, x]) => escrever(2, 7, x + 4, 469, titulo));
     linha(36, 462, 806, 462);
 
-    paginaItens.forEach((item, indice) => {
-      const y = 445 - (indice * 16);
-      const valores = [item.nome, item.cargo, item.entrada, item.pausa, item.retorno, item.saida, item.status];
-      colunas.forEach(([, x, limite], colIndex) => escrever(1, 8, x + 4, y, encurtarTextoPdf(valores[colIndex], limite)));
-      linha(36, y - 5, 806, y - 5, 0.25);
+    let y = 445;
+    paginaItens.forEach(({ celulas, altura }) => {
+      celulas.forEach((linhas, colIndex) => linhas.forEach((valor, index) =>
+        escrever(1, 8, colunas[colIndex][1] + 4, y - index * 11, valor)));
+      y -= altura;
+      linha(36, y + 9, 806, y + 9, 0.25);
     });
-    escrever(1, 7, 36, 26, 'Documento gerado a partir dos registros do sistema ATestaPonto.');
+    escrever(1, 7, 36, 26, 'Indicadores por pessoa e dia; dias futuros fora dos totais previstos.');
     paginas.push(comandos.join('\n'));
   }
 
@@ -110,7 +116,7 @@ function criarPdfRelatorio(relatorio) {
 
 function gerarPDF() {
   const btn = document.getElementById('btn-gerar-pdf');
-  if (!btn || !temCapacidade('relatorio.visualizar')) return;
+  if (!btn || !temCapacidade('relatorio.hierarquico.visualizar')) return;
   try {
     btn.classList.add('loading');
     const relatorio = obterDadosExportacaoRelatorio();
@@ -131,20 +137,25 @@ function gerarPDF() {
 }
 
 function criarHtmlImpressaoRelatorio(relatorio) {
-  const linhas = relatorio.itens.length ? relatorio.itens.map((item) => `
-    <tr><td><strong>${escapeHtml(item.nome)}</strong><small>${escapeHtml(item.cargo)}</small></td><td>${escapeHtml(item.entrada)}</td><td>${escapeHtml(item.pausa)}</td><td>${escapeHtml(item.retorno)}</td><td>${escapeHtml(item.saida)}</td><td>${escapeHtml(item.status)}</td></tr>`).join('') :
-    '<tr><td colspan="6">Nenhum registro encontrado para o período.</td></tr>';
+  const linhas = relatorio.linhas.length ? relatorio.linhas.map(linha => `<tr>${linha.map(valor => `<td>${escapeHtml(String(valor))}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${relatorio.colunas.length}">Nenhum registro encontrado para o período.</td></tr>`;
   return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório de frequência</title><style>
-    @page { size: A4 landscape; margin: 14mm; } * { box-sizing: border-box; } body { font: 11px Arial, sans-serif; color: #172033; margin: 0; } header { border-bottom: 2px solid #0d2e61; padding-bottom: 11px; margin-bottom: 16px; } h1 { color: #0d2e61; font-size: 21px; margin: 0 0 5px; } p { color: #475569; margin: 3px 0; } .summary { display: flex; gap: 12px; margin-bottom: 16px; } .card { border: 1px solid #cbd5e1; border-radius: 4px; min-width: 130px; padding: 9px 12px; } .card b { color: #0d2e61; display: block; font-size: 16px; margin-top: 3px; } table { border-collapse: collapse; width: 100%; } thead { display: table-header-group; } th { background: #0d2e61; color: white; font-size: 10px; padding: 8px; text-align: left; } td { border-bottom: 1px solid #dbe3ed; padding: 8px; vertical-align: top; } td:not(:first-child) { white-space: nowrap; } small { color: #64748b; display: block; margin-top: 2px; } footer { color: #64748b; font-size: 9px; margin-top: 16px; }
-  </style></head><body><header><h1>Relatório de frequência</h1><p><strong>Período:</strong> ${escapeHtml(relatorio.periodo)}</p><p>Gerado por ${escapeHtml(relatorio.geradoPor)} em ${escapeHtml(relatorio.geradoEm)}</p></header><section class="summary"><div class="card">Presentes<b>${relatorio.presentes}</b></div><div class="card">Ausentes<b>${relatorio.ausentes}</b></div><div class="card">Registros no relatório<b>${relatorio.itens.length}</b></div></section><table><thead><tr><th>Funcionário</th><th>Entrada</th><th>Pausa</th><th>Retorno</th><th>Saída</th><th>Status</th></tr></thead><tbody>${linhas}</tbody></table><footer>Documento gerado a partir dos registros do sistema ATestaPonto.</footer></body></html>`;
+    @page { size: A4 landscape; margin: 14mm; } body { font: 11px Inter, Arial, sans-serif; color: #141414; margin: 0; }
+    h1 { font-size: 21px; } p { margin: 6px 0; } table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { border-bottom: 1px solid #E4E9F3; padding: 8px; text-align: left; } thead { display: table-header-group; }
+  </style></head><body><header><h1>Relatório de frequência</h1><p>Período: ${escapeHtml(relatorio.periodo)}</p>
+    <p>${escapeHtml(relatorio.filtros)}</p><p>Gerado por ${escapeHtml(relatorio.geradoPor)} em ${escapeHtml(relatorio.geradoEm)} (Brasília)</p>
+    <p>Presentes: ${relatorio.presentes} · Ausentes: ${relatorio.ausentes} (pessoas/dia; dias futuros fora dos totais)</p></header>
+    <table><thead><tr>${relatorio.colunas.map(coluna => `<th>${escapeHtml(coluna)}</th>`).join('')}</tr></thead><tbody>${linhas}</tbody></table></body></html>`;
 }
 
 function imprimirRelatorio() {
-  if (!temCapacidade('relatorio.visualizar')) return;
+  if (!temCapacidade('relatorio.hierarquico.visualizar')) return;
   try {
+    const dados = obterDadosExportacaoRelatorio();
     const janela = window.open('', '_blank');
     if (!janela) throw new Error('O navegador bloqueou a janela de impressão. Permita pop-ups e tente novamente.');
-    janela.document.write(criarHtmlImpressaoRelatorio(obterDadosExportacaoRelatorio()));
+    janela.document.write(criarHtmlImpressaoRelatorio(dados));
     janela.document.close();
     janela.focus();
     window.setTimeout(() => janela.print(), 150);

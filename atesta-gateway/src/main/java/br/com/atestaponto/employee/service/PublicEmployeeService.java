@@ -11,8 +11,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.validation.Validator;
-import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.Locale;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -28,7 +26,6 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class PublicEmployeeService {
     private static final Logger LOG = LoggerFactory.getLogger(PublicEmployeeService.class);
-    private static final SecureRandom RANDOM = new SecureRandom();
     private final EmployeeService reads;
     private final SchoolService schools;
     private final EmployeeCreateService creates;
@@ -36,14 +33,14 @@ public class PublicEmployeeService {
     private final EmployeeActivationService activations;
     private final PublicAdminAuthorization admins;
     private final PublicEmployeeAuthorization authorization;
-    private final EmployeeWelcomeEmail mail;
+    private final EmployeeTemporaryPasswordService temporaryPasswords;
     private final Validator validator;
     private final ObjectMapper json;
     private final BCryptPasswordEncoder passwords;
 
     public PublicEmployeeService(EmployeeService reads, SchoolService schools, EmployeeCreateService creates,
             EmployeeEditService edits, EmployeeActivationService activations, PublicAdminAuthorization admins,
-            PublicEmployeeAuthorization authorization, EmployeeWelcomeEmail mail, Validator validator,
+            PublicEmployeeAuthorization authorization, EmployeeTemporaryPasswordService temporaryPasswords, Validator validator,
             ObjectMapper json, @Value("${BCRYPT_SALT_ROUNDS:12}") int rounds) {
         this.reads = reads;
         this.schools = schools;
@@ -52,7 +49,7 @@ public class PublicEmployeeService {
         this.activations = activations;
         this.admins = admins;
         this.authorization = authorization;
-        this.mail = mail;
+        this.temporaryPasswords = temporaryPasswords;
         this.validator = validator;
         this.json = json;
         this.passwords = new BCryptPasswordEncoder(rounds);
@@ -90,7 +87,9 @@ public class PublicEmployeeService {
     public Map<String, Object> find(Context previous, long id) {
         var context = refresh(previous, "funcionario.visualizar", id, null, false);
         var employee = reads.findAdminEmployeeById(new EmployeeDetailRequest(id, context.link().id()));
-        return Map.of("funcionario", project(employee, false));
+        var projected = project(employee, false);
+        projected.set("credencial_temporaria", json.valueToTree(temporaryPasswords.metadata(id)));
+        return Map.of("funcionario", projected);
     }
 
     @Transactional(readOnly = true)
@@ -109,17 +108,17 @@ public class PublicEmployeeService {
             throw invalid;
         }
         var context = refresh(previous, "funcionario.criar", null, request.unidadeEscolarId(), false);
-        byte[] bytes = new byte[18];
-        RANDOM.nextBytes(bytes);
-        String password = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        String password = EmployeeTemporaryPasswordService.randomPassword();
         request = PublicEmployeeInput.create(body, passwords.encode(password));
         long schoolId = request.unidadeEscolarId();
         var result = creates.createAuthorized(request,
                 () -> refresh(previous, "funcionario.criar", null, schoolId, true).targetDepartmentId());
         audit("funcionario_cadastrado", context.adminId(), result.id());
         // O service de dominio encerra a transacao antes do envio de e-mail.
-        return Map.of("funcionario", project(result, true),
-                "email_acesso", mail.send(result.nome(), result.email(), password));
+        var response = new java.util.LinkedHashMap<String, Object>(
+                temporaryPasswords.delivery(result.nome(), result.email(), password, result.senhaTemporariaExpiraEm()));
+        response.put("funcionario", project(result, true));
+        return response;
     }
 
     @Transactional

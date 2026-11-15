@@ -236,7 +236,7 @@ function iniciarFormRegistro() {
     if (!temCapacidade('funcionario.criar')) return;
     // Bloqueia cliques/envios repetidos enquanto o POST atual ainda esta em
     // andamento. Assim, cada tentativa possui uma unica resposta e um toast.
-    if (form.dataset.cadastroEmAndamento === 'true') return;
+    if (form.dataset.cadastroEmAndamento === 'true' || form.dataset.respostaIncerta === 'true') return;
     const nome = document.getElementById('input-nome')?.value.trim();
     const email = document.getElementById('input-email')?.value.trim();
     const cpf = document.getElementById('input-cpf')?.value.trim();
@@ -284,6 +284,7 @@ function iniciarFormRegistro() {
       mostrarMensagem: true,
     });
 
+    const paginaId = senhaTemporariaPaginaId;
     try {
       const response = await adminApiFetch(ADMIN_ENDPOINTS.funcionarios, {
         method: 'POST',
@@ -302,9 +303,12 @@ function iniciarFormRegistro() {
         }),
       });
 
+      if (paginaId !== senhaTemporariaPaginaId) return;
       const dadosCriados = getApiData(response);
       const funcionarioCriado = dadosCriados?.funcionario;
-      const emailAcesso = dadosCriados?.email_acesso;
+      if (!funcionarioCriado || !dadosCriados?.email_acesso?.estado) {
+        throw new Error('Resposta de cadastro incompleta.');
+      }
       if (funcionarioCriado) {
         // Insere no início da lista para que o novo funcionário apareça
         // imediatamente no topo, sem esperar um recarregamento completo.
@@ -313,13 +317,12 @@ function iniciarFormRegistro() {
 
       form.reset();
       atualizarPreview();
-      if (emailAcesso?.enviado) {
-        toast(`Funcionario "${nome}" cadastrado. As instrucoes de acesso foram enviadas para o e-mail informado.`, 'success');
-      } else {
-        toast('Funcionario cadastrado, mas o e-mail com as instrucoes de acesso nao foi enviado.', 'error');
-      }
+      informarEntregaCredencial(dadosCriados, nome);
     } catch (error) {
-      toast(error.message || 'Nao foi possivel cadastrar o funcionario.', 'error');
+      if (!error.status || error.status >= 500) {
+        form.dataset.respostaIncerta = 'true';
+        toast('Resposta de cadastro não confirmada. Consulte a lista de funcionários antes de cadastrar novamente. Nenhum reenvio automático será feito.', 'error');
+      } else toast(error.message || 'Não foi possível cadastrar o funcionário.', 'error');
       if (error.status === 401) {
         redirecionarAdminParaGovbr();
       }
@@ -327,6 +330,13 @@ function iniciarFormRegistro() {
       await finalizarCarregamento(carregamento);
       delete form.dataset.cadastroEmAndamento;
       form.removeAttribute('aria-busy');
+      if (form.dataset.respostaIncerta === 'true') {
+        btn.disabled = true;
+        const aviso = document.createElement('p');
+        aviso.innerHTML = 'Cadastro com resposta incerta. <a href="/admin/funcionarios">Consultar funcionários</a> antes de iniciar outro cadastro.';
+        aviso.setAttribute('role', 'alert');
+        form.appendChild(aviso);
+      }
     }
   });
 

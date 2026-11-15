@@ -485,6 +485,7 @@ function sincronizarFuncionariosNosPontos() {
 }
 
 async function recarregarDadosAdminTela() {
+  if (document.querySelector('.reports-page')) return carregarRelatorioPeriodoAdmin();
   await carregarDadosAdmin({
     includeEmployees: true,
     includeToday: true,

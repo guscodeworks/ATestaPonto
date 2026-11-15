@@ -12,5 +12,6 @@ public record EmployeeCreateResponse(
         @JsonProperty("criado_em") String criadoEm,
         @JsonProperty("primeiro_acesso") Boolean primeiroAcesso,
         @JsonProperty("cargo_id") Long cargoId,
-        @JsonProperty("cargo_nome") String cargoNome) {
+        @JsonProperty("cargo_nome") String cargoNome,
+        @JsonProperty("senha_temporaria_expira_em") String senhaTemporariaExpiraEm) {
 }

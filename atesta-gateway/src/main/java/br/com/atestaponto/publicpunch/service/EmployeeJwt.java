@@ -40,8 +40,9 @@ public class EmployeeJwt {
     public String issue(long id, String hash, boolean first) {
         var claims = new LinkedHashMap<String, Object>();
         claims.put("sub", Long.toString(id));
+        claims.put("credentialVersion", version(id, hash));
         if (first) claims.put("purpose", "primeira_troca_senha");
-        else { claims.put("role", "funcionario"); claims.put("credentialVersion", version(id, hash)); }
+        else claims.put("role", "funcionario");
         long now = Instant.now().getEpochSecond();
         claims.put("iat", now); claims.put("exp", now + seconds(expires(first)));
         try {
@@ -71,6 +72,7 @@ public class EmployeeJwt {
             if (claims.get("exp").doubleValue() <= now)
                 throw denied(first ? "Comprovante de primeiro acesso invalido" : "Sessao expirada. Faca login novamente.");
             if (first && !claims.path("purpose").asText().equals("primeira_troca_senha")) throw new IllegalArgumentException();
+            if (first && !claims.path("credentialVersion").asText().matches("[a-f0-9]{64}")) throw new IllegalArgumentException();
             id(claims, first);
             return claims;
         } catch (PublicPunchException e) { throw e; }

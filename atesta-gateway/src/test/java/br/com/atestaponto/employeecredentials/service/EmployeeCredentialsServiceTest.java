@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsRequest.EmployeeId;
 import br.com.atestaponto.employeecredentials.repository.EmployeeCredentialsRepository;
+import br.com.atestaponto.publicpunch.service.EmployeeJwt;
 import com.fasterxml.jackson.databind.node.LongNode;
 import java.time.Clock;
 import java.time.Instant;
@@ -19,7 +20,7 @@ import org.springframework.jdbc.core.RowMapper;
 class EmployeeCredentialsServiceTest {
     private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final EmployeeCredentialsRepository repository = new EmployeeCredentialsRepository(jdbc);
-    private final EmployeeCredentialsService service = new EmployeeCredentialsService(repository);
+    private final EmployeeCredentialsService service = new EmployeeCredentialsService(repository, mock(EmployeeJwt.class));
     private final EmployeeId request = new EmployeeId(LongNode.valueOf(5));
 
     @ParameterizedTest

@@ -22,6 +22,40 @@ class DailyReportServiceTest {
     private final DailyReportService service = new DailyReportService(repository);
 
     @ParameterizedTest
+    @CsvSource({"true,true,2", "true,false,1", "false,true,1", "false,false,0"})
+    void countsDistinctActiveEmployeesWithoutChangingAttendance(boolean firstActive, boolean secondActive,
+            long expectedActive) {
+        when(repository.findByDate(DATE, false, List.of(20L))).thenReturn(List.of(
+                new Row(1L, 101L, 5L, "Pessoa A", "a@example.test", null, firstActive,
+                        3L, 20L, "Escola", "ENTRADA", "08:00:00"),
+                new Row(2L, 101L, 5L, "Pessoa A", "a@example.test", null, firstActive,
+                        3L, 20L, "Escola", "SAIDA", "17:00:00"),
+                new Row(null, 102L, 5L, "Pessoa A", "a@example.test", null, firstActive,
+                        3L, 20L, "Escola", null, null),
+                new Row(null, 103L, 6L, "Pessoa B", "b@example.test", null, secondActive,
+                        3L, 20L, "Escola", null, null),
+                new Row(null, 104L, 6L, "Pessoa B", "b@example.test", null, secondActive,
+                        3L, 20L, "Escola", null, null)));
+
+        var response = service.snapshot(new DailyReportRequest(DATE.toString(), false, List.of(20L)));
+
+        assertEquals(expectedActive, response.total_funcionarios_ativos());
+        assertEquals(expectedActive, response.resumo().total_ativos());
+        assertEquals(2, response.total_funcionarios());
+        assertEquals(2, response.resumo().total_funcionarios());
+        assertEquals(1, response.resumo().presentes());
+        assertEquals(1, response.resumo().ausentes());
+        assertEquals(50, response.resumo().taxa_presenca_percent());
+        assertEquals(4, response.relatorio().size());
+        assertEquals(1, response.presentes().size());
+        assertEquals(3, response.ausentes().size());
+        assertEquals(firstActive, response.relatorio().getFirst().funcionario().ativo());
+        assertEquals(secondActive, response.relatorio().getLast().funcionario().ativo());
+        verify(repository).findByDate(DATE, false, List.of(20L));
+        verifyNoMoreInteractions(repository);
+    }
+
+    @ParameterizedTest
     @CsvSource(value = {
         "00:00:00,NULL,EM_ANDAMENTO",
         "08:00:00,NULL,EM_ANDAMENTO",

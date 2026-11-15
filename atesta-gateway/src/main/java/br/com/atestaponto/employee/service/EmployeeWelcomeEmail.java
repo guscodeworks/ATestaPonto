@@ -7,6 +7,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.env.Environment;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailParseException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,6 +18,7 @@ public class EmployeeWelcomeEmail {
     private final JavaMailSenderImpl sender;
     private final String from, loginUrl;
 
+    @Autowired
     public EmployeeWelcomeEmail(Environment env) {
         boolean enabled = env.getProperty("MAIL_ENABLED", Boolean.class,
                 "production".equals(env.getProperty("NODE_ENV")));
@@ -46,6 +50,12 @@ public class EmployeeWelcomeEmail {
         loginUrl = base.resolve("/ponto/acessar").toString();
     }
 
+    EmployeeWelcomeEmail(JavaMailSenderImpl sender, String from, String loginUrl) {
+        this.sender = sender;
+        this.from = from;
+        this.loginUrl = loginUrl;
+    }
+
     public void sendRecovery(String name, String email, String code) {
         if (sender == null) return;
         try {
@@ -62,7 +72,7 @@ public class EmployeeWelcomeEmail {
     }
 
     public Map<String, Object> send(String name, String email, String password) {
-        if (sender == null) return Map.of("enviado", false, "motivo", "desativado");
+        if (sender == null) return Map.of("enviado", false, "motivo", "desativado", "estado", "desativado");
         try {
             var message = new SimpleMailMessage();
             message.setFrom(from);
@@ -70,13 +80,32 @@ public class EmployeeWelcomeEmail {
             message.setSubject("Acesso ao Atesta Ponto");
             message.setText("Olá, " + name + "!\n\nSeu acesso ao Atesta Ponto foi criado.\nLogin: "
                     + email + "\nSenha temporária: " + password + "\n\nAcesse: " + loginUrl
-                    + "\nPor segurança, altere sua senha no primeiro acesso.");
+                    + "\nEsta senha vence em sete dias. Por segurança, altere sua senha no primeiro acesso.");
             sender.send(message);
-            return Map.of("enviado", true);
+            return Map.of("enviado", true, "estado", "aceito_smtp");
         } catch (RuntimeException failure) {
             // Excecoes SMTP podem conter destinatario, corpo e credenciais.
             LOG.error("Falha ao enviar e-mail de acesso ao funcionario");
-            return Map.of("enviado", false, "motivo", "falha_no_envio");
+            return Map.of("enviado", false, "motivo", "falha_no_envio", "estado", deliveryFailure(failure));
         }
+    }
+
+    private static String deliveryFailure(Throwable failure) {
+        if (failure instanceof MailAuthenticationException || failure instanceof MailParseException) return "falha";
+        if (failure instanceof org.springframework.mail.MailSendException sent && !sent.getFailedMessages().isEmpty()) {
+            return sent.getFailedMessages().values().stream()
+                    .allMatch(error -> "falha".equals(deliveryFailure(error))) ? "falha" : "desconhecido";
+        }
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof java.net.ConnectException || cause instanceof java.net.UnknownHostException
+                    || cause instanceof jakarta.mail.AuthenticationFailedException) return "falha";
+            if (cause instanceof org.eclipse.angus.mail.smtp.SMTPSendFailedException rejected
+                    && rejected.getReturnCode() >= 400 && rejected.getReturnCode() < 600) return "falha";
+            if (cause instanceof jakarta.mail.SendFailedException rejected
+                    && rejected.getInvalidAddresses() != null && rejected.getInvalidAddresses().length > 0
+                    && (rejected.getValidSentAddresses() == null || rejected.getValidSentAddresses().length == 0)) return "falha";
+        }
+        // Sem rejeicao comprovada, inclusive timeout, o servidor pode ter aceitado a mensagem.
+        return "desconhecido";
     }
 }

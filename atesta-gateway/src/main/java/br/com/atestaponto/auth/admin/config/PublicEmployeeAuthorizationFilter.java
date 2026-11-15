@@ -22,7 +22,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 final class PublicEmployeeAuthorizationFilter extends OncePerRequestFilter {
     private static final String ROOT = "/api/admin/funcionarios";
-    private static final Pattern ITEM = Pattern.compile(ROOT + "/([^/]+)(?:/(desativar|reativar))?/?");
+    private static final Pattern ITEM = Pattern.compile(ROOT + "/([^/]+)(?:/(desativar|reativar|senha-temporaria))?/?");
     private final PublicEmployeeAuthorization authorization;
     private final ObjectMapper json;
 
@@ -84,8 +84,13 @@ final class PublicEmployeeAuthorizationFilter extends OncePerRequestFilter {
                 } catch (NumberFormatException invalid) {
                     throw PublicEmployeeInput.invalid("id", "params", "ID de funcionario invalido");
                 }
+                if ("senha-temporaria".equals(item.group(2)) && !item.group(1).equals(employeeId.toString())) {
+                    throw PublicEmployeeInput.invalid("id", "params", "ID de funcionario invalido");
+                }
                 if (method.equals("GET") && item.group(2) == null) capability = "funcionario.visualizar";
-                else if (method.equals("PATCH")) capability = "funcionario." + (item.group(2) == null ? "editar" : item.group(2));
+                else if (method.equals("POST") && "senha-temporaria".equals(item.group(2))) capability = "funcionario.editar";
+                else if (method.equals("PATCH") && !"senha-temporaria".equals(item.group(2)))
+                    capability = "funcionario." + (item.group(2) == null ? "editar" : item.group(2));
                 else throw new IllegalArgumentException();
             } else throw new IllegalArgumentException();
 

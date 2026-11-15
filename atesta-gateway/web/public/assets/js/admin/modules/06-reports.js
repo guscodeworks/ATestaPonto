@@ -7,7 +7,7 @@ function validarAcessoPaginaRelatorios() {
   if (!pagina) return true;
   if (temCapacidade('relatorio.hierarquico.visualizar')) {
     if (!temCapacidade('relatorio.visualizar')) {
-      pagina.querySelectorAll('#relatorio-nominal, .reports-export-actions, .reports-filter-panel')
+      pagina.querySelectorAll('#relatorio-nominal, [data-filtro-nominal], .reports-chart-panel')
         .forEach(elemento => elemento.remove());
     }
     return true;
@@ -211,76 +211,155 @@ function renderizarGraficoSemanalRelatorio() {
     <p class="reports-panel-meta">Presença por pessoa e por dia. Dias futuros não contam como ausência; o dia atual mostra a situação até o momento da consulta.</p>`;
 }
 
+let RELATORIO_PERIODO = null;
+let RELATORIO_PERIODO_ERRO = null;
+let RELATORIO_PERIODO_CARREGANDO = false;
+let relatorioPeriodoRequestId = 0;
+let relatorioPeriodoController = null;
+
+function filtrosRelatorioPeriodo() {
+  return new URLSearchParams({
+    periodo: document.getElementById('relatorio-periodo').value,
+    data: document.getElementById('relatorio-referencia').value,
+    ...(temCapacidade('relatorio.visualizar') && document.getElementById('relatorio-funcionario')?.value
+      ? { funcionario_id: document.getElementById('relatorio-funcionario').value } : {}),
+    ...(temCapacidade('relatorio.visualizar') && document.getElementById('relatorio-status')?.value
+      ? { status: document.getElementById('relatorio-status').value } : {}),
+  });
+}
+
+function atualizarExportacaoRelatorio() {
+  const indisponivel = RELATORIO_PERIODO_CARREGANDO || Boolean(RELATORIO_PERIODO_ERRO) || !RELATORIO_PERIODO;
+  document.querySelectorAll('#btn-gerar-pdf, #btn-imprimir').forEach(botao => { botao.disabled = indisponivel; });
+}
+
+function periodoRelatorioTexto(report) {
+  const data = value => value.split('-').reverse().join('/');
+  return report.data_inicio === report.data_fim ? data(report.data_inicio)
+    : `${data(report.data_inicio)} a ${data(report.data_fim)}`;
+}
+
+function statusRelatorioTexto(item) {
+  if (item.futuro) return 'Dia futuro';
+  return item.ponto.status === 'COMPLETO' ? 'Completo' : item.ponto.status === 'AUSENTE' ? 'Ausente' : 'Em andamento';
+}
+
+function horariosRelatorio(item) {
+  const registros = item.ponto.registros || [];
+  const hora = tipo => {
+    const registro = registros.find(ponto => ponto.tipo === tipo);
+    if (!registro?.registrado_em) return '—';
+    // O relatório já fornece data e hora civil de Brasília, sem offset.
+    const horario = String(registro.registrado_em).match(/^\d{4}-\d{2}-\d{2} ([0-2]\d:[0-5]\d):[0-5]\d$/);
+    return horario ? horario[1] : '—';
+  };
+  return ['ENTRADA', 'SAIDA_ALMOCO', 'RETORNO_ALMOCO', 'SAIDA'].map(hora);
+}
+
+async function carregarRelatorioPeriodoAdmin() {
+  const requestId = ++relatorioPeriodoRequestId;
+  relatorioPeriodoController?.abort();
+  const controller = new AbortController();
+  relatorioPeriodoController = controller;
+  RELATORIO_PERIODO_CARREGANDO = true;
+  RELATORIO_PERIODO_ERRO = null;
+  RELATORIO_PERIODO = null;
+  atualizarExportacaoRelatorio();
+  renderizarRelatorio();
+  const nominal = temCapacidade('relatorio.visualizar');
+  const query = filtrosRelatorioPeriodo();
+  try {
+    if (!dataIsoSemanalValida(query.get('data'))) {
+      throw new Error('Informe uma data de referência válida entre 01/01/1000 e 31/12/9999.');
+    }
+    const endpoint = nominal ? '/api/admin/pontos/relatorio/periodo' : '/api/admin/pontos/relatorio/hierarquia/periodo';
+    const payload = await adminApiFetch(`${endpoint}?${query}`, { signal: controller.signal });
+    if (requestId !== relatorioPeriodoRequestId) return;
+    const report = getApiData(payload);
+    if (!report || !Array.isArray(report.items) || !Array.isArray(report.diretorias)
+      || !dataIsoSemanalValida(report.data_inicio) || !dataIsoSemanalValida(report.data_fim)
+      || !resumoSemanalValido(report.resumo, ['total_previstos', 'total_presencas', 'total_ausencias'])) {
+      throw new Error('Resposta de relatório incompleta. Atualize os dados para tentar novamente.');
+    }
+    report.filtros = Object.fromEntries(query);
+    RELATORIO_PERIODO = report;
+    const select = document.getElementById('relatorio-funcionario');
+    if (nominal && select && !query.has('funcionario_id') && !query.has('status')) {
+      const funcionarios = new Map(report.items.map(item => [item.ponto.funcionario.id, item.ponto.funcionario.nome]));
+      select.innerHTML = '<option value="">Todos os funcionários</option>'
+        + [...funcionarios].map(([id, nome]) => `<option value="${Number(id)}">${escapeHtml(nome)}</option>`).join('');
+    }
+  } catch (erro) {
+    if (requestId !== relatorioPeriodoRequestId || erro?.name === 'AbortError') return;
+    RELATORIO_PERIODO_ERRO = erro;
+    if (erro.status === 401) redirecionarAdminParaGovbr();
+  } finally {
+    if (requestId === relatorioPeriodoRequestId) {
+      RELATORIO_PERIODO_CARREGANDO = false;
+      atualizarExportacaoRelatorio();
+      renderizarRelatorio();
+    }
+  }
+}
+
+async function iniciarRelatoriosPeriodo() {
+  const referencia = document.getElementById('relatorio-referencia');
+  if (!referencia) return;
+  referencia.value = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  document.querySelectorAll('#relatorio-periodo, #relatorio-referencia, #relatorio-funcionario, #relatorio-status')
+    .forEach(campo => campo.addEventListener('change', carregarRelatorioPeriodoAdmin));
+  document.getElementById('relatorio-atualizar')?.addEventListener('click', carregarRelatorioPeriodoAdmin);
+  document.getElementById('relatorio-hierarquico').hidden = temCapacidade('relatorio.visualizar');
+  await carregarRelatorioPeriodoAdmin();
+}
+
 function renderizarRelatorio() {
-  renderizarRelatorioHierarquico();
-  const tbody = document.getElementById('tbody-relatorio');
-  const elData = document.getElementById('relatorio-data');
-  const elPres = document.getElementById('relatorio-presentes');
-  const elAus = document.getElementById('relatorio-ausentes');
-  const elGerado = document.getElementById('relatorio-gerado-por');
-  const detalhado = temCapacidade('relatorio.visualizar');
-  const resumo = detalhado ? RESUMO_RELATORIO : RESUMO_PONTOS;
-  const error = detalhado ? RELATORIO_DATA_ERROR || FUNCIONARIOS_DATA_ERROR : RESUMO_DATA_ERROR;
-  // A listagem de funcionários pode ter escopo maior que o relatório nominal.
-  // Somente o endpoint do relatório define as pessoas que podem aparecer aqui.
-  const itens = RELATORIO_PONTOS;
-
-  if (elData) elData.textContent = error
-    ? '—'
-    : formatarDataReferencia(DATA_REFERENCIA_RELATORIO || DATA_REFERENCIA_PONTOS);
-  if (elPres) elPres.textContent = error ? '—' : resumo?.presentes ?? 0;
-  if (elAus) elAus.textContent = error ? '—' : resumo?.ausentes ?? 0;
-  if (elGerado) elGerado.textContent = ADMIN.nome;
-
-  renderizarGraficoSemanalRelatorio();
-
-  if (!tbody || !detalhado) return;
-
-  if (error) {
-    const state = criarEstadoErroDadosAdmin(
-      'Não foi possível carregar o relatório',
-      error.message,
-      ![401, 403].includes(Number(error.status || 0))
-    );
-    tbody.innerHTML = `<tr><td colspan="6">${state}</td></tr>`;
+  if (!document.querySelector('.reports-page')) return;
+  const report = RELATORIO_PERIODO;
+  const nominal = temCapacidade('relatorio.visualizar');
+  const tbody = document.getElementById(nominal ? 'tbody-relatorio' : 'tbody-relatorio-hierarquico');
+  const estado = document.getElementById('relatorio-estado');
+  estado.textContent = RELATORIO_PERIODO_CARREGANDO ? 'Atualizando relatório. Exportação indisponível.'
+    : RELATORIO_PERIODO_ERRO ? RELATORIO_PERIODO_ERRO.message : 'Consulta concluída. Indicadores por pessoa e dia; dias futuros fora dos totais previstos.';
+  document.getElementById('relatorio-presentes').textContent = report?.resumo.total_presencas ?? '—';
+  document.getElementById('relatorio-ausentes').textContent = report?.resumo.total_ausencias ?? '—';
+  document.getElementById('relatorio-data').textContent = report ? periodoRelatorioTexto(report) : '—';
+  document.getElementById('relatorio-gerado-por').textContent = ADMIN.nome;
+  if (!report) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="${nominal ? 7 : 5}">${RELATORIO_PERIODO_CARREGANDO ? 'Carregando relatório...' : 'Relatório indisponível. Atualize os dados para tentar novamente.'}</td></tr>`;
+    const chart = document.getElementById('chart-presenca-semanal');
+    if (chart) chart.replaceChildren();
     return;
   }
-
-  if (!itens.length) {
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><img src="/icons/clipboard-list.svg" alt="" aria-hidden="true"></div><div class="empty-title">Nenhum funcionario encontrado</div></div></td></tr>`;
+  if (!nominal) {
+    RELATORIO_HIERARQUICO = { ...report, data_referencia: periodoRelatorioTexto(report) };
+    RELATORIO_HIERARQUICO_DATA_ERROR = null;
+    renderizarRelatorioHierarquico();
+    document.getElementById('hierarquia-data').textContent = periodoRelatorioTexto(report);
     return;
   }
-
-  tbody.innerHTML = itens.map(item => {
-    const func = getFuncionarioPorId(item.funcionarioId) || item.funcionario;
-    const statusLabel = item.status === 'completo'
-      ? 'Completo'
-      : item.status === 'ausente'
-        ? 'Ausente'
-        : 'Em andamento';
-    const statusClass = item.status === 'completo'
-      ? 'badge-ok'
-      : item.status === 'ausente'
-        ? 'badge-absent'
-        : 'badge-info';
-
-    return `
-      <tr>
-        <td>
-          <div class="td-user">
-            <div class="td-avatar">${getIniciais(func.nome)}</div>
-            <div>
-              <div class="td-name">${escapeHtml(func.nome)}</div>
-              <div class="td-email">${escapeHtml(func.cargo)}</div>
-            </div>
-          </div>
-        </td>
-        <td class="td-mono">${item.entrada || '<span style="color:var(--text-300)">—</span>'}</td>
-        <td class="td-mono">${item.pausa || '<span style="color:var(--text-300)">—</span>'}</td>
-        <td class="td-mono">${item.retorno || '<span style="color:var(--text-300)">—</span>'}</td>
-        <td class="td-mono">${item.saida || '<span style="color:var(--text-300)">—</span>'}</td>
-        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
-      </tr>
-    `;
+  tbody.innerHTML = report.items.map(item => {
+    const ponto = item.ponto;
+    const status = statusRelatorioTexto(item);
+    const classe = ponto.status === 'COMPLETO' ? 'badge-ok' : ponto.status === 'AUSENTE' ? 'badge-absent' : 'badge-info';
+    return `<tr><td>${escapeHtml(item.data_referencia.split('-').reverse().join('/'))}</td>
+      <td><strong>${escapeHtml(ponto.funcionario.nome)}</strong><div class="td-email">${escapeHtml(ponto.unidade_escolar_nome)} · Vínculo ${Number(ponto.vinculo_funcional_id)}</div></td>
+      ${horariosRelatorio(item).map(hora => `<td class="td-mono">${escapeHtml(hora)}</td>`).join('')}
+      <td><span class="badge ${item.futuro ? 'badge-info' : classe}">${status}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="7">Nenhum registro para os filtros selecionados.</td></tr>';
+  const dates = new Map();
+  for (let date = report.data_inicio; date <= report.data_fim; date = adicionarDiasDataIsoSemanal(date, 1)) dates.set(date, new Map());
+  report.items.forEach(item => {
+    const pessoas = dates.get(item.data_referencia);
+    const id = item.ponto.funcionario.id;
+    pessoas?.set(id, Boolean(pessoas.get(id)) || item.ponto.total_batidas > 0);
+  });
+  document.getElementById('chart-presenca-semanal').innerHTML = [...dates].map(([date, pessoas]) => {
+    const presentes = [...pessoas.values()].filter(Boolean).length;
+    const futuro = date > report.data_atual;
+    return `<div class="weekly-chart-day"><strong>${escapeHtml(date.split('-').reverse().join('/'))}</strong>
+      <span>${futuro ? 'Dia futuro' : `${presentes} presentes de ${pessoas.size}; ${pessoas.size - presentes} ausentes`}</span></div>`;
   }).join('');
 }

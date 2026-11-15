@@ -797,6 +797,8 @@ const estadoEdicaoFuncionario = {
   elementoOrigem: null,
   requestId: 0,
   fechamentoTimer: null,
+  credencial: null,
+  reemitindo: false,
 };
 
 function elementosEdicaoFuncionario() {
@@ -926,6 +928,7 @@ function atualizarBotaoSalvarEdicao() {
   save.disabled = Boolean(
     estadoEdicaoFuncionario.carregando ||
     estadoEdicaoFuncionario.salvando ||
+    estadoEdicaoFuncionario.reemitindo ||
     form?.hidden ||
     !edicaoFuncionarioTemAlteracoes()
   );
@@ -978,6 +981,7 @@ function mostrarErroEdicao(error) {
 }
 
 function mostrarFormularioEdicao(funcionario) {
+  atualizarCredencialTemporariaEdicao(funcionario);
   const { form, loading, error, panel, nome, save } = elementosEdicaoFuncionario();
   preencherCamposEdicao(funcionario);
   estadoEdicaoFuncionario.carregando = false;
@@ -1020,6 +1024,8 @@ function abrirPainelEdicao() {
 }
 
 function fecharPainelEdicao() {
+  limparSenhaTemporaria();
+  estadoEdicaoFuncionario.credencial = null;
   const { overlay } = elementosEdicaoFuncionario();
   if (!overlay) return;
   const elementoOrigem = estadoEdicaoFuncionario.elementoOrigem;
@@ -1040,7 +1046,7 @@ function fecharPainelEdicao() {
 }
 
 function solicitarFechamentoEdicao() {
-  if (!painelEdicaoEstaAberto() || estadoEdicaoFuncionario.salvando) return;
+  if (!painelEdicaoEstaAberto() || estadoEdicaoFuncionario.salvando || estadoEdicaoFuncionario.reemitindo) return;
   if (
     edicaoFuncionarioTemAlteracoes() &&
     !window.confirm('Existem alterações não salvas. Deseja descartá-las?')
@@ -1155,7 +1161,7 @@ async function salvarEdicaoFuncionario(event) {
   if (
     !temCapacidade('funcionario.editar') ||
     estadoEdicaoFuncionario.carregando ||
-    estadoEdicaoFuncionario.salvando
+    estadoEdicaoFuncionario.salvando || estadoEdicaoFuncionario.reemitindo
   ) return;
 
   const elements = elementosEdicaoFuncionario();
@@ -1295,3 +1301,122 @@ function abrirEdicao(id, trigger = null) {
   estadoEdicaoFuncionario.elementoOrigem = trigger || document.activeElement;
   carregarFuncionarioEdicao();
 }
+
+
+let senhaTemporariaPaginaId = 0;
+
+function limparSenhaTemporaria() {
+  senhaTemporariaPaginaId += 1;
+  const dialogo = document.getElementById('senha-temporaria-dialogo');
+  if (!dialogo) return;
+  dialogo.querySelectorAll('[data-segredo]').forEach(elemento => { elemento.textContent = ''; });
+  dialogo.close();
+  dialogo.remove();
+}
+
+function informarEntregaCredencial(dados, nome = 'Funcionário') {
+  limparSenhaTemporaria();
+  const estado = dados?.email_acesso?.estado;
+  const mensagens = {
+    aceito_smtp: 'O servidor de e-mail aceitou a mensagem. O recebimento na caixa postal ainda não está confirmado.',
+    falha: 'O envio foi rejeitado. Entregue a senha temporária ao funcionário por um canal seguro.',
+    desconhecido: 'Não foi possível confirmar o envio. A mensagem ainda pode chegar. Nenhum reenvio automático será feito.',
+    desativado: 'O envio de e-mail está desativado. Entregue a senha temporária por um canal seguro.',
+  };
+  const mensagem = mensagens[estado] || 'Consulte o estado do cadastro antes de iniciar outra operação.';
+  const contingencia = dados?.senha_temporaria;
+  if (estado === 'aceito_smtp' || !contingencia?.senha || !contingencia.expira_em) {
+    if (contingencia) delete contingencia.senha;
+    toast(`${nome}: ${mensagem}`, estado === 'aceito_smtp' ? 'success' : 'error');
+    return;
+  }
+  const dialogo = document.createElement('dialog');
+  dialogo.id = 'senha-temporaria-dialogo';
+  dialogo.className = 'temporary-password-dialog';
+  dialogo.setAttribute('aria-labelledby', 'senha-temporaria-titulo');
+  dialogo.innerHTML = `<h2 id="senha-temporaria-titulo">Senha temporária — exibição única</h2>
+    <p data-entrega></p><p>Funcionário: <strong data-nome></strong></p>
+    <p data-segredo class="temporary-password-value"></p><p data-validade></p>
+    <p>A senha será eliminada desta tela ao fechar ou sair. Ela não poderá ser recuperada; uma reemissão explícita invalida a anterior.</p>
+    <button type="button" class="ui-btn ui-btn-primary">Fechar e eliminar senha</button>`;
+  dialogo.querySelector('[data-entrega]').textContent = mensagem;
+  dialogo.querySelector('[data-nome]').textContent = nome;
+  dialogo.querySelector('[data-segredo]').textContent = contingencia.senha;
+  delete contingencia.senha;
+  dialogo.querySelector('[data-validade]').textContent = `Válida até ${new Date(contingencia.expira_em).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (Brasília). Troca obrigatória no primeiro acesso.`;
+  dialogo.querySelector('button').addEventListener('click', limparSenhaTemporaria);
+  dialogo.addEventListener('cancel', evento => { evento.preventDefault(); limparSenhaTemporaria(); });
+  dialogo.addEventListener('close', () => { dialogo.querySelector('[data-segredo]').textContent = ''; dialogo.remove(); });
+  document.body.appendChild(dialogo);
+  dialogo.showModal();
+}
+
+function atualizarCredencialTemporariaEdicao(funcionario) {
+  estadoEdicaoFuncionario.credencial = funcionario.credencial_temporaria || null;
+  let secao = document.getElementById('employee-temporary-password');
+  if (!secao) {
+    secao = document.createElement('section');
+    secao.id = 'employee-temporary-password';
+    secao.innerHTML = '<h3>Primeiro acesso</h3><p data-credential-state></p><button type="button" class="ui-btn ui-btn-secondary">Reemitir senha temporária</button>';
+    elementosEdicaoFuncionario().form?.appendChild(secao);
+    secao.querySelector('button').addEventListener('click', reemitirSenhaTemporaria);
+  }
+  const credencial = estadoEdicaoFuncionario.credencial;
+  const permitida = temCapacidade('funcionario.editar') && funcionario.ativo === true
+    && credencial?.primeiro_acesso === true && typeof credencial.versao === 'string';
+  secao.hidden = !temCapacidade('funcionario.editar');
+  secao.querySelector('[data-credential-state]').textContent = credencial?.primeiro_acesso
+    ? 'Primeiro acesso pendente. Reemitir invalida a senha temporária e os comprovantes anteriores.'
+    : 'Reemissão de primeiro acesso indisponível para este funcionário.';
+  secao.querySelector('button').disabled = !permitida || estadoEdicaoFuncionario.reemitindo;
+}
+
+async function reemitirSenhaTemporaria() {
+  const estado = estadoEdicaoFuncionario;
+  const versao = estado.credencial?.versao;
+  if (estado.reemitindo || estado.salvando || estado.carregando || !versao
+    || !temCapacidade('funcionario.editar')) return;
+  if (edicaoFuncionarioTemAlteracoes()) {
+    definirFeedbackEdicao('Salve ou descarte as alterações antes de reemitir a senha.', 'error');
+    return;
+  }
+  if (!window.confirm('Reemitir a senha temporária? A senha e os comprovantes de primeiro acesso anteriores serão invalidados. Uma mensagem antiga ainda poderá chegar, mas sua senha não funcionará.')) return;
+  estado.reemitindo = true;
+  const id = estado.id;
+  const requestId = estado.requestId;
+  const paginaId = senhaTemporariaPaginaId;
+  const botao = document.querySelector('#employee-temporary-password button');
+  botao.disabled = true;
+  definirFeedbackEdicao('Reemitindo senha temporária...');
+  try {
+    const resposta = await adminApiFetch(`${ADMIN_ENDPOINTS.funcionarios}/${id}/senha-temporaria`, {
+      method: 'POST', body: JSON.stringify({ confirmacao: 'REEMITIR', versao_esperada: versao }),
+    });
+    if (requestId !== estado.requestId || paginaId !== senhaTemporariaPaginaId) return;
+    if (!getApiData(resposta)?.email_acesso?.estado) throw new Error('Resposta de reemissão incompleta.');
+    const nome = elementosEdicaoFuncionario().nome.value;
+    estado.reemitindo = false;
+    fecharPainelEdicao();
+    informarEntregaCredencial(getApiData(resposta), nome);
+  } catch (erro) {
+    if (requestId !== estado.requestId || paginaId !== senhaTemporariaPaginaId) return;
+    estado.credencial = null;
+    await carregarFuncionarioEdicao();
+    definirFeedbackEdicao(erro.status === 409
+      ? 'A credencial mudou. O estado foi atualizado; confira antes de iniciar outra reemissão.'
+      : 'A resposta não confirmou a reemissão. Consulte o estado atualizado; nenhuma operação será repetida automaticamente. Uma nova reemissão exige outra confirmação.', 'error');
+    if (erro.status === 401) redirecionarAdminParaGovbr();
+  } finally {
+    estado.reemitindo = false;
+    atualizarBotaoSalvarEdicao();
+    const botaoAtual = document.querySelector('#employee-temporary-password button');
+    if (botaoAtual) botaoAtual.disabled = !estado.credencial?.versao;
+  }
+}
+
+window.addEventListener('pagehide', limparSenhaTemporaria);
+window.addEventListener('pageshow', limparSenhaTemporaria);
+window.addEventListener('beforeunload', limparSenhaTemporaria);
+document.addEventListener('click', evento => {
+  if (evento.target.closest('.btn-logout, a[href]')) limparSenhaTemporaria();
+}, true);

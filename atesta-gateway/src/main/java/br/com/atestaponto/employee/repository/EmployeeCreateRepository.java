@@ -125,7 +125,7 @@ public class EmployeeCreateRepository {
     public EmployeeCreateResponse findCreatedEmployee(long employeeId) {
         List<EmployeeCreateResponse> result = jdbc.query("""
                 SELECT f.id, f.cpf, f.nome, f.email, f.telefone, f.ativo, f.criado_em,
-                       lf.primeiro_acesso, c.id AS cargo_id, c.cargo AS cargo_nome
+                       lf.primeiro_acesso, lf.senha_temporaria_expira_em, c.id AS cargo_id, c.cargo AS cargo_nome
                 FROM funcionarios f
                 INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id
                 INNER JOIN vinculos_funcionais v ON v.funcionario_id = f.id
@@ -142,7 +142,8 @@ public class EmployeeCreateRepository {
         return (row, index) -> new EmployeeCreateResponse(
                 row.getLong("id"), row.getString("cpf"), row.getString("nome"), row.getString("email"),
                 row.getString("telefone"), row.getBoolean("ativo"), timestamp(row, "criado_em"),
-                row.getBoolean("primeiro_acesso"), row.getLong("cargo_id"), row.getString("cargo_nome"));
+                row.getBoolean("primeiro_acesso"), row.getLong("cargo_id"), row.getString("cargo_nome"),
+                timestamp(row, "senha_temporaria_expira_em"));
     }
 
     private String timestamp(ResultSet row, String column) throws SQLException {

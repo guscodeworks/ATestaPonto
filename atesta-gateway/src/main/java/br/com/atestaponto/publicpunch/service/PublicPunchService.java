@@ -91,8 +91,10 @@ public class PublicPunchService {
     }
     public Object firstAccess(JsonNode body, HttpServletRequest request) {
         PublicPunchValidation.password(body, "novaSenha");
-        long id = jwt.id(jwt.verify(request.getHeader("Authorization"), true), true);
-        if (!credential(() -> credentials.firstAccess(new EmployeeCredentialsRequest.Change(LongNode.valueOf(id), TextNode.valueOf(hash(PublicPunchValidation.text(body, "novaSenha")))))).updated())
+        JsonNode claims = jwt.verify(request.getHeader("Authorization"), true);
+        long id = jwt.id(claims, true);
+        if (!credential(() -> credentials.firstAccess(new EmployeeCredentialsRequest.Change(LongNode.valueOf(id),
+                TextNode.valueOf(hash(PublicPunchValidation.text(body, "novaSenha"))), claims.path("credentialVersion").asText()))).updated())
             throw credentialsUnavailable();
         audit("senha_primeiro_acesso_atualizada", id, request, Map.of());
         return Map.of("primeiro_acesso", false, "message", "Senha atualizada com sucesso. Faca login novamente.");

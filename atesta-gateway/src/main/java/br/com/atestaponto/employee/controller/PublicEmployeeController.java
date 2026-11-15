@@ -3,6 +3,7 @@ package br.com.atestaponto.employee.controller;
 import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization;
 import br.com.atestaponto.auth.admin.service.PublicEmployeeAuthorization.Context;
 import br.com.atestaponto.employee.service.PublicEmployeeService;
+import br.com.atestaponto.employee.service.EmployeeTemporaryPasswordService;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.http.HttpStatus;
 import org.springframework.util.MultiValueMap;
@@ -13,8 +14,18 @@ import org.springframework.web.bind.annotation.*;
 public class PublicEmployeeController {
     public record Response<T>(boolean success, T data) {}
     private final PublicEmployeeService service;
+    private final EmployeeTemporaryPasswordService temporaryPasswords;
 
-    public PublicEmployeeController(PublicEmployeeService service) { this.service = service; }
+    public PublicEmployeeController(PublicEmployeeService service, EmployeeTemporaryPasswordService temporaryPasswords) {
+        this.service = service;
+        this.temporaryPasswords = temporaryPasswords;
+    }
+
+    @PostMapping({"/{id}/senha-temporaria", "/{id}/senha-temporaria/"})
+    public Response<?> temporaryPassword(@RequestAttribute(PublicEmployeeAuthorization.CONTEXT_ATTRIBUTE) Context context,
+            @PathVariable long id, @RequestAttribute(value = "publicAccessBody", required = false) JsonNode body) {
+        return new Response<>(true, temporaryPasswords.reissue(context, id, body));
+    }
 
     @GetMapping({"", "/"})
     public Response<?> list(@RequestAttribute(PublicEmployeeAuthorization.CONTEXT_ATTRIBUTE) Context context,

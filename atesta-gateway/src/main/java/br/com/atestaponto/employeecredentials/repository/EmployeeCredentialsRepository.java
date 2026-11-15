@@ -4,6 +4,7 @@ import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse.Em
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse.AuthenticationEmployee;
 import br.com.atestaponto.employeecredentials.dto.EmployeeCredentialsResponse.ActiveLink;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -13,7 +14,10 @@ public class EmployeeCredentialsRepository {
 
     public EmployeeCredentialsRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
-    public record Credential(boolean active, Boolean firstAccess) {}
+    public record Credential(boolean active, Boolean firstAccess, String passwordHash,
+                             LocalDateTime expiresAt, boolean temporaryValid) {
+        @Override public String toString() { return "Credential[redacted]"; }
+    }
 
     public AuthenticationEmployee findLoginEmployee(String cpf, String email) {
         return findAuthenticationEmployee(cpf != null ? "f.cpf" : "f.email",
@@ -32,7 +36,7 @@ public class EmployeeCredentialsRepository {
         // Coluna escolhida apenas pelos metodos acima; identificador sempre parametrizado.
         sql += " WHERE " + column + " = ? AND f.ativo = 1";
         if (login) {
-            sql += " AND (lf.senha_temporaria_expira_em IS NULL"
+            sql += " AND ((lf.primeiro_acesso = FALSE AND lf.senha_temporaria_expira_em IS NULL)"
                     + " OR lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP)";
         }
         var rows = jdbc.query(sql + " LIMIT 1", (row, number) -> {
@@ -81,24 +85,45 @@ public class EmployeeCredentialsRepository {
     }
 
     public Credential lockCredential(long employeeId) {
+        return findCredential(employeeId, true);
+    }
+
+    public Credential findCredential(long employeeId) {
+        return findCredential(employeeId, false);
+    }
+
+    private Credential findCredential(long employeeId, boolean forUpdate) {
         var rows = jdbc.query("""
-                SELECT f.ativo, lf.primeiro_acesso FROM funcionarios f
+                SELECT f.ativo, lf.primeiro_acesso, lf.senha_hash, lf.senha_temporaria_expira_em,
+                       lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP AS temporaria_valida
+                FROM funcionarios f
                 INNER JOIN login_funcionario lf ON lf.funcionario_id = f.id
-                WHERE f.id = ? LIMIT 1 FOR UPDATE
-                """, (row, number) -> {
+                WHERE f.id = ? LIMIT 1
+                """ + (forUpdate ? " FOR UPDATE" : ""), (row, number) -> {
             int firstAccess = row.getInt("primeiro_acesso");
             Boolean state = row.wasNull() || (firstAccess != 0 && firstAccess != 1) ? null : firstAccess == 1;
-            return new Credential(row.getInt("ativo") == 1, state);
+            return new Credential(row.getInt("ativo") == 1, state, row.getString("senha_hash"),
+                    row.getObject("senha_temporaria_expira_em", LocalDateTime.class), row.getBoolean("temporaria_valida"));
         }, employeeId);
         return rows.isEmpty() ? null : rows.getFirst();
     }
 
     public int updatePassword(long employeeId, String passwordHash, boolean firstAccess) {
-        return jdbc.update("""
+        String sql = """
                 UPDATE login_funcionario lf INNER JOIN funcionarios f ON f.id = lf.funcionario_id
                 SET lf.senha_hash = ?, lf.senha_alterada_em = CURRENT_TIMESTAMP,
                     lf.senha_temporaria_expira_em = NULL, lf.primeiro_acesso = FALSE
                 WHERE lf.funcionario_id = ? AND f.ativo = 1 AND lf.primeiro_acesso = ?
-                """, passwordHash, employeeId, firstAccess);
+                """;
+        if (firstAccess) sql += " AND lf.senha_temporaria_expira_em > CURRENT_TIMESTAMP";
+        return jdbc.update(sql, passwordHash, employeeId, firstAccess);
+    }
+
+    public int reissueTemporary(long employeeId, String passwordHash) {
+        return jdbc.update("""
+                UPDATE login_funcionario SET senha_hash = ?,
+                    senha_temporaria_expira_em = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 7 DAY)
+                WHERE funcionario_id = ? AND primeiro_acesso = TRUE
+                """, passwordHash, employeeId);
     }
 }

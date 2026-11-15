@@ -20,7 +20,8 @@ final class PublicAccessApiFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return List.of("/api/admin/acessos", "/api/admin/cargos", "/api/admin/qr-tokens").stream()
+        return !request.getServletPath().matches("/api/admin/funcionarios/[^/]+/senha-temporaria/?")
+                && List.of("/api/admin/acessos", "/api/admin/cargos", "/api/admin/qr-tokens").stream()
                 .noneMatch(p -> request.getServletPath().equals(p) || request.getServletPath().startsWith(p + "/"));
     }
 
@@ -35,12 +36,16 @@ final class PublicAccessApiFilter extends OncePerRequestFilter {
             String path = request.getServletPath().replaceAll("/+$", ""), method = request.getMethod();
             boolean grant = method.equals("POST") && path.equals("/api/admin/acessos");
             boolean qr = method.equals("POST") && path.equals("/api/admin/qr-tokens");
+            var temporaryPath = java.util.regex.Pattern.compile("/api/admin/funcionarios/([^/]+)/senha-temporaria").matcher(path);
+            boolean temporary = method.equals("POST") && temporaryPath.matches();
             var change = java.util.regex.Pattern.compile("/api/admin/acessos/([^/]+)/(suspender|reativar|revogar)").matcher(path);
             boolean status = method.equals("PATCH") && change.matches();
-            if ((grant || qr || status) && auth != null && auth.getPrincipal() instanceof AdminPrincipal admin) {
+            if ((grant || qr || status || temporary) && auth != null && auth.getPrincipal() instanceof AdminPrincipal admin) {
                 String subject = "admin:" + admin.id();
                 if (!PublicAdminApiErrors.reserve(limits, json, "sensitive", subject, 40, response)) return;
-                if (!PublicAdminApiErrors.reserve(limits, json, "sensitive-resource", List.of(subject, qr ? "/api/admin/qr-tokens" : "/api/admin/acessos",
+                if (temporary && !PublicAdminApiErrors.reserve(limits, json, "temporary-password",
+                        List.of(subject, temporaryPath.group(1)), 5, response)) return;
+                if (!temporary && !PublicAdminApiErrors.reserve(limits, json, "sensitive-resource", List.of(subject, qr ? "/api/admin/qr-tokens" : "/api/admin/acessos",
                         status ? "/:id/" + change.group(2) : "/", status ? change.group(1) : ""), 40, response)) return;
             }
         } catch (RuntimeException unavailable) {
