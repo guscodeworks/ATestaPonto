@@ -217,16 +217,7 @@
         sessionStorage.setItem('funcionario_primeiro_acesso_token', data.token_primeiro_acesso);
         sessionStorage.setItem('funcionario_primeiro_acesso_expira_em', data.expira_em || '');
         
-        if (remember.checked) {
-          const rememberedIdentifier = identificador.includes('@')
-            ? normalizeIdentifier(identificador)
-            : formatCpf(identificador);
-          localStorage.setItem('func_saved_identificador', rememberedIdentifier);
-          localStorage.removeItem('func_saved_cpf');
-        } else {
-          localStorage.removeItem('func_saved_identificador');
-          localStorage.removeItem('func_saved_cpf');
-        }
+        lembrarIdentificador(identificador);
 
         // Redireciona para a tela de troca de senha de primeiro acesso
         window.location.href = '/first-access';
@@ -239,16 +230,7 @@
       sessionStorage.setItem('func_nome', data.funcionario?.nome || '');
       sessionStorage.setItem('func_cpf', data.funcionario?.cpf || '');
 
-      if (remember.checked) {
-        const rememberedIdentifier = identificador.includes('@')
-          ? normalizeIdentifier(identificador)
-          : formatCpf(identificador);
-        localStorage.setItem('func_saved_identificador', rememberedIdentifier);
-        localStorage.removeItem('func_saved_cpf');
-      } else {
-        localStorage.removeItem('func_saved_identificador');
-        localStorage.removeItem('func_saved_cpf');
-      }
+      lembrarIdentificador(identificador);
 
       window.location.href = '/funcionario';
     } catch (error) {
@@ -267,17 +249,33 @@
     }
   });
 
-  const savedIdentifier = localStorage.getItem('func_saved_identificador') ||
-    localStorage.getItem('func_saved_cpf');
-  if (savedIdentifier) {
+  const PRAZO_LEMBRAR_MS = 30 * 24 * 60 * 60 * 1000;
+
+  function esquecerIdentificador() {
+    localStorage.removeItem('func_saved_identificador');
+    localStorage.removeItem('func_saved_identificador_expira_em');
+    localStorage.removeItem('func_saved_cpf');
+  }
+
+  function lembrarIdentificador(identificador) {
+    esquecerIdentificador();
+    if (!remember.checked) return;
+    localStorage.setItem('func_saved_identificador', identificador.includes('@')
+      ? normalizeIdentifier(identificador)
+      : formatCpf(identificador));
+    localStorage.setItem('func_saved_identificador_expira_em', String(Date.now() + PRAZO_LEMBRAR_MS));
+  }
+
+  // Sem prazo válido (vencido ou gravado antes do prazo existir) o identificador é descartado.
+  const savedIdentifier = localStorage.getItem('func_saved_identificador');
+  if (savedIdentifier && Number(localStorage.getItem('func_saved_identificador_expira_em')) > Date.now()) {
     identificadorInput.value = formatIdentifierInput(savedIdentifier);
     remember.checked = true;
+  } else {
+    esquecerIdentificador();
   }
 
   remember.addEventListener('change', function () {
-    if (!this.checked) {
-      localStorage.removeItem('func_saved_identificador');
-      localStorage.removeItem('func_saved_cpf');
-    }
+    if (!this.checked) esquecerIdentificador();
   });
 })();
