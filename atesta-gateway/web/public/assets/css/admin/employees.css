@@ -990,7 +990,10 @@ body.employee-status-open {
 }
 
 .temporary-password-dialog {
+  /* base.css zera margin de tudo; o <dialog> precisa de auto para centralizar. */
+  margin: auto;
   width: min(36rem, calc(100% - 2rem));
+  max-width: calc(100vw - 2rem);
   max-height: calc(100dvh - 2rem);
   overflow: auto;
   padding: 24px;
