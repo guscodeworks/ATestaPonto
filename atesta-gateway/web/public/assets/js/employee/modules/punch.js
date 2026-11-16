@@ -511,7 +511,8 @@ function tratarErroCarregamento(error, { notificar = true } = {}) {
 
   let mensagem = error.message || 'Não foi possível carregar o ponto de hoje.';
   if (isUnauthorized) mensagem = 'Sua sessão expirou. Entre novamente.';
-  else if (isForbidden) mensagem = 'Seu acesso ao ponto não está autorizado.';
+  // code só existe quando o servidor enviou o erro; sem ele, vale a mensagem genérica.
+  else if (isForbidden) mensagem = (error.code && error.message) || 'Seu acesso ao ponto não está autorizado.';
   else if (isNetwork) mensagem = 'Sem conexão com o servidor. Verifique sua internet.';
   else if (isInternal) mensagem = 'Não foi possível carregar seus dados agora.';
 
@@ -715,7 +716,10 @@ function recarregarEstadoAposRegistro() {
 
 function mensagemSeguraRegistro(error) {
   if (error.status === 401) return 'Sua sessão expirou. Entre novamente.';
-  if (error.status === 403) return 'Seu acesso ao registro de ponto não está autorizado.';
+  if (error.status === 403) {
+    // code só existe quando o servidor enviou o erro (ex.: fora do raio da escola).
+    return (error.code && error.message) || 'Seu acesso ao registro de ponto não está autorizado.';
+  }
   if (error.code === 'NETWORK_ERROR') {
     return 'Sem conexão com o servidor. Verifique sua internet e tente novamente.';
   }
