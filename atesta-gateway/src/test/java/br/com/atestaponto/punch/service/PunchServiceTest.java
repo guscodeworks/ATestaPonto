@@ -261,7 +261,7 @@ class PunchServiceTest {
         } else {
             var error = assertThrows(PunchException.class, () -> service.today(request));
             assertEquals(404, error.status());
-            assertEquals("Funcionario sem vinculo ativo", error.getMessage());
+            assertEquals("Funcionário sem vínculo ativo", error.getMessage());
             verify(repository, never()).location(anyLong());
             verify(repository, never()).day(anyLong(), any(), anyBoolean());
         }

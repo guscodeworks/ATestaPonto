@@ -54,7 +54,7 @@ public class PunchService {
         JsonNode id = request.funcionario_id();
         if (id == null || !id.isIntegralNumber() || !id.canConvertToLong()
                 || id.longValue() < 1 || id.longValue() > MAX_SAFE_INTEGER) {
-            throw new PunchException(401, "UNAUTHORIZED", "Sessao do funcionario invalida");
+            throw new PunchException(401, "UNAUTHORIZED", "Sessão do funcionário inválida");
         }
         return id.longValue();
     }
@@ -75,39 +75,39 @@ public class PunchService {
         try {
             reading = request.leitura_json() == null ? null : json.readTree(request.leitura_json());
         } catch (JsonProcessingException error) {
-            throw badRequest("Localizacao invalida para registro de ponto");
+            throw badRequest("Localização inválida para registro de ponto");
         }
         if (reading == null || !reading.isArray() || (reading.size() != 2 && reading.size() != 4)
                 || !coordinate(reading.get(0), 90) || !coordinate(reading.get(1), 180)) {
-            throw badRequest("Localizacao invalida para registro de ponto");
+            throw badRequest("Localização inválida para registro de ponto");
         }
         String hash = sha256(request.leitura_json());
         var employee = repository.lockEmployee(employeeId);
         var previous = repository.lockIdempotency(employeeId, key);
         if (previous != null) {
-            if (!previous.hash().equals(hash)) throw conflict("Chave de idempotencia ja usada com outros dados");
+            if (!previous.hash().equals(hash)) throw conflict("Chave de idempotência já usada com outros dados");
             try {
                 return new PunchResponse.Registration(true, json.readTree(previous.response()));
             } catch (JsonProcessingException error) {
                 throw new IllegalStateException("Resposta de idempotencia invalida", error);
             }
         }
-        if (employee == null) throw notFound("Funcionario nao encontrado");
-        if (!employee.ativo()) throw forbidden("Funcionario inativo");
+        if (employee == null) throw notFound("Funcionário não encontrado");
+        if (!employee.ativo()) throw forbidden("Funcionário inativo");
         if (reading.size() != 4 || !reading.get(2).isNumber() || !Double.isFinite(reading.get(2).doubleValue())
                 || reading.get(2).doubleValue() <= 0 || reading.get(2).doubleValue() > 100
                 || !reading.get(3).isIntegralNumber() || !reading.get(3).canConvertToLong()
                 || reading.get(3).longValue() <= 0 || reading.get(3).longValue() > MAX_SAFE_INTEGER) {
-            throw badRequest("Leitura GPS exige precisao maior que zero e de ate 100 metros, com timestamp em milissegundos.");
+            throw badRequest("Leitura GPS exige precisão maior que zero e de até 100 metros, com timestamp em milissegundos.");
         }
         LocalDate date = LocalDate.now(clock);
         Long linkId = repository.activeLink(employeeId, date, true);
         if (!date.equals(LocalDate.now(clock))) {
             throw conflict("O dia mudou durante o registro de ponto. Tente novamente.");
         }
-        if (linkId == null) throw notFound("Funcionario sem vinculo ativo");
+        if (linkId == null) throw notFound("Funcionário sem vínculo ativo");
         var location = repository.location(linkId);
-        if (location == null) throw notFound("Unidade escolar do vinculo nao encontrada");
+        if (location == null) throw notFound("Unidade escolar do vínculo não encontrada");
         double distance = distance(location, reading.get(0).doubleValue(), reading.get(1).doubleValue(), reading.get(2).doubleValue());
         List<Row> rows = repository.day(linkId, date, true);
         var now = clock.instant().atZone(BRASILIA);
@@ -117,10 +117,10 @@ public class PunchService {
         // So novas acoes validam a idade do GPS, depois de adquirir todos os locks.
         long age = now.toInstant().toEpochMilli() - reading.get(3).longValue();
         if (age > 60000 || age < -5000) {
-            throw badRequest("Leitura GPS vencida ou com horario futuro. Atualize a localizacao e confira o relogio do aparelho.");
+            throw badRequest("Leitura GPS vencida ou com horário futuro. Atualize a localização e confira o relógio do aparelho.");
         }
         int next = next(times(rows));
-        if (next == 4) throw conflict("Funcionario ja realizou 4 batidas hoje");
+        if (next == 4) throw conflict("Funcionário já realizou 4 batidas hoje");
         String dateTime = DATE_TIME.format(now);
         long id = repository.insert(linkId, date, TYPES.get(next), dateTime);
         String cpf = employee.cpf() == null ? "" : employee.cpf().replaceAll("[^0-9]", "");
@@ -146,7 +146,7 @@ public class PunchService {
                 || !Double.isFinite(location.latitude().doubleValue()) || Math.abs(location.latitude().doubleValue()) > 90
                 || !Double.isFinite(location.longitude().doubleValue()) || Math.abs(location.longitude().doubleValue()) > 180
                 || location.radius() <= 0) {
-            throw forbidden("Geolocalizacao da unidade nao configurada corretamente. Contate a administracao.");
+            throw forbidden("Geolocalização da unidade não configurada corretamente. Contate a administração.");
         }
         double originLat = location.latitude().doubleValue(), originLon = location.longitude().doubleValue();
         double dLat = (latitude - originLat) * Math.PI / 180, dLon = (longitude - originLon) * Math.PI / 180;
@@ -156,7 +156,7 @@ public class PunchService {
         a = Math.min(1, Math.max(0, a));
         double meters = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         if (meters + accuracy > location.radius()) {
-            throw forbidden("A localizacao e sua margem de precisao devem estar dentro da area permitida da escola.");
+            throw forbidden("A localização e sua margem de precisão devem estar dentro da área permitida da escola.");
         }
         return new BigDecimal(meters).setScale(2, RoundingMode.HALF_UP).doubleValue();
     }
@@ -193,15 +193,15 @@ public class PunchService {
         long employeeId = employeeId(request);
         LocalDate today = LocalDate.now(clock);
         var employee = repository.dashboard(employeeId, today);
-        if (employee == null) throw notFound("Funcionario nao encontrado");
-        if (!employee.ativo()) throw forbidden("Funcionario inativo");
+        if (employee == null) throw notFound("Funcionário não encontrado");
+        if (!employee.ativo()) throw forbidden("Funcionário inativo");
         if (employee.entrada() == null || employee.saidaAlmoco() == null || employee.retornoAlmoco() == null
                 || employee.saida() == null || employee.cargo() == null || employee.cargo().isEmpty()) {
-            throw notFound("Funcionario sem vinculo ativo");
+            throw notFound("Funcionário sem vínculo ativo");
         }
         Long linkId = repository.activeLink(employeeId, today, false);
-        if (linkId == null) throw notFound("Funcionario sem vinculo ativo");
-        if (repository.location(linkId) == null) throw notFound("Unidade escolar do vinculo nao encontrada");
+        if (linkId == null) throw notFound("Funcionário sem vínculo ativo");
+        if (repository.location(linkId) == null) throw notFound("Unidade escolar do vínculo não encontrada");
         // A referencia interna seleciona o dia consultado, nunca concede vigencia atual.
         LocalDate date = request.referencia() == null ? today : request.referencia().atZone(BRASILIA).toLocalDate();
         String[] times = times(repository.day(linkId, date, false));
@@ -220,10 +220,10 @@ public class PunchService {
         if (rawMonth == null) month = YearMonth.from(referenceDate(request)).toString();
         else {
             if (!rawMonth.isTextual() || !rawMonth.textValue().matches("[0-9]{4}-(0[1-9]|1[0-2])")) {
-                throw badRequest("mes deve usar o formato YYYY-MM");
+                throw badRequest("mês deve usar o formato YYYY-MM");
             }
             month = rawMonth.textValue();
-            if (Integer.parseInt(month.substring(0, 4)) < 1000) throw badRequest("mes deve conter um ano valido");
+            if (Integer.parseInt(month.substring(0, 4)) < 1000) throw badRequest("mês deve conter um ano válido");
         }
         YearMonth period = YearMonth.parse(month);
         List<Row> rows = repository.history(employeeId, period.atDay(1), period.atEndOfMonth());
