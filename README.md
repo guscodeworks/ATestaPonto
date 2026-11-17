@@ -71,10 +71,10 @@ Com autorização explícita para modificar o banco, os comandos manuais são:
 
 ```bash
 atesta-db init
-atesta-db run --file=../database/migrations/20260908_ponto_idempotencia.sql
+atesta-db apply --migration 20260908_ponto_idempotencia
 ```
 
-`init` aplica somente o baseline canônico e recusa banco com tabelas/views. `run` substitui `db:run`: aceita `.sql` dentro do módulo ou a migration canônica indicada, nunca inicializa o schema automaticamente. Em produção, os dois exigem `--confirm-production`. SQL arbitrário pode ter efeitos irreversíveis e DDL MySQL não garante rollback; confira o destino antes de autorizar. Estes comandos não fazem parte do build/startup.
+`init` aplica somente o baseline canônico e recusa banco com tabelas/views. `apply` aplica migrations autorizadas explicitamente pelo ID (ex.: `20260908_ponto_idempotencia`); não aceita caminhos arbitrários, nem inicializa o schema automaticamente. Em produção, os dois exigem `--confirm-production`. SQL pode ter efeitos irreversíveis e DDL MySQL não garante rollback; confira o destino antes de autorizar. Estes comandos não fazem parte do build/startup.
 
 ## Simulador independente
 
