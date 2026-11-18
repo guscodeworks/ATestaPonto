@@ -1,7 +1,7 @@
 ## Purpose
 
 - ATestaID é exclusivamente um simulador local de integração OAuth/OIDC para desenvolvimento e testes com identidades fictícias; implementa Authorization Code e `userinfo`, sem equivaler a um provedor OIDC completo. Não é o Gov.br oficial e nunca deve ser implantado como Gov.br de produção.
-- O consumidor OAuth pode ser o Spring Boot ou o gateway legado durante a transição; preserve a integração configurável com ambos, sem acoplar o simulador a um backend específico.
+- O consumidor OAuth é o Spring Boot; preserve a integração configurável, sem acoplar o simulador a um backend específico.
 
 ## Commands
 
@@ -12,7 +12,7 @@
 ## Constraints
 
 - Preserve Authorization Code, PKCE S256, `state`, callback configurável com validação de `redirect_uri`, code de uso único, emissão pelo endpoint de token, `userinfo`, cookies e validação de cliente.
-- Autenticação no simulador não concede autorização administrativa; cadastro ativo, RBAC, escopo territorial e acesso ao dashboard são responsabilidade do backend consumidor, Spring Boot ou gateway legado, com falha fechada conforme a raiz.
+- Autenticação no simulador não concede autorização administrativa; cadastro ativo, RBAC, escopo territorial e acesso ao dashboard são responsabilidade do backend consumidor Spring Boot, com falha fechada conforme a raiz.
 - Não crie atalhos de autenticação ou autorização: não ignore PKCE, validação de cliente, callback ou troca de code por token, nem use identidades fictícias para conceder acesso automático no backend.
 - Não use, colete ou armazene credenciais ou dados pessoais reais; não exponha o simulador publicamente de forma que pareça um serviço oficial.
 - Use URLs configuráveis: `Gerenciar pontos` inicia o fluxo por `PONTO_ESCOLAR_START_URL` em `/auth/govbr/login`; não chame o callback diretamente nem fixe host ou porta.
