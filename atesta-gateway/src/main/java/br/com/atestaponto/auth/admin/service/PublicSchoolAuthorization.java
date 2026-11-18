@@ -47,11 +47,17 @@ public class PublicSchoolAuthorization {
 
     @Transactional(readOnly = true)
     public SchoolListResponse.Item school(long adminId, long id) {
+        return school(adminId, id, null);
+    }
+
+    @Transactional(readOnly = true)
+    public SchoolListResponse.Item school(long adminId, long id, String capability) {
         var admin = admins.requireActive(adminId);
         try {
             var school = schools.findForAdmin(id);
             var resource = new Resource(school.diretoria_ensino_id(), school.id());
-            if (admin.acessos().stream().anyMatch(a -> AdminAccessPolicy.covers(a, resource))) return school;
+            if (admin.acessos().stream().anyMatch(a -> (capability == null || AdminAccessPolicy.permits(a.perfil(), capability))
+                    && AdminAccessPolicy.covers(a, resource))) return school;
         } catch (ResponseStatusException missing) {
             if (missing.getStatusCode().value() != 404) throw missing;
         } catch (DataAccessException failure) {

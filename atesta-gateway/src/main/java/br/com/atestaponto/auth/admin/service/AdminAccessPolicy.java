@@ -19,6 +19,7 @@ public final class AdminAccessPolicy {
                 "diretoria.gerenciar",
                 "escola.listar",
                 "escola.visualizar",
+                "escola.acesso_funcionario.visualizar",
                 "ponto.resumo.visualizar",
                 "relatorio.hierarquico.visualizar",
                 "acesso.listar",
@@ -32,6 +33,7 @@ public final class AdminAccessPolicy {
         profiles.put("ADMIN_DIRETORIA", List.of(
                 "escola.listar",
                 "escola.visualizar",
+                "escola.acesso_funcionario.visualizar",
                 "funcionario.listar",
                 "funcionario.visualizar",
                 "funcionario.editar",
@@ -53,6 +55,7 @@ public final class AdminAccessPolicy {
         profiles.put("DIRETOR", List.of(
                 "escola.listar",
                 "escola.visualizar",
+                "escola.acesso_funcionario.visualizar",
                 "funcionario.listar",
                 "funcionario.visualizar",
                 "funcionario.editar",
@@ -76,6 +79,7 @@ public final class AdminAccessPolicy {
         profiles.put("VICE_DIRETOR", List.of(
                 "escola.listar",
                 "escola.visualizar",
+                "escola.acesso_funcionario.visualizar",
                 "funcionario.listar",
                 "funcionario.visualizar",
                 "funcionario.editar",
@@ -99,6 +103,7 @@ public final class AdminAccessPolicy {
         profiles.put("SECRETARIA", List.of(
                 "escola.listar",
                 "escola.visualizar",
+                "escola.acesso_funcionario.visualizar",
                 "funcionario.listar",
                 "funcionario.visualizar",
                 "funcionario.criar",
@@ -114,6 +119,7 @@ public final class AdminAccessPolicy {
         profiles.put("COORDENADOR", List.of(
                 "escola.listar",
                 "escola.visualizar",
+                "escola.acesso_funcionario.visualizar",
                 "funcionario.listar",
                 "funcionario.visualizar",
                 "ponto.hoje.visualizar",

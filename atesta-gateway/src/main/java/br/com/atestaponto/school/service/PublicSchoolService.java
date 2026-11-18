@@ -1,6 +1,7 @@
 package br.com.atestaponto.school.service;
 
 import br.com.atestaponto.address.service.AddressService;
+import br.com.atestaponto.auth.admin.service.PublicAdminAudit;
 import br.com.atestaponto.auth.admin.service.PublicSchoolAuthorization;
 import br.com.atestaponto.educationdepartment.service.EducationDepartmentService;
 import br.com.atestaponto.school.dto.*;
@@ -56,6 +57,13 @@ public class PublicSchoolService {
     public SchoolListResponse.Item find(long adminId, String rawId) {
         long id = integer(rawId, 9007199254740991L, "id", "params");
         return authorization.school(adminId, id);
+    }
+
+    public Map<String, String> employeeAccess(long adminId, String rawId, String baseUrl, String ip) {
+        long id = integer(rawId, 9007199254740991L, "id", "params");
+        var school = authorization.school(adminId, id, "escola.acesso_funcionario.visualizar");
+        PublicAdminAudit.record("acesso_funcionario_escola_consultado", adminId, ip, Map.of("escolaId", id));
+        return Map.of("escola_nome", school.nome(), "url", baseUrl + "ponto/acessar");
     }
 
     public Map<String, ?> registrationDepartments(long adminId) {
