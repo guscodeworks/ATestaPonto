@@ -6,14 +6,14 @@
 
 ## Commands
 
-- Dentro de `atesta-gateway/`, `./mvnw compile` compila o projeto; use quando pertinente à mudança.
+- Dentro de `atesta-gateway/`, `./mvnw compile` compila, `./mvnw test` roda a suíte e `./mvnw verify` roda a suíte e empacota; use o proporcional à mudança.
 - Selecione validações locais proporcionais à alteração e confira seus efeitos antes de executá-las; login, startup ou testes que escrevam no banco exigem autorização explícita conforme a raiz. Não gere scripts ou relatórios versionados para testes locais, nem crie arquivos auxiliares não solicitados.
 
 ## Architecture
 
 - Controller trata HTTP → Service concentra regras e transações → Repository executa SQL via JDBC, parametrizado conforme a raiz; preserve os limites transacionais existentes.
 - APIs públicas, como `/api/admin/**`, `/api/pontos/**` e `/auth/govbr/**`, atendem os clientes com as proteções próprias de cada fluxo; públicas não significa acesso anônimo irrestrito, nem exige HMAC do navegador.
-- `/internal/**` mantém compatibilidade Node → Spring durante a migração, com HMAC, timestamp, request ID e proteção anti-replay definidos na raiz; não crie rotas alternativas que contornem essa proteção.
+- `/internal/**` mantém HMAC, timestamp, request ID e proteção anti-replay definidos na raiz; não crie rotas alternativas que contornem essa proteção.
 - Preserve contratos HTTP públicos e internos: rotas, métodos, status, corpos, erros, cookies e redirecionamentos consumidos pelo navegador e pelo gateway.
 - Preserve atomicidade, rollback, locks e revalidações de autorização dentro das transações existentes; não mova SQL para controllers.
 
