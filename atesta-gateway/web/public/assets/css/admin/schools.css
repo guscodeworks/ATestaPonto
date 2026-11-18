@@ -220,3 +220,105 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* QR de acesso da escola */
+.schools-mobile-card .schools-qr-button {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.qr-acesso-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  padding: 20px;
+  overflow-y: auto;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid color-mix(in srgb, var(--color-text) 10%, var(--color-bg));
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-hover);
+}
+
+.qr-acesso-dialog::backdrop {
+  background: color-mix(in srgb, var(--color-text) 54%, transparent);
+}
+
+.qr-acesso-dialog h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.qr-acesso-escola {
+  margin: 0 0 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.qr-acesso-canvas {
+  display: block;
+  width: min(280px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+  margin: 0 auto;
+  border: 1px solid color-mix(in srgb, var(--color-text) 14%, var(--color-bg));
+  image-rendering: pixelated;
+}
+
+.qr-acesso-link {
+  margin: 12px 0 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  word-break: break-all;
+}
+
+.qr-acesso-acoes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 400px) {
+  .qr-acesso-dialog { padding: 16px; }
+  .qr-acesso-acoes { grid-template-columns: minmax(0, 1fr); }
+}
+
+#qr-print-area {
+  display: none;
+}
+
+@media print {
+  @page { size: A4; margin: 15mm; }
+
+  body.qr-printing > *:not(#qr-print-area) {
+    display: none !important;
+  }
+
+  body.qr-printing #qr-print-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12mm;
+    min-height: 250mm;
+    color: #000;
+    text-align: center;
+  }
+
+  #qr-print-area h1 {
+    margin: 0;
+    font-size: 28pt;
+    overflow-wrap: anywhere;
+  }
+
+  #qr-print-area canvas {
+    width: 140mm;
+    height: 140mm;
+  }
+
+  #qr-print-area p {
+    margin: 0;
+    font-size: 20pt;
+  }
+}
