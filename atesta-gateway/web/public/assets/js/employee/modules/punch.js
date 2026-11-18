@@ -741,6 +741,7 @@ async function confirmarRegistroPonto() {
   }
 
   if (!navigator.onLine) {
+    fecharConfirm();
     toast('Sem internet. Verifique sua conexão e tente novamente.', 'error');
     return;
   }
@@ -789,6 +790,8 @@ async function confirmarRegistroPonto() {
       if ([400, 403, 422].includes(error.status)) {
         sessionStorage.removeItem('funcionario_ponto_pendente');
       }
+      // O dialog modal fica na top layer e cobriria o toast; fecha antes de avisar.
+      fecharConfirm({ forcar: true });
       toast(mensagemSeguraRegistro(error), 'error');
       if (error.status === 401) {
         window.setTimeout(sair, 1400);
@@ -868,7 +871,7 @@ function toast(msg, tipo = 'info') {
 
   element.append(icon, message);
   getElement('toast-stack').appendChild(element);
-  window.setTimeout(() => element.remove(), 3500);
+  window.setTimeout(() => element.remove(), tipo === 'error' ? 6000 : tipo === 'success' ? 4000 : 3500);
 }
 
 function sair() {
