@@ -9,7 +9,7 @@
     '08-settings-login.js', '10-schools.js', '11-departments.js', '09-init.js', 'mobile-check.js', 'settings.js',
   ];
 
-  const urls = ['/assets/js/shared/loading.js', ...modules].map((module) =>
+  const urls = ['/assets/js/shared/loading.js', '/assets/js/vendor/qrcode-generator/qrcode.js', ...modules].map((module) =>
     module.startsWith('/') ? module : `/assets/js/admin/modules/${module}`
   );
 

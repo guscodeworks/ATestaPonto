@@ -41,6 +41,155 @@ function formatarDataCadastroEscola(value) {
     : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
+const CAPACIDADE_QR_ESCOLA = 'escola.acesso_funcionario.visualizar';
+
+function criarBotaoQrEscola(escola) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ui-btn ui-btn-secondary ui-btn-sm schools-qr-button';
+  button.textContent = 'QR de acesso';
+  button.setAttribute('aria-label', `QR de acesso da escola ${escola.nome || ''}`.trim());
+  button.addEventListener('click', () => abrirQrAcessoEscola(escola, button));
+  return button;
+}
+
+// Desenha o QR (nivel M) em canvas com quiet zone de 4 modulos; branco/preto fixos para leitura.
+function desenharQrEscola(canvas, texto, tamanho) {
+  const qr = qrcode(0, 'M');
+  qr.addData(texto);
+  qr.make();
+  const modulos = qr.getModuleCount();
+  const celula = Math.max(1, Math.floor(tamanho / (modulos + 8)));
+  canvas.width = canvas.height = celula * (modulos + 8);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#000';
+  for (let r = 0; r < modulos; r += 1) {
+    for (let c = 0; c < modulos; c += 1) {
+      if (qr.isDark(r, c)) ctx.fillRect((c + 4) * celula, (r + 4) * celula, celula, celula);
+    }
+  }
+}
+
+function mensagemErroQrEscola(erro) {
+  if (erro && erro.status === 403) return 'Você não tem permissão para ver o QR de acesso desta escola.';
+  if (erro && (erro.status === 0 || erro.code === 'NETWORK_ERROR')) return 'Sem conexão com o servidor. Verifique a internet e tente novamente.';
+  return 'Não foi possível gerar o QR de acesso agora. Tente novamente.';
+}
+
+async function abrirQrAcessoEscola(escola, button) {
+  if (button.disabled) return;
+  button.disabled = true;
+  let dados;
+  try {
+    dados = getApiData(await adminApiFetch(`/api/admin/escolas/${encodeURIComponent(escola.id)}/acesso-funcionario`));
+    if (!dados || typeof dados.url !== 'string' || !dados.url) throw new Error('Resposta inválida');
+  } catch (erro) {
+    if (erro && erro.status === 401) { redirecionarAdminParaGovbr(); return; }
+    toast(mensagemErroQrEscola(erro), 'error');
+    return;
+  } finally {
+    button.disabled = false;
+  }
+  const nome = dados.escola_nome || escola.nome || 'Escola';
+  const url = dados.url;
+
+  const dialogo = document.createElement('dialog');
+  dialogo.className = 'qr-acesso-dialog';
+  dialogo.setAttribute('aria-labelledby', 'qr-acesso-titulo');
+  dialogo.innerHTML = `<h2 id="qr-acesso-titulo">QR de acesso</h2>
+    <p class="qr-acesso-escola" data-nome></p>
+    <canvas class="qr-acesso-canvas" role="img"></canvas>
+    <p class="qr-acesso-link"><a data-link target="_blank" rel="noopener noreferrer"></a></p>
+    <div class="qr-acesso-acoes">
+      <button type="button" class="ui-btn ui-btn-primary" data-imprimir>Imprimir</button>
+      <button type="button" class="ui-btn ui-btn-secondary" data-baixar>Baixar PNG</button>
+      <button type="button" class="ui-btn ui-btn-secondary" data-copiar>Copiar link</button>
+      <button type="button" class="ui-btn ui-btn-secondary" data-fechar autofocus>Fechar</button>
+    </div>`;
+  dialogo.querySelector('[data-nome]').textContent = nome;
+  const link = dialogo.querySelector('[data-link]');
+  link.textContent = url;
+  link.href = url;
+  const canvas = dialogo.querySelector('canvas');
+  canvas.setAttribute('aria-label', `QR code de acesso ao ponto da escola ${nome}`);
+  try {
+    desenharQrEscola(canvas, url, 280);
+  } catch (erro) {
+    toast('Não foi possível gerar o QR de acesso agora. Tente novamente.', 'error');
+    return;
+  }
+
+  const fechar = () => dialogo.close();
+  dialogo.querySelector('[data-fechar]').addEventListener('click', fechar);
+  dialogo.addEventListener('close', () => dialogo.remove());
+
+  dialogo.querySelector('[data-baixar]').addEventListener('click', () => {
+    const grande = document.createElement('canvas');
+    desenharQrEscola(grande, url, 1024);
+    grande.toBlob((blob) => {
+      if (!blob) { dialogo.close(); toast('Não foi possível gerar o PNG.', 'error'); return; }
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const slug = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'escola';
+      a.href = href;
+      a.download = `qr-acesso-${slug}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(href), 1000);
+    }, 'image/png');
+  });
+
+  const copiar = dialogo.querySelector('[data-copiar]');
+  copiar.addEventListener('click', async () => {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      ok = true;
+    } catch (erro) {
+      const area = document.createElement('textarea');
+      area.value = url;
+      area.setAttribute('readonly', '');
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      dialogo.appendChild(area);
+      area.select();
+      try { ok = document.execCommand('copy'); } catch (falha) { ok = false; }
+      area.remove();
+    }
+    // Feedback inline: toast ficaria sob o dialog modal aberto.
+    copiar.textContent = ok ? 'Link copiado!' : 'Não foi possível copiar';
+    setTimeout(() => { copiar.textContent = 'Copiar link'; }, 2000);
+  });
+
+  dialogo.querySelector('[data-imprimir]').addEventListener('click', () => {
+    const area = document.createElement('section');
+    area.id = 'qr-print-area';
+    const titulo = document.createElement('h1');
+    titulo.textContent = nome;
+    const grande = document.createElement('canvas');
+    desenharQrEscola(grande, url, 1000);
+    const legenda = document.createElement('p');
+    legenda.textContent = 'Aponte a câmera para registrar o ponto';
+    area.append(titulo, grande, legenda);
+    document.body.appendChild(area);
+    document.body.classList.add('qr-printing');
+    const limpar = () => {
+      document.body.classList.remove('qr-printing');
+      area.remove();
+      window.removeEventListener('afterprint', limpar);
+    };
+    window.addEventListener('afterprint', limpar);
+    window.print();
+  });
+
+  document.body.appendChild(dialogo);
+  dialogo.showModal();
+}
+
 function criarStatusEscola(ativa) {
   const status = document.createElement('span');
   status.className = `schools-status ${ativa ? 'is-active' : 'is-inactive'}`;
@@ -68,6 +217,7 @@ function criarCardEscola(escola) {
     card.appendChild(line);
   });
   card.appendChild(criarStatusEscola(escola.ativa));
+  if (temCapacidade(CAPACIDADE_QR_ESCOLA)) card.appendChild(criarBotaoQrEscola(escola));
   return card;
 }
 
@@ -87,6 +237,11 @@ function criarLinhaEscola(escola) {
   const status = document.createElement('td');
   status.appendChild(criarStatusEscola(escola.ativa));
   row.appendChild(status);
+  if (temCapacidade(CAPACIDADE_QR_ESCOLA)) {
+    const actions = document.createElement('td');
+    actions.appendChild(criarBotaoQrEscola(escola));
+    row.appendChild(actions);
+  }
   return row;
 }
 
@@ -114,6 +269,8 @@ function inicializarListaEscolas() {
 
   const podeCriar = temCapacidade('escola.criar');
   createLink.hidden = !podeCriar;
+  const actionsHead = document.getElementById('schools-actions-head');
+  if (actionsHead) actionsHead.hidden = !temCapacidade(CAPACIDADE_QR_ESCOLA);
   let currentPage = 1;
   let totalPages = 1;
   let requestId = 0;
@@ -123,7 +280,7 @@ function inicializarListaEscolas() {
     tableBody.replaceChildren();
     const tableRow = document.createElement('tr');
     const tableCell = document.createElement('td');
-    tableCell.colSpan = 5;
+    tableCell.colSpan = temCapacidade(CAPACIDADE_QR_ESCOLA) ? 6 : 5;
     tableCell.appendChild(estadoListaEscolas(titulo, descricao, retry));
     tableRow.appendChild(tableCell);
     tableBody.appendChild(tableRow);
