@@ -150,6 +150,8 @@ function criarLoadingTabelaFuncionarios() {
   `).join('');
 }
 
+let contadorMenusAcoesFuncionario = 0;
+
 function criarMenuAcoesFuncionario(funcionario) {
   const isActive = funcionario.status === 'ativo';
   const podeVisualizar = temCapacidade('funcionario.visualizar');
@@ -160,22 +162,25 @@ function criarMenuAcoesFuncionario(funcionario) {
 
   const statusLabel = isActive ? 'Desativar' : 'Reativar';
   const tituloVisualizacao = temCapacidade('funcionario.editar') ? 'Editar' : 'Ver detalhes';
+  // Popover API: vai para a top layer, entao nao e cortado por overflow/transform da tabela;
+  // fecha com Esc e clique fora, e abrir um fecha os outros (popover="auto").
+  const menuId = `menu-acoes-funcionario-${++contadorMenusAcoesFuncionario}`;
   return `
-    <details class="employee-actions-menu">
-      <summary aria-label="Abrir ações de ${escapeHtml(funcionario.nome)}">Ações <span aria-hidden="true">⌄</span></summary>
-      <div class="employee-actions-popover">
+    <div class="employee-actions-menu">
+      <button type="button" class="employee-actions-trigger" popovertarget="${menuId}" aria-haspopup="menu" aria-label="Abrir ações de ${escapeHtml(funcionario.nome)}">Ações <span aria-hidden="true">⌄</span></button>
+      <div class="employee-actions-popover" id="${menuId}" popover="auto" role="menu">
         ${podeVisualizar ? `
-          <button type="button" data-employee-edit="${Number(funcionario.id)}">
+          <button type="button" role="menuitem" data-employee-edit="${Number(funcionario.id)}">
             <img src="/icons/pencil.svg" alt="" aria-hidden="true"> ${tituloVisualizacao}
           </button>
         ` : ''}
         ${podeAlterarStatus ? `
-          <button type="button" data-employee-status="${Number(funcionario.id)}" class="${isActive ? 'action-danger' : 'action-success'}">
+          <button type="button" role="menuitem" data-employee-status="${Number(funcionario.id)}" class="${isActive ? 'action-danger' : 'action-success'}">
             ${statusLabel}
           </button>
         ` : ''}
       </div>
-    </details>
+    </div>
   `;
 }
 
@@ -523,7 +528,7 @@ function abrirModalStatusFuncionario(funcionario, trigger) {
   estadoStatusFuncionario.id = Number(funcionario.id);
   estadoStatusFuncionario.elementoOrigem = trigger || document.activeElement;
   configurarModalStatusFuncionario(funcionario, isReactivation);
-  trigger?.closest('details')?.removeAttribute('open');
+  trigger?.closest('[popover]')?.hidePopover();
   elements.overlay.hidden = false;
   document.querySelector('.app-wrap')?.setAttribute('inert', '');
   document.body.classList.add('employee-status-open');
@@ -742,6 +747,25 @@ function alterarAtivacaoFuncionario(id, button) {
 function iniciarAcoesFuncionarios() {
   if (document.documentElement.dataset.employeeActionsInitialized === 'true') return;
   document.documentElement.dataset.employeeActionsInitialized = 'true';
+
+  // Posiciona o menu (top layer, fixed) junto ao botao; fecha ao rolar/redimensionar.
+  document.addEventListener('toggle', (event) => {
+    const popover = event.target;
+    if (!popover.matches?.('.employee-actions-popover') || event.newState !== 'open') return;
+    const botao = document.querySelector(`[popovertarget="${popover.id}"]`)?.getBoundingClientRect();
+    if (!botao) return;
+    const abaixo = botao.bottom + 6;
+    const topo = abaixo + popover.offsetHeight > window.innerHeight - 8
+      ? Math.max(8, botao.top - 6 - popover.offsetHeight) : abaixo;
+    const esquerda = Math.min(Math.max(8, botao.right - popover.offsetWidth),
+      window.innerWidth - popover.offsetWidth - 8);
+    popover.style.top = `${topo}px`;
+    popover.style.left = `${esquerda}px`;
+  }, true);
+  const fecharMenusAcoes = () => document.querySelectorAll('.employee-actions-popover:popover-open')
+    .forEach((popover) => popover.hidePopover());
+  window.addEventListener('scroll', fecharMenusAcoes, true);
+  window.addEventListener('resize', fecharMenusAcoes);
 
   document.addEventListener('click', (event) => {
     const previousPage = event.target.closest('#funcionarios-prev');
@@ -1295,7 +1319,7 @@ function abrirEdicao(id, trigger = null) {
   iniciarPainelEdicaoFuncionarios();
   if (!abrirPainelEdicao()) return;
 
-  trigger?.closest('details')?.removeAttribute('open');
+  trigger?.closest('[popover]')?.hidePopover();
   estadoEdicaoFuncionario.id = employeeId;
   estadoEdicaoFuncionario.valoresIniciais = null;
   estadoEdicaoFuncionario.elementoOrigem = trigger || document.activeElement;
