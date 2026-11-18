@@ -77,7 +77,7 @@ public class PublicEmployeeService {
         }
         var request = new EmployeeListRequest(false, context.schoolIds(),
                 active == null ? null : active.equals("true") || active.equals("1"), cargo,
-                PublicEmployeeInput.escape(q), page, limit);
+                q, page, limit);
         var result = reads.list(request);
         return Map.of("items", result.items().stream().map(item -> project(item, true)).toList(),
                 "pagination", result.pagination());

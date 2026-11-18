@@ -22,7 +22,7 @@ public final class PublicEmployeeInput {
         if (name.length() < 3 || name.length() > 55 || name.contains("<") || name.contains(">")) {
             throw invalid("Nome deve ter entre 3 e 55 caracteres, sem < ou >");
         }
-        return new EmployeeCreateRequest(escape(name), text(body, "cpf").replaceAll("[^0-9]", ""),
+        return new EmployeeCreateRequest(name, text(body, "cpf").replaceAll("[^0-9]", ""),
                 email(text(body, "email")), phone(body.get("telefone")), active(body.get("ativo")),
                 schoolId(body.get("unidade_escolar_id")), text(body, "cargo").strip().toUpperCase(Locale.ROOT),
                 text(body, "entrada").strip(), text(body, "saida_almoco").strip(),
@@ -49,7 +49,6 @@ public final class PublicEmployeeInput {
                 if (value.length() < 3 || value.length() > 150 || value.contains("<") || value.contains(">")) {
                     throw invalid("Nome deve ter entre 3 e 150 caracteres, sem < ou >");
                 }
-                value = escape(value);
             } else if (key.equals("email")) value = email(value);
             else if (key.equals("cargo")) value = value.toUpperCase(Locale.ROOT);
             fields.put(key, new TextNode(value));

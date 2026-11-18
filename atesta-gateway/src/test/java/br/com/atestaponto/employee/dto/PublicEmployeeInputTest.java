@@ -29,7 +29,7 @@ class PublicEmployeeInputTest {
     }
 
     @Test
-    void editEscapesAcceptedName() {
-        assertEquals("Ana D&#x27;Avila", PublicEmployeeInput.edit(json.valueToTree(Map.of("nome", " Ana D'Avila "))).get("nome").asText());
+    void editKeepsAcceptedNameRaw() {
+        assertEquals("Ana D'Avila", PublicEmployeeInput.edit(json.valueToTree(Map.of("nome", " Ana D'Avila "))).get("nome").asText());
     }
 }
