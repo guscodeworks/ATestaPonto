@@ -167,6 +167,12 @@ function renderizarGrafico() {
    ALERTAS (dashboard)
    ============================================================ */
 
+// Lista no maximo 3 nomes; o excedente vira "e mais N" (o titulo mantem o total real).
+function resumirNomesAlerta(nomes, limite = 3) {
+  const lista = nomes.slice(0, limite).join(', ');
+  return nomes.length > limite ? `${lista} e mais ${nomes.length - limite}` : lista;
+}
+
 function renderizarAlertas() {
   const container = document.getElementById('lista-alertas');
   if (!container) return;
@@ -184,7 +190,7 @@ function renderizarAlertas() {
   // Cada regra de alerta é avaliada isoladamente e resulta em null quando
   // a condição não se aplica, para depois filtrar apenas os relevantes.
   const alertas = [
-    ausentes.length > 0 ? { tipo:'amber', icon:'triangle-alert.svg', titulo:`${ausentes.length} funcionario(s) sem ponto hoje`, desc: ausentes.map(f=>f.nome).join(', ') } : null,
+    ausentes.length > 0 ? { tipo:'amber', icon:'triangle-alert.svg', titulo:`${ausentes.length} funcionário(s) sem ponto hoje`, desc: resumirNomesAlerta(ausentes.map(f=>f.nome)) } : null,
     inativos > 0 ? { tipo:'red', icon:'circle-x.svg', titulo:'Funcionarios inativos no sistema', desc:`${inativos} conta(s) inativa(s). Verifique o cadastro.` } : null,
   ].filter(Boolean);
 
